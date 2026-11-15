@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { PickerLoading, issuePickerRow } from "@/components/palette-picker-rows";
 import { usePalettePicker, type PalettePickerRequest } from "@/lib/palette-picker";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import { GLOBAL_BOARD_KEY } from "@/lib/query-keys";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { issueStatusForPrState } from "@/lib/pr-issue-status";
 import { linkPullRequestIssueApi } from "@/lib/agent-api";

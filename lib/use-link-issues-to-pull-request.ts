@@ -8,8 +8,9 @@ import { ALL_PULL_REQUESTS_QUERY_KEY } from "./pull-request-list-cache";
 import { linkPullRequestIssueApi, unlinkPullRequestIssueApi, type IssuePr } from "./agent-api";
 import type { IssuePrPayload } from "./issue-pr-store";
 import { issueStatusForPrState } from "./pr-issue-status";
-import { GLOBAL_BOARD_KEY, patchIssueEverywhere } from "./optimistic/issue-writes";
+import { patchIssueEverywhere } from "./optimistic/issue-writes";
 import type { GlobalBoardResponse, Issue } from "./types";
+import { GLOBAL_BOARD_KEY, ALL_ISSUES_KEY } from "./query-keys";
 
 /** The pull request a board action links issues to. */
 export interface LinkTargetPullRequest {
@@ -57,7 +58,7 @@ export function optimisticIssuePrs(
 
 /** The project of a cached issue row, from a project board or the global board. */
 function cachedIssueProject(queryClient: QueryClient, issueId: string): string | null {
-  for (const [, data] of queryClient.getQueriesData<unknown>({ queryKey: ["issues"] })) {
+  for (const [, data] of queryClient.getQueriesData<unknown>({ queryKey: ALL_ISSUES_KEY })) {
     const row = Array.isArray(data) ? (data as Issue[]).find((issue) => issue?.id === issueId) : undefined;
     if (row) return row.project_id;
   }
@@ -147,7 +148,7 @@ export function useLinkIssuesToPullRequest() {
       if (outcome.failed.length > 0) {
         // A refused link must not leave its card in the column it moved to.
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["issues"] }),
+          queryClient.invalidateQueries({ queryKey: ALL_ISSUES_KEY }),
           queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY }),
         ]);
       }

@@ -33,8 +33,8 @@ import type {
   SearchIndexObjective,
   SearchIndexResponse,
 } from "./types";
+import { SEARCH_INDEX_KEY } from "./query-keys";
 
-export const SEARCH_INDEX_KEY = ["me", "search-index"] as const;
 
 /** Minimum quiet period before background indexing can start. */
 export const SEARCH_INDEX_ARM_DELAY_MS = 1_500;

@@ -2,9 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchIntegrationsApi } from "./integrations-api";
-
-export const integrationsQueryKey = (projectId: string) =>
-  ["integrations", projectId] as const;
+import { integrationsKey } from "./query-keys";
 
 /** Project integrations (names, key prefixes, webhook state) — member-readable.
     Shared cache with the settings tab; revoked rows are included so issue
@@ -12,7 +10,7 @@ export const integrationsQueryKey = (projectId: string) =>
 export function useIntegrationsQuery(projectId: string | null) {
   const enabled = !!projectId;
   const { data, isPending } = useQuery({
-    queryKey: integrationsQueryKey(projectId ?? ""),
+    queryKey: integrationsKey(projectId ?? ""),
     queryFn: () => fetchIntegrationsApi(projectId as string),
     enabled,
   });

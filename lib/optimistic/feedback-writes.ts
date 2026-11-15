@@ -8,6 +8,7 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { createPendingWrites } from "./pending-writes";
+import { TRIAGE_COUNTS_KEY } from "../query-keys";
 import type { TeamFeedbackDetail, TeamFeedbackListItem } from "../server/feedback/team-queries";
 
 export const feedbackWrites = createPendingWrites<TeamFeedbackListItem>();
@@ -56,7 +57,7 @@ export async function writeFeedbackPost(
     // Filters, counts and the objective's feedback row follow the write.
     void queryClient.invalidateQueries({ queryKey: ["feedback", projectId] });
     void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId, postId] });
-    void queryClient.invalidateQueries({ queryKey: ["feedback-count", projectId] });
+    void queryClient.invalidateQueries({ queryKey: TRIAGE_COUNTS_KEY });
     void queryClient.invalidateQueries({ queryKey: ["objective-feedback", projectId] });
   }
 }

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useAuth } from "./auth-context";
 import { myInvitationsQueryOptions, respondInvitationApi } from "./invitations-api";
+import { PROJECTS_KEY } from "./query-keys";
 const MY_INVITATIONS_KEY = myInvitationsQueryOptions.queryKey;
 
 /** The caller's pending invitations (drives the Home banner and the inbox). */
@@ -26,7 +27,7 @@ export function useMyInvitations() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: MY_INVITATIONS_KEY }),
         // Accepting joins a project — refresh the project list/switcher.
-        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        queryClient.invalidateQueries({ queryKey: PROJECTS_KEY }),
       ]);
       return result;
     },

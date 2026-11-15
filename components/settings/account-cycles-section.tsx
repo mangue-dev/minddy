@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
-import {GLOBAL_BOARD_KEY} from "@/lib/use-global-board-query";
+import { GLOBAL_BOARD_KEY } from "@/lib/query-keys";
 import {CYCLES_ENABLED_META_KEY, CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY, CYCLE_AUTO_CAPTURE_STARTED_META_KEY, CYCLE_DURATION_WEEKS_META_KEY, CYCLE_INTENSITIES, CYCLE_INTENSITY_META_KEY, CYCLE_START_DOW_META_KEY, CYCLE_UPCOMING_COUNT_META_KEY, resolveCyclePrefs} from "@/lib/cycle-prefs";
 import type {CyclePrefs} from "@/lib/cycle-prefs";
 

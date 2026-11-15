@@ -21,6 +21,8 @@ import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
+import { useAppTabChange } from "@/lib/use-app-tab-change";
+import { loadGlobalIssuePanel } from "@/lib/lazy-app-surfaces";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
 import { ReadFailureNotice } from "@/components/read-failure-notice";
@@ -91,11 +93,8 @@ const PrDetail = dynamic(
   },
 );
 
-const PrIssuePanel = dynamic(
-  () =>
-    import("@/components/pull-requests/pr-issue-panel").then(
-      (m) => m.PrIssuePanel,
-    ),
+const GlobalIssuePanel = dynamic(
+  () => loadGlobalIssuePanel().then((m) => m.GlobalIssuePanel),
   { ssr: false },
 );
 
@@ -467,6 +466,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
   // Stays mounted, closed, while the panel slides out (MIN-774).
   const shownPanel = useRetainedWhileClosing(panel);
+  useAppTabChange(() => setPanel(null));
   // Sections start expanded; each keeps its own collapse and show-more state.
   const [collapsedGroups, setCollapsedGroups] = useMobileCollectionState<ReadonlySet<string>>("/pull-requests", "collapsedGroups",
     () => new Set(),
@@ -1072,7 +1072,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
       {/* Linked issue side panel — overlay over the page (no nav). */}
       {shownPanel ? (
-        <PrIssuePanel
+        <GlobalIssuePanel
           key={`${shownPanel.projectId}:${shownPanel.issueId}`}
           projectId={shownPanel.projectId}
           issueId={shownPanel.issueId}

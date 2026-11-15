@@ -20,8 +20,8 @@ import type {
   Objective,
   ObjectiveUpdateInput,
 } from "./types";
+import { objectivesKey, issuesKey } from "./query-keys";
 
-const objectivesKey = (projectId: string) => ["objectives", projectId] as const;
 // Stable until the list loads, so memos keyed on it do not rerun every render.
 const NO_OBJECTIVES: Objective[] = [];
 
@@ -112,7 +112,7 @@ export function useObjectivesQuery(projectId: string | null) {
       invalidate();
       // Detached issues lose their objective_id → refresh the board too.
       if (projectId) {
-        void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
+        void queryClient.invalidateQueries({ queryKey: issuesKey(projectId) });
       }
     },
     [invalidate, projectId, queryClient]

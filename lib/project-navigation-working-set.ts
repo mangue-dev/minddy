@@ -1,10 +1,11 @@
 import { projectPath } from "./app-urls";
 import type { QueryClient } from "@tanstack/react-query";
 import { appTabRoute } from "./app-tab-location";
+import { PROJECTS_KEY } from "./query-keys";
 
 /** Select one nearby project from the account's authorized project list, never a stored URL alone. */
 export function adjacentProjectDestination(client: QueryClient, active: string, visits: readonly string[], available: readonly string[]): string | undefined {
-  const state = client.getQueryState<{ id: string }[]>(["projects"]);
+  const state = client.getQueryState<{ id: string }[]>(PROJECTS_KEY);
   if (state?.status !== "success" || state.isInvalidated || !Array.isArray(state.data)) return;
   const ids = [...new Set(state.data.map((project) => project.id))];
   const current = [...visits].reverse().concat(active, ...available).map(appTabRoute)

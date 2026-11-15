@@ -67,6 +67,7 @@ import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
+import { HOME_BACK_NAV_KEY } from "@/components/project-nav-model";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { sidebarTakesProjectSwitch } from "@/lib/keyboard/project-switch-shortcut";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
@@ -529,7 +530,7 @@ function SidebarNav({
         resetBack(link.getAttribute("href") ?? undefined);
       }}
     >
-      <SidebarRows sections={sections} renderItem={(item) => item.key === "home-back" && currentProject
+      <SidebarRows sections={sections} renderItem={(item) => item.key === HOME_BACK_NAV_KEY && currentProject
         ? <ProjectContextRow homeItem={item} currentProject={currentProject} projects={projects} onMenuOpenChange={onMenuOpenChange} onBack={onBack} />
         : undefined} />
     </nav>

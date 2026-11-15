@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { globalBoardQueryFn } from "./global-board-api";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { GLOBAL_BOARD_KEY, GLOBAL_VIEWS_KEY } from "./query-keys";
 import { fetchViewsApi } from "./views-api";
 
 /** Start authenticated cold board reads before the lazy view can mount. */
@@ -20,9 +20,9 @@ export function useColdBoardPrefetch(active: boolean) {
     }
     // Saved views are also a render prerequisite: preserve the selected filters
     // while starting the existing small query beside the board data request.
-    if (client.getQueryData(["views", "global"]) === undefined) {
+    if (client.getQueryData(GLOBAL_VIEWS_KEY) === undefined) {
       void client.prefetchQuery({
-        queryKey: ["views", "global"],
+        queryKey: GLOBAL_VIEWS_KEY,
         queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal),
       });
     }

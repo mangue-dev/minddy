@@ -39,6 +39,7 @@ import Link from "@/components/app-link";
 import { useLocale, useTranslations, useFormatter } from "next-intl";
 import { useTimeAgo } from "@/lib/use-live-now";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { TRIAGE_COUNTS_KEY } from "@/lib/query-keys";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
@@ -83,7 +84,6 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { useIssuesQuery } from "@/lib/use-issues-query";
-import { useIssueRelationsQuery, type RelationKinds } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -103,7 +103,6 @@ import type {
   ResourceInput,
   Category,
   Issue,
-  IssueRelationType,
   Member,
   Objective,
   Project,
@@ -769,11 +768,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     );
   }, [visiblePosts, query]);
 
-  // Side panel issue: the linked ticket opens HERE, without navigation — even
-  // cabling as the board (issues + relationships + project collections).
-  const { issues, updateIssue, deleteIssue, setCategories } =
-    useIssuesQuery(projectId);
-  const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
+  // The linked ticket opens here in the side panel, without navigating.
+  const { issues } = useIssuesQuery(projectId);
   // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
   // members are read with the issues, not after the project list (MIN-875).
   const { members } = useMembersQuery(projectId, true);
@@ -837,25 +833,6 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   useAppTabChange(() => setOpenIssueId(null));
   const openIssue: Issue | null = issues.find((i) => i.id === openIssueId) ?? null;
-  const handleAddRelation = useCallback(
-    (
-      sourceId: string,
-      type: IssueRelationType,
-      targetId: string,
-      kinds?: RelationKinds
-    ) => {
-      void addRelation(sourceId, type, targetId, kinds).catch((err) =>
-        toast.error((err as Error).message)
-      );
-    },
-    [addRelation]
-  );
-  const handleRemoveRelation = useCallback(
-    (relationId: string) => {
-      void removeRelation(relationId).catch((err) => toast.error((err as Error).message));
-    },
-    [removeRelation]
-  );
 
   // A post a deep link selected survives the scope read its consumption
   // starts: an empty pending list is not a reason to drop the user's choice.
@@ -921,7 +898,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["feedback", projectId] });
     void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
-    void queryClient.invalidateQueries({ queryKey: ["feedback-count", projectId] });
+    void queryClient.invalidateQueries({ queryKey: TRIAGE_COUNTS_KEY });
   };
 
   // A row menu's gesture, handed to the detail pane it selects.
@@ -1513,23 +1490,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         onOpenChange={(next) => {
           if (!next) setOpenIssueId(null);
         }}
-        projectKey={project?.key ?? ""}
-        members={members}
-        categories={categories}
-        objectives={objectives}
-        allIssues={issues}
-        relations={relations}
-        onUpdate={updateIssue}
-        onDelete={async (issueId) => {
-          if (!(await deleteIssue(issueId))) return false;
-          setOpenIssueId(null);
-          refresh();
-          return true;
-        }}
-        onSetCategories={setCategories}
         onOpenIssue={setOpenIssueId}
-        onAddRelation={handleAddRelation}
-        onRemoveRelation={handleRemoveRelation}
+        // The deleted ticket leaves the posts it was linked to.
+        onDeleted={refresh}
       />
 
       <ConfirmDeleteDialog
@@ -2417,16 +2380,11 @@ function FeedbackDetail({
           onClose={() => setLinkOpen(false)}
         />
       )}
-      {/* Promoting means opening the ticket creation form already
-          filled by the return — not make a ticket behind whose back
-          click. The return gives what it knows (title, text, categories);
-          effort, priority, assignment and deadline are judgments
-          team, and ask themselves here rather than reopening the ticket just
-          After. It's the SAME form as everywhere else: its shortcuts
-          field, his dictation and his drafts come with it.
-          `projects` only carries the current project: a return belongs to
-          his project, “creating in another project” would not make sense and
-          would leave the link behind. */}
+      {/* Promoting opens the ticket form filled from the post (title, text,
+          categories): effort, priority, assignee and due date are the team's
+          call and are asked here, in the same form as everywhere else.
+          `projects` only lists this project: a ticket created elsewhere
+          would lose its link to the post. */}
       <CreateIssueDialog
         open={promoteOpen}
         onOpenChange={setPromoteOpen}
@@ -2440,7 +2398,7 @@ function FeedbackDetail({
         initialCategoryIds={post.category_ids}
         initialObjectiveId={post.objective_id}
         analyticsSource="feedback"
-        onCreate={async (input) => {
+        onCreate={async (_targetProjectId, input) => {
           await api(`/api/projects/${projectId}/feedback/${postId}/promote`, {
             method: "POST",
             body: JSON.stringify(input),
@@ -2449,10 +2407,6 @@ function FeedbackDetail({
           setPromoteOpen(false);
           refreshDetail();
         }}
-        // Unattainable (no other projects in the list), but the prop is
-        // required: failing loudly is better than a ticket created
-        // elsewhere and detached from his return.
-        onCreateInProject={() => Promise.reject(new Error(t("errorGeneric")))}
       />
       {/* Refuse/discard. Nothing is destroyed — the status is replaced later
           suddenly — but both see each other from the outside: one displays a no on the

@@ -1,6 +1,24 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
-import { GLOBAL_BOARD_KEY, issueWrites, objectiveWrites } from "./optimistic/issue-writes";
+import {
+  ALL_STATS_KEY,
+  GLOBAL_BOARD_KEY,
+  GLOBAL_VIEWS_KEY,
+  HOME_BRIEF_KEY,
+  HOME_SUMMARY_KEY,
+  PROJECTS_KEY,
+  SEARCH_INDEX_KEY,
+  SMART_ASSIGN_WARNINGS_KEY,
+  TRIAGE_COUNTS_KEY,
+  categoriesKey,
+  issueRelationsKey,
+  issuesKey,
+  membersKey,
+  objectivesKey,
+  sameQueryKey,
+  viewsKey,
+} from "./query-keys";
+import { issueWrites, objectiveWrites } from "./optimistic/issue-writes";
 import { isAcceptedPageEcho } from "./optimistic-page-writes";
 import { isOwnRelationEcho } from "./optimistic/relation-writes";
 import { hasLivePageSession } from "./page-collaboration-signals";
@@ -47,20 +65,9 @@ export interface Invalidation {
   issueId?: string;
 }
 
-// Caches that aggregate several projects. A project event has to reach them too
-// or /home, /all, /statistics and the palette stay stale (MIN-89). Kept as
-// literals like every other key in this file; the owning modules are named.
-// (GLOBAL_BOARD_KEY comes from lib/optimistic/issue-writes.ts — this is the module
-// who also knows if the event is the echo of our own writing.)
-const HOME_SUMMARY_KEY: QueryKey = ["me", "summary"]; // lib/use-home-summary-query.ts
-const SEARCH_INDEX_KEY: QueryKey = ["me", "search-index"]; // lib/use-search-index.ts
-// Smart Assign incorrectly set: the sidebar bears the mark on all pages.
-const SMART_ASSIGN_WARNINGS_KEY: QueryKey = ["me", "smart-assign-warnings"]; // lib/use-smart-assign-warnings-query.ts
-// What is waiting to be sorted by project: the number of project lines in the
-// sidebar, also read on all pages. lib/use-triage-counts-query.ts.
-const TRIAGE_COUNTS_KEY: QueryKey = ["me", "triage-counts"];
-const HOME_BRIEF_KEY: QueryKey = ["me", "home-brief"]; // lib/use-home-brief-query.ts
-const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", tz]
+// The aggregates a project event must also reach, or /home, /all,
+// /statistics and the palette stay stale (MIN-89). Shared keys come from
+// lib/query-keys.ts; the ones only this table names stay below.
 const ALL_PULL_REQUESTS_KEY: QueryKey = ["pull-requests", "all"];
 const OPEN_PULL_REQUEST_COUNT_KEY: QueryKey = ["pull-requests", "open-count"];
 // The board cards' pull request chips — components/issue-pr-context.tsx.
@@ -68,17 +75,16 @@ const ISSUE_PRS_KEY: QueryKey = ["issue-pull-requests"];
 
 /**
  * Views DERIVED from a ticket: their list membership is calculated in SQL,
- * so nothing patches them locally — they need to be refreshed even on
- * echoing our own writing (MIN-156). The palette level is marked
- * stale but NOT refreshed: it is a 4,000-line snapshot loaded once
- * times per tab, which is already revalidates upon opening when it is stale
- * (lib/use-search-index.ts). The others only go back to the server if they
- * are mounted — `invalidateQueries` leaves stale requests without
- * observer, without request.
+ * so nothing patches them locally and they refresh even on the echo of our
+ * own write (MIN-156). The palette index is marked stale but NOT refetched:
+ * it is a 4,000-line snapshot loaded once per tab, which revalidates on
+ * opening when stale (lib/use-search-index.ts). The others only reach the
+ * server when mounted: `invalidateQueries` sends no request for a query
+ * without observers.
  */
 const ISSUE_DERIVED_KEYS: Invalidation[] = [
   { key: HOME_SUMMARY_KEY, refetch: "active" },
-  { key: STATS_KEY, refetch: "active" },
+  { key: ALL_STATS_KEY, refetch: "active" },
   { key: TRIAGE_COUNTS_KEY, refetch: "active" },
   { key: SEARCH_INDEX_KEY, refetch: "none" },
 ];
@@ -90,9 +96,6 @@ const ISSUE_AGGREGATE_KEYS: Invalidation[] = [
 ];
 
 const active = (key: QueryKey): Invalidation => ({ key, refetch: "active" });
-
-const sameKey = (a: QueryKey, b: QueryKey) =>
-  a.length === b.length && a.every((part, index) => part === b[index]);
 
 /** Metadata triggers can project DELETE's NEW row into a non-null empty record. */
 function routingRecord(change: BroadcastChange): Record<string, unknown> | null {
@@ -162,7 +165,7 @@ export function applyProjectCounterBump(client: QueryClient, change: BroadcastCh
   if (!bump) return false;
   const time = (value: unknown) => Date.parse(String(value)) || 0;
   let found = true;
-  client.setQueryData<Record<string, unknown>[]>(["projects"], (projects) => {
+  client.setQueryData<Record<string, unknown>[]>(PROJECTS_KEY, (projects) => {
     if (!projects) return undefined;
     const index = projects.findIndex((project) => project.id === bump.id);
     found = index >= 0;
@@ -196,7 +199,7 @@ export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
     case "projects":
       if (projectCounterBump(change)) return [];
       return [
-        active(["projects"]),
+        active(PROJECTS_KEY),
         active(SMART_ASSIGN_WARNINGS_KEY),
         active(TRIAGE_COUNTS_KEY),
       ];
@@ -207,7 +210,7 @@ export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
     // no longer have access (or not yet theirs).
     case "project_members":
       return [
-        active(["projects"]),
+        active(PROJECTS_KEY),
         active(SMART_ASSIGN_WARNINGS_KEY),
         active(GLOBAL_BOARD_KEY),
         active(HOME_SUMMARY_KEY),
@@ -215,9 +218,9 @@ export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
         { key: SEARCH_INDEX_KEY, refetch: "none" },
       ];
     case "project_invitations":
-      return [active(["my-invitations"]), active(["projects"])];
+      return [active(["my-invitations"]), active(PROJECTS_KEY)];
     case "views": // global (project-less) views broadcast on the user topic
-      return [active(["views", "global"])];
+      return [active(GLOBAL_VIEWS_KEY)];
     case "cycles": // my cycle timeline moved (fill, capture, rollover — MIN-32)
       return [
         active(GLOBAL_BOARD_KEY),
@@ -291,7 +294,7 @@ function ownRelationEchoCheck(
   change: BroadcastChange,
   { key }: Invalidation
 ): ((client: QueryClient) => boolean) | undefined {
-  if (change.table !== "issue_relations" || !sameKey(key, GLOBAL_BOARD_KEY)) return undefined;
+  if (change.table !== "issue_relations" || !sameQueryKey(key, GLOBAL_BOARD_KEY)) return undefined;
   return (client) => isOwnRelationEcho(client, change);
 }
 
@@ -325,11 +328,11 @@ export function keysForProjectEvent(
       // read back; the board itself is refetched only when that cannot work.
       const issueId = change.table === "issues" ? routingRecord(change)?.id : issueIdOf(change);
       return typeof issueId === "string" && issueId
-        ? [active(["issues", projectId]), { key: GLOBAL_BOARD_KEY, refetch: "active", issueId }, ...ISSUE_DERIVED_KEYS]
-        : [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
+        ? [active(issuesKey(projectId)), { key: GLOBAL_BOARD_KEY, refetch: "active", issueId }, ...ISSUE_DERIVED_KEYS]
+        : [active(issuesKey(projectId)), ...ISSUE_AGGREGATE_KEYS];
     }
     case "issue_relations":
-      return [active(["issue-relations", projectId]), active(GLOBAL_BOARD_KEY)];
+      return [active(issueRelationsKey(projectId)), active(GLOBAL_BOARD_KEY)];
     // An objective is copied into TWO caches: that of its project and the
     // `objectives` slice of the cross-project board (card chips, facet
     // “Objective”, ticket panel selector). The echo of our own
@@ -341,7 +344,7 @@ export function keysForProjectEvent(
       return isOwnEcho(change)
         ? [{ key: SEARCH_INDEX_KEY, refetch: "none" }]
         : [
-            active(["objectives", projectId]),
+            active(objectivesKey(projectId)),
             active(["app-tab-metadata"]),
             active(GLOBAL_BOARD_KEY),
             { key: SEARCH_INDEX_KEY, refetch: "none" },
@@ -424,8 +427,8 @@ export function keysForProjectEvent(
     }
     case "categories": // renames/deletes also affect chips on cached issues
       return [
-        active(["categories", projectId]),
-        active(["issues", projectId]),
+        active(categoriesKey(projectId)),
+        active(issuesKey(projectId)),
         // A category is copied into the cross-project board, like a
         // objective: without that, the one that a teammate (or Numo, or the addition
         // quick from another tab) just created did not exist on `/all`.
@@ -433,7 +436,7 @@ export function keysForProjectEvent(
         { key: SEARCH_INDEX_KEY, refetch: "none" },
       ];
     case "views":
-      return [active(["views", projectId])];
+      return [active(viewsKey(projectId))];
     // A membership that changes does not only move the Members tab: the list of
     // members is COPIED into two aggregate caches — the `members` map of the
     // cross-project board (filter and assignee selector, ticket panel,
@@ -444,7 +447,7 @@ export function keysForProjectEvent(
     // rehydrated from disk (lib/query-provider.tsx).
     case "project_members":
       return [
-        active(["members", projectId]),
+        active(membersKey(projectId)),
         active(GLOBAL_BOARD_KEY),
         { key: SEARCH_INDEX_KEY, refetch: "none" },
         // The team changes size → the Smart Assign warning too.
@@ -453,7 +456,7 @@ export function keysForProjectEvent(
     // A pending invitation is not yet a member of anything: only the view
     // Members, who lists both, shows it.
     case "project_invitations":
-      return [active(["members", projectId])];
+      return [active(membersKey(projectId))];
     // Feedback (MIN-89): the team board, the open-feedback badge in the sidebar
     // and the home section all move when a post is created, voted or triaged.
     // The dashboard summary is in that list since MIN-104 — the home "to triage"
@@ -466,11 +469,9 @@ export function keysForProjectEvent(
         active(["feedback", projectId]),
         active(["feedback-detail", projectId]),
         active(["objective-feedback", projectId]),
-        active(["feedback-count", projectId]),
         active(HOME_SUMMARY_KEY),
-        // The number of the project lines in the sidebar counts the returns
-        // opened with tickets in triage: feedback published, promoted or
-        // merged moves it, just like the Feedback tab badge.
+        // The project rows and the Feedback tab badge count open feedback:
+        // publishing, promoting or merging a post moves them.
         active(TRIAGE_COUNTS_KEY),
       ];
     case "comments": {
@@ -601,13 +602,13 @@ export function keysForProjectEvent(
 export const USER_SCOPE_KEYS: QueryKey[] = [
   ["app-tabs"],
   ["notifications"],
-  ["projects"],
+  PROJECTS_KEY,
   ["my-invitations"],
-  ["views", "global"],
-  ["me", "board"],
+  GLOBAL_VIEWS_KEY,
+  GLOBAL_BOARD_KEY,
   ["me", "cycle"],
   ["me", "scratchpad"],
-  ["me", "triage-counts"],
+  TRIAGE_COUNTS_KEY,
   HOME_BRIEF_KEY,
   ["billing"],
   ISSUE_PRS_KEY,
@@ -617,12 +618,12 @@ export const USER_SCOPE_KEYS: QueryKey[] = [
 
 export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["app-tab-metadata"],
-  ["issues", projectId],
-  ["issue-relations", projectId],
-  ["objectives", projectId],
-  ["categories", projectId],
-  ["views", projectId],
-  ["members", projectId],
+  issuesKey(projectId),
+  issueRelationsKey(projectId),
+  objectivesKey(projectId),
+  categoriesKey(projectId),
+  viewsKey(projectId),
+  membersKey(projectId),
   ["comments"],
   ["comment-follow-ups", projectId],
   ["events"],
@@ -633,7 +634,6 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["objective-feedback", projectId],
   ["feedback", projectId],
   ["feedback-detail", projectId],
-  ["feedback-count", projectId],
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
   ["issue-pull-request"],
@@ -678,7 +678,7 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   // otherwise leave the dashboard and /all stale until their staleTime.
   GLOBAL_BOARD_KEY,
   HOME_SUMMARY_KEY,
-  STATS_KEY,
+  ALL_STATS_KEY,
   TRIAGE_COUNTS_KEY,
   ALL_PULL_REQUESTS_KEY,
   OPEN_PULL_REQUEST_COUNT_KEY,

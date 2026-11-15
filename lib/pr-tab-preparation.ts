@@ -15,9 +15,10 @@ import { createNavigationWorkingSet } from "./navigation-working-set";
 import { createProjectBootstrapPair, ProjectBootstrapLimitError } from "./project-bootstrap-api";
 import { firstDisplayedOpenPullRequestIds, PR_BACKGROUND_LIMIT } from "./pull-request-sections";
 import type { PullRequestListItem } from "./agent-api";
+import { HOME_SUMMARY_KEY, SMART_ASSIGN_WARNINGS_KEY, TRIAGE_COUNTS_KEY } from "./query-keys";
 
 const PASSIVE_SHELL_READS = new Set([
-  ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
+  HOME_SUMMARY_KEY, TRIAGE_COUNTS_KEY, SMART_ASSIGN_WARNINGS_KEY,
   ["pull-requests", "open-count"],
 ].map(hashKey));
 

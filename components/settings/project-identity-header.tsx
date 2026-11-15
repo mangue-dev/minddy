@@ -31,6 +31,7 @@ import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { issuesQueryFn } from "@/lib/issues-api";
 import type { Project } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { issuesKey } from "@/lib/query-keys";
 
 /**
  * The identity of a project at the top of its General settings (MIN-737),
@@ -64,7 +65,7 @@ export function ProjectIdentityHeader({
   // The board's own cache entry: no second request when the board was open,
   // one shared read otherwise.
   const { data: issues } = useQuery({
-    queryKey: ["issues", project.id],
+    queryKey: issuesKey(project.id),
     queryFn: issuesQueryFn(project.id),
   });
 

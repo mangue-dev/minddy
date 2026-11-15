@@ -23,6 +23,7 @@ import { insertCategoryEverywhere } from "@/lib/optimistic/issue-writes";
 import { useCreateOptional } from "@/lib/create-context";
 import type { PickerCreateOption } from "@/components/search-select";
 import type { Category, Objective } from "@/lib/types";
+import { categoriesKey } from "./query-keys";
 
 /**
  * “Add a category”: creates the label in the project and returns it to
@@ -56,7 +57,7 @@ export function useCategoryCreateOption({
       // Written in the caches BEFORE being checked: the pastille has its name and
       // its color from the first rendering, without waiting for the refetch.
       insertCategoryEverywhere(queryClient, projectId, category);
-      void queryClient.invalidateQueries({ queryKey: ["categories", projectId] });
+      void queryClient.invalidateQueries({ queryKey: categoriesKey(projectId) });
       onCreated(category);
     },
     [projectId, categories, queryClient, onCreated]

@@ -1,33 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { globalBoardQueryFn } from "./global-board-api";
 import { refreshGlobalIssueSnapshot } from "./global-issues-api";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
-import {
-  addIssueRelationApi,
-  removeIssueRelationApi,
-} from "./issue-relations-api";
-import {
-  addRelationOptimistically,
-  beginRelationRemoval,
-  persistedRelationId,
-} from "./optimistic/relation-writes";
-import type { RelationKinds } from "./use-issue-relations-query";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 import { useIssueMutations } from "./use-issue-mutations";
-import { useUndoHistory } from "./undo/undo-context";
-import type {
-  GlobalBoardResponse,
-  Issue,
-  IssueRelation,
-  IssueRelationType,
-} from "./types";
-
-/** Cache key for the aggregate cross-project board (MIN-29), declared in
-    lib/optimistic/issue-writes.ts and re-exported where the app reads it. */
-export { GLOBAL_BOARD_KEY };
+import { useRelationMutations } from "./use-relation-mutations";
+import type { GlobalBoardResponse, Issue, IssueRelation } from "./types";
 
 const BOARD_CACHE_STALE_MS = 5 * 60_000;
 // Stable while loading: fresh fallbacks each render broke the board's memos.
@@ -37,25 +17,6 @@ const NO_MEMBERS_BY_PROJECT: GlobalBoardResponse["members"] = {};
 const NO_CATEGORIES_BY_PROJECT: GlobalBoardResponse["categories"] = {};
 const NO_OBJECTIVES_BY_PROJECT: GlobalBoardResponse["objectives"] = {};
 const NO_INTEGRATIONS_BY_PROJECT: GlobalBoardResponse["integrations"] = {};
-
-/** The project an issue or objective belongs to, from the board's own rows
-    (relations are same-project by construction). */
-function endpointProject(board: GlobalBoardResponse | undefined, id: string): string | undefined {
-  const issue = board?.issues.find((i) => i.id === id);
-  if (issue) return issue.project_id;
-  for (const [projectId, objectives] of Object.entries(board?.objectives ?? {})) {
-    if (objectives.some((o) => o.id === id)) return projectId;
-  }
-  return undefined;
-}
-
-const relationSnapshot = ({ source_id, target_id, type, source_type, target_type }: IssueRelation) => ({
-  source_id,
-  target_id,
-  type,
-  source_type,
-  target_type,
-});
 
 /**
  * The cross-project "My/All" kanban's data and writes. Issue writes are the
@@ -67,7 +28,8 @@ const relationSnapshot = ({ source_id, target_id, type, source_type, target_type
 export function useGlobalBoardQuery() {
   const queryClient = useQueryClient();
   const mutations = useIssueMutations("global");
-  const { record, currentLink } = useUndoHistory();
+  // The project of each write is read from the cached endpoint rows.
+  const { addRelation, removeRelation } = useRelationMutations();
 
   const fastSyncOnMount = useRef<boolean | null>(null);
   if (fastSyncOnMount.current === null) {
@@ -94,100 +56,6 @@ export function useGlobalBoardQuery() {
       // The aggregate query mounted above remains the fallback.
     });
   }, [queryClient]);
-
-  // Relations (MIN-25) on the cross-project board: the writes go through the
-  // per-project routes, so the project is read from a cached endpoint row. The
-  // board cache's `relations` slice is patched at once and the project's own
-  // ["issue-relations"] cache invalidated, so both boards stay in sync.
-  const addRelation = useCallback(
-    async (
-      sourceId: string,
-      type: IssueRelationType,
-      targetId: string,
-      kinds?: RelationKinds
-    ) => {
-      const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
-      const projectId = endpointProject(board, sourceId) ?? endpointProject(board, targetId);
-      if (!projectId) return;
-      const input = {
-        source_id: sourceId,
-        target_id: targetId,
-        type,
-        source_type: kinds?.sourceType,
-        target_type: kinds?.targetType,
-      };
-      // Read before awaiting: the selection gesture that asked for it is over
-      // by the time the server answers (MIN-795).
-      const link = currentLink();
-      try {
-        const created = await addRelationOptimistically(queryClient, projectId, input, () =>
-          addIssueRelationApi(projectId, input)
-        );
-        // Record the server-normalized row (blocked_by is stored as an inverted
-        // blocks), so a redo replays exactly what was persisted.
-        record({
-          kind: "relation-add",
-          projectId,
-          relationId: created.id,
-          relation: relationSnapshot(created),
-        }, undefined, link);
-        // The board's relation slice already holds the server row: refetching
-        // the whole aggregate would only confirm it.
-        void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
-      } catch (err) {
-        toast.error((err as Error).message);
-      }
-    },
-    [queryClient, record, currentLink]
-  );
-
-  const removeRelation = useCallback(
-    async (relationId: string) => {
-      const link = currentLink();
-      try {
-        relationId = await persistedRelationId(queryClient, relationId);
-      } catch (err) {
-        toast.error((err as Error).message);
-        return;
-      }
-      const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
-      const removed = board?.relations.find((r) => r.id === relationId);
-      const projectId = removed
-        ? endpointProject(board, removed.source_id) ?? endpointProject(board, removed.target_id)
-        : undefined;
-      if (!removed || !projectId) return;
-      // Registered first, so a board read already in flight cannot bring the
-      // row back once the DELETE is confirmed.
-      const removal = beginRelationRemoval(queryClient, projectId, relationId);
-      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-        old
-          ? { ...old, relations: old.relations.filter((r) => r.id !== relationId) }
-          : old
-      );
-      try {
-        await removeIssueRelationApi(relationId);
-        removal.settle();
-        record({
-          kind: "relation-remove",
-          projectId,
-          relationId,
-          relation: relationSnapshot(removed),
-        }, undefined, link);
-        void queryClient.invalidateQueries({
-          queryKey: ["issue-relations", projectId],
-        });
-      } catch (err) {
-        removal.fail();
-        queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-          old && !old.relations.some((r) => r.id === relationId)
-            ? { ...old, relations: [...old.relations, removed] }
-            : old
-        );
-        toast.error((err as Error).message);
-      }
-    },
-    [queryClient, record, currentLink]
-  );
 
   return {
     issues: (data?.issues ?? NO_ISSUES) as Issue[],

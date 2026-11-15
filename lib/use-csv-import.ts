@@ -23,6 +23,7 @@ import {
   type ImportCommitResponse,
 } from "@/lib/import-api";
 import { ISSUE_STATUSES } from "@/lib/issue-validation";
+import { categoriesKey, issuesKey } from "./query-keys";
 
 /** The dropped file, as the preview holds it: read once, reread never. */
 export interface PreparedCsv {
@@ -248,8 +249,8 @@ export function useCsvImport({
     try {
       const result = await importIssuesApi(projectId, prepared.csvText, mapping);
       toast.success(t("importSuccessToast", { count: result.created }));
-      void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
-      void queryClient.invalidateQueries({ queryKey: ["categories", projectId] });
+      void queryClient.invalidateQueries({ queryKey: issuesKey(projectId) });
+      void queryClient.invalidateQueries({ queryKey: categoriesKey(projectId) });
       reset();
       onImported?.(result);
     } catch (e) {

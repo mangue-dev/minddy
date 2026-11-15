@@ -28,6 +28,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PROJECTS_KEY } from "@/lib/query-keys";
 
 /**
  * The icon gestures of a project — import a site's favicon, upload a file,
@@ -53,7 +54,7 @@ export function useProjectIconActions({
   const busy = importing || uploading || removing || rerolling;
 
   const refresh = () =>
-    void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    void queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
 
   /** Resolves `true` once the favicon is imported, `false` otherwise. */
   const handleImport = async (rawUrl: string): Promise<boolean> => {

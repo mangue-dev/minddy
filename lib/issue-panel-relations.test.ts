@@ -45,26 +45,8 @@ function evaluate<T>(expression: string, scope: Record<string, unknown>): T {
 }
 
 const memo = (callback: () => unknown) => callback();
-const callback = (fn: unknown) => fn;
 
 describe("issue panel relation plumbing", () => {
-  it.each([
-    "components/pull-requests/pr-issue-panel.tsx",
-    "components/feedback/feedback-team-page.tsx",
-  ])("forwards objective kinds through %s", (file) => {
-    const addRelation = vi.fn().mockResolvedValue(undefined);
-    const handler = evaluate<(...args: unknown[]) => void>(initializer(file, "handleAddRelation"), {
-      useCallback: callback, addRelation, toast: { error: vi.fn() },
-    });
-    const kinds = { targetType: "objective" };
-    for (const type of ["blocks", "blocked_by", "related"]) {
-      handler("issue", type, "objective", kinds);
-      expect(addRelation).toHaveBeenLastCalledWith("issue", type, "objective", kinds);
-    }
-    handler("issue", "related", "other-issue");
-    expect(addRelation).toHaveBeenLastCalledWith("issue", "related", "other-issue", undefined);
-  });
-
   it("hydrates objective rows and recomputes resolved state from updated objective statuses", () => {
     const expression = initializer("components/issue-side-panel.tsx", "resolvedRelations");
     const issue = { id: "issue", number: 1, status: "todo" };

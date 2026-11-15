@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 
 import { useAuth } from "./auth-context";
 import {
@@ -12,6 +12,7 @@ import {
   type TrashItem,
   type TrashType,
 } from "./trash-api";
+import { ALL_STATS_KEY, GLOBAL_BOARD_KEY, HOME_SUMMARY_KEY, PROJECTS_KEY, SEARCH_INDEX_KEY, TRIAGE_COUNTS_KEY, issuesKey, objectivesKey } from "./query-keys";
 
 const TRASH_KEY = ["me", "trash"] as const;
 
@@ -49,29 +50,28 @@ export function useTrashQuery(): UseTrashResult {
 
   const invalidate = useCallback(
     async (item: TrashItem | null) => {
-      const keys: unknown[][] = [
-        [...TRASH_KEY],
-        ["projects"],
-        ["me", "board"],
+      const keys: QueryKey[] = [
+        TRASH_KEY,
+        PROJECTS_KEY,
+        GLOBAL_BOARD_KEY,
         // The routines live in their own list, outside the project (MIN-201).
         ["routines"],
       ];
       if (item?.project_id) {
         keys.push(
-          ["issues", item.project_id],
-          ["objectives", item.project_id],
+          issuesKey(item.project_id),
+          objectivesKey(item.project_id),
           // The wiki tree: restoring a page brings back a whole sub-tree,
           // that no realtime event would signal (MIN-266).
           ["pages", item.project_id],
-          ["feedback", item.project_id],
-          ["feedback-count", item.project_id]
+          ["feedback", item.project_id]
         );
       }
       keys.push(
-        ["me", "summary"],
-        ["me", "triage-counts"],
-        ["me", "search-index"],
-        ["stats"]
+        HOME_SUMMARY_KEY,
+        TRIAGE_COUNTS_KEY,
+        SEARCH_INDEX_KEY,
+        ALL_STATS_KEY
       );
       await Promise.all(
         keys.map((key) => queryClient.invalidateQueries({ queryKey: key }))

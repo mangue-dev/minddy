@@ -123,7 +123,6 @@ export function CreateIssueDialog({
   categories,
   objectives,
   onCreate,
-  onCreateInProject,
   initialStatus,
   initialObjectiveId,
   initialAssigneeId,
@@ -147,12 +146,8 @@ export function CreateIssueDialog({
   members: Member[];
   categories: Category[];
   objectives: Objective[];
-  onCreate: (input: CreateIssueInput) => Promise<unknown>;
-  /** Create in another project chosen in the "Create in" select. */
-  onCreateInProject: (
-    targetProjectId: string,
-    input: CreateIssueInput,
-  ) => Promise<unknown>;
+  /** Creates in `projectId` or in the project chosen in the "Create in" select. */
+  onCreate: (targetProjectId: string, input: CreateIssueInput) => Promise<unknown>;
   /** Preset the status column the issue lands in (e.g. from a column's "+"). */
   initialStatus?: IssueStatus;
   /** Preset the objective (when creating from an objective-filtered board). */
@@ -707,14 +702,14 @@ export function CreateIssueDialog({
         smart_fill: smartFill,
       };
       if (inHomeProject) {
-        await onCreate({ ...input, resources: uploads.inputs });
+        await onCreate(projectId, { ...input, resources: uploads.inputs });
       } else {
         // Files uploaded before the project changed carry the previous
         // project's storage prefix: the server copies them into the target
         // (and drops pages that do not belong there, MIN-275). Assignee,
         // objective and categories come from the target's own pickers and are
         // validated against it server-side.
-        await onCreateInProject(activeProjectId, { ...input, copy_resources: uploads.inputs });
+        await onCreate(activeProjectId, { ...input, copy_resources: uploads.inputs });
       }
       announceIssueSubmitted();
       // Smart-fill: the card is not yet there (the server fills before

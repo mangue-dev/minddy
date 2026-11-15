@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import { GLOBAL_BOARD_KEY } from "@/lib/query-keys";
 import type { CycleInfo } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { EmptyScene } from "@/components/empty-scene";

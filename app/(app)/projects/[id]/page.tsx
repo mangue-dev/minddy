@@ -1,7 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Layout3ColumnIcon, FileUploadIcon } from "@hugeicons/core-free-icons";
-import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { resolveIssueRef } from "@/lib/app-urls";
 import { expandParam } from "@/lib/ref-registry";
 import { useGeneratingViews } from "@/lib/use-generating-views";
@@ -24,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SplitButton } from "@/components/ui/split-button";
-import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
@@ -42,6 +40,7 @@ import { boardIntegrationFacets } from "@/lib/board-integrations";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import { cycleCompletionPercent } from "@/lib/cycle";
 import { useBoardViews } from "@/lib/use-board-views";
+import { useBoardScreen } from "@/lib/use-board-screen";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
@@ -102,11 +101,7 @@ import {
   loadIssueSidePanel,
   preloadSurface,
 } from "@/lib/lazy-app-surfaces";
-import type {
-  Issue,
-  IssueRelationType,
-  RelationEndpointType,
-} from "@/lib/types";
+import type { Issue } from "@/lib/types";
 
 function ProjectBoard() {
   const t = useTranslations("Board");
@@ -120,7 +115,6 @@ function ProjectBoard() {
   // Record parameters carry short codes; they expand as their lists load.
   const objectiveParam = expandParam(searchParams.get("objective"));
   const familyParam = expandParam(searchParams.get("family"));
-  const issueParam = searchParams.get("issue");
   const newParam = searchParams.get("new");
   const viewParam = expandParam(searchParams.get("view"));
   const setupParam = searchParams.get("setup");
@@ -135,7 +129,6 @@ function ProjectBoard() {
     issues,
     loading: issuesLoading,
     createIssue,
-    createIssueInProject,
     updateIssue,
     deleteIssue,
     moveIssue,
@@ -271,13 +264,6 @@ function ProjectBoard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createMounted, setCreateMounted] = useState(false);
   const [createStatus, setCreateStatus] = useState<IssueStatus | undefined>(undefined);
-  const [openIssueId, setOpenIssueId] = useState<string | null>(null);
-  useAppTabChange(() => setOpenIssueId(null));
-  const [sidePanelMounted, setSidePanelMounted] = useState(false);
-  // Which tab the side panel shows when it (re)opens on an issue.
-  const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
-    "description"
-  );
   // The import start (MIN-171): `?setup=import` opens the import panel with
   // the CSV dropped in the wizard.
   const [importOpen, setImportOpen] = useState(false);
@@ -304,18 +290,6 @@ function ProjectBoard() {
   }, 3_000, 1_500), [createMounted]);
 
   useEffect(() => {
-    if (openIssueId) setSidePanelMounted(true);
-  }, [openIssueId]);
-
-  // Mount the closed panel during idle time so its large hook tree and editor
-  // preload do not land on the first card click. The transition remains
-  // interruptible if the user interacts while the warm-up is rendering.
-  useEffect(() => sidePanelMounted ? undefined : afterFirstContentIdle(() => {
-    preloadSurface(loadIssueSidePanel);
-    startTransition(() => setSidePanelMounted(true));
-  }, 4_000, 2_000), [sidePanelMounted]);
-
-  useEffect(() => {
     if (importOpen) setImportMounted(true);
   }, [importOpen]);
 
@@ -326,41 +300,12 @@ function ProjectBoard() {
     setCreateOpen(true);
   }, []);
 
-  // Relations (MIN-25): open a related issue by id, add/remove relations.
-  const openIssueById = useCallback((id: string) => {
-    setOpenIssueId(id);
-    setOpenIssueTab("description");
-  }, []);
-
-  const handleOpenIssue = useCallback((issue: Issue) => {
-    setOpenIssueId(issue.id);
-    setOpenIssueTab("description");
-  }, []);
-  const handleOpenPlan = useCallback((issue: Issue) => {
-    setOpenIssueId(issue.id);
-    setOpenIssueTab("plan");
-  }, []);
-  const handleAddRelation = useCallback(
-    (
-      sourceId: string,
-      type: IssueRelationType,
-      targetId: string,
-      kinds?: { sourceType?: RelationEndpointType; targetType?: RelationEndpointType }
-    ) => {
-      void addRelation(sourceId, type, targetId, kinds).catch((err) =>
-        toast.error((err as Error).message)
-      );
-    },
-    [addRelation]
-  );
-  const handleRemoveRelation = useCallback(
-    (relationId: string) => {
-      void removeRelation(relationId).catch((err) =>
-        toast.error((err as Error).message)
-      );
-    },
-    [removeRelation]
-  );
+  const { panel, handleCreateView, handleAskAI } = useBoardScreen({
+    projectId,
+    activeView,
+    createViewAndSelect,
+    beginGenerating,
+  });
 
   // Family mode takes precedence over the objective and saved-view filters.
   // Its URL keeps the current view so leaving the family restores it intact.
@@ -439,44 +384,9 @@ function ProjectBoard() {
     },
     [openIntent, project],
   );
-  const handleCreateView = async (name: string, description?: string) => {
-    const view = await createViewAndSelect(name);
-    const wish = description?.trim();
-    if (wish) {
-      // Hand the view over to the AI: mark it generating, then ask the AI to
-      // fill in its filters/sort from the description. It edits this exact
-      // view (the id rides along in pageContext), and the board reflects the
-      // change live once realtime brings the updated view back (see the
-      // config-sync effect).
-      beginGenerating(view);
-      openAssistant({
-        projectId,
-        prompt: t("aiBuildViewPrompt", { name, description: wish }),
-        pageContext: { projectId, viewId: view.id, viewName: name },
-      });
-    } else {
-      toast.success(t("viewCreated", { name }));
-    }
-  };
-
-  // The filters menu's “Create with Numo”: hand the typed wish to the Numo
-  // conversation (MIN-592, review — the classifier pass proved unreliable for
-  // filter selection, the agent with its hardened view tools is the reliable
-  // path), carrying the active view as context so "this view" resolves.
-  // Nothing typed opens the composer on that same context.
-  const handleAskAI = (wish: string) => {
-    openAssistant({
-      projectId,
-      ...(wish ? { prompt: t("aiFilterPrompt", { wish }) } : { focusComposer: true }),
-      pageContext: activeView
-        ? { projectId, viewId: activeView.id, viewName: activeView.name }
-        : { projectId },
-    });
-  };
-
   // A deep link names the issue `MIN-42` or by short code; panels set its id.
-  const openIssue = openIssueId
-    ? resolveIssueRef(openIssueId, issues) ?? null
+  const openIssue = panel.openIssueRef
+    ? resolveIssueRef(panel.openIssueRef, issues) ?? null
     : null;
 
   // The active view of a board lives in localStorage, not in the address —
@@ -536,14 +446,6 @@ function ProjectBoard() {
           : { projectId, ...viewCtx }
       : null
   );
-
-  // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
-  useEffect(() => {
-    if (issueParam) {
-      setOpenIssueId(issueParam);
-      setOpenIssueTab("description");
-    }
-  }, [issueParam]);
 
   // Header "Nouveau → Nouvelle issue": /projects/[id]?new=issue opens the dialog.
   useEffect(() => {
@@ -706,7 +608,7 @@ function ProjectBoard() {
               projectId={project.id}
               projectKey={project.key}
               issues={issues}
-              onOpenIssue={openIssueById}
+              onOpenIssue={panel.openIssueById}
               progress={objectiveProgress(activeObjective.id, issues)}
               lead={
                 activeObjective.lead_user_id
@@ -766,11 +668,11 @@ function ProjectBoard() {
               currentCycleId={currentCycle?.id ?? null}
               onSetCycle={onSetIssueCycle}
               projects={boardProjects}
-              onOpenIssue={handleOpenIssue}
-              onOpenIssueById={openIssueById}
-              onAddRelation={handleAddRelation}
-              onRemoveRelation={handleRemoveRelation}
-              onOpenPlan={handleOpenPlan}
+              onOpenIssue={panel.openIssue}
+              onOpenIssueById={panel.openIssueById}
+              onAddRelation={addRelation}
+              onRemoveRelation={removeRelation}
+              onOpenPlan={panel.openPlan}
               // Project readers (MIN-693) create nothing.
               onCreateIssue={canWrite ? openCreate : undefined}
               onAskNumo={handleAskNumoForIssues}
@@ -794,7 +696,6 @@ function ProjectBoard() {
           categories={categories}
           objectives={objectives}
           onCreate={createIssue}
-          onCreateInProject={createIssueInProject}
           initialStatus={createStatus}
           // Family mode: a new issue created from this scoped board lands IN
           // the family — without the preset it would be born top-level and
@@ -814,33 +715,13 @@ function ProjectBoard() {
         />
       ) : null}
 
-      {sidePanelMounted ? (
+      {panel.mounted ? (
         <IssueSidePanel
           issue={openIssue}
           open={!!openIssue}
-          onOpenChange={(next) => {
-            if (!next) {
-              setOpenIssueId(null);
-              // Strip the deep-link param so re-opening the same issue works.
-              if (issueParam) router.replace(pathname);
-            }
-          }}
-          projectKey={project.key}
-          members={members}
-          categories={categories}
-          objectives={objectives}
-          allIssues={issues}
-          relations={relations}
-          onUpdate={updateIssue}
-          onDelete={deleteIssue}
-          onSetCategories={setCategories}
-          onOpenIssue={(id) => {
-            setOpenIssueId(id);
-            setOpenIssueTab("description");
-          }}
-          onAddRelation={handleAddRelation}
-          onRemoveRelation={handleRemoveRelation}
-          initialTab={openIssueTab}
+          onOpenChange={panel.onOpenChange}
+          onOpenIssue={panel.openIssueById}
+          initialTab={panel.tab}
         />
       ) : null}
 

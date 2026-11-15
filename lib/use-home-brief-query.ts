@@ -1,16 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-/**
- * Numo's word on the home page (MIN-930), as GET /api/home/brief returns it.
- * Numo writes it in the background; this read never calls a model.
- *
- * Freshness: a new version is announced on the user's realtime topic
- * (`numo_home_briefs`, without its content) and invalidates this key
- * (lib/realtime-keys.ts). No staleTime, therefore.
- */
-export const HOME_BRIEF_KEY = ["me", "home-brief"] as const;
+import { HOME_BRIEF_KEY } from "./query-keys";
 
 export interface HomeBriefSuggestion {
   label: string;
@@ -25,6 +16,14 @@ export interface HomeBrief {
   generated_at: string;
 }
 
+/**
+ * Numo's word on the home page (MIN-930), as GET /api/home/brief returns it.
+ * Numo writes it in the background; this read never calls a model.
+ *
+ * Freshness: a new version is announced on the user's realtime topic
+ * (`numo_home_briefs`, without its content) and invalidates this key
+ * (lib/realtime-keys.ts). No staleTime, therefore.
+ */
 export function useHomeBriefQuery(enabled = true) {
   const { data, isPending } = useQuery({
     queryKey: HOME_BRIEF_KEY,

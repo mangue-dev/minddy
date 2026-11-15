@@ -1,9 +1,10 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { CATEGORY_WRITE_DEBOUNCE_MS, createIssueMutations } from "./use-issue-mutations";
-import { GLOBAL_BOARD_KEY, applyPendingIssues, issueWrites } from "./optimistic/issue-writes";
+import { applyPendingIssues, issueWrites } from "./optimistic/issue-writes";
 import type { GlobalBoardResponse, Issue } from "./types";
 import type { UndoRecord } from "./undo/undo-context";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 
 const mocks = vi.hoisted(() => ({
   updateIssue: vi.fn(),

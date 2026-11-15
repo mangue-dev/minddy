@@ -1,21 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { IssueSidePanel } from "@/components/issue-side-panel";
-import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
-import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
-import { useMembersQuery } from "@/lib/use-members-query";
-import { useCategoriesQuery } from "@/lib/use-categories-query";
-import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import type {
-  Issue,
-  IssueRelationType,
-  RelationEndpointType,
-} from "@/lib/types";
 
-/** Loads the owning project's data and displays an issue above the current page. */
+/**
+ * An issue of any project in the side panel, above the current page and
+ * without navigating to its board: the app-wide panel (Inbox, palette,
+ * mentions) and the Pull Requests page (MIN-66). Hosts mount it with
+ * `key={projectId}:{issueId}`, so it starts over on another issue.
+ */
 export function GlobalIssuePanel({
   projectId,
   issueId,
@@ -28,39 +22,10 @@ export function GlobalIssuePanel({
   open?: boolean;
   onClose: () => void;
 }) {
-  const { projects } = useProjects();
-  const project = projects.find((candidate) => candidate.id === projectId) ?? null;
-  const { issues, updateIssue, deleteIssue, setCategories } =
-    useIssuesQuery(projectId);
-  const { relations, addRelation, removeRelation } =
-    useIssueRelationsQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
-  const { categories } = useCategoriesQuery(projectId);
-  const { objectives } = useObjectivesQuery(projectId);
+  const { issues } = useIssuesQuery(projectId);
+  // The issue shown: a relation or the parent link opens another one here.
   const [openId, setOpenId] = useState(issueId);
-  const issue: Issue | null = issues.find((candidate) => candidate.id === openId) ?? null;
-
-  const handleAddRelation = useCallback(
-    (
-      sourceId: string,
-      type: IssueRelationType,
-      targetId: string,
-      kinds?: { sourceType?: RelationEndpointType; targetType?: RelationEndpointType },
-    ) => {
-      void addRelation(sourceId, type, targetId, kinds).catch((error) =>
-        toast.error((error as Error).message),
-      );
-    },
-    [addRelation],
-  );
-  const handleRemoveRelation = useCallback(
-    (relationId: string) => {
-      void removeRelation(relationId).catch((error) =>
-        toast.error((error as Error).message),
-      );
-    },
-    [removeRelation],
-  );
+  const issue = issues.find((candidate) => candidate.id === openId) ?? null;
 
   return (
     <IssueSidePanel
@@ -69,19 +34,7 @@ export function GlobalIssuePanel({
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      projectKey={project?.key ?? ""}
-      members={members}
-      categories={categories}
-      objectives={objectives}
-      allIssues={issues}
-      relations={relations}
-      onUpdate={updateIssue}
-      // The panel closes itself after a successful delete, which calls onClose.
-      onDelete={deleteIssue}
-      onSetCategories={setCategories}
       onOpenIssue={setOpenId}
-      onAddRelation={handleAddRelation}
-      onRemoveRelation={handleRemoveRelation}
     />
   );
 }

@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { RetainedAppView } from "@/lib/retained-app-views";
+import { PROJECTS_KEY } from "@/lib/query-keys";
 
 /** Local retained navigation does not run the server metadata route again.
  * Mount before the board so an issue panel can subsequently own its title.
@@ -17,7 +18,7 @@ export function RetainedBoardTitle({ view }: { view: RetainedAppView }) {
   const subscribe = useCallback((notify: () => void) => client.getQueryCache().subscribe((event) => {
     if (event.query.queryKey.length === 1 && event.query.queryKey[0] === "projects") notify();
   }), [client]);
-  const read = useCallback(() => client.getQueryData<{ id: string; name: string }[]>(["projects"])?.find((project) => project.id === expandProjectSegment(view.route.projectSegment))?.name ?? null, [client, view.route.projectSegment]);
+  const read = useCallback(() => client.getQueryData<{ id: string; name: string }[]>(PROJECTS_KEY)?.find((project) => project.id === expandProjectSegment(view.route.projectSegment))?.name ?? null, [client, view.route.projectSegment]);
   const name = useSyncExternalStore(subscribe, read, () => null);
   const label = view.kind === "global-board" ? t("all") : view.kind === "project-board" ? name ?? t("project")
     : view.kind === "pull-requests" ? t("pullRequests") : t(view.kind);

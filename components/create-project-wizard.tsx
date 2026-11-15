@@ -83,6 +83,7 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo, Collaborator } from "@/lib/types";
 import { TruncatedText } from "@/components/ui/truncated-text";
+import { PROJECTS_KEY, membersKey } from "@/lib/query-keys";
 
 /**
  * Project creation wizard (MIN-62, MIN-171, MIN-689): Where do we start? →
@@ -751,7 +752,7 @@ export function CreateProjectWizard({
           failed.push({ label, message: (err as Error).message });
         }
       }
-      void queryClient.invalidateQueries({ queryKey: ["members", created.id] });
+      void queryClient.invalidateQueries({ queryKey: membersKey(created.id) });
       if (failed.length > 0) {
         // Persistent: it names who was not invited, and the wizard is about
         // to close — a toast that fades would leave no trace of it.
@@ -775,7 +776,7 @@ export function CreateProjectWizard({
 
     // The icon and settings are applied after creation: the cached list
     // already dates back before.
-    void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    void queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
     track("project_wizard_completed", {
       has_git_link: !!repo,
       smart_assign_enabled: smartAssignEnabled,

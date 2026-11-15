@@ -1,26 +1,13 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
-import {
-  addIssueRelationApi,
-  fetchIssueRelationsApi,
-  removeIssueRelationApi,
-} from "./issue-relations-api";
-import { useUndoHistory } from "./undo/undo-context";
-import type {
-  IssueRelation,
-  IssueRelationType,
-  RelationEndpointType,
-} from "./types";
+import { fetchIssueRelationsApi } from "./issue-relations-api";
+import type { IssueRelation } from "./types";
+import { issueRelationsKey } from "./query-keys";
+import { useRelationMutations } from "./use-relation-mutations";
 
-import { addRelationOptimistically, persistedRelationId, relationsKey } from "./optimistic/relation-writes";
-
-/** Endpoint kinds of a relation being added (MIN-513) — default `issue` both. */
-export interface RelationKinds {
-  sourceType?: RelationEndpointType;
-  targetType?: RelationEndpointType;
-}
+/** Stable while loading: memoized boards and panels keep their render. */
+const NO_RELATIONS: IssueRelation[] = [];
 
 /**
  * Project-wide issue relations (MIN-25). One list per project, kept fresh by the
@@ -29,97 +16,17 @@ export interface RelationKinds {
  */
 export function useIssueRelationsQuery(projectId: string | null) {
   const queryClient = useQueryClient();
-  // Local undo history (MIN-35): relation edits record like issue edits do.
-  const { record, currentLink } = useUndoHistory();
+  const { addRelation, removeRelation } = useRelationMutations(projectId);
 
   const enabled = !!projectId;
   const { data, isPending } = useQuery({
-    queryKey: relationsKey(projectId ?? ""),
+    queryKey: issueRelationsKey(projectId ?? ""),
     queryFn: () => fetchIssueRelationsApi(projectId as string, queryClient),
     enabled,
   });
 
-  const invalidate = useCallback(() => {
-    if (projectId) {
-      void queryClient.invalidateQueries({ queryKey: relationsKey(projectId) });
-    }
-  }, [queryClient, projectId]);
-
-  const addRelation = useCallback(
-    async (
-      sourceId: string,
-      type: IssueRelationType,
-      targetId: string,
-      kinds?: RelationKinds
-    ) => {
-      if (!projectId) return;
-      const input = {
-        source_id: sourceId,
-        target_id: targetId,
-        type,
-        source_type: kinds?.sourceType,
-        target_type: kinds?.targetType,
-      };
-      // Read before awaiting: the selection gesture that asked for it is over
-      // by the time the server answers (MIN-795).
-      const link = currentLink();
-      const created = await addRelationOptimistically(queryClient, projectId, input, () => addIssueRelationApi(projectId, input));
-      // Record the server-normalized row (blocked_by → inverted blocks).
-      record({
-        kind: "relation-add",
-        projectId,
-        relationId: created.id,
-        relation: {
-          source_id: created.source_id,
-          target_id: created.target_id,
-          type: created.type,
-          source_type: created.source_type,
-          target_type: created.target_type,
-        },
-      }, undefined, link);
-      invalidate();
-    },
-    [projectId, queryClient, invalidate, record, currentLink]
-  );
-
-  const removeRelation = useCallback(
-    async (relationId: string) => {
-      if (!projectId) return;
-      const link = currentLink();
-      relationId = await persistedRelationId(queryClient, relationId);
-      const key = relationsKey(projectId);
-      const previous = queryClient.getQueryData<IssueRelation[]>(key);
-      const removed = previous?.find((r) => r.id === relationId);
-      queryClient.setQueryData<IssueRelation[]>(key, (old) =>
-        (old ?? []).filter((r) => r.id !== relationId)
-      );
-      try {
-        await removeIssueRelationApi(relationId);
-        if (removed) {
-          record({
-            kind: "relation-remove",
-            projectId,
-            relationId,
-            relation: {
-              source_id: removed.source_id,
-              target_id: removed.target_id,
-              type: removed.type,
-              source_type: removed.source_type,
-              target_type: removed.target_type,
-            },
-          }, undefined, link);
-        }
-        invalidate();
-      } catch (err) {
-        queryClient.setQueryData(key, previous);
-        throw err;
-      }
-    },
-    [projectId, queryClient, invalidate, record, currentLink]
-  );
-
   return {
-    relations: (data ?? []) as IssueRelation[],
+    relations: data ?? NO_RELATIONS,
     loading: enabled && isPending,
     addRelation,
     removeRelation,

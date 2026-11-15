@@ -5,7 +5,7 @@ import { Cancel01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useQuery } from "@tanstack/react-query";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -102,7 +102,7 @@ import { AgentBeamOverlay } from "@/components/agent-beam";
 import { hasPlanTasks, planProgress } from "@/lib/plan";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { useAuth } from "@/lib/auth-context";
-import { ProjectsContext } from "@/lib/projects-context-store";
+import { useIssuePanelData, type IssuePanelBoardData } from "@/lib/use-issue-panel-data";
 import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
@@ -115,61 +115,29 @@ import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import type {
-  Category,
   Issue,
   IssueDraftPatch,
-  IssueRelation,
-  IssueRelationType,
   IssueUpdateInput,
-  Member,
-  Objective,
-  RelationEndpointType,
 } from "@/lib/types";
 
 export function IssueSidePanel({
   issue: liveIssue,
   open: requestedOpen,
   onOpenChange,
-  projectKey,
-  members,
-  categories,
-  objectives,
-  allIssues,
-  relations,
-  onUpdate,
-  onDelete,
-  onSetCategories,
   onOpenIssue,
-  onAddRelation,
-  onRemoveRelation,
+  onDeleted,
+  boardData,
   initialTab = "description",
 }: {
   issue: Issue | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectKey: string;
-  members: Member[];
-  categories: Category[];
-  objectives: Objective[];
-  allIssues: Issue[];
-  /** Every project relation row (raw); resolved for this issue below. */
-  relations: IssueRelation[];
-  /** The shared issue writers (lib/use-issue-mutations.ts): they show their
-      own errors and resolve to null or false on failure. */
-  onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<Issue | null>;
-  onDelete: (issueId: string) => Promise<boolean>;
-  onSetCategories: (issueId: string, categoryIds: string[]) => Promise<boolean>;
+  /** Opens another issue of the same project in this panel. */
   onOpenIssue: (id: string) => void;
-  onAddRelation: (
-    sourceId: string,
-    type: IssueRelationType,
-    targetId: string,
-    kinds?: {
-      sourceType?: RelationEndpointType;
-      targetType?: RelationEndpointType;
-    }
-  ) => void;
-  onRemoveRelation: (relationId: string) => void;
+  /** After the issue was deleted (the panel then closes itself). */
+  onDeleted?: (issueId: string) => void;
+  /** The project data a board already holds; the panel reads it otherwise. */
+  boardData?: IssuePanelBoardData;
   /** Tab to show when the panel (re)opens on a new issue. */
   initialTab?: "description" | "plan";
 }) {
@@ -190,8 +158,25 @@ export function IssueSidePanel({
   // Project readers (MIN-693) see the ticket without editing controls; the
   // server rejects their writes regardless.
   const { canWrite, canComment } = useProjectCapabilities(issue?.project_id ?? null);
-  // Read without requiring the provider: some hosts render the panel outside it.
-  const issueProject = useContext(ProjectsContext)?.projects.find((p) => p.id === issue?.project_id);
+  const {
+    project: issueProject,
+    projectKey,
+    members,
+    categories,
+    objectives,
+    allIssues,
+    relations,
+    updateIssue: onUpdate,
+    deleteIssue,
+    setCategories: onSetCategories,
+    addRelation: onAddRelation,
+    removeRelation: onRemoveRelation,
+  } = useIssuePanelData(issue?.project_id ?? null, boardData);
+  const onDelete = useCallback(async (issueId: string) => {
+    const deleted = await deleteIssue(issueId);
+    if (deleted) onDeleted?.(issueId);
+    return deleted;
+  }, [deleteIssue, onDeleted]);
   const readOnly = !canWrite;
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
@@ -208,8 +193,8 @@ export function IssueSidePanel({
   useEffect(() => setRelationsOpen(false), [issue?.id, open]);
   const [tab, setTab] = useIssuePanelTab(issue?.id ?? null, initialTab);
   // Remount the description editor when the description is rewritten under it
-  // (dictation, or distant writing) — it only reads `value` during editing and
-  // ne commite qu'au blur.
+  // (dictation, or a remote write): while editing it only reads `value` and
+  // commits on blur.
   const [editorKey, setEditorKey] = useState(0);
   // The description's editor document (MIN-728): what Markdown cannot carry —
   // block identities, colors, pills. `undefined` while it loads.

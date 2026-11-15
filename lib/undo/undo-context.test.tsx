@@ -3,12 +3,13 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import { GLOBAL_BOARD_KEY, issueWrites } from "@/lib/optimistic/issue-writes";
+import { issueWrites } from "@/lib/optimistic/issue-writes";
 import type { GlobalBoardResponse, Issue } from "@/lib/types";
 import { toast } from "sonner";
 import { HttpResponseError } from "@/lib/backend-availability";
 import { UndoProvider, useUndoHistory, type UndoRecord } from "./undo-context";
 import type { IssueSnapshot } from "./undo-core";
+import { GLOBAL_BOARD_KEY } from "../query-keys";
 
 const api = vi.hoisted(() => ({
   update: vi.fn(), categories: vi.fn(), create: vi.fn(), delete: vi.fn(), fetch: vi.fn(), restore: vi.fn(),

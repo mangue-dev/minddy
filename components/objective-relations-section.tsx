@@ -22,7 +22,6 @@ import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import {
@@ -163,14 +162,14 @@ export const ObjectiveRelationsSection = memo(function ObjectiveRelationsSection
     onPickIssue: (_type, issueId) => {
       void addRelation(objective.id, step, issueId, {
         sourceType: "objective",
-      }).catch((err) => toast.error((err as Error).message));
+      });
       close();
     },
     onPickObjective: (_type, objectiveId) => {
       void addRelation(objective.id, step, objectiveId, {
         sourceType: "objective",
         targetType: "objective",
-      }).catch((err) => toast.error((err as Error).message));
+      });
       close();
     },
     onClose: close,
@@ -359,9 +358,7 @@ export const ObjectiveRelationsSection = memo(function ObjectiveRelationsSection
         cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           if (!removeTarget) return;
-          void Promise.resolve(removeRelation(removeTarget.id)).catch(
-            (err) => toast.error((err as Error).message),
-          );
+          void removeRelation(removeTarget.id);
         }}
       />
     </>

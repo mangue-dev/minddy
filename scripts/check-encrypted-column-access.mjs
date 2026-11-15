@@ -170,7 +170,7 @@ const rules = [
       "lib/server/feedback/comments.ts", "lib/server/feedback/votes.ts",
       "lib/server/add-comment.ts", "lib/server/assistant/comment-agent.ts",
       "app/api/cron/feedback-analysis/route.ts", "app/api/me/triage-counts/route.ts",
-      "app/api/projects/[id]/feedback/counts/route.ts", "app/api/v1/feedback/[id]/vote/route.ts",
+      "app/api/v1/feedback/[id]/vote/route.ts",
       "captures/world/seed/007-feedback.mjs",
     ]),
   },

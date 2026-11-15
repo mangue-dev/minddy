@@ -14,8 +14,8 @@ import {
   type MemberAccessInput,
 } from "./members-api";
 import type { MembersResponse } from "./types";
+import { membersKey, PROJECTS_KEY, issuesKey } from "./query-keys";
 
-const membersKey = (projectId: string) => ["members", projectId] as const;
 // One empty value while loading: a fresh one each render broke every
 // memoized board column and card that receives the members (MIN-875).
 const NO_MEMBERS: MembersResponse = {
@@ -81,7 +81,7 @@ export function useMembersQuery(projectId: string | null, enabled: boolean) {
       invalidate();
       // A demotion unassigns the reader's open issues.
       if (access.role === "reader") {
-        void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
+        void queryClient.invalidateQueries({ queryKey: issuesKey(projectId as string) });
       }
       return result;
     },
@@ -102,7 +102,7 @@ export function useMembersQuery(projectId: string | null, enabled: boolean) {
       invalidate();
       // The viewer's own role changed: the project list carries `my_role`,
       // and routines were paused.
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
       void queryClient.invalidateQueries({ queryKey: ["routines"] });
       return result;
     },

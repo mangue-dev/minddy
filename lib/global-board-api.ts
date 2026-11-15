@@ -7,7 +7,6 @@ import { applyPendingRelations } from "./optimistic/relation-writes";
 import {
   applyPendingBoard,
   applyPendingIssues,
-  GLOBAL_BOARD_KEY,
   issueWrites,
 } from "./optimistic/issue-writes";
 import {
@@ -23,6 +22,7 @@ import {
 } from "./global-board-reads";
 import type { QueryClient } from "@tanstack/react-query";
 import type { GlobalBoardResponse, Issue } from "./types";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 
 export function browserTimeZone(): string {
   try {

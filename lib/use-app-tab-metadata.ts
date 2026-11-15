@@ -8,6 +8,7 @@ import { useRefRegistryVersion } from "./use-ref-registry-version";
 import { APP_TAB_METADATA_BATCH_SIZE, appTabMetadataLocations, type AppTabMetadata } from "./app-tab-metadata";
 import { createPullRequestTabLabels } from "./pull-request-tab-labels";
 import { fetchRoutinesApi } from "./routines-api";
+import { issuesKey, objectivesKey } from "./query-keys";
 
 const empty: AppTabMetadata = { pages: [], objectives: [], pullRequests: [], routines: [], issues: [] };
 
@@ -58,7 +59,7 @@ export function useAppTabMetadata(hrefs: string[]) {
     select: (pages: AppTabMetadata["pages"]) => pages.filter((page) => routes.some((route) => route.pageId === page.id)).map(({ id, project_id, title, icon }) => ({ id, project_id, title, icon })),
   })) });
   const objectiveQueries = useQueries({ queries: objectiveProjects.map((projectId) => ({
-    queryKey: ["objectives", projectId], enabled: false,
+    queryKey: objectivesKey(projectId), enabled: false,
     select: (objectives: AppTabMetadata["objectives"]) => objectives.filter((objective) => routes.some((route) => route.objectiveId === objective.id)).map(({ id, project_id, name, color, status }) => ({ id, project_id, name, color, status })),
   })) });
   const prLabels = useMemo(() => createPullRequestTabLabels(client, prIds), [client, prIds]);
@@ -66,7 +67,7 @@ export function useAppTabMetadata(hrefs: string[]) {
   // Family boards name their tab after the parent issue: the project board's
   // own ["issues", projectId] cache already carries it — reuse, never fetch.
   const familyQueries = useQueries({ queries: familyProjects.map((projectId) => ({
-    queryKey: ["issues", projectId], enabled: false,
+    queryKey: issuesKey(projectId), enabled: false,
     select: (issues: { id: string; number: number; title: string }[]) => issues
       .filter((issue) => routes.some((route) => route.familyId === issue.id))
       .map(({ id, number, title }) => ({ id, project_id: projectId, number, title })),
@@ -96,7 +97,7 @@ export function useAppTabMetadata(hrefs: string[]) {
     for (const page of query.data) pageById.set(page.id, page);
   });
   objectiveQueries.forEach((query, index) => {
-    if (!query.data || superseded(["objectives", objectiveProjects[index]])) return;
+    if (!query.data || superseded(objectivesKey(objectiveProjects[index]))) return;
     for (const [id, objective] of objectiveById) if (objective.project_id === objectiveProjects[index]) objectiveById.delete(id);
     for (const objective of query.data) objectiveById.set(objective.id, objective);
   });
@@ -107,7 +108,7 @@ export function useAppTabMetadata(hrefs: string[]) {
     else prById.set(id, label.value);
   });
   familyQueries.forEach((query, index) => {
-    if (!query.data || superseded(["issues", familyProjects[index]])) return;
+    if (!query.data || superseded(issuesKey(familyProjects[index]))) return;
     for (const [id, issue] of issueById) if (issue.project_id === familyProjects[index]) issueById.delete(id);
     for (const issue of query.data) issueById.set(issue.id, issue);
   });

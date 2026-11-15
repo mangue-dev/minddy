@@ -22,7 +22,7 @@ import { BoardWindowedItems } from "@/components/board-windowed-items";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
-import type { RelationKinds } from "@/lib/use-issue-relations-query";
+import type { RelationKinds } from "@/lib/use-relation-mutations";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 /** A card's project, as the board resolves it for the viewer. */

@@ -33,7 +33,6 @@ import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { RELATION_PRIORITY, RELATION_TYPES, closedObjectivesLast } from "@/lib/relation-constants";
@@ -416,9 +415,7 @@ export const RelationsSection = memo(function RelationsSection({
         cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           if (!removeTarget) return;
-          void Promise.resolve(onRemoveRelation(removeTarget.id)).catch(
-            (err) => toast.error((err as Error).message),
-          );
+          onRemoveRelation(removeTarget.id);
         }}
       />
     </>

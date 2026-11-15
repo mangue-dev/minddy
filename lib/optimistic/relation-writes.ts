@@ -2,10 +2,9 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { normalizeRelation } from "../relation-constants";
+import { GLOBAL_BOARD_KEY, issueRelationsKey } from "../query-keys";
 import type { CreateIssueRelationInput, GlobalBoardResponse, IssueRelation } from "../types";
 
-const boardKey = ["me", "board"] as const;
-export const relationsKey = (projectId: string) => ["issue-relations", projectId] as const;
 const retentionMs = 30_000;
 const temporaryPrefix = "optimistic-relation:";
 
@@ -101,8 +100,18 @@ export function isOwnRelationEcho(client: QueryClient, change: { operation: stri
 }
 
 function updateCaches(client: QueryClient, projectId: string, update: (rows: IssueRelation[]) => IssueRelation[]): void {
-  client.setQueryData<IssueRelation[]>(relationsKey(projectId), (old) => old === undefined ? old : update(old));
-  client.setQueryData<GlobalBoardResponse>(boardKey, (old) => old ? { ...old, relations: update(old.relations) } : old);
+  client.setQueryData<IssueRelation[]>(issueRelationsKey(projectId), (old) => old === undefined ? old : update(old));
+  client.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) => old ? { ...old, relations: update(old.relations) } : old);
+}
+
+/** Drop a relation from the project and aggregate caches. */
+export function removeRelationFromCaches(client: QueryClient, projectId: string, id: string): void {
+  updateCaches(client, projectId, (rows) => rows.filter((r) => r.id !== id));
+}
+
+/** Put back a relation whose removal failed, unless a read already did. */
+export function restoreRelationInCaches(client: QueryClient, projectId: string, row: IssueRelation): void {
+  updateCaches(client, projectId, (rows) => rows.some((r) => r.id === row.id) ? rows : [...rows, row]);
 }
 
 /** Insert synchronously; reconcile or roll back only this addition. */
@@ -115,7 +124,7 @@ export function addRelationOptimistically(client: QueryClient, projectId: string
   const duplicate = [...pending].find((w) => w.projectId === projectId && w.settledAt === null && sameRelation(w.row, row));
   if (duplicate) return duplicate.result;
 
-  void client.cancelQueries({ queryKey: relationsKey(projectId) });
+  void client.cancelQueries({ queryKey: issueRelationsKey(projectId) });
   // The aggregate read is not cancelled: its query function applies this
   // write, and restarting it would repeat a multi-second server read.
   const write: Write = { projectId, row, settledAt: null, result: Promise.resolve(row) };

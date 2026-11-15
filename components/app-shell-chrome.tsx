@@ -3,15 +3,10 @@
 import { expandParam } from "@/lib/ref-registry";
 import { useCanonicalProjectUrl } from "@/lib/use-canonical-project-url";
 import { issueHref, objectiveHref, pagePath, projectPath } from "@/lib/app-urls";
-import { useIsAdmin } from "@/lib/use-is-admin";
-import { ADMIN_SECTION_PARAM, useAdminSections } from "@/lib/admin-sections";
-import { visibleAdminTabs, type AdminTabId } from "@/lib/admin-tabs";
-import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
 import { pageHref } from "@/lib/pages-navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { documentationPath } from "@/lib/documentation-core.mjs";
 import { ContentToaster } from "@/components/content-toaster";
-import { Add01Icon, AiAutoRotateIcon as CycleIcon, Book02Icon, BotIcon, DollarCircleIcon, ServerStack01Icon, UserGroupIcon, Alert01Icon, ArrowLeft01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowLeft01Icon, Clock01Icon as FileClock, Delete02Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   startTransition,
@@ -28,7 +23,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { usePendingNavigation } from "@/lib/pending-navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { AppShell, SkipToContentLink, requestMainFocusOnNavigation, useMainFocusOnNavigation } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
@@ -47,13 +42,10 @@ import { useRoutinesQuery } from "@/lib/use-routines-query";
 import { allPullRequestsQueryOptions } from "@/lib/use-agent-runs";
 import { fetchViewsApi } from "@/lib/views-api";
 import { useNotificationPlainText } from "@/lib/use-notification-text";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useHiddenProjects, visibleNavigationProjects } from "@/lib/use-hidden-projects";
 import { useCreate } from "@/lib/create-context";
-import { useAllDrafts } from "@/lib/use-all-drafts";
-import { useScratchpad } from "@/lib/scratchpad-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { useMyInvitations } from "@/lib/use-invitations-query";
 import { issuesQueryFn } from "@/lib/issues-api";
@@ -84,10 +76,9 @@ import { AppTabPanel } from "@/components/app-tab-view-host";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
-import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
+import { projectOrbIcon } from "@/components/project-orb";
 import { ProjectContextActionsProvider, useCreateProjectPage, useProjectContextActions } from "@/components/project-context-actions";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { NumoIcon } from "@/components/numo-icon";
 import {
   AppSidebar,
   EXPANDED_WIDTH,
@@ -98,19 +89,17 @@ import {
 } from "@/components/app-sidebar";
 import { applyProjectOrder, moveProjectInOrder } from "@/lib/project-order";
 import { useProjectOrder } from "@/lib/use-project-order";
-
-/** A project's row in the home panel, and back (MIN-968 reorders by it). */
-const PROJECT_NAV_KEY_PREFIX = "project-";
-const projectNavKey = (projectId: string) => `${PROJECT_NAV_KEY_PREFIX}${projectId}`;
-const projectIdFromNavKey = (key: string) => key.slice(PROJECT_NAV_KEY_PREFIX.length);
+import {
+  HOME_BACK_NAV_KEY,
+  projectIdFromNavKey,
+  projectNavEntries,
+  projectNavKey,
+  type ProjectNavEntry,
+  type ProjectNavLocation,
+} from "@/components/project-nav-model";
+import { projectChip, useShellCommandGroups } from "@/components/app-shell-palette-commands";
 import { SidebarNavOverlay } from "@/components/sidebar-nav-overlay";
 import { BOARD_ICON, ROUTINE_ICON } from "@/components/feature-icons";
-import {
-  settingsSectionHref,
-  useSettingsSections,
-  type SettingsSection,
-} from "@/lib/settings-sections";
-import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
 import { useCommandPaletteLauncher } from "@/lib/use-command-palette-launcher";
 import type {
@@ -198,16 +187,6 @@ const GlobalPagePanelHost = memo(function GlobalPagePanelHost() {
   );
 });
 
-/** Right-aligned project tag shown on palette rows (orb + name), AutoKap-style. */
-function projectChip(project: Project) {
-  return (
-    <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
-      <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-3.5" />
-      <span className="max-w-[9rem] truncate">{project.name}</span>
-    </span>
-  );
-}
-
 // The mobile menu renders nav/command icons itself as components, so
 // Hugeicons icon DATA must be bridged into components at that boundary only.
 function menuIcon(icon: AppIcon): IconComponent {
@@ -246,22 +225,10 @@ function emojiIcon(emoji: string): ComponentType<{ className?: string }> {
   return Icon;
 }
 
-/** Numo's face in static nav/palette icon (no perpetual blinking,
- like list icons). Slotted where the lucid tabs pass a `className`. */
-const NumoNavIcon = ({ className }: { className?: string }) => (
-  <NumoIcon animated={false} className={className} />
-);
-NumoNavIcon.displayName = "NumoNavIcon";
-
-const TriageNavIcon = ({ className }: { className?: string }) => (
-  <AppIcon icon={CircleDotDashedIcon} className={className} strokeWidth={2.25} />
-);
-TriageNavIcon.displayName = "TriageNavIcon";
-
 import { countBadge, countBadges } from "@/components/nav-badge";
 import { NotificationBadge, UnreadCountAnnouncer } from "@/components/notification-badge";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { fetchSeeded } from "@/lib/server-seed";
+import { GLOBAL_VIEWS_KEY, issuesKey, viewsKey } from "@/lib/query-keys";
 
 /**
  * The mark of a draft project, in the exact place of the “to sort” counter
@@ -270,6 +237,13 @@ import { fetchSeeded } from "@/lib/server-seed";
  */
 function draftBadge(label: string) {
   return <AppIcon icon={FileClock} className="size-3.5 text-muted-foreground" aria-label={label} />;
+}
+
+/** A project tab's counter, or nothing when it has none. */
+function navEntryBadge(entry: ProjectNavEntry, t: ReturnType<typeof useTranslations<"Nav">>) {
+  return entry.badge
+    ? countBadge(entry.badge.count, t(entry.badge.labelKey, { count: entry.badge.count }))
+    : undefined;
 }
 
 /** Muted monospace identifier badge, e.g. "MIND-42". */
@@ -304,15 +278,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     };
   }, []);
   const t = useTranslations("Nav");
-  const locale = useLocale();
-  const openAssistant = useAssistantPanelActions().open;
   const ti = useTranslations("Issue");
-  const tk = useTranslations("Keyboard");
-  const tScratch = useTranslations("Scratchpad");
-  const tDrafts = useTranslations("Drafts");
   const tRoutines = useTranslations("Routines");
-  const tSettings = useTranslations("Settings");
-  const tExport = useTranslations("Export");
   const tBilling = useTranslations("Billing");
   const tProjects = useTranslations("Projects");
   const tPages = useTranslations("Pages");
@@ -342,9 +309,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     openProjectDraft,
     deleteProjectDraft,
   } = useProjects();
-  const { openCreateIssue, openCreateObjective } = useCreate();
-  const { drafts: creationDrafts } = useAllDrafts();
-  const { open: openScratchpad } = useScratchpad();
+  const { openCreateIssue } = useCreate();
   const { notifications, unreadCount } = useNotifications();
   const {
     openIssue: openIssuePanel,
@@ -366,7 +331,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { invitations } = useMyInvitations();
   const inboxCount = unreadCount + invitations.length;
   const navigateToWikiPage = useWikiPageNavigation(pathname, router, openDestination);
-  const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();
   const mobileLayout = useMobileLayout() === true;
 
@@ -429,7 +393,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const projectReorder = useMemo<AppNavReorder>(() => ({
     keys: listedProjects.map((p) => projectNavKey(p.id)),
     onMove: (activeKey, overKey) => {
-      const next = moveProjectInOrder(projects, projectOrder, projectIdFromNavKey(activeKey), projectIdFromNavKey(overKey));
+      const activeId = projectIdFromNavKey(activeKey);
+      const overId = projectIdFromNavKey(overKey);
+      const next = activeId && overId ? moveProjectInOrder(projects, projectOrder, activeId, overId) : null;
       if (next) void setProjectOrder(next);
     },
     instructions: tDrag("projectInstructions"),
@@ -461,7 +427,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // search index — this cache is what makes the CURRENT project's rows exact
   // (realtime-fresh) rather than as-of-the-snapshot.
   const { data: projectIssues } = useQuery({
-    queryKey: ["issues", currentProjectId ?? ""],
+    queryKey: issuesKey(currentProjectId ?? ""),
     queryFn: issuesQueryFn(currentProjectId as string),
     enabled: !!currentProjectId && paletteOpen,
   });
@@ -558,25 +524,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [searchIndex, currentProjectId, projectObjectives, objectivesLoading, objectivesProjectId]
   );
 
-  // Triage is a hidden issue status — the sidebar counter derives from the
-  // same issues cache the board and search already keep fresh.
-  const triageCount = currentProjectId
-    ? (triageCounts[currentProjectId]?.triage ?? 0)
-    : 0;
-
-  // Feedback (MIN-37): counter of open/planned feedback, via an endpoint
-  // lightweight (badge does not need the full list).
-  const { data: feedbackCountData } = useQuery({
-    queryKey: ["feedback-count", currentProjectId ?? ""],
-    queryFn: async () => {
-      const r = await fetchSeeded(`/api/projects/${currentProjectId}/feedback/counts`);
-      if (!r.ok) return { count: 0 };
-      return (await r.json()) as { count: number };
-    },
-    enabled: !!currentProjectId,
-    staleTime: 60_000,
-  });
-  const feedbackCount = feedbackCountData?.count ?? 0;
+  const navLocation = useMemo<ProjectNavLocation>(
+    () => ({ pathname, currentProjectId, objectiveBoardId }),
+    [pathname, currentProjectId, objectiveBoardId],
+  );
 
   // Pull Requests (MIN-66): counter of open PRs. The list is global
   // (the tab points to /pull-requests), so we derive the account from the same
@@ -662,479 +613,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [homeBackBadge, projectBackBadge]
   );
 
-  const commandGroups = useMemo<PaletteGroup[]>(() => {
-    const groups: PaletteGroup[] = [];
-    const createKw = ["create", "créer", "new", "nouveau"];
-
-    // ── Create (issue-first) ──────────────────────────────────────────
-    // New issue is always the leading option. Inside a project it targets that
-    // project; from anywhere else you pick which project to create it in.
-    const createItems: PaletteItem[] = [];
-    if (currentProject) {
-      createItems.push({
-        key: "create-issue",
-        label: t("newIssue"),
-        icon: TaskEdit01Icon,
-        keywords: [...createKw, ti("entity"), currentProject.name, currentProject.key],
-        meta: projectChip(currentProject),
-        metaText: currentProject.name,
-        contextId: currentProject.id,
-        // The global single-key shortcut (lib/create-context) targets the
-        // current project's dialog when one is open
-        keys: ["C"],
-        onSelect: () => openCreateIssue({ projectId: currentProject.id }),
-      });
-      createItems.push({
-        key: "create-objective",
-        label: t("newObjective"),
-        icon: Target01Icon,
-        keywords: [...createKw, currentProject.name, currentProject.key],
-        meta: projectChip(currentProject),
-        metaText: currentProject.name,
-        contextId: currentProject.id,
-        keys: ["O"],
-        onSelect: () => openCreateObjective({ projectId: currentProject.id }),
-      });
-      // The page only follows the open project IN a project, unlike the
-      // ticket: outside the project, the palette would not know in which wiki to write,
-      // and the page cache is only loaded for the current project.
-      createItems.push({
-        key: "create-page",
-        label: tPages("newPage"),
-        icon: File02Icon,
-        keywords: [
-          ...createKw,
-          "page",
-          "wiki",
-          "document",
-          "doc",
-          "note",
-          currentProject.name,
-          currentProject.key,
-        ],
-        meta: projectChip(currentProject),
-        metaText: currentProject.name,
-        contextId: currentProject.id,
-        onSelect: () => createPageFromPalette(currentProject.id),
-        onSelectInNewTab: () => createPageInNewTab(currentProject.id),
-      });
-    } else {
-      // Outside a project, creation is GENERIC: one "New issue" line and one
-      // "New objective", not a line per project — the dialogs pick the
-      // project themselves. The global single-key shortcuts always apply.
-      createItems.push({
-        key: "create-issue",
-        label: t("newIssue"),
-        icon: TaskEdit01Icon,
-        keywords: [...createKw, ti("entity")],
-        keys: ["C"],
-        onSelect: () => openCreateIssue(),
-      });
-      // Objective creation from anywhere (MIN-33): one entry — the dialog's split
-      // button picks the target project.
-      if (projects.length > 0) {
-        createItems.push({
-          key: "create-objective",
-          label: t("newObjective"),
-          icon: Target01Icon,
-          keywords: createKw,
-          keys: ["O"],
-          onSelect: () => openCreateObjective(),
-        });
-      }
-    }
-    if (!projectLimitReached) {
-      createItems.push({
-        key: "create-project",
-        label: t("newProject"),
-        icon: Add01Icon,
-        keywords: createKw,
-        onSelect: openCreateProject,
-      });
-    }
-    // Drafts live IN the “Create” group, under “New Project”:
-    // a draft is a creation in progress, and both lines lead to the same
-    // place — the wizard, new or reused. Putting them in “Go to” would have
-    // ranked a modal among destinations.
-    //
-    // No plan lock here, unlike “New project”: resume
-    // a draft is not created, and the ceiling is said to be created.
-    for (const d of projectDrafts) {
-      createItems.push({
-        key: `resume-project-draft-${d.id}`,
-        label: tProjects("draftResume", { name: d.name }),
-        icon: FileClock,
-        keywords: [...createKw, d.name, "brouillon", "draft", "reprendre", "resume"],
-        onSelect: () => openProjectDraft(d),
-      });
-    }
-    // Issue and objective drafts too (MIN-753): the bottom bar's drafts tray
-    // is hidden on a phone, where the palette is their only way back.
-    for (const d of creationDrafts) {
-      const draftProject = projectById.get(d.projectId);
-      const name = d.title.trim() || tDrafts("untitled");
-      createItems.push({
-        key: `resume-${d.kind}-draft-${d.id}`,
-        label: d.kind === "issue" ? tDrafts("resumeIssue", { name }) : tDrafts("resumeObjective", { name }),
-        icon: d.kind === "issue" ? TaskEdit01Icon : Target01Icon,
-        keywords: [...createKw, name, "brouillon", "draft", "reprendre", "resume"],
-        ...(draftProject ? { meta: projectChip(draftProject), metaText: draftProject.name, contextId: draftProject.id } : {}),
-        onSelect: () => d.kind === "issue"
-          ? openCreateIssue({ projectId: d.projectId, draftId: d.id })
-          : openCreateObjective({ projectId: d.projectId, draftId: d.id }),
-      });
-    }
-    groups.push({ key: "create", heading: tCommon("create"), items: createItems });
-
-    // ── Go to (global) ────────────────────────────────────────────────
-    // Every shortcut below mirrors keyboard-context's runChord (G then key);
-    // when a chord changes there, it changes here too.
-    groups.push({
-      key: "goto",
-      heading: t("goTo"),
-      items: [
-        { key: "go-documentation", label: t("documentation"), icon: Book02Icon,
-          keywords: ["documentation", "docs", "help"],
-          onSelect: () => window.open(documentationPath(null, locale), "_blank", "noopener,noreferrer") },
-        { key: "go-home", label: t("home"), icon: Home01Icon, href: "/home", keys: ["G", "H"], entityType: "navigation", onSelect: () => router.push("/home") },
-        { key: "go-inbox", label: t("inbox"), icon: InboxIcon, keys: ["G", "I"], onSelect: openInbox },
-        {
-          key: "open-notes",
-          label: tScratch("open"),
-          icon: StickyNote02Icon,
-          keys: ["mod", "⇧", "K"],
-          keywords: ["notes", "scratchpad", "todo", "tâches", "problems"],
-          onSelect: () => openScratchpad("palette"),
-        },
-        ...(agentsAllowed
-          ? [
-              {
-                key: "go-pull-requests",
-                label: t("pullRequests"),
-                icon: GitPullRequestIcon,
-                href: "/pull-requests",
-                keys: ["G", "R"],
-                entityType: "navigation",
-                onSelect: () => router.push("/pull-requests"),
-              },
-              {
-                // Numo has no page of its own any more (the FAB hosts the whole
-                // conversation): the entry, like its chord, OPENS the panel.
-                key: "go-agents",
-                label: t("agents"),
-                icon: NumoNavIcon,
-                keys: ["G", "J"],
-                keywords: ["numo", "chat", "assistant", "conversation"],
-                onSelect: () => openAssistant(),
-              },
-              {
-                // ROUTINES (MIN-185) have their own page and their own
-                // entry into primary navigation.
-                key: "go-routines",
-                label: tRoutines("title"),
-                icon: ROUTINE_ICON,
-                href: "/routines",
-                keys: ["G", "U"],
-                entityType: "navigation",
-                keywords: [
-                  "routine",
-                  "routines",
-                  "schedule",
-                  "scheduled",
-                  "cron",
-                  "récurrent",
-                  "programmé",
-                  "planifié",
-                ],
-                onSelect: () => router.push("/routines"),
-              },
-            ]
-          : []),
-         {
-          key: "go-all-global",
-          label: t("allIssues"),
-          icon: BOARD_ICON,
-          href: "/all",
-          keys: ["G", "B"],
-          entityType: "navigation",
-          onSelect: () => router.push("/all"),
-        },
-        {
-          // The cycle is personal and cross-project: it lives on /all in mode
-          // cycle (MIN-32), never assigned to a project — same destination as
-          // the ↗ boards tab and the home map.
-          key: "go-cycle",
-          label: t("cycle"),
-          icon: CycleIcon,
-          href: "/all?view=cycle",
-          entityType: "navigation",
-          keywords: [
-            "cycle",
-            "sprint",
-            "semaine",
-            "week",
-            "quinzaine",
-            "fortnight",
-            "itération",
-            "iteration",
-          ],
-          onSelect: () => router.push("/all?view=cycle"),
-        },
-        {
-          key: "go-account-settings",
-          label: t("accountSettings"),
-          icon: Settings01Icon,
-          href: "/settings",
-          entityType: "navigation",
-          onSelect: () => router.push("/settings"),
-        },
-        {
-          // Take out your tickets in CSV — the gesture you come to look for in ⌘K
-          // at Linear, and that we were therefore looking for here. The dialogue asks for
-          // project and statutes; this line assumes nothing.
-          key: "export-issues",
-          label: tExport("title"),
-          icon: Download01Icon,
-          keywords: [
-            "export",
-            "exporter",
-            "csv",
-            "excel",
-            "tableur",
-            "spreadsheet",
-            "download",
-            "télécharger",
-            "telecharger",
-            "backup",
-            "sauvegarde",
-            "sortir",
-          ],
-          onSelect: openExport,
-        },
-        {
-          key: "keyboard-shortcuts",
-          label: tk("shortcutsTitle"),
-          icon: KeyboardIcon,
-          keys: ["?"],
-          keywords: ["keyboard", "shortcuts", "raccourcis", "clavier", "cheatsheet", "help", "aide"],
-          onSelect: () => setCheatsheetOpen(true),
-        },
-      ],
-    });
-
-    if (switcherProjects.length > 0) {
-      // ── Projects (quick switch) ─────────────────────────────────────
-      groups.push({
-        key: "projects",
-        heading: t("projects"),
-        items: switcherProjects.map((p) => ({
-          key: `project-${p.id}`,
-          label: p.name,
-          icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
-          keywords: [p.key],
-          entityType: "project",
-          contextId: p.id,
-          data: p,
-          href: projectPath(p.id),
-          onSelect: () => router.push(projectPath(p.id)),
-        })),
-      });
-
-      // ── Pages (per-project navigation) ──────────────────────────────
-      const pageItems: PaletteItem[] = [];
-      for (const p of switcherProjects) {
-        const base = projectPath(p.id);
-        const chip = projectChip(p);
-        const metaText = p.name;
-        const kw = [p.name, p.key];
-        // contextId: with several projects the same five page names repeat, so
-        // the current project's copies are the ones that should rank first.
-        const contextId = p.id;
-        pageItems.push(
-          {
-            key: `pg-tickets-${p.id}`,
-            label: t("tickets"),
-            icon: BOARD_ICON,
-            keywords: kw,
-            meta: chip,
-            metaText,
-            href: base,
-            contextId,
-            entityType: "navigation",
-            onSelect: () => router.push(base),
-          },
-          {
-            key: `pg-obj-${p.id}`,
-            label: t("objectives"),
-            icon: Target01Icon,
-            keywords: kw,
-            meta: chip,
-            metaText,
-            href: `${base}/objectives`,
-            contextId,
-            entityType: "navigation",
-            onSelect: () => router.push(`${base}/objectives`),
-          },
-          // Between Objectives and Triage, as in the sidebar: the palette says
-          // the screens of a project in the order in which they are seen.
-          {
-            key: `pg-pages-${p.id}`,
-            label: t("pages"),
-            icon: File02Icon,
-            keywords: [...kw, "wiki", "documentation", "doc"],
-            meta: chip,
-            metaText,
-            href: `${base}/pages`,
-            contextId,
-            entityType: "navigation",
-            onSelect: () => router.push(`${base}/pages`),
-          },
-          {
-            key: `pg-triage-${p.id}`,
-            label: t("triage"),
-            icon: CircleDotDashedIcon,
-            keywords: kw,
-            meta: chip,
-            metaText,
-            href: `${base}/triage`,
-            contextId,
-            entityType: "navigation",
-            onSelect: () => router.push(`${base}/triage`),
-          },
-          {
-            key: `pg-feedback-${p.id}`,
-            label: t("feedback"),
-            icon: MessageMultiple01Icon,
-            keywords: kw,
-            meta: chip,
-            metaText,
-            href: `${base}/feedback`,
-            contextId,
-            entityType: "navigation",
-            onSelect: () => router.push(`${base}/feedback`),
-          },
-          {
-            key: `pg-set-${p.id}`,
-            label: t("projectSettings"),
-            icon: Settings01Icon,
-            keywords: kw,
-            meta: chip,
-            metaText,
-            href: `${base}/settings`,
-            contextId,
-            entityType: "navigation",
-            onSelect: () => router.push(`${base}/settings`),
-          },
-        );
-      }
-
-      // “Go to” and not “Pages”: since MIN-270, a Page is an object of the
-      // product (the wiki of a project). Keep this word for the SCREENS group
-      // would put two different things under the same title, in the same list.
-      groups.push({ key: "pages", heading: t("goTo"), items: pageItems });
-    }
-
-    return groups;
-  }, [projects, switcherProjects, projectById, projectDrafts, openProjectDraft, creationDrafts, tDrafts, currentProject, createPageFromPalette, createPageInNewTab, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
-
-  // ── Settings: one line per CARD, not per tab ───────────────────────
-  // A settings tab is a column of cards; “Cadence”, “Zone
-  // sensitive” or “Act on your behalf” are not tabs, and they are
-  // yet these words we type. Choosing a line therefore opens the correct page,
-  // y selects the correct tab, scrolls down to the map and highlights it
-  // (lib/settings-sections.ts → components/settings-shell.tsx).
-  //
-  // The project offered is THAT OF THE PAGE, and it alone: ​​the same thirteen
-  // repeated sections for each project would swamp the list, while “the
-  // settings of this project” is what we are looking for from inside a project.
-  // To set another one, the “Project Settings” line in the Pages group
-  // (she, offered for all) takes there first.
-  const settingsSections = useSettingsSections();
-  // Admin dashboard tabs and sections (MIN-829), for administrators only: the
-  // palette opens the tab, and a section lands on its card like a setting.
-  const isAdmin = useIsAdmin();
-  const adminSections = useAdminSections();
-  const adminCapabilities = useAdminCapabilities({ enabled: isAdmin === true });
-  const tAdmin = useTranslations("Admin");
-  const adminGroups = useMemo<PaletteGroup[]>(() => {
-    if (!isAdmin) return [];
-    const tabIcons: Record<AdminTabId, AppIcon> = { accounts: UserGroupIcon, costs: DollarCircleIcon, models: BotIcon, instance: ServerStack01Icon };
-    const tabs = visibleAdminTabs(adminCapabilities.configured("managedAi"), adminCapabilities.instanceOverrides);
-    const tabRows: PaletteItem[] = tabs.map((tab) => ({
-      key: `admin-tab-${tab}`,
-      label: tAdmin(`tabs.${tab}`),
-      icon: tabIcons[tab],
-      keywords: [tAdmin("pageTitle"), "admin"],
-      href: `/admin?tab=${tab}`,
-      entityType: "navigation",
-      onSelect: () => router.push(`/admin?tab=${tab}`),
-    }));
-    const sectionRows: PaletteItem[] = adminSections.filter((section) => tabs.includes(section.tab)).map((section) => {
-      const href = `/admin?tab=${section.tab}&${ADMIN_SECTION_PARAM}=${section.id}`;
-      return {
-        key: `admin-section-${section.id}`,
-        label: section.title,
-        icon: section.icon,
-        keywords: [...section.keywords, section.tabLabel, tAdmin("pageTitle")],
-        href,
-        entityType: "navigation",
-        onSelect: () => router.push(href),
-      };
-    });
-    return [{ key: "admin", heading: tAdmin("pageTitle"), items: [...tabRows, ...sectionRows] }];
-  }, [isAdmin, adminSections, adminCapabilities, router, tAdmin]);
-  const settingsGroups = useMemo<PaletteGroup[]>(() => {
-    const row = (s: SettingsSection, project: Project | null): PaletteItem => ({
-      key: `settings-${s.id}`,
-      label: s.title,
-      icon: s.icon,
-      keywords: [
-        ...s.keywords,
-        // The tab is a search term in its own right: “cycles” must
-        // find “Cadence”, which doesn’t have the word anywhere.
-        s.tabLabel,
-        // A single setting is also found by the card that holds it.
-        ...(s.parentTitle ? [s.parentTitle] : []),
-        ...(project ? [project.name, project.key] : []),
-      ],
-      // No trailing text: the tab name is noise on the row (it is in the
-      // search keywords), and the project orb comes from `contextId`.
-      contextId: project?.id,
-      href: settingsSectionHref(s, project?.id),
-      entityType: "navigation",
-      onSelect: () => router.push(settingsSectionHref(s, project?.id)),
-    });
-
-    const groups: PaletteGroup[] = [
-      {
-        key: "settings-account",
-        heading: t("accountSettings"),
-        items: settingsSections
-          .filter((s) => s.scope === "account")
-          .map((s) => row(s, null)),
-      },
-    ];
-
-    if (currentProject) {
-      // “Leave project” and “Sensitive area” are mutually exclusive:
-      // offering the second to someone who is not an owner would take them to a
-      // tab where it does not exist.
-      const isOwner = currentProject.owner_id === user?.id;
-      groups.push({
-        key: "settings-project",
-        heading: t("projectSettings"),
-        items: settingsSections
-          .filter(
-            (s) =>
-              s.scope === "project" &&
-              (!s.audience || s.audience === (isOwner ? "owner" : "member")),
-          )
-          .map((s) => row(s, currentProject)),
-      });
-    }
-
-    return groups;
-  }, [settingsSections, currentProject, user, router, t]);
+  const shellCommandGroups = useShellCommandGroups({
+    currentProject,
+    switcherProjects,
+    projectById,
+    createPageFromPalette,
+    createPageInNewTab,
+    openExport,
+  });
 
   // One wiki row, shared by the index model below and by the palette for pages
   // that only the content search found.
@@ -1282,12 +768,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // keys the boards use. Every project's views would cost one request per
   // project, each seeding that project's baseline views.
   const { data: globalViews } = useQuery({
-    queryKey: ["views", "global"],
+    queryKey: GLOBAL_VIEWS_KEY,
     queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal),
     enabled: workspaceReads,
   });
   const { data: projectViews } = useQuery({
-    queryKey: ["views", currentProjectId ?? ""],
+    queryKey: viewsKey(currentProjectId ?? ""),
     queryFn: ({ signal }) =>
       fetchViewsApi({ kind: "project", projectId: currentProjectId as string }, signal),
     enabled: workspaceReads && !!currentProjectId,
@@ -1477,14 +963,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   const sections = useMemo<AppNavSection[]>(() => {
     if (!currentProject) return homeSections;
-    const base = projectPath(currentProject.id);
     return [
         {
           // Project mode keeps ONLY the project context: back home, the
           // project switcher, and the project's own items (MIN-546 review).
           items: [
             {
-              key: "home-back",
+              key: HOME_BACK_NAV_KEY,
               label: t("home"),
               icon: ArrowLeft01Icon,
               href: "/home",
@@ -1495,83 +980,23 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           ],
         },
         {
-          items: [
-            {
-              key: "tickets",
-              label: t("tickets"),
-              icon: BOARD_ICON,
-              href: base,
-              active: pathname === base && !objectiveBoardId,
-              // P (project) — B is the all-project board, from a project too.
-              shortcut: "P",
-              contextActions: projectContext.tabActions(currentProject, "tickets"),
-            },
-            {
-              key: "objectives",
-              label: t("objectives"),
-              icon: Target01Icon,
-              href: `${base}/objectives`,
-              active:
-                pathname.startsWith(`${base}/objectives`) || !!objectiveBoardId,
-              shortcut: "O",
-              descends: true,
-              contextActions: projectContext.tabActions(currentProject, "objectives"),
-            },
-            // Between Objectives and Triage: the project wiki can be read with what
-            // says WHERE the project is GOING, and not with the files that we empty. Sorting,
-            // Returns and their pellets remain grouped at the bottom, where they are
-            // checks when looking for pending work.
-            {
-              key: "pages",
-              label: t("pages"),
-              icon: File02Icon,
-              href: `${base}/pages`,
-              active: pathname.startsWith(`${base}/pages`),
-              shortcut: "W",
-              descends: true,
-              contextActions: projectContext.tabActions(currentProject, "pages"),
-            },
-            {
-              key: "triage",
-              label: t("triage"),
-              icon: TriageNavIcon,
-              href: `${base}/triage`,
-              active: pathname.startsWith(`${base}/triage`),
-              shortcut: "T",
-              descends: true,
-              ...countBadges(
-                triageCount,
-                t("triageBadge", { count: triageCount })
-              ),
-            },
-            {
-              key: "feedback",
-              label: t("feedback"),
-              icon: MessageMultiple01Icon,
-              href: `${base}/feedback`,
-              active: pathname.startsWith(`${base}/feedback`),
-              shortcut: "F",
-              descends: true,
-              contextActions: projectContext.tabActions(currentProject, "feedback"),
-              ...countBadges(
-                feedbackCount,
-                t("feedbackBadge", { count: feedbackCount })
-              ),
-            },
-            {
-              key: "settings",
-              label: t("projectSettings"),
-              icon: Settings01Icon,
-              href: `${base}/settings`,
-              active: pathname.startsWith(`${base}/settings`),
-              shortcut: "S",
-              descends: true,
-            },
-          ],
+          items: projectNavEntries(currentProject.id, navLocation, triageCounts[currentProject.id]).map(
+            (entry): AppNavItem => ({
+              key: entry.key,
+              label: t(entry.labelKey),
+              icon: entry.icon,
+              href: entry.href,
+              active: entry.active,
+              shortcut: entry.shortcut,
+              ...(entry.descends ? { descends: true } : {}),
+              ...(entry.contextTab ? { contextActions: projectContext.tabActions(currentProject, entry.contextTab) } : {}),
+              badge: navEntryBadge(entry, t),
+            }),
+          ),
         },
       ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, homeSections, pathname, objectiveBoardId, triageCount, feedbackCount, homeBadge, projectContext.tabActions, t]);
+  }, [currentProject, homeSections, navLocation, triageCounts, homeBadge, projectContext.tabActions, t]);
 
   // The inbox is a compact top control on desktop and a slot of the bottom
   // bar on a phone: neither lists it among the rows.
@@ -1594,7 +1019,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
-  const modeKey = currentProject ? `project-${currentProject.id}` : "home";
+  const modeKey = currentProject ? projectNavKey(currentProject.id) : "home";
   const [sidebarLayerOpen, setSidebarLayerOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
 
@@ -1607,14 +1032,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Mobile account destinations also appear in the navigation sheet.
   const paletteGroups = useMemo(
     () => [
-      ...commandGroups,
-      ...settingsGroups,
-      ...adminGroups,
+      ...shellCommandGroups,
       ...desktopDataGroups,
       ...workspaceGroups,
       accountCommandGroup,
     ],
-    [commandGroups, settingsGroups, adminGroups, desktopDataGroups, workspaceGroups, accountCommandGroup]
+    [shellCommandGroups, desktopDataGroups, workspaceGroups, accountCommandGroup]
   );
 
   const mobileNavigation = useMemo(() => {
@@ -1632,23 +1055,30 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind === "pages" && pathname.startsWith(`${base}/pages`) ? pathname : `${base}/${kind}`,
         render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} />,
         backBadge: projectBackBadge(project.id) });
-      panels.set(project.id, { key: `project-${project.id}`, title: project.name, project, sections: [{ items: [
-        { key: "tickets", label: t("tickets"), contextActions: projectContext.tabActions(project, "tickets"), icon: menuIcon(BOARD_ICON), href: base, active: pathname === base && !objectiveBoardId },
-        { key: "objectives", label: t("objectives"), contextActions: projectContext.tabActions(project, "objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
-        { key: "pages", label: t("pages"), contextActions: projectContext.tabActions(project, "pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
-        { key: "triage", label: t("triage"), icon: menuIcon(TriageNavIcon), panel: resource("triage"), active: pathname.startsWith(`${base}/triage`), ...countBadges(triageCounts[project.id]?.triage ?? 0, t("triageBadge", {count: triageCounts[project.id]?.triage ?? 0})) },
-        { key: "feedback", label: t("feedback"), contextActions: projectContext.tabActions(project, "feedback"), icon: menuIcon(MessageMultiple01Icon), panel: resource("feedback"), active: pathname.startsWith(`${base}/feedback`), ...countBadges(triageCounts[project.id]?.feedback ?? 0, t("feedbackBadge", {count: triageCounts[project.id]?.feedback ?? 0})) },
-        { key: "settings", label: t("projectSettings"), icon: menuIcon(Settings01Icon), panel: settingsPanel(project), active: pathname.startsWith(`${base}/settings`) },
-      ] }] });
+      panels.set(project.id, { key: projectNavKey(project.id), title: project.name, project, sections: [{
+        items: projectNavEntries(project.id, navLocation, triageCounts[project.id]).map((entry) => ({
+          key: entry.key,
+          label: t(entry.labelKey),
+          icon: menuIcon(entry.icon),
+          active: entry.active,
+          ...(entry.contextTab ? { contextActions: projectContext.tabActions(project, entry.contextTab) } : {}),
+          ...(entry.key === "tickets" ? { href: entry.href }
+            : { panel: entry.key === "settings" ? settingsPanel(project) : resource(entry.key) }),
+          badge: navEntryBadge(entry, t),
+        })),
+      }] });
     });
     // The inbox has its own slot in the bottom bar (MIN-907).
     const root = toMenuSections(homeDesktopSections).map((section) => ({ ...section,
-      items: section.items.map((item) => ({ ...item,
-        panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length))
+      items: section.items.map((item) => {
+        const projectId = projectIdFromNavKey(item.key);
+        return { ...item,
+        panel: projectId ? panels.get(projectId)
           : item.key === "routines" ? { key: "routines", title: t("routines"), sidebarRoute: "/routines", backBadge: homeBackBadge, render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
           : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), sidebarRoute: "/pull-requests", backBadge: homeBackBadge, render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
           : undefined,
-      })),
+        };
+      }),
     }));
     const projectPanel = currentProject ? panels.get(currentProject.id) : undefined;
     const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
@@ -1658,7 +1088,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     // `homeBadge` is a fresh element each render; `toSortEverywhere` and the
     // Smart Assign warnings it is built from are the real dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects, switcherProjects, homeDesktopSections, inboxCount, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t, projectBackBadge, homeBackBadge, homeBadgeLabel, toSortEverywhere, smartAssignWarnings.length]);
+  }, [projects, switcherProjects, homeDesktopSections, inboxCount, currentProject, pathname, navLocation, triageCounts, projectContext.tabActions, t, projectBackBadge, homeBackBadge, homeBadgeLabel, toSortEverywhere, smartAssignWarnings.length]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).

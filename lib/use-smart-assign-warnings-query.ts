@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { SmartAssignWarningsResponse } from "./types";
+import { SMART_ASSIGN_WARNINGS_KEY } from "./query-keys";
 
 /**
  * My projects where Smart Assign runs without being set (MIN-31).
@@ -15,8 +16,6 @@ import type { SmartAssignWarningsResponse } from "./types";
  * or member event (lib/realtime-provider.tsx), i.e. exactly what can
  * change it — enable Smart Assign, write a rule, add someone.
  */
-export const SMART_ASSIGN_WARNINGS_KEY = ["me", "smart-assign-warnings"] as const;
-
 export function useSmartAssignWarningsQuery() {
   const { data } = useQuery({
     queryKey: SMART_ASSIGN_WARNINGS_KEY,

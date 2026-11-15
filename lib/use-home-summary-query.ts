@@ -3,21 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { browserTimeZone } from "./global-board-api";
 import type { HomeSummaryResponse } from "./types";
-
-/**
- * Dashboard payload (MIN-89).
- *
- * Home was going up `useGlobalBoardQuery()` — i.e. GET /api/me/board,
- * all full tickets for all my projects — to show three counters
- * and three cycle lines. This query reads the same thing from
- * GET /api/me/summary, where the counters are `count` SQL and where only the
- * tickets of the current cycle are materialized, in reduced columns.
- *
- * Freshness: the real-time bridge is invalid `["me","summary"]` on any event
- * ticket, cycle or feedback (lib/realtime-provider.tsx) — so no
- * staleTime is running here, the clock has nothing left to catch up with.
- */
-export const HOME_SUMMARY_KEY = ["me", "summary"] as const;
+import { HOME_SUMMARY_KEY } from "./query-keys";
 
 async function fetchHomeSummaryApi(): Promise<HomeSummaryResponse> {
   const response = await fetch(
@@ -39,6 +25,18 @@ async function fetchHomeSummaryApi(): Promise<HomeSummaryResponse> {
   return data as HomeSummaryResponse;
 }
 
+/**
+ * Dashboard payload (MIN-89).
+ *
+ * Home was going up `useGlobalBoardQuery()` — i.e. GET /api/me/board,
+ * all full tickets for all my projects — to show three counters
+ * and three cycle lines. This query reads the same thing from
+ * GET /api/me/summary, where the counters are `count` SQL and where only the
+ * tickets of the current cycle are materialized, in reduced columns.
+ *
+ * Freshness: the realtime bridge invalidates this key on every ticket, cycle
+ * or feedback event (lib/realtime-keys.ts), so no staleTime is needed.
+ */
 export function useHomeSummaryQuery({ enabled = true }: { enabled?: boolean } = {}) {
   const { data, isPending } = useQuery({
     queryKey: HOME_SUMMARY_KEY,

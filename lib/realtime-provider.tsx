@@ -60,6 +60,7 @@ import {
 } from "./realtime-topic";
 import { emitDocumentHead } from "./document-collaboration-signals";
 import { emitPageHead } from "./page-collaboration-signals";
+import { PROJECTS_KEY } from "./query-keys";
 
 /**
  * Single realtime bridge for the whole app. The DB broadcasts every relevant
@@ -155,7 +156,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   // So: read the cache and subscribe to it, without ever becoming an observer.
   const [projects, setProjects] = useState<Project[] | undefined>(undefined);
   useEffect(() => {
-    const read = () => setProjects(queryClient.getQueryData<Project[]>(["projects"]));
+    const read = () => setProjects(queryClient.getQueryData<Project[]>(PROJECTS_KEY));
     read();
     return queryClient.getQueryCache().subscribe((event) => {
       // The EXACT key, not its prefix. It's `["projects"]` that we reread, and a
@@ -450,7 +451,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // A counter-only project UPDATE has no invalidation; refetch the list
       // only when the row it names is not in it.
       if (projectCounterBump(change) && !applyProjectCounterBump(queryClient, change)) {
-        void queryClient.invalidateQueries({ queryKey: ["projects"] });
+        void queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
       }
     });
   }, [userId, openScope, queryClient]);

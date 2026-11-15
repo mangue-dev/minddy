@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { applyBriefApi, type SeedCommitResponse } from "@/lib/seed-api";
 import type { SeedProposal } from "@/lib/seed/types";
+import { categoriesKey, issuesKey, objectivesKey } from "./query-keys";
 
 /**
  * The LIVE preview of a starter proposal: what is unchecked, the titles
@@ -87,9 +88,9 @@ export function useSeedProposal(projectId: string) {
     try {
       const result = await applyBriefApi(projectId, payload);
       toast.success(t("createdToast", { count: result.created }));
-      void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
-      void queryClient.invalidateQueries({ queryKey: ["objectives", projectId] });
-      void queryClient.invalidateQueries({ queryKey: ["categories", projectId] });
+      void queryClient.invalidateQueries({ queryKey: issuesKey(projectId) });
+      void queryClient.invalidateQueries({ queryKey: objectivesKey(projectId) });
+      void queryClient.invalidateQueries({ queryKey: categoriesKey(projectId) });
       return result;
     } catch (e) {
       toast.error((e as Error).message);

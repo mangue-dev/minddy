@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchClientRead } from "./client-read";
 import { useColdBoardPrefetch } from "./use-cold-board-prefetch";
 import { globalBoardQueryFn } from "./global-board-api";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 import { useViewsQuery } from "./use-views-query";
 import type { GlobalBoardResponse } from "./types";
 

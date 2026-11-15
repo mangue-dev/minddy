@@ -2,8 +2,8 @@ import { beforeEach, expect, it } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { adoptRemoteRow, remoteEchoOf, type RemoteChange } from "./remote-echo";
 import { applyPendingIssues, applyPendingObjectives, issueWrites, objectiveWrites } from "./issue-writes";
-import { GLOBAL_BOARD_KEY } from "./issue-writes";
-import { SEARCH_INDEX_KEY } from "../use-search-index";
+import { GLOBAL_BOARD_KEY, SEARCH_INDEX_KEY } from "../query-keys";
+
 import type { Issue, Objective } from "../types";
 
 beforeEach(() => { issueWrites.reset(); objectiveWrites.reset(); });

@@ -82,30 +82,31 @@ function FirstContentWatch() {
   return null;
 }
 
+/** True from the first render where `when` holds, then for good. */
+function useMountedOnce(when: boolean): boolean {
+  const [mounted, setMounted] = useState(when);
+  if (when && !mounted) setMounted(true);
+  return mounted || when;
+}
+
 // Numo and the notebook load their code after the first content (MIN-880),
 // or at once when opened earlier. Once mounted they stay mounted.
 function DeferredAssistantPanel() {
   const { isOpen } = useAssistantPanel();
   const ready = useAfterFirstContent();
-  const [mounted, setMounted] = useState(false);
-  if ((ready || isOpen) && !mounted) setMounted(true);
-  return mounted ? <AssistantPanel /> : null;
+  return useMountedOnce(ready || isOpen) ? <AssistantPanel /> : null;
 }
 
 function DeferredScratchpadModal() {
   const { isOpen } = useScratchpad();
   const ready = useAfterFirstContent();
-  const [mounted, setMounted] = useState(false);
-  if ((ready || isOpen) && !mounted) setMounted(true);
-  return mounted ? <ScratchpadModal /> : null;
+  return useMountedOnce(ready || isOpen) ? <ScratchpadModal /> : null;
 }
 
+// Loaded on first open, then kept mounted so the panel can animate out.
 function DeferredKeyboardCheatsheet() {
   const { open } = useCheatsheet();
-  // Loaded on first open, then kept mounted so the panel can animate out.
-  const [opened, setOpened] = useState(open);
-  if (open && !opened) setOpened(true);
-  return opened ? <KeyboardCheatsheet /> : null;
+  return useMountedOnce(open) ? <KeyboardCheatsheet /> : null;
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -129,9 +130,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           provider (MIN-907). */}
       <AiConsentGate />
       <RememberTimeZone />
-      {/* The sending shortcut chosen by the account, placed high: all
- composers of the app are below, and none need to know
- Supabase to read it (see lib/keyboard/use-send-mode). */}
+      {/* The account's send shortcut, high enough that every composer reads
+          it without querying Supabase (lib/keyboard/use-send-mode). */}
       <SendModeBoundary>
         <AccountQueryProvider>
           {/* Mentions show their hover card in the signed-in app only (MIN-879). */}
@@ -142,8 +142,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               <PromptDeliveryProvider>
               <IssuePanelProvider>
               <PagePanelProvider>
-              {/* Reopens the creation wizard when returning from a git redirect
- (?setup=git): the project does not yet exist, the restart cannot therefore live in the layout of a project. */}
+              {/* Reopens the creation wizard after a git redirect (?setup=git):
+                  the project does not exist yet, so no project layout can. */}
               <Suspense fallback={null}>
                 <ProjectDraftResume />
               </Suspense>
@@ -160,12 +160,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                   <AssistantComposerProvider>
                     <ScratchpadProvider>
                     <SidebarVisibilityProvider>
-                      {/* Above the keyboard: ⌘B reads this context to know
- that a page has a secondary sidebar — the primary y
- is in rail, there is nothing more to fold. */}
                       <SecondarySidebarProvider>
+                        {/* Below the providers its chords read: the assistant
+                            panel, the tabs, the notebook and both sidebars. */}
                         <KeyboardProvider>
                           <UndoProvider>
+                            {/* Below UndoProvider: creation writes through
+                                useIssueMutations, which records undo steps. */}
                             <CreateProvider>
                               <BulkActionsProvider>
                                 <PrUnlinkConfirmationProvider>
@@ -189,17 +190,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             <CommentShortcut />
                             <AnalyticsProjectGroup />
                             <PushServiceWorker />
-                            {/* The native counterpart in the desktop app (MIN-291):
- the MIN-89 real-time bridge already provides everything,
- there are only the banners to emit. */}
+                            {/* The desktop app's native banners (MIN-291), fed by
+                                the realtime bridge (MIN-89). */}
                             <DesktopNotifications />
-                            {/* The question of audience measurement, asked once
- times in the desktop app — the site banner
- does not go there (MIN-291). */}
+                            {/* The desktop app asks once about analytics: the
+                                site's banner does not reach it (MIN-291). */}
                             <DesktopAnalyticsPrompt />
-                            {/* Obligatory suspense: it reads `useSearchParams`,
- because the target of a notification lives in the
- query (`?issue=…`). */}
+                            {/* Suspense: it reads `useSearchParams`, where a
+                                notification's target lives (`?issue=…`). */}
                             <Suspense fallback={null}>
                               <PushNotificationDismiss />
                             </Suspense>

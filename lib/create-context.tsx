@@ -410,8 +410,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           members={issueMembers}
           categories={categories}
           objectives={objectives}
-          onCreate={(input) => createIssueGlobal(issueTarget, input)}
-          onCreateInProject={createIssueGlobal}
+          onCreate={createIssueGlobal}
           initialStatus={issuePresets.status}
           initialObjectiveId={issuePresets.objectiveId}
           initialAssigneeId={issuePresets.assigneeId}
