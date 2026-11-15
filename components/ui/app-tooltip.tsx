@@ -21,12 +21,19 @@ export function AppTooltip({
   side,
   align,
 }: AppTooltipProps) {
+  // The label only describes its trigger, so the pointer goes through it:
+  // a tooltip over a neighboring control (the selection card's grid, a
+  // toolbar) would otherwise take that control's hover and click
+  // (MIN-1003). It closes as soon as the pointer leaves the trigger, and
+  // `data-tooltip-passive` lets the pointer through its positioning wrapper
+  // as well (app/globals.css).
   return (
-    <Tooltip>
+    <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent
         side={side}
         align={align}
+        data-tooltip-passive=""
         className={shortcut?.length ? "flex items-center gap-1.5" : undefined}
       >
         {label}

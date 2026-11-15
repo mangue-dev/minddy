@@ -292,6 +292,13 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   z-index: 1100 !important;
 }
 
+/* A label-only tooltip (AppTooltip) lets the pointer through to what it
+   covers. Radix positions the content inside a wrapper that takes hits too,
+   so the rule goes on the wrapper and the content inherits it (MIN-1003). */
+[data-radix-popper-content-wrapper]:has(> [data-tooltip-passive]) {
+  pointer-events: none;
+}
+
 /* A searchable command list lives inside its popover. Let the parent surface
    carry the glass treatment so the command root does not paint an opaque box
    over it. CommandDialog remains opaque because it is not inside one of these
