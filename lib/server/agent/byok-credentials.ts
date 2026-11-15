@@ -22,10 +22,9 @@ function getAiKeySecret(): string {
 }
 
 /**
- * Non-sensitive state stored for a local endpoint without authentication. The
- * historical column `key_encrypted` is `NOT NULL` in certain instances:
- * this marker therefore allows Ollama to be registered immediately, without requiring a
- * key or prior migration. It is never sent to the provider.
+ * Stands in for the missing key of a local endpoint saved before MIN-996
+ * (`key_encrypted` is `NOT NULL`). Only decoding still meets it, so those rows
+ * stay listed until their owner removes them; nothing writes it any more.
  */
 export const LOCAL_ENDPOINT_WITHOUT_API_KEY = "minddy:local-endpoint-without-api-key:v1";
 

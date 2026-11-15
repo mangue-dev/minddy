@@ -203,7 +203,7 @@ describe("translateAiChatRequest", () => {
     expect(nativeModelReasoning("openai", "gpt-5.1")).toEqual({ efforts: ["low", "medium", "high"], mandatory: false });
     expect(nativeModelReasoning("google", "gemini-2.5-pro")).toMatchObject({ mandatory: true });
     // Endpoints without a reasoning field: no level would reach the model.
-    for (const provider of ["generic", "local_openai", "ollama", "opencode-go", "opencode-zen"] as const) {
+    for (const provider of ["generic", "opencode-go", "opencode-zen"] as const) {
       expect(nativeModelReasoning(provider, "any-model")).toBeNull();
     }
     // OpenRouter publishes its own levels per model.
@@ -211,7 +211,7 @@ describe("translateAiChatRequest", () => {
     // A catalog entry wins; a model without one falls back to the rule.
     expect(catalogModelReasoning("openai", "gpt-4o", { reasoning: { efforts: ["low"], mandatory: false } }))
       .toEqual({ efforts: ["low"], mandatory: false });
-    expect(catalogModelReasoning("ollama", "llama3", undefined)).toBeNull();
+    expect(catalogModelReasoning("generic", "llama3", undefined)).toBeNull();
     expect(catalogModelReasoning("openrouter", null, undefined)).toBeUndefined();
   });
 

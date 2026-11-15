@@ -138,10 +138,13 @@ describe("desktop preload against the IPC contract", () => {
       localRepo(input: unknown): Promise<unknown>;
       chooseLocalRepo(input: unknown): Promise<unknown>;
       forgetLocalRepo(input: unknown): Promise<unknown>;
+      discoverLocalModels(input: unknown): Promise<unknown>;
     };
     expect(() => retired.setWindowButtonsVisible(false)).not.toThrow();
     await expect(retired.chooseLocalRepo({ projectId: "p" })).resolves.toEqual({ status: "none" });
     await expect(retired.forgetLocalRepo({ projectId: "p" })).resolves.toEqual({ status: "none" });
+    await expect(retired.discoverLocalModels({ provider: "ollama", baseUrl: "http://127.0.0.1:11434" }))
+      .resolves.toMatchObject({ ok: false });
     const settled = vi.fn();
     void retired.localRepo({ projectId: "p" }).then(settled, settled);
     await Promise.resolve();

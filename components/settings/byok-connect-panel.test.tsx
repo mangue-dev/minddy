@@ -112,3 +112,18 @@ it("preserves the onboarding managed-provider choice and initially open connecti
   expect(host.querySelector("input[type='password']")).toBeNull();
   expect(host.textContent).not.toContain(messages.Account.aiAddProvider);
 });
+it("lists a retired local key as unsupported with removal as its only action, and never offers local providers (MIN-996)", async () => {
+  h.keys = [{ ...key("openai"), id: "local", provider: "ollama" as AiKey["provider"], key_prefix: null,
+    base_url: "http://127.0.0.1:11434", supported_capabilities: [] }];
+  await render("settings");
+  expect(host.textContent).toContain("Ollama");
+  expect(host.textContent).toContain(messages.Account.aiKeyRetired);
+  expect(host.textContent).not.toContain("127.0.0.1");
+  expect(Array.from(host.querySelectorAll("button")).map((item) => item.textContent)).not.toContain(messages.Common.edit);
+  await click(messages.Account.aiAddProvider);
+  const choices = Array.from(host.querySelectorAll("option")).map((item) => item.value);
+  expect(choices).not.toContain("ollama"); expect(choices).not.toContain("local_openai");
+  await click(messages.Common.cancel);
+  await click(messages.Account.aiKeyRemove);
+  expect(host.textContent).toContain(messages.Account.aiKeyRemoveConfirmDescription.replace("{provider}", "Ollama"));
+});

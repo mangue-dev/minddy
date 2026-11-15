@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 28,
-  "sourceRevision": 27,
+  "revision": 29,
+  "sourceRevision": 28,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-13",
+  "updatedAt": "2026-11-15",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -65,14 +65,17 @@
       "lib/server/ai-routes.ts",
       "lib/server/decisions/engine.ts",
       "app/api/account/ai-decisions/route.ts",
-      "lib/decision-engine.ts"
+      "lib/decision-engine.ts",
+      "components/settings/byok-connect-panel.tsx",
+      "app/api/account/ai-keys/route.ts",
+      "lib/agent-providers.ts"
     ]
   },
   "review": {
-    "revision": 28,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-980: Decisions paragraph of #ai-keys-and-models, source audit against components/settings/account-ai-keys-section.tsx, lib/server/decisions/engine.ts and app/api/account/ai-decisions/route.ts; no browser walkthrough; no figure shows this row; existing figures kept, not recaptured); agent:claude-code (MIN-979: one sentence in #ai-keys-and-models on model lists limited to callable models and the save-time check of a key's embedding and speech-to-text models, source audit against lib/server/agent/models-catalog.ts, lib/byok-model-catalog.ts and app/api/account/ai-keys/route.ts; no browser walkthrough; no figure shows this; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-13"
+    "revision": 29,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-980: Decisions paragraph of #ai-keys-and-models, source audit against components/settings/account-ai-keys-section.tsx, lib/server/decisions/engine.ts and app/api/account/ai-decisions/route.ts; no browser walkthrough; no figure shows this row; existing figures kept, not recaptured); agent:claude-code (MIN-979: one sentence in #ai-keys-and-models on model lists limited to callable models and the save-time check of a key's embedding and speech-to-text models, source audit against lib/server/agent/models-catalog.ts, lib/byok-model-catalog.ts and app/api/account/ai-keys/route.ts; no browser walkthrough; no figure shows this; existing figures kept, not recaptured); agent:claude-code (MIN-996: #models paragraph on retired local providers, source audit against components/settings/byok-connect-panel.tsx, app/api/account/ai-keys/route.ts and lib/agent-providers.ts; no browser walkthrough; no figure shows the provider list; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-996 local-provider passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-15"
   },
   "related": [
     "scheduled-routines"
@@ -94,7 +97,7 @@
       "src": "/documentation/pt-BR/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Provedores conectados, um provedor por tipo de modelo e o modelo de linguagem são ajustes separados.",
       "caption": "Cada tipo de modelo passa pelo minddy Cloud ou por um provedor conectado. No minddy Cloud, a instância define o modelo de linguagem; com uma chave pessoal, o modelo dele é salvo por provedor e uma conversa pode escolher o seu.",
-      "revision": 28,
+      "revision": 29,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -148,7 +151,7 @@ Uma chave não confirmada ou inacessível pode manter as chamadas gerais de IA c
 
 ### Modelos locais {#models}
 
-O minddy chama os modelos de IA pelo servidor, então não consegue usar um modelo executado no seu computador. **Adicionar provedor** não oferece Ollama local nem endpoints locais compatíveis com OpenAI. Um endpoint local salvo em uma versão anterior continua aparecendo em **Provedores conectados**, mas não atende às conversas do Numo, às rotinas nem a outros recursos. Remova-o e atribua no lugar um provedor acessível pelo servidor. Remova um provedor pelo controle de confirmação quando ele não for mais necessário e confira o roteamento resultante antes da próxima execução.
+O minddy chama os modelos de IA pelo próprio servidor, então não consegue usar um modelo executado no seu computador. Provedores locais, como o Ollama ou um endpoint local compatível com OpenAI, não são mais compatíveis, e **Adicionar provedor** não os oferece. Um endpoint local salvo em uma versão anterior continua aparecendo em **Provedores conectados**, marcado como **Não é mais compatível**. Ele não atende a nenhum recurso e não pode mais ser editado. Escolha **Remover**, confirme e depois conecte um provedor que o minddy consiga acessar pela internet. Remova da mesma forma qualquer outro provedor de que você não precise mais e confira o roteamento resultante antes da próxima execução.
 
 
 ## Entender os planos Cloud e o consumo de IA {#plans-and-ai-usage}

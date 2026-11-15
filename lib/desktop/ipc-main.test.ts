@@ -94,10 +94,6 @@ describe("registerDesktopIpc", () => {
     expect(handlers["minddy:window-chrome"]).toHaveBeenCalledWith(page, "dark", undefined);
 
     expect(await call("minddy:linux-background:set", page, "true")).toBeNull();
-    expect(await call("minddy:local-models:discover", page, { provider: "ollama" })).toEqual({
-      ok: false,
-      reason: "invalid_endpoint",
-    });
     await call("minddy:push:register", page, { activate: "yes" });
     expect(handlers["minddy:push:register"]).toHaveBeenCalledWith(page, { activate: false });
 

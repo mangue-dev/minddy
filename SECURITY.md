@@ -128,15 +128,20 @@ return only their documented projections. Public visibility does not imply
 access to team-only comments, internal identities, private attachments, billing
 data, or service credentials.
 
-## Coding-agent isolation
+## Linked repository content
 
-Server-side agents run in isolated sandboxes with a restricted environment and
-network policy. The sandbox receives only the scoped material required for a
-run. It does not receive the host Docker socket, private Supabase network, or
-unrelated service credentials.
+Minddy does not execute code from a linked repository. The server reads
+repository files, pull requests, and review threads through the forge API and
+handles them as data. A repository skill that a member selects is re-read from
+the linked repository when the message is sent, within fixed count and size
+limits, rather than trusted from the client.
 
-Repository code is untrusted input. Agent execution, dependency installation,
-tests, and build scripts must run away from operator credentials. See
+Repository content is untrusted input: a skill or file can contain text
+written to steer Numo. Numo's tools act as the member who sent the message and
+check that member's project access on the server, whatever the content asks.
+
+Developing minddy itself executes repository code. Run untrusted pull requests
+away from operator credentials; see
 [CONTRIBUTING.md](CONTRIBUTING.md#run-untrusted-changes-safely).
 
 ## Security verification

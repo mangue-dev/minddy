@@ -75,7 +75,7 @@ vi.mock("@/lib/supabase-service", () => ({
         ? anyChain({ id: "key-1", user_id: "u1", provider: args.p_provider,
             key_encrypted: args.p_key_encrypted,
             key_prefix: args.p_key_prefix, base_url: args.p_base_url,
-            feature_models: {}, enabled_surfaces: ["agent"],
+            feature_models: {},
             created_at: "2026-09-26T00:00:00Z",
             updated_at: "2026-09-26T00:00:00Z", validated_at: null,
             last_used_at: null })
@@ -318,11 +318,12 @@ describe("base URL BYOK « generic »", () => {
     expect(response.status).toBe(200);
   });
 
-  it("enregistre Ollama sans clé ni sonde depuis le cloud", async () => {
+  it("refuses a retired local provider without probing it (MIN-996)", async () => {
     const response = await postAiKey(
       jsonRequest({ provider: "ollama", base_url: "http://127.0.0.1:11434" })
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "local_provider_retired" });
     expect(pinnedRequest).not.toHaveBeenCalled();
   });
 });

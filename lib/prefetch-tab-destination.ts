@@ -12,7 +12,6 @@ import { prefetchPageNavigation } from "./use-pages-query";
 import { prefetchProjectQueries, projectPreparationQueries } from "./use-prefetch-project";
 import { routinesQueryKey, routineRunsQueryKey } from "./use-routines-query";
 import { fetchRoutinesApi, fetchRoutineRunsApi } from "./routines-api";
-import { agentModelsQueryKey, fetchAgentModels } from "./use-agent-models-query";
 import {
   PULL_REQUESTS_PAGE,
   allPullRequestsQueryOptions,
@@ -117,10 +116,6 @@ export function prefetchAppTabDestination(
     }
     case "routines": {
       void queryClient.prefetchQuery({ queryKey: routinesQueryKey(), queryFn: fetchRoutinesApi });
-      void queryClient.prefetchQuery({
-        queryKey: agentModelsQueryKey,
-        queryFn: () => fetchAgentModels("user", "text"),
-      });
       return;
     }
     case "pull-requests": {
@@ -302,7 +297,6 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
   }
   if (route.section === "routines") {
     return [{ queryKey: routinesQueryKey(), queryFn: fetchRoutinesApi },
-      { queryKey: agentModelsQueryKey, queryFn: () => fetchAgentModels("user", "text") },
       ...(route.routineId ? [{ queryKey: routineRunsQueryKey(route.routineId), queryFn: () => fetchRoutineRunsApi(route.routineId!) }] : [])];
   }
   const primary = appTabPreparationQuery(client, href);

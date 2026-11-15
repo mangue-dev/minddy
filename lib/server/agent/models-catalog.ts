@@ -3,7 +3,7 @@ import "server-only";
 import {
   getUserByok,
   getUserByokForProvider,
-  resolveAgentApiKey,
+  resolveCatalogEndpoint,
   type UserByok,
 } from "./model";
 import {
@@ -25,13 +25,12 @@ import { nativeModelReasoning } from "@/lib/model-reasoning-rules";
 import { parseClaudeCapabilities, rememberClaudeCapabilities } from "@/lib/anthropic-model-capabilities";
 import {
   getAgentProvider,
-  isLocalAgentProvider,
   normalizeBaseUrl,
   resolveProviderBaseUrl,
   DEFAULT_AGENT_PROVIDER,
   type AgentProviderId,
 } from "@/lib/agent-providers";
-import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice, type AiSurface, type ByokModelKey } from "@/lib/ai-surfaces";
+import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice, type ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import type {
@@ -42,8 +41,9 @@ import { providerSupportsModelCapability } from "@/lib/model-catalog-capability"
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 
 /**
- * Model catalog (MIN-46) of an account's active provider (its BYOK, or the
- * OpenRouter platform key), served by `/api/agent/models` to the model picker.
+ * Model catalogs (MIN-46): the provider serving Numo for an account (its BYOK,
+ * or the OpenRouter platform key), served by `/api/assistant/models` to the
+ * model picker, plus the BYOK settings and admin catalogs.
  *
  * We only return `{ id, name, multiplier? }` per model (+ the slug provider,
  * the configured account default and the plan cap): the picker reformats via
@@ -99,15 +99,6 @@ export interface AgentModelsCatalog {
    * list of advice would hide precisely what we came to look for.
    */
   recommended?: string[];
-  /**
-   * Non-secret address that only the desktop application uses to discover
-   * the local catalog. The server never joins it: `models` remains empty here
-   * and the Electron bridge makes the call on loopback.
-   */
-  localEndpoint?: {
-    provider: Extract<AgentProviderId, "local_openai" | "ollama">;
-    baseUrl: string;
-  };
 }
 
 const TTL_MS = 60 * 60 * 1000;
@@ -319,11 +310,6 @@ async function loadModels(
     case "generic":
       // Arbitrary endpoint: may not expose /models → failure is tolerated.
       return listOpenAICompat(provider, baseUrl, apiKey, capability);
-    case "none":
-      // Local endpoints are never reached from the cloud. The field of
-      // model remains free in the picker: the user enters the id exposed by
-      // Ollama, LM Studio, vLLM… on your own machine.
-      return [];
   }
 }
 
@@ -428,37 +414,28 @@ async function resolveRecommended(
 }
 
 /**
- * Model catalog of the user's ACTIVE provider (BYOK or key
- * OpenRouter platform). Without BYOK or a managed service, the catalog remains empty:
- * even OpenRouter's public index is a third-party call that the instance did not
- * request. Never raises: on upstream failure, returns the expired cache if it
- * exists, otherwise an empty list.
+ * The catalog Numo conversations choose from: the provider routed to Numo
+ * (BYOK or the OpenRouter platform key), or one provider the picker chose
+ * (MIN-826). Without BYOK or a managed service the catalog stays empty: even
+ * OpenRouter's public index is a third-party call the instance did not
+ * request. Never throws: on upstream failure it returns the expired cache if
+ * one exists, otherwise an empty list.
  *
- * The multipliers and the cap only apply in platform mode. BYOK users pay for
- * their own tokens, so the picker does not restrict their model choices.
+ * Multipliers and the plan cap apply in platform mode only. BYOK users pay
+ * for their own tokens, so the picker does not restrict their model choices.
  */
-export async function getAgentModelsForUser(
+export async function getAssistantModelsForUser(
   userId: string,
-  surface: Extract<AiSurface, "agent" | "assistant"> = "agent",
   /** This request's `getUserByok(userId, "assistant")`, when the caller already started it. */
   assistantByok?: Promise<UserByok | null>,
-  /**
-   * Lists one provider's models instead of the usage's route (MIN-826): the
-   * Numo picker shows the models of the provider chosen first.
-   */
   providerChoice?: AiProviderChoice | null,
 ): Promise<AgentModelsCatalog> {
   const modelKey: ByokModelKey = "assistant_model";
-  // The assistant catalog reads the same assignment for its endpoint and for
-  // its feature default: resolve it once.
-  const byokRead = providerChoice === MINDDY_CLOUD_PROVIDER
+  const byok = await (providerChoice === MINDDY_CLOUD_PROVIDER
     ? Promise.resolve(null)
     : providerChoice
-      ? getUserByokForProvider(userId, providerChoice, { surface })
-      : surface === "assistant"
-        ? assistantByok ?? getUserByok(userId, surface)
-        : undefined;
-  // Active Provider: BYOK of the account, or OpenRouter platform key.
+      ? getUserByokForProvider(userId, providerChoice, { surface: "assistant" })
+      : assistantByok ?? getUserByok(userId, "assistant"));
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
   let apiKey = "";
@@ -466,13 +443,7 @@ export async function getAgentModelsForUser(
   let mode: "platform" | "byok" = "platform";
   let endpointConfigured = true;
   try {
-    // This read never probes a local endpoint (`listStrategy: none`); it only
-    // returns the correct provider and keeps the picker in the local run's
-    // namespace.
-    const endpoint = await resolveAgentApiKey(userId, surface, {
-      allowLocal: true,
-      byok: byokRead,
-    });
+    const endpoint = resolveCatalogEndpoint(byok);
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
@@ -482,32 +453,13 @@ export async function getAgentModelsForUser(
     endpointConfigured = false;
   }
 
-  // Assistant calls retain provider feature defaults. Other catalogs expose
-  // no provider or platform fallback that a caller could silently use.
-  const byok = byokRead ? await byokRead : null;
-  const featureDefault = byok?.featureModels[modelKey]?.trim();
   const defaultModel =
-    surface === "assistant"
-      ? featureDefault ||
-        (await resolveByokFeatureDefaultModel(provider, modelKey)) ||
-        null
-      : null;
+    byok?.featureModels[modelKey]?.trim() ||
+    (await resolveByokFeatureDefaultModel(provider, modelKey)) ||
+    null;
 
   const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
-  const localEndpoint = isLocalAgentProvider(provider)
-    ? {
-        provider: provider as Extract<
-          AgentProviderId,
-          "local_openai" | "ollama"
-        >,
-        baseUrl,
-      }
-    : undefined;
-  const header = {
-    provider,
-    defaultModel,
-    ...(localEndpoint ? { localEndpoint } : {}),
-  };
+  const header = { provider, defaultModel };
 
   if (!endpointConfigured) {
     return { ...header, models: [], recommended: [], maxMultiplier: null };
@@ -549,15 +501,6 @@ export async function getAgentModelsForUser(
       )),
     };
   }
-}
-
-/** Catalog for Numo conversations: the assistant route, or one chosen provider. */
-export function getAssistantModelsForUser(
-  userId: string,
-  byok?: Promise<UserByok | null>,
-  providerChoice?: AiProviderChoice | null,
-): Promise<AgentModelsCatalog> {
-  return getAgentModelsForUser(userId, "assistant", byok, providerChoice);
 }
 
 /** Capability-aware catalog for the active BYOK settings screen. */
@@ -619,20 +562,14 @@ export async function getActiveByokModelCatalog(
 /**
  * Catalog of the PLATFORM key (OpenRouter), for the admin dashboard.
  *
- * Difference assumed with `getAgentModelsForUser`: we ignore the BYOK of the admin
- * who is watching. The `app_config` models all run on the platform key —
- * proposing the Anthropic catalog of an admin in BYOK would cause ids
- * to be written unusable in runtime.
+ * Unlike `getAssistantModelsForUser`, the watching admin's own BYOK is
+ * ignored: the `app_config` models all run on the platform key, and an admin's
+ * Anthropic catalog would write ids the runtime cannot use.
  *
  * The tool-calling filter is preserved for text settings: almost all admin
  * settings force a tool call and would break on a model that does not support
  * one. Transcription and embedding settings receive their own capability-
- * filtered catalogs from the same full OpenRouter index.
- *
- * Same robustness contract as the user catalog: never raises.
- */
-/**
- * The capability-aware catalog of the admin dashboard, using the platform key.
+ * filtered catalogs from the same full OpenRouter index. Never throws.
  *
  * Text models are located on the Minddy conversational cost scale. Specialized
  * models use different pricing units, so they deliberately have no multiplier.

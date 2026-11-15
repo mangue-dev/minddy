@@ -87,7 +87,7 @@ export function ModelCombobox({
   triggerContent,
   ariaLabel,
   triggerClassName,
-  scope = "user",
+  scope,
   capability = "text",
   providerChoice,
   providerStep,
@@ -126,11 +126,8 @@ export function ModelCombobox({
   ariaLabel?: string;
   /** Additional compact trigger styles for host-specific layouts. */
   triggerClassName?: string;
-  /**
-   * Catalog queried. `user` (default) = the active provider of the account;
-   * `platform` = the OpenRouter platform key, for the admin config.
-   */
-  scope?: AgentModelsScope;
+  /** Catalog queried (`lib/use-agent-models-query.ts`). */
+  scope: AgentModelsScope;
   /** Runtime capability used to filter the platform admin catalog. */
   capability?: AdminCatalogCapability;
   /** Lists one provider's models (MIN-826): the picker chose the provider first. */

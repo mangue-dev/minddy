@@ -5,13 +5,9 @@ import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import {
   DEFAULT_AGENT_PROVIDER,
   isKnownAgentProvider,
-  isLocalAgentProvider,
   resolveProviderBaseUrl,
   type AgentProviderId,
 } from "@/lib/agent-providers";
-import {
-  LOCAL_ENDPOINT_WITHOUT_API_KEY,
-} from "./byok-credentials";
 import { decodeUserAiKeyRow, type UserAiKeyRow } from
   "@/lib/server/user-ai-key-content";
 import {
@@ -44,15 +40,6 @@ export interface UserByok {
   /** Effective URL base (register, or custom for 'generic'). */
   baseUrl: string;
   featureModels: ByokFeatureModels;
-}
-
-/** A local endpoint cannot serve a call the server makes. */
-export class LocalEndpointRequiresLocalRunError extends Error {
-  code = "localEndpointRequiresLocalRun" as const;
-  constructor() {
-    super("This BYOK endpoint is local and can only be used by a local run");
-    this.name = "LocalEndpointRequiresLocalRunError";
-  }
 }
 
 /**
@@ -109,8 +96,9 @@ async function confirmsUnvalidatedKey(params: {
  * type (`usageKeyFor`). A capability the routed provider does not offer falls
  * back to Minddy Cloud as well.
  *
- * Ignores a row whose URL base is not resolvable (generic without URL), whose
- * key no longer decrypts (secret turned → “reconfigure your key”), or — since
+ * Ignores a row whose provider left the registry (the local providers retired
+ * in MIN-996), whose base URL is not resolvable (generic without URL), whose
+ * key no longer decrypts (rotated secret → “reconfigure your key”), or — since
  * MIN-344 — that the provider has never recognized.
  */
 async function resolveUserByok(
@@ -137,7 +125,7 @@ async function resolveUserByok(
   let keyQuery = supabase
     .from("user_ai_keys")
     .select(
-      "id, user_id, provider, key_encrypted, base_url, validated_at, updated_at, enabled_surfaces, feature_models, encrypted_content, encryption_version, content_revision",
+      "id, user_id, provider, key_encrypted, base_url, validated_at, updated_at, feature_models, encrypted_content, encryption_version, content_revision",
     )
     .eq("user_id", userId);
   keyQuery = target.provider
@@ -150,7 +138,6 @@ async function resolveUserByok(
     base_url: string | null;
     validated_at: string | null;
     updated_at: string;
-    enabled_surfaces: AiSurface[] | null;
     feature_models: ByokFeatureModels | null;
   } & UserAiKeyRow) | null;
   if (!stored) return null;
@@ -160,29 +147,15 @@ async function resolveUserByok(
     !providerSupportsModelCapability(row.provider as AgentProviderId, target.capability)) {
     return null;
   }
-  const localProvider = isLocalAgentProvider(row.provider);
-  // Only the agent surface has an explicit local-execution handoff. Every
-  // other surface runs on the server and must ignore a legacy or corrupted
-  // local-provider assignment even if it bypassed the database constraint.
-  if (localProvider && surface && surface !== "agent") return null;
-  const apiKey =
-    row.key_encrypted === LOCAL_ENDPOINT_WITHOUT_API_KEY
-      ? ""
-      : row.key_encrypted;
-  // The key remains mandatory for all cloud providers. Locally, Ollama
-  // and most OpenAI-compatible servers do not require any: the
-  // proxy will then remove the placeholder from opencode instead of sending it.
-  if (!apiKey && !localProvider) return null;
+  const apiKey = row.key_encrypted;
+  if (!apiKey) return null;
   const baseUrl = resolveProviderBaseUrl(row.provider, row.base_url);
   if (!baseUrl) return null;
-  // A custom cloud URL database is revalidated for EACH use, not just for
-  // the registration (MIN-341): between the two, the DNS of the domain belongs
-  // always to the one who seized it, and nothing prevents it from now on pointing
-  // on the internal network. A URL that has become unresolvable falls into the same situation
-  // that the other unusable lines — we ignore it.
-  // The server never resolves a local address: only the LLM proxy and the
-  // harness from the desktop app access it.
-  if (row.base_url && !localProvider) {
+  // A custom base URL is revalidated on EACH use, not only at registration
+  // (MIN-341): the domain's DNS stays in its owner's hands and may now point
+  // at the internal network. A URL that no longer resolves is ignored like
+  // any other unusable row.
+  if (row.base_url) {
     try {
       await assertPublicHttpUrl(baseUrl);
     } catch {
@@ -192,19 +165,13 @@ async function resolveUserByok(
   const provider = row.provider as AgentProviderId;
   if (
     !row.validated_at &&
-    !localProvider &&
-    !(await confirmsUnvalidatedKey({
-      userId,
-      provider,
-      apiKey: apiKey!,
-      baseUrl,
-    }))
+    !(await confirmsUnvalidatedKey({ userId, provider, apiKey, baseUrl }))
   ) {
     return null;
   }
   return {
     provider,
-    apiKey: apiKey ?? "",
+    apiKey,
     credentialVersion: stored.updated_at,
     baseUrl,
     featureModels: row.feature_models ?? {},
@@ -239,7 +206,7 @@ export async function getUserByokForProvider(
 /** True if the user has a usable BYOK (→ unlimited use). */
 export async function userHasByokKey(
   userId: string,
-  surface: AiSurface = "agent",
+  surface: AiSurface,
 ): Promise<boolean> {
   return (await getUserByok(userId, surface)) != null;
 }
@@ -281,23 +248,11 @@ function resolvePlatformAgentEndpoint(): ResolvedAgentEndpoint {
 }
 
 /**
- * Resolves the effective endpoint: BYOK the user if present (provider + base URL +
- * key), otherwise the OpenRouter platform key. Raised if no platform key.
+ * The endpoint a model catalog lists: the account credential when one serves
+ * the call, otherwise the OpenRouter platform key. Throws without a platform key.
  */
-export async function resolveAgentApiKey(
-  userId: string,
-  surface: Extract<AiSurface, "agent" | "assistant" | "automations"> = "agent",
-  options: {
-    allowLocal?: boolean;
-    /** This request's `getUserByok(userId, surface)`, when the caller already started it. */
-    byok?: Promise<UserByok | null>;
-  } = {},
-): Promise<ResolvedAgentEndpoint> {
-  const byok = await (options.byok ?? getUserByok(userId, surface));
+export function resolveCatalogEndpoint(byok: UserByok | null): ResolvedAgentEndpoint {
   if (byok) {
-    if (isLocalAgentProvider(byok.provider) && !options.allowLocal) {
-      throw new LocalEndpointRequiresLocalRunError();
-    }
     return {
       apiKey: byok.apiKey,
       credentialVersion: byok.credentialVersion,

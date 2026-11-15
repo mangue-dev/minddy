@@ -20,7 +20,6 @@ import {
 
 import { parseDesktopAuthLink } from "@/lib/desktop/auth-link";
 import { createDesktopAuthLinkDelivery } from "@/lib/desktop/auth-link-delivery";
-import { discoverLocalModels } from "@/lib/desktop/local-models";
 import {
   DESKTOP_APP_NAME,
   DESKTOP_ENTRY_PATH,
@@ -957,7 +956,6 @@ function registerIpc(): void {
         stopRuntime: stopLocalRuntime,
         startRuntime: startLocalRuntime,
         reloadWindow: () => mainWindow?.webContents.reload(),
-        discoverModels: discoverLocalModels,
       }),
       ...updateHandlers<ShellIpcEvent>({
         checkForUpdates: checkForUpdatesManually,

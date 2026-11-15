@@ -31,11 +31,6 @@ import {
   type LocalPrerequisiteResult,
 } from "./local-installer";
 import {
-  parseLocalModelDiscoveryInput,
-  type LocalModelDiscoveryInput,
-  type LocalModelDiscoveryResult,
-} from "./local-models";
-import {
   parseDesktopLocalNotification,
   parseDesktopLocalNotificationId,
   type DesktopLocalNotificationPayload,
@@ -71,7 +66,6 @@ interface InvokeChannels {
   "minddy:linux-background:get": { args: []; result: LinuxBackgroundNotificationState | null };
   "minddy:linux-background:set": { args: [enabled: boolean]; result: LinuxBackgroundNotificationState | null };
   "minddy:window-material:set": { args: [enabled: boolean]; result: DesktopWindowMaterialState };
-  "minddy:local-models:discover": { args: [input: LocalModelDiscoveryInput]; result: LocalModelDiscoveryResult };
   "minddy:storage:flush": { args: []; result: void };
   "minddy:server-choice:state": { args: []; result: DesktopServerChoiceState | null };
   "minddy:server-choice:cloud": { args: []; result: void };
@@ -205,10 +199,6 @@ export const DESKTOP_IPC: Contract = {
     { supported: false, enabled: false, reducedTransparency: false, kind: "none" },
     flag,
   ),
-  "minddy:local-models:discover": invoke("app", { ok: false, reason: "invalid_endpoint" }, ([input]) => {
-    const parsed = parseLocalModelDiscoveryInput(input);
-    return parsed ? [parsed] : null;
-  }),
   "minddy:storage:flush": invoke("window", undefined, noArgs),
   "minddy:server-choice:state": invoke("welcome", null, noArgs),
   "minddy:server-choice:cloud": invoke("welcome", undefined, noArgs),

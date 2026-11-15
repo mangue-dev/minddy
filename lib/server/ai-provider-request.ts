@@ -1,10 +1,6 @@
 import "server-only";
 
-import {
-  getAgentProvider,
-  isLocalAgentProvider,
-  type AgentProviderId,
-} from "@/lib/agent-providers";
+import { getAgentProvider, type AgentProviderId } from "@/lib/agent-providers";
 import {
   safeFetch,
   safeFetchResponse,
@@ -14,24 +10,13 @@ import {
 } from "@/lib/server/safe-fetch";
 import { assertAiConsent } from "@/lib/server/ai-consent";
 
-/** Raised when cloud code attempts to contact a desktop-only model server. */
-export class LocalAiProviderRequestError extends Error {
-  code = "localEndpointRequiresLocalRun" as const;
-
-  constructor() {
-    super("Local AI providers can only be contacted by a local agent run");
-    this.name = "LocalAiProviderRequestError";
-  }
-}
-
 function assertServerProvider(provider: AgentProviderId): void {
   if (!getAgentProvider(provider)) throw new Error(`Unknown AI provider: ${provider}`);
-  if (isLocalAgentProvider(provider)) throw new LocalAiProviderRequestError();
 }
 
 /**
  * The single streaming/multipart transport for server-side AI provider calls.
- * It rejects desktop-only providers, validates every DNS answer and redirect,
+ * It rejects providers outside the registry, validates every DNS answer and redirect,
  * and connects only to the address that passed validation. A request from the
  * mobile app whose person has not allowed AI sends nothing (MIN-907,
  * `lib/server/ai-consent.ts`); callers already treat a failed call as no

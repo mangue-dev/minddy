@@ -1,6 +1,5 @@
 import type { DesktopIpcHandlers } from "@/lib/desktop/ipc-main";
 import type { LocalAccountSession } from "@/lib/desktop/local-account";
-import type { LocalModelDiscoveryInput, LocalModelDiscoveryResult } from "@/lib/desktop/local-models";
 
 interface LocalDependencies {
   /** The local clone this app runs, `null` when none is selected. */
@@ -11,15 +10,13 @@ interface LocalDependencies {
   stopRuntime: () => void;
   startRuntime: (root: string) => Promise<void>;
   reloadWindow: () => void;
-  discoverModels: (input: LocalModelDiscoveryInput) => Promise<LocalModelDiscoveryResult>;
 }
 
-type LocalChannel = "minddy:local-account:session" | "minddy:local-runtime:restart" | "minddy:local-models:discover";
+type LocalChannel = "minddy:local-account:session" | "minddy:local-runtime:restart";
 
 /**
- * What runs on this machine: the local instance this app installed (its
- * channels' `local` policy admits only that instance's pages while it is the
- * selected server) and local model servers.
+ * The local instance this app installed: its channels' `local` policy admits
+ * only that instance's pages while it is the selected server.
  */
 export function localHandlers<E>(deps: LocalDependencies): Pick<DesktopIpcHandlers<E>, LocalChannel> {
   /** Whatever else answers on the local port is not the instance this app started. */
@@ -44,7 +41,5 @@ export function localHandlers<E>(deps: LocalDependencies): Pick<DesktopIpcHandle
       deps.reloadWindow();
       return true;
     },
-    // Loopback only, and nothing back but model ids (local-models.ts).
-    "minddy:local-models:discover": (_event, input) => deps.discoverModels(input),
   };
 }

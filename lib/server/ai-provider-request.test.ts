@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AgentProviderId } from "@/lib/agent-providers";
+
 vi.mock("server-only", () => ({}));
 
 const safeFetch = vi.fn();
@@ -7,11 +9,7 @@ const safeFetchResponse = vi.fn();
 
 vi.mock("@/lib/server/safe-fetch", () => ({ safeFetch, safeFetchResponse }));
 
-const {
-  fetchAiProvider,
-  fetchAiProviderBytes,
-  LocalAiProviderRequestError,
-} = await import("@/lib/server/ai-provider-request");
+const { fetchAiProvider, fetchAiProviderBytes } = await import("@/lib/server/ai-provider-request");
 
 describe("server-side AI provider requests", () => {
   beforeEach(() => {
@@ -19,13 +17,16 @@ describe("server-side AI provider requests", () => {
     safeFetchResponse.mockReset();
   });
 
-  it.each(["local_openai", "ollama"] as const)(
+  // A row saved before MIN-996 may still name a retired local provider.
+  it.each(["local_openai", "ollama", "unknown"])(
     "rejects the %s provider before opening a server connection",
     (provider) => {
-      expect(() => fetchAiProvider(provider, "http://127.0.0.1:11434/v1/models")).toThrow(
-        LocalAiProviderRequestError,
-      );
+      expect(() => fetchAiProvider(provider as AgentProviderId, "http://127.0.0.1:11434/v1/models"))
+        .toThrow(`Unknown AI provider: ${provider}`);
+      expect(() => fetchAiProviderBytes(provider as AgentProviderId, "http://127.0.0.1:11434/v1/models", { maxBytes: 1 }))
+        .toThrow(`Unknown AI provider: ${provider}`);
       expect(safeFetchResponse).not.toHaveBeenCalled();
+      expect(safeFetch).not.toHaveBeenCalled();
     },
   );
 

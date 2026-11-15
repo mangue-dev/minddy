@@ -1,12 +1,12 @@
 /**
- * The AI ​​surfaces that an account can pass on its BYOK key (MIN-366).
- * This module remains pure: the API, client settings and server runtime
- * share exactly the same identifiers and the same default values.
+ * The AI surfaces an account can serve with its own provider key (MIN-366).
+ * This module stays pure: the API, the client settings and the server runtime
+ * share the same identifiers and defaults.
  */
 
 import type { AgentProviderId } from "./agent-providers";
 
-export const AI_SURFACES = ["agent", "assistant", "automations", "voice", "feedback"] as const;
+export const AI_SURFACES = ["assistant", "automations", "voice", "feedback"] as const;
 
 export type AiSurface = (typeof AI_SURFACES)[number];
 
@@ -101,9 +101,6 @@ export interface AiSurfaceDefinition {
 }
 
 export const AI_SURFACE_DEFINITIONS: readonly AiSurfaceDefinition[] = [
-  // The agent model and its reasoning already have their dedicated group just below
-  // surfaces in /settings; we do not make two concurrent controls.
-  { id: "agent", modelKeys: [] },
   {
     id: "assistant",
     modelKeys: ["assistant_model", "conversation_title_model", "web_search_model", "numo_wake_model", "home_brief_model"],
@@ -127,12 +124,7 @@ export const AI_SURFACE_DEFINITIONS: readonly AiSurfaceDefinition[] = [
   },
 ] as const;
 
-const AI_SURFACE_SET = new Set<string>(AI_SURFACES);
 const BYOK_MODEL_KEY_SET = new Set<string>(BYOK_MODEL_KEYS);
-
-export function isAiSurface(value: string): value is AiSurface {
-  return AI_SURFACE_SET.has(value);
-}
 
 export function isByokModelKey(value: string): value is ByokModelKey {
   return BYOK_MODEL_KEY_SET.has(value);
@@ -141,17 +133,6 @@ export function isByokModelKey(value: string): value is ByokModelKey {
 /** App_config key of the pre-selected model for a native provider. */
 export function byokFeatureDefaultModelKey(provider: string, modelKey: ByokModelKey): string {
   return `byok_default_${provider}_${modelKey}`;
-}
-
-/** Validation stricte d'un payload API. Un tableau vide signifie « quota Minddy partout ». */
-export function parseAiSurfaces(value: unknown): AiSurface[] | null {
-  if (!Array.isArray(value)) return null;
-  const result: AiSurface[] = [];
-  for (const entry of value) {
-    if (typeof entry !== "string" || !isAiSurface(entry) || result.includes(entry)) return null;
-    result.push(entry);
-  }
-  return result;
 }
 
 /**

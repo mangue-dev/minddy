@@ -28,9 +28,8 @@ import {
   updateRoutineApi,
   type Routine,
 } from "@/lib/routines-api";
-import { useRoutineRunsQuery } from "@/lib/use-routines-query";
+import { useRoutineRunsQuery, useRoutineSchedulingConfigured } from "@/lib/use-routines-query";
 import { RoutineTrashDialog, useRoutineActions } from "@/components/routines/use-routine-actions";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { PageScroll } from "@/components/page-scroll";
 import { DateMentionChip } from "@/components/date-mention-chip";
 import { dayKey, type MentionDate } from "@/lib/mention-date";
@@ -113,10 +112,7 @@ export function RoutineDetail({
   const purchasesHidden = usePurchasesHidden();
   const tCommon = useTranslations("Common");
   const format = useFormatter();
-  const {
-    routineSchedulingConfigured,
-    loading: agentCapabilitiesLoading,
-  } = useAgentModelsQuery();
+  const routineSchedulingConfigured = useRoutineSchedulingConfigured();
   const actions = useRoutineActions({ schedulingConfigured: routineSchedulingConfigured });
 
   const { runs, loading } = useRoutineRunsQuery(routine.id);
@@ -272,7 +268,7 @@ export function RoutineDetail({
         <RoutineStateControl
           enabled={routine.enabled}
           canChange={isOwner}
-          disabled={gesturePending || agentCapabilitiesLoading}
+          disabled={gesturePending}
           canResume={routineSchedulingConfigured}
           onChange={toggleEnabled}
         />
@@ -316,8 +312,7 @@ export function RoutineDetail({
       <PageScroll className={PAGE_SCROLL}>
         <div className="mx-auto flex max-w-content flex-col gap-6">
           <div className="flex flex-col gap-1 empty:hidden">
-            {!agentCapabilitiesLoading &&
-            !routineSchedulingConfigured ? (
+            {!routineSchedulingConfigured ? (
               <p className="flex items-center gap-1.5 text-xs text-warning-strong">
                 <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" />
                 <span>

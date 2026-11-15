@@ -8,10 +8,10 @@ import { isAdminCatalogCapability } from "@/lib/model-catalog-capability";
 /**
  * Admin dashboard template catalog (`/admin` → “Templates” tab).
  *
- * Deliberately distinct from `/api/agent/models`: this one resolves the provider
- * ACTIVE of the account (its BYOK), while the `app_config` models are running
- * still on the OpenRouter platform key — offer the Anthropic catalog
- * of an admin in BYOK would cause runtime to write unusable ids. And he doesn't
+ * Deliberately distinct from `/api/assistant/models`: that one resolves the
+ * provider serving the account's Numo (its BYOK), while the `app_config`
+ * models always run on the OpenRouter platform key, and an admin's Anthropic
+ * catalog would write ids the runtime cannot use.
  * Capability-aware filtering keeps conversational, transcription, embedding
  * and decision settings on separate compatible model lists.
  *

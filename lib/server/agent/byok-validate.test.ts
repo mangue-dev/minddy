@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AgentProviderId } from "@/lib/agent-providers";
 
 vi.mock("server-only", () => ({}));
 
@@ -28,15 +29,15 @@ describe("BYOK provider probes", () => {
     expect(fetchAiProviderBytes).toHaveBeenCalledTimes(10);
   });
 
-  it("never probes a local provider from the server", async () => {
+  it("refuses a retired local provider without contacting it (MIN-996)", async () => {
     await expect(
       probeByokKey({
-        provider: "ollama",
+        provider: "ollama" as AgentProviderId,
         apiKey: "local-placeholder",
         baseUrl: "http://127.0.0.1:11434/v1",
         rateLimitKey: "local-provider-user",
       }),
-    ).resolves.toBe("unknown");
+    ).resolves.toBe("invalid");
     expect(fetchAiProviderBytes).not.toHaveBeenCalled();
   });
 

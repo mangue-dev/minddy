@@ -73,7 +73,6 @@ function setup() {
       stopRuntime: vi.fn(),
       startRuntime: vi.fn(async () => {}),
       reloadWindow: vi.fn(),
-      discoverModels: vi.fn(async () => ({ ok: true, models: ["llama"] }) as never),
     },
     update: {
       checkForUpdates: vi.fn(),
@@ -297,18 +296,6 @@ describe("the local instance", () => {
     selectLocal();
     expect(await call("minddy:local-account:session")).toEqual({ access_token: "a", refresh_token: "r" });
     expect(deps.local.accountSession).toHaveBeenCalledWith("/clone");
-  });
-
-  it("passes parsed discovery input to model discovery and refuses the rest", async () => {
-    const { deps, call } = setup();
-    expect(await call("minddy:local-models:discover", page, { provider: "openai", baseUrl: "http://localhost" })).toEqual({
-      ok: false,
-      reason: "invalid_endpoint",
-    });
-    expect(deps.local.discoverModels).not.toHaveBeenCalled();
-    expect(await call("minddy:local-models:discover", page, { provider: "ollama", baseUrl: " http://localhost:11434 " }))
-      .toEqual({ ok: true, models: ["llama"] });
-    expect(deps.local.discoverModels).toHaveBeenCalledWith({ provider: "ollama", baseUrl: "http://localhost:11434" });
   });
 });
 

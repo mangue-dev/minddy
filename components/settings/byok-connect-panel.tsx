@@ -10,10 +10,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -27,7 +24,7 @@ import { ProviderLogo } from "@/components/model-logo";
 import {
   AGENT_PROVIDERS,
   getAgentProvider,
-  isLocalAgentProvider,
+  isRetiredLocalProvider,
 } from "@/lib/agent-providers";
 import { addAiKeyApi, deleteAiKeyApi, type AiKey } from "@/lib/agent-keys-api";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
@@ -57,10 +54,10 @@ export function ByokConnectPanel({
   const [adding, setAdding] = useState(mode === "onboarding");
   const { keys, loading } = useAiKeysQuery();
   const [editing, setEditing] = useState<AiKey | null>(null);
-  const [provider, setProvider] = useState(() =>
+  const [provider, setProvider] = useState<string>(() =>
     showManagedChoice
       ? MINDDY_CLOUD_PROVIDER
-      : (AGENT_PROVIDERS.find((entry) => !isLocalAgentProvider(entry.id))?.id ?? ""),
+      : (AGENT_PROVIDERS[0]?.id ?? ""),
   );
   const [keyDraft, setKeyDraft] = useState("");
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
@@ -70,16 +67,22 @@ export function ByokConnectPanel({
 
   const providerLabel = (entry: { id: string; label: string }) => {
     if (entry.id === "generic") return t("aiProviderGeneric");
-    if (entry.id === "local_openai") return t("aiProviderLocalOpenAi");
     return entry.label;
+  };
+  // A key saved before MIN-996 may name a provider that left the registry.
+  const keyProviderLabel = (provider: string) => {
+    const definition = getAgentProvider(provider);
+    if (definition) return providerLabel(definition);
+    if (provider === "local_openai") return t("aiProviderLocalOpenAi");
+    if (provider === "ollama") return "Ollama";
+    return provider;
   };
   const availableProviders = useMemo(
     () =>
       AGENT_PROVIDERS.filter(
         (entry) =>
-          (!isLocalAgentProvider(entry.id) || entry.id === editing?.provider) &&
-          (entry.id === editing?.provider ||
-            !keys.some((key) => key.provider === entry.id)),
+          entry.id === editing?.provider ||
+          !keys.some((key) => key.provider === entry.id),
       ),
     [editing?.provider, keys],
   );
@@ -99,7 +102,6 @@ export function ByokConnectPanel({
   }, [availableProviders, editing, showManagedChoice, provider]);
 
   const selectedDef = getAgentProvider(provider);
-  const localProvider = !!selectedDef && isLocalAgentProvider(selectedDef.id);
   const refresh = async () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
@@ -128,11 +130,11 @@ export function ByokConnectPanel({
   const selectProvider = (next: string) => {
     setProvider(next);
     setKeyDraft("");
-    setBaseUrlDraft(getAgentProvider(next)?.localDefaultBaseUrl ?? "");
+    setBaseUrlDraft("");
   };
   const saveKey = async () => {
     const key = keyDraft.trim();
-    if (!selectedDef || (!key && !localProvider) || saving) return;
+    if (!selectedDef || !key || saving) return;
     if (
       selectedDef.requiresBaseUrl &&
       !/^https?:\/\/.+/i.test(baseUrlDraft.trim())
@@ -148,9 +150,7 @@ export function ByokConnectPanel({
         baseUrl: selectedDef.requiresBaseUrl ? baseUrlDraft.trim() : undefined,
       });
       await refresh();
-      toast.success(
-        localProvider ? t("aiLocalEndpointAddedToast") : t("aiKeyAddedToast"),
-      );
+      toast.success(t("aiKeyAddedToast"));
       resetForm();
       onConnected?.();
     } catch (error) {
@@ -177,12 +177,6 @@ export function ByokConnectPanel({
 
   if (loading)
     return <RowsSkeleton rows={2} leading="avatar" secondLine className="max-w-2xl" />;
-  const cloudProviders = availableProviders.filter(
-    (entry) => !isLocalAgentProvider(entry.id),
-  );
-  const localProviders = availableProviders.filter((entry) =>
-    isLocalAgentProvider(entry.id),
-  );
 
   return (
     <div className={cn("flex max-w-2xl flex-col gap-3", className)}>
@@ -193,12 +187,7 @@ export function ByokConnectPanel({
         }}
         title={t("aiKeyRemoveConfirmTitle")}
         description={t("aiKeyRemoveConfirmDescription", {
-          provider: removing
-            ? providerLabel(getAgentProvider(removing.provider) ?? {
-                id: removing.provider,
-                label: removing.provider,
-              })
-            : "",
+          provider: removing ? keyProviderLabel(removing.provider) : "",
         })}
         confirmLabel={t("aiKeyRemove")}
         cancelLabel={tc("cancel")}
@@ -218,7 +207,7 @@ export function ByokConnectPanel({
         </div>
       )}
       {keys.map((key) => {
-        const definition = getAgentProvider(key.provider);
+        const retired = isRetiredLocalProvider(key.provider);
         return (
           <div
             key={key.id}
@@ -227,24 +216,27 @@ export function ByokConnectPanel({
             <ProviderLogo provider={key.provider} size={20} />
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-sm font-medium">
-                {definition ? providerLabel(definition) : key.provider}
+                {keyProviderLabel(key.provider)}
               </span>
-              <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-                {key.base_url ? `${key.base_url} · ` : ""}
-                {key.key_prefix ??
-                  (isLocalAgentProvider(key.provider)
-                    ? t("aiKeyNotRequired")
-                    : "")}
-              </span>
+              {retired ? (
+                <span className="text-xs text-warning-strong">{t("aiKeyRetired")}</span>
+              ) : (
+                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+                  {key.base_url ? `${key.base_url} · ` : ""}
+                  {key.key_prefix ?? ""}
+                </span>
+              )}
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => beginEdit(key)}
-            >
-              {tc("edit")}
-            </Button>
+            {retired ? null : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => beginEdit(key)}
+              >
+                {tc("edit")}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -276,38 +268,19 @@ export function ByokConnectPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectGroup>
-                <SelectLabel>{t("aiProviderCloudGroup")}</SelectLabel>
-                {showManagedChoice && !editing ? (
-                  <SelectItem value={MINDDY_CLOUD_PROVIDER}>
-                    {t("aiProviderMinddy")}
-                  </SelectItem>
-                ) : null}
-                {cloudProviders.map((entry) => (
-                  <SelectItem key={entry.id} value={entry.id}>
-                    <span className="flex items-center gap-2">
-                      <ProviderLogo provider={entry.id} size={16} />
-                      {providerLabel(entry)}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-              {localProviders.length > 0 ? (
-                <>
-                  <SelectSeparator />
-                  <SelectGroup>
-                    <SelectLabel>{t("aiProviderLocalGroup")}</SelectLabel>
-                    {localProviders.map((entry) => (
-                      <SelectItem key={entry.id} value={entry.id}>
-                        <span className="flex items-center gap-2">
-                          <ProviderLogo provider={entry.id} size={16} />
-                          {providerLabel(entry)}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </>
+              {showManagedChoice && !editing ? (
+                <SelectItem value={MINDDY_CLOUD_PROVIDER}>
+                  {t("aiProviderMinddy")}
+                </SelectItem>
               ) : null}
+              {availableProviders.map((entry) => (
+                <SelectItem key={entry.id} value={entry.id}>
+                  <span className="flex items-center gap-2">
+                    <ProviderLogo provider={entry.id} size={16} />
+                    {providerLabel(entry)}
+                  </span>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>} />
           {provider === MINDDY_CLOUD_PROVIDER ? (
@@ -317,40 +290,23 @@ export function ByokConnectPanel({
           ) : null}
           {selectedDef?.requiresBaseUrl ? (
             <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-              {localProvider
-                ? t("aiKeyLocalBaseUrlLabel")
-                : t("aiKeyBaseUrlLabel")}
+              {t("aiKeyBaseUrlLabel")}
               <Input
                 value={baseUrlDraft}
                 onChange={(event) => setBaseUrlDraft(event.target.value)}
-                placeholder={
-                  localProvider
-                    ? t("aiKeyLocalBaseUrlPlaceholder")
-                    : t("aiKeyBaseUrlPlaceholder")
-                }
+                placeholder={t("aiKeyBaseUrlPlaceholder")}
                 spellCheck={false}
                 className="font-mono text-[13px]"
               />
-              {selectedDef.localDefaultBaseUrl ? (
-                <span className="font-normal">
-                  {t("aiKeyLocalBaseUrlHint", {
-                    url: selectedDef.localDefaultBaseUrl,
-                  })}
-                </span>
-              ) : null}
             </label>
           ) : null}
           {selectedDef ? (
             <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-              {localProvider ? t("aiKeyOptionalLabel") : t("aiKeyLabel")}
+              {t("aiKeyLabel")}
               <Input
                 value={keyDraft}
                 onChange={(event) => setKeyDraft(event.target.value)}
-                placeholder={
-                  localProvider
-                    ? t("aiKeyOptionalPlaceholder")
-                    : t("aiKeyPlaceholder")
-                }
+                placeholder={t("aiKeyPlaceholder")}
                 type="password"
                 autoComplete="new-password"
                 spellCheck={false}
@@ -381,7 +337,7 @@ export function ByokConnectPanel({
               <Button
                 type="button"
                 onClick={() => void saveKey()}
-                disabled={saving || (!localProvider && !keyDraft.trim())}
+                disabled={saving || !keyDraft.trim()}
               >
                 {saving ? <Spinner /> : null}
                 {editing ? tc("save") : t("aiKeySave")}

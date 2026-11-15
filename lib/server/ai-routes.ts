@@ -4,7 +4,6 @@ import { getServiceClient } from "@/lib/supabase-service";
 import {
   getAgentProvider,
   isKnownAgentProvider,
-  isLocalAgentProvider,
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import {
@@ -44,7 +43,7 @@ interface KeyRow {
 
 /** A validated server-side credential whose provider can serve the call type. */
 function keyServesUsage(key: KeyRow, usageKey: ByokModelKey): key is KeyRow & { provider: AgentProviderId } {
-  if (!isKnownAgentProvider(key.provider) || isLocalAgentProvider(key.provider)) return false;
+  if (!isKnownAgentProvider(key.provider)) return false;
   return !!key.validated_at && providerServesModelKey(key.provider, usageKey);
 }
 

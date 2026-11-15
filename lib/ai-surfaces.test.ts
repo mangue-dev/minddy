@@ -1,22 +1,26 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AI_SURFACE_DEFINITIONS,
   AI_SURFACES,
+  BYOK_MODEL_KEYS,
   byokFeatureDefaultModelKey,
-  parseAiSurfaces,
   parseByokFeatureModels,
   surfaceForModelKey,
 } from "@/lib/ai-surfaces";
 
 describe("AI surfaces", () => {
-  it("accepts every surface and an empty list that leaves everything on the Minddy quota", () => {
-    expect(parseAiSurfaces(AI_SURFACES)).toEqual(AI_SURFACES);
-    expect(parseAiSurfaces([])).toEqual([]);
+  it("defines every surface once, each serving at least one call type", () => {
+    expect(AI_SURFACE_DEFINITIONS.map((definition) => definition.id)).toEqual([...AI_SURFACES]);
+    for (const definition of AI_SURFACE_DEFINITIONS) expect(definition.modelKeys.length).toBeGreaterThan(0);
   });
 
-  it("rejects unknown and duplicate surfaces", () => {
-    expect(parseAiSurfaces(["agent", "unknown"])).toBeNull();
-    expect(parseAiSurfaces(["assistant", "assistant"])).toBeNull();
+  it("gives every call type exactly one surface", () => {
+    for (const modelKey of BYOK_MODEL_KEYS) {
+      const owners = AI_SURFACE_DEFINITIONS.filter((definition) => definition.modelKeys.includes(modelKey));
+      expect(owners, modelKey).toHaveLength(1);
+      expect(surfaceForModelKey(modelKey)).toBe(owners[0]!.id);
+    }
   });
 
   it("drops blank models and rejects unknown keys", () => {
