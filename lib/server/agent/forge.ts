@@ -1,6 +1,9 @@
 import "server-only";
 
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { getGithubAppSlug } from "@/lib/server/git/github-app";
+import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
+import { isGitlabConfigured } from "@/lib/server/git/gitlab-app";
 import * as github from "./pr";
 import * as gitlab from "./mr";
 import { GithubApiError } from "./pr";
@@ -77,6 +80,19 @@ export { ForgeApiError, isForgeApiError } from "./forge-error";
  * of the minddy project must see the PR without a connected git account. The only exception
  * is `listReviewCommentReactions`, the outcome of which depends on who is looking.
  */
+/** How people and minddy itself appear on a forge (MIN-144, MIN-146). */
+export interface ForgeIdentity {
+  /** Where a member's own account on this forge is stored: the GitHub user
+      authorization, or the GitLab connection, which is also the account that
+      links repositories. */
+  accountTable: "git_user_identities" | "git_connections";
+  /** Members can connect their own account on this deployment. */
+  userAuthConfigured(): boolean;
+  /** minddy's own login on the forge, or null. GitLab has no free bot
+      identity: Numo's gestures there carry the linking account (MIN-146). */
+  botLogin(): string | null;
+}
+
 export interface Forge {
   provider: RepoProviderId;
   /** Merge methods actually offered — GitLab sets its strategy at the
@@ -85,6 +101,10 @@ export interface Forge {
   /** The forge reads reactions comment by comment (GitLab), so a caller must
       know the comment ids first; GitHub reads them for the whole PR at once. */
   reactionsNeedCommentIds: boolean;
+  /** Identical concurrent display reads can share one in-flight request
+      (`withGithubReadScope`). Only the GitHub HTTP layer does it. */
+  sharesConcurrentReads: boolean;
+  identity: ForgeIdentity;
   /** Request a review using the connected human account, preserving other requests. */
   requestPullRequestReviewer(opts: { token: string; repoFullName: string; number: number; login: string }): Promise<void>;
   /**
@@ -171,6 +191,14 @@ export interface Forge {
     path: string;
     ref: string;
   }): Promise<string | null>;
+  /** Paths of the files named `fileName` under `roots` at `ref` (repository skills). */
+  findFilesNamed(opts: {
+    token: string;
+    repoFullName: string;
+    ref: string;
+    roots: readonly string[];
+    fileName: string;
+  }): Promise<string[]>;
   /** Same bytes without UTF-8 decoding — the side-by-side view of the images in the diff. */
   getFileBytesAtRef(opts: {
     token: string;
@@ -520,6 +548,7 @@ export const FORGE_METHOD_ACCESS = {
   getCommitDiff: "read",
   getMergeBaseSha: "read",
   getFileAtRef: "read",
+  findFilesNamed: "read",
   getFileBytesAtRef: "read",
   mergePullRequest: "write",
   updatePullRequestBranch: "write",
@@ -560,6 +589,20 @@ const githubForge: Forge = {
   provider: "github",
   mergeMethods: ["squash", "merge", "rebase"],
   reactionsNeedCommentIds: false,
+  sharesConcurrentReads: true,
+  identity: {
+    accountTable: "git_user_identities",
+    userAuthConfigured: () => isGithubUserAuthConfigured(),
+    // Configuration, not identity: it does not depend on the reader or the
+    // repository, and an unconfigured App must not break the PR view.
+    botLogin: () => {
+      try {
+        return `${getGithubAppSlug()}[bot]`;
+      } catch {
+        return null;
+      }
+    },
+  },
   listRepoMembers: github.listRepoMembers,
   requestPullRequestReviewer: github.requestPullRequestReviewer,
   listPullRequests: github.listPullRequests,
@@ -571,6 +614,7 @@ const githubForge: Forge = {
   getCommitDiff: github.getCommitDiff,
   getMergeBaseSha: github.getMergeBaseSha,
   getFileAtRef: github.getFileAtRef,
+  findFilesNamed: github.findFilesNamed,
   getFileBytesAtRef: github.getFileBytesAtRef,
   mergePullRequest: github.mergePullRequest,
   updatePullRequestBranch: github.updatePullRequestBranch,
@@ -659,6 +703,12 @@ const gitlabForge: Forge = {
   // squash is a parameter to the merge call.
   mergeMethods: ["squash", "merge"],
   reactionsNeedCommentIds: true,
+  sharesConcurrentReads: false,
+  identity: {
+    accountTable: "git_connections",
+    userAuthConfigured: () => isGitlabConfigured(),
+    botLogin: () => null,
+  },
   listRepoMembers: gitlab.listRepoMembers,
   requestPullRequestReviewer: gitlab.requestPullRequestReviewer,
   listPullRequests: gitlab.listPullRequests,
@@ -670,6 +720,7 @@ const gitlabForge: Forge = {
   getCommitDiff: gitlab.getCommitDiff,
   getMergeBaseSha: gitlab.getMergeBaseSha,
   getFileAtRef: gitlab.getFileAtRef,
+  findFilesNamed: gitlab.findFilesNamed,
   getFileBytesAtRef: gitlab.getFileBytesAtRef,
   mergePullRequest: gitlab.mergeMergeRequest,
   updatePullRequestBranch: gitlab.rebaseMergeRequest,
@@ -716,7 +767,7 @@ const gitlabForge: Forge = {
   setConversationReaction: gitlab.setMergeRequestNoteAward,
 };
 
-/** Client of the provider — the value comes from `RepoCloneTarget.provider` (DB). */
+/** Client of the provider — the value comes from `LinkedRepository.provider` (DB). */
 export function forgeFor(provider: RepoProviderId): Forge {
   return provider === "gitlab" ? gitlabForge : githubForge;
 }

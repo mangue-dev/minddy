@@ -9,7 +9,7 @@ import type { PullRequestRef } from "@/lib/pull-request-contract";
  * vocabulary of `PullRequestRef`: both forges are already normalized there by
  * their own `toRef`.
  *
- * It backs the newest paths, in-app reopening (`pr-actions`, which reads the
+ * It backs the newest paths, in-app reopening (`pr-state-actions`, which reads the
  * state from the PR the forge returns rather than assuming `open`) and scan
  * reconciliation (`syncRepoPullRequests`), plus `registerPr` and the legacy
  * prompt. A mistake here is not harmless: it moves an issue.

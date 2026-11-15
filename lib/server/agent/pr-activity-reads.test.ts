@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { prCommentsResponse, prReviewCommentsResponse, type PrScope } from "./pr-actions";
+import { prCommentsResponse } from "./pr-comments";
+import { prReviewCommentsResponse } from "./pr-review-comments";
+import { type PrScope } from "./pr-scope";
 
 /**
  * Reactions of a PR's activity (MIN-889). GitHub reads them from the PR

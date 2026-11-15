@@ -20,7 +20,7 @@ import { decodeDefaultBranch } from "@/lib/server/git/default-branch-content";
  * Call again before a later network operation when the credential may have expired.
  */
 
-export interface RepoCloneTarget {
+export interface LinkedRepository {
   provider: RepoProviderId;
   /** `owner/name`. */
   repoFullName: string;
@@ -77,9 +77,9 @@ const GIT_LINK_COLUMNS =
  * Forge target of the project, or null if no repository is linked or its GitHub
  * installation is unavailable. Other malformed links and unknown providers raise.
  */
-export async function resolveRepoCloneTarget(
+export async function resolveLinkedRepository(
   projectId: string,
-): Promise<RepoCloneTarget | null> {
+): Promise<LinkedRepository | null> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("project_git_links")
@@ -101,12 +101,12 @@ export async function resolveRepoCloneTarget(
  * Returns null when no accessible project has a usable link to this repository;
  * callers respond with the same 404 used for an inaccessible repository.
  */
-export async function resolveRepoCloneTargetForRepo(opts: {
+export async function resolveLinkedRepositoryForRepo(opts: {
   userId: string;
   provider: RepoProviderId;
   repoFullName: string;
-}): Promise<RepoCloneTarget | null> {
-  const target = await resolveRepoCloneTargetWithAccess(opts);
+}): Promise<LinkedRepository | null> {
+  const target = await resolveLinkedRepositoryWithAccess(opts);
   return target ? target.target : null;
 }
 
@@ -116,11 +116,11 @@ export async function resolveRepoCloneTargetForRepo(opts: {
  * in one project and member in another acts through the second. Read-only
  * access still resolves (reads stay open), with `canWrite: false`.
  */
-export async function resolveRepoCloneTargetWithAccess(opts: {
+export async function resolveLinkedRepositoryWithAccess(opts: {
   userId: string;
   provider: RepoProviderId;
   repoFullName: string;
-}): Promise<{ target: RepoCloneTarget; canWrite: boolean } | null> {
+}): Promise<{ target: LinkedRepository; canWrite: boolean } | null> {
   const link = await resolveProjectLinkForRepo(opts);
   if (!link) return null;
   const target = await targetFromLink(link.row);
@@ -175,7 +175,7 @@ async function resolveProjectLinkForRepo(opts: {
  * calls still act as the linked account, the only identity GitLab offers
  * (MIN-146).
  */
-async function targetFromLink(row: GitLinkRow): Promise<RepoCloneTarget | null> {
+async function targetFromLink(row: GitLinkRow): Promise<LinkedRepository | null> {
   const installationId = githubInstallationId(row);
   // Inert fixtures and disconnected installations carry no forge authority.
   // Treat them as unavailable instead of minting a token or throwing a 500.

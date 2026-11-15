@@ -6,19 +6,22 @@ const h = vi.hoisted(() => ({ find: vi.fn(), target: vi.fn(), getPr: vi.fn(),
 vi.mock("./pull-requests", async (original) => ({ ...await original<typeof import("./pull-requests")>(),
   findPullRequest: h.find }));
 vi.mock("./repo-access", async (original) => ({ ...await original<typeof import("./repo-access")>(),
-  resolveRepoCloneTargetForRepo: h.target,
+  resolveLinkedRepositoryForRepo: h.target,
   // PR scopes resolve the target with the caller's write capability (MIN-693).
-  resolveRepoCloneTargetWithAccess: async (...args: unknown[]) => {
+  resolveLinkedRepositoryWithAccess: async (...args: unknown[]) => {
     const target = await h.target(...args);
     return target ? { target, canWrite: true } : null;
   } }));
-vi.mock("./forge", async (original) => ({ ...await original<typeof import("./forge")>(),
-  forgeFor: () => ({ getPullRequest: h.getPr, getRepositoryMergePolicy: h.policy,
-    listChecks: h.checks, listReviews: h.reviews, listReviewThreads: h.threads }) }));
+vi.mock("./forge", async (original) => {
+  const actual = await original<typeof import("./forge")>();
+  return { ...actual,
+    forgeFor: (provider: "github" | "gitlab") => ({ ...actual.forgeFor(provider), getPullRequest: h.getPr,
+      getRepositoryMergePolicy: h.policy, listChecks: h.checks, listReviews: h.reviews, listReviewThreads: h.threads }) };
+});
 vi.mock("@/lib/server/git/forge-actor", () => ({
   resolveForgeActor: h.actor,
 }));
-import { prReadinessBatchResponse } from "./pr-actions";
+import { prReadinessBatchResponse } from "./pr-detail";
 
 const ids = Array.from({ length: 7 }, (_, index) => `pr-${index}`);
 const closed = { state: "closed", merged: true, base: null, headSha: null };

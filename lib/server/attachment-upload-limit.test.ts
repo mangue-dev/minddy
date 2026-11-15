@@ -19,7 +19,7 @@ vi.mock("@/lib/server/attachments", async (importOriginal) => ({
 
 const { POST } = await import("@/app/api/attachments/upload/route");
 const { parseResourcesInput } = await import("./attachments");
-const { prAttachmentResponse } = await import("./agent/pr-actions");
+const { prAttachmentResponse } = await import("./agent/pr-attachments");
 const project = "11111111-1111-4111-8111-111111111111";
 const prefix = `projects/${project}`;
 

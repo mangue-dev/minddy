@@ -2,7 +2,7 @@ import "server-only";
 import type { VisibleRepo } from "./pull-requests";
 import type { PullRequestRef } from "@/lib/pull-request-contract";
 import { forgeFor } from "./forge";
-import { resolveRepoCloneTargetForRepo } from "./repo-access";
+import { resolveLinkedRepositoryForRepo } from "./repo-access";
 
 const TTL_MS = 60_000;
 const MAX_ENTRIES = 200;
@@ -31,7 +31,7 @@ export function readReviewQueue(userId: string, repo: VisibleRepo): Promise<Snap
   if (inflight) return inflight;
   let operation!: Promise<Snapshot>;
   operation = (async () => {
-    const target = await resolveRepoCloneTargetForRepo({ userId, provider: repo.provider, repoFullName: repo.repoFullName });
+    const target = await resolveLinkedRepositoryForRepo({ userId, provider: repo.provider, repoFullName: repo.repoFullName });
     if (!target) return new Map<number, string[]>();
     // Only open PRs wait for a review: reading every state cost five pages
     // (MIN-889).

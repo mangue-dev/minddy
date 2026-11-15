@@ -17,7 +17,7 @@ import {
   rowProvider,
   type PullRequestRow,
 } from "./pull-requests";
-import { resolveRepoCloneTarget } from "./repo-access";
+import { resolveLinkedRepository } from "./repo-access";
 
 /**
  * PR → ticket comment mirror (MIN-802): what is written on a linked pull
@@ -137,7 +137,7 @@ async function backfillPrCommentsToIssue(pr: PullRequestRow, issueId: string): P
   if (error) throw new Error("pr_comment_backfill_issue_unreadable");
   const projectId = (issue as { project_id?: string } | null)?.project_id;
   if (!projectId) return;
-  const target = await resolveRepoCloneTarget(projectId);
+  const target = await resolveLinkedRepository(projectId);
   if (!target || target.provider !== rowProvider(pr)) return;
   const authorId = await writeActorFor(pr, issueId);
   if (!authorId) return;

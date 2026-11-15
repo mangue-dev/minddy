@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * account's other private repositories.
  *
  * Both halves of the contract are tested: what `getInstallationToken` sends
- * (scope and permissions), and what `resolveRepoCloneTarget` asks for. Only
+ * (scope and permissions), and what `resolveLinkedRepository` asks for. Only
  * `fetch` is faked, the one thing that leaves the process here.
  */
 
@@ -39,7 +39,7 @@ import {
   __clearInstallationTokenCacheForTests,
   getInstallationToken,
 } from "./github-app";
-import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
+import { resolveLinkedRepository } from "@/lib/server/agent/repo-access";
 
 const originalFetch = globalThis.fetch;
 
@@ -129,7 +129,7 @@ describe("installation token mint", () => {
 
 describe("project forge target", () => {
   it("always scopes the token to the linked stable repository id", async () => {
-    await resolveRepoCloneTarget("proj-1");
+    await resolveLinkedRepository("proj-1");
     expect(h.minted[0]).toMatchObject({ repository_ids: [1288848861] });
   });
 
@@ -137,7 +137,7 @@ describe("project forge target", () => {
     // Narrowing them would protect nothing more (the repository is already
     // the only one) and would break installations that did not accept a
     // recent permission.
-    await resolveRepoCloneTarget("proj-1");
+    await resolveLinkedRepository("proj-1");
     expect(h.minted[0]).not.toHaveProperty("permissions");
   });
 });

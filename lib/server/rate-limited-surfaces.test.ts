@@ -57,7 +57,7 @@ vi.mock("@/lib/server/project-icon", async (importOriginal) => ({
   uploadProjectIcon: (...args: unknown[]) => uploadProjectIcon(...args),
   compressIconFile: (...args: unknown[]) => compressIconFile(...args),
 }));
-vi.mock("@/lib/server/agent/pr-actions", () => ({
+vi.mock("@/lib/server/agent/pr-attachments", () => ({
   prAttachmentResponse: (...args: unknown[]) => prAttachmentResponse(...args),
   readUploadedFile: async (request: Request) => {
     const entry = (await request.formData()).get("file");

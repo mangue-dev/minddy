@@ -790,6 +790,59 @@ export async function getFileAtRef(opts: {
   );
 }
 
+/** Bounds the directory walk of `findFilesNamed`: one contents call per directory. */
+const MAX_FIND_DIRECTORIES = 300;
+
+/**
+ * Paths of the files named `fileName` under `roots` at `ref`. The contents
+ * API lists one directory per call, so the walk is breadth-first and bounded;
+ * a directory that holds the file is not searched deeper.
+ */
+export async function findFilesNamed(opts: {
+  token: string;
+  repoFullName: string;
+  ref: string;
+  roots: readonly string[];
+  fileName: string;
+}): Promise<string[]> {
+  const [owner, repo] = opts.repoFullName.split("/");
+  if (!owner || !repo) throw new Error("Invalid GitHub repository name");
+  const queue: string[] = [...opts.roots];
+  const paths: string[] = [];
+  let visited = 0;
+
+  while (queue.length > 0 && visited < MAX_FIND_DIRECTORIES) {
+    const directory = queue.shift()!;
+    visited += 1;
+    const url =
+      `${GITHUB_API_BASE}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}` +
+      `/contents/${encodePath(directory)}?ref=${encodeURIComponent(opts.ref)}`;
+    const response = await fetch(url, { headers: githubHeaders(opts.token), cache: "no-store" });
+    if (response.status === 404) continue;
+    if (!response.ok) {
+      throw new Error(`GitHub file discovery failed (${response.status})`);
+    }
+    const data = (await response.json()) as unknown;
+    if (!Array.isArray(data)) continue;
+    const entries = data.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") return [];
+      const item = entry as { path?: unknown; type?: unknown; name?: unknown };
+      return typeof item.path === "string" && typeof item.type === "string"
+        ? [{ path: item.path, type: item.type, name: item.name }]
+        : [];
+    });
+    const found = entries.find((entry) => entry.type === "file" && entry.name === opts.fileName);
+    if (found) {
+      paths.push(found.path);
+      continue;
+    }
+    for (const entry of entries) {
+      if (entry.type === "dir") queue.push(entry.path);
+    }
+  }
+  return paths;
+}
+
 /**
  * Same bytes, not decoded: the image version of a diff file (MIN-66).
  * `getFileAtRef` passes through `res.text()`, which interprets the body as UTF-8 and

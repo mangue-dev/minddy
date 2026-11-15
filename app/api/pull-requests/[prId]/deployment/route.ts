@@ -1,9 +1,7 @@
 import type { NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  prDeploymentResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prDeploymentResponse } from "@/lib/server/agent/pr-detail";
 
 type RouteContext = { params: Promise<{ prId: string }> };
 

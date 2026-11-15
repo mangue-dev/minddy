@@ -49,7 +49,7 @@ import type { CommitDiff, CommitExtras, DeploymentOutcome, ReviewSubmission } fr
  * • conversation = non-system notes; anchored review = discussions
  * carrying a `position` (DiffNote). GitLab does not provide `diff_hunk`
  * → empty string (all renderings already have a hunkless fallback).
- * Token: OAuth access token of the connected account (minted by resolveRepoCloneTarget).
+ * Token: OAuth access token of the connected account (minted by resolveLinkedRepository).
  */
 
 export class GitlabApiError extends ForgeApiError {
@@ -750,6 +750,53 @@ export async function getFileAtRef(opts: {
     throw new GitlabApiError(errorMessage(data, res.status), res.status);
   }
   return text;
+}
+
+/** Bounds the recursive tree read of `findFilesNamed`, per root. */
+const MAX_FIND_PAGES_PER_ROOT = 10;
+
+/** Paths of the files named `fileName` under `roots` at `ref`, from the recursive repository tree. */
+export async function findFilesNamed(opts: {
+  token: string;
+  repoFullName: string;
+  ref: string;
+  roots: readonly string[];
+  fileName: string;
+}): Promise<string[]> {
+  const paths: string[] = [];
+  for (const root of opts.roots) {
+    let page = 1;
+    for (let count = 0; count < MAX_FIND_PAGES_PER_ROOT; count += 1) {
+      const query = new URLSearchParams({
+        path: root,
+        ref: opts.ref,
+        recursive: "true",
+        per_page: "100",
+        page: String(page),
+      });
+      const response = await fetch(
+        `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/tree?${query}`,
+        { headers: gitlabHeaders(opts.token), cache: "no-store" },
+      );
+      if (response.status === 404) break;
+      if (!response.ok) {
+        throw new Error(`GitLab file discovery failed (${response.status})`);
+      }
+      const data = (await response.json()) as unknown;
+      if (!Array.isArray(data)) break;
+      for (const entry of data) {
+        if (!entry || typeof entry !== "object") continue;
+        const item = entry as { path?: unknown; type?: unknown; name?: unknown };
+        if (item.type === "blob" && item.name === opts.fileName && typeof item.path === "string") {
+          paths.push(item.path);
+        }
+      }
+      const next = gitlabNextPage(response);
+      if (!next) break;
+      page = next;
+    }
+  }
+  return paths;
 }
 
 /**

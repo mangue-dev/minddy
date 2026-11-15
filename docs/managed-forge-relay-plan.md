@@ -384,7 +384,7 @@ Phase 0 — Contract (this document, decisions)
 Phase 1 — Core seam (ships value independently)
 - [x] Extract `ForgeProvider` interface (`lib/server/git/forge-provider.ts`);
   route `repo-access.ts` through it. `pr-actions.ts` and `pr-link.ts` consume
-  tokens exclusively via `repo-access.ts` (`resolveRepoCloneTarget*`), so the
+  tokens exclusively via `repo-access.ts` (`resolveLinkedRepository*`), so the
   seam covers them without direct changes. (`forge-actor.ts` is deferred to
   Phase 3 — it needs user tokens, not installation tokens; see the interface
   scope note.)

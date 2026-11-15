@@ -1,7 +1,7 @@
 import "server-only";
 
 import { issueStatusForPrState, type SyncableIssueStatus } from "@/lib/pr-issue-status";
-import { resolveRepoCloneTargetForRepo } from "./repo-access";
+import { resolveLinkedRepositoryForRepo } from "./repo-access";
 import { parsePullRequestRef } from "./pr-ingest-core";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { broadcastPrChanged } from "./pr-live";
@@ -125,7 +125,7 @@ export async function resolveProjectPullRequest(opts: {
   if (existing) return { pr: existing };
 
   try {
-    const target = await resolveRepoCloneTargetForRepo({
+    const target = await resolveLinkedRepositoryForRepo({
       userId: opts.userId,
       provider: repo.provider,
       repoFullName: repo.repoFullName,

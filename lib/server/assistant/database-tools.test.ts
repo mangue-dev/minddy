@@ -14,7 +14,7 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
   rowProvider: (row: { provider: string }) => row.provider,
 }));
 vi.mock("@/lib/server/agent/repo-access", () => ({
-  resolveRepoCloneTarget: h.resolveRepo,
+  resolveLinkedRepository: h.resolveRepo,
 }));
 vi.mock("@/lib/server/project-access", async (original) => ({
   ...await original<typeof import("@/lib/server/project-access")>(), getProjectAccess: h.access,

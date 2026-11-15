@@ -14,6 +14,7 @@ import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
+import { readObjective } from "@/lib/server/objective-read";
 import { commentStore } from "@/lib/server/comment-store";
 import { readIssueEvents } from "@/lib/server/issue-event-store";
 import "server-only";
@@ -29,7 +30,6 @@ import {
   getIssue,
   listIssues,
   listMembers,
-  resolveEntityRelations,
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
@@ -142,8 +142,13 @@ import {
   type PromptPullRequest,
 } from "@/lib/issue-prompt";
 import type { Issue } from "@/lib/types";
-import { groupReviewThreads } from "@/lib/pr-review-threads";
-import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
+import {
+  pullRequestFileView,
+  pullRequestState,
+  readPullRequestFromForge,
+  reviewThreadView,
+} from "@/lib/server/agent/pull-request-read";
+import { resolveLinkedRepository } from "@/lib/server/agent/repo-access";
 import {
   linkPullRequestToIssue,
   resolveProjectPullRequest,
@@ -213,7 +218,7 @@ import { durationBucket } from "@/lib/analytics-sanitize";
 import { isKnownTimezone } from "@/lib/routine-schedule";
 import { readInboxNotifications } from "@/lib/server/inbox";
 import { buildInboxToolResult } from "@/lib/inbox-tool";
-import { MAX_BULK_ISSUES, MAX_EDIT_DIFF_CHARS, MAX_PATCH_CHARS } from "./surface-limits";
+import { MAX_BULK_ISSUES, MAX_EDIT_DIFF_CHARS } from "./surface-limits";
 import {
   compactToolDescription,
   type DiscoveryAnnotations,
@@ -1486,7 +1491,7 @@ export function registerMinddyTools(
 
       let target;
       try {
-        target = await resolveRepoCloneTarget(scope.access.project.id);
+        target = await resolveLinkedRepository(scope.access.project.id);
       } catch (e) {
         return fail("git_link_invalid", (e as Error).message);
       }
@@ -1502,68 +1507,28 @@ export function registerMinddyTools(
           `The pull request of '${ref.issue.identifier}' is not in this project's repository.`,
         );
       }
-      const forge = forgeFor(target.provider);
-
       try {
-        const [pr, diff, reviewComments, reviewThreads] = await Promise.all([
-          forge.getPullRequest({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge.listPullRequestFiles({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge
-            .listPullRequestReviewComments({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-            })
-            .catch(() => []),
-          // Thread resolution state (MIN-139) — best-effort, like
-          // comments: unreadable = stateless child, no error.
-          forge
-            .listReviewThreads({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-            })
-            .catch(() => []),
-        ]);
-        // Checks CI (MIN-138) — `null` = illisible (permission de l'App non
-        // accepted) or deposit without CI; never blocking when reading the PR.
-        const checks = pr.headSha
-          ? await forge
-              .listChecks({
-                token: target.token,
-                repoFullName: target.repoFullName,
-                number: prNumber,
-                sha: pr.headSha,
-              })
-              .catch(() => null)
-          : null;
+        const read = await readPullRequestFromForge(forgeFor(target.provider), target, prNumber, { conversation: false });
+        const pr = read.pullRequest;
         return ok({
           pull_request: {
             number: pr.number,
             url: pr.url,
-            state: pr.merged ? "merged" : pr.state,
+            state: pullRequestState(pr),
             title: pr.title,
             body: pr.body,
             head: pr.head,
             base: pr.base,
             draft: !!pr.draft,
-            checks: checks
+            checks: read.checks
               ? {
-                  state: checks.state,
-                  passing: checks.passing,
-                  total: checks.total,
-                  failing: checks.checks
+                  state: read.checks.state,
+                  passing: read.checks.passing,
+                  total: read.checks.total,
+                  failing: read.checks.checks
                     .filter((c) => c.state === "failure")
-                    // `description` = what the forge says about failure, when it
-                    // formulate it: enough to know WHAT to correct without opening the link.
+                    // What the forge says about the failure, when it says it:
+                    // enough to know what to fix without opening the link.
                     .map((c) => ({
                       name: c.name,
                       url: c.url,
@@ -1573,48 +1538,9 @@ export function registerMinddyTools(
               : null,
             repository: target.repoFullName,
             issue: { id: ref.issue.id, identifier: ref.issue.identifier },
-            files: diff.files.map((f) => ({
-              filename: f.filename,
-              status: f.status,
-              additions: f.additions,
-              deletions: f.deletions,
-              // Cap the patch: a big diff would drown out the context of the model.
-              patch:
-                f.patch && f.patch.length > MAX_PATCH_CHARS
-                  ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
-                  : (f.patch ?? null),
-            })),
-            // The pagination of the forge cut the list: say it rather than
-            // let conclude on what has been seen.
-            files_truncated: diff.truncated,
-            // Review threads anchored to the code. An expired thread (`outdated`) no longer has
-            // reliable anchor — its `diff_hunk` is the only trace of the targeted code.
-            review_comments: groupReviewThreads(
-              reviewComments,
-              reviewThreads,
-            ).map((thread) => ({
-              id: thread.id,
-              path: thread.root.path,
-              line: thread.root.line,
-              original_line: thread.root.original_line,
-              side: thread.root.side,
-              // Note MULTI-LINES: `line` is the last line, this one
-              // the first. Without it, “these ten lines are false” reads
-              // as a point on the last one (MIN-181).
-              start_line: thread.root.start_line,
-              original_start_line: thread.root.original_start_line,
-              outdated: thread.resolution?.outdated ?? thread.root.line == null,
-              // `true` = the thread has been marked resolved: the point is set.
-              // `false` includes "unknown state" — the forge didn't say it.
-              resolved: !!thread.resolution?.resolved,
-              diff_hunk: thread.root.diff_hunk,
-              url: thread.root.html_url,
-              comments: thread.comments.map((c) => ({
-                author: c.user?.login ?? null,
-                body: c.body,
-                created_at: c.created_at,
-              })),
-            })),
+            files: read.files.map(pullRequestFileView),
+            files_truncated: read.filesTruncated,
+            review_comments: read.threads.map((thread) => reviewThreadView(thread, { withUrl: true })),
           },
         });
       } catch (e) {
@@ -1983,92 +1909,45 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       const service = getServiceClient();
+      const projectId = scope.access.project.id;
 
-      const { data: objective, error } = await objectiveStore(service)
-        .select("*")
-        .is("deleted_at", null)
-        .eq("id", args.objective_id)
-        .eq("project_id", scope.access.project.id)
-        .maybeSingle();
-      if (error) return fail("database_error", error.message);
-      if (!objective) {
-        return fail("not_found", "Objective not found in this project.");
-      }
-
-      const [
-        { data: issues },
-        { data: comments, error: commentsError },
-        { data: attachmentRows },
-        relationRows,
-        activity,
-      ] = await Promise.all([
-        issueStore(service).select("id, number, title, status, priority, effort, assignee_id")
-          .is("deleted_at", null)
-          .eq("objective_id", objective.id)
-          .order("number", { ascending: true }),
-        commentStore(service, "comments", scope.userId)
-          .select(
-            "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at",
-          )
-          .eq("objective_id", objective.id)
-          .order("created_at", { ascending: true }),
-        service
-          .from("attachments")
-          .select(
-            "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
-          )
-          .eq("objective_id", objective.id)
-          .order("created_at", { ascending: true }),
-        resolveEntityRelations(
-          service,
-          {
-            projectId: scope.access.project.id,
-            projectKey: scope.access.project.key,
-          },
-          objective.id as string,
-        ),
-        recentActivity({ objective_id: objective.id as string }, scope.userId, scope.access.project.id),
-      ]);
-
-      if (commentsError) return fail("database_error", "Unable to read objective comments.");
-      // Resources: `comment_id` null = carried by the objective itself, otherwise
-      // by one of his comments — same cut as minddy_get_issue.
-      const resourcesByComment = new Map<
-        string | null,
-        Record<string, unknown>[]
-      >();
-      for (const stored of attachmentRows ?? []) {
-        const row = await decodeAttachmentRow("attachments", stored,
-          scope.userId, scope.access.project.id);
-        const key = (row.comment_id as string | null) ?? null;
-        const list = resourcesByComment.get(key) ?? [];
-        list.push(resourceMeta(row));
-        resourcesByComment.set(key, list);
-      }
-
-      // Authors: a comment written by an agent is attributed to HIS KEY, not
-      // to the owner of the key — same rule as on a ticket.
-      const [users, keyActors] = await Promise.all([
-        fetchAuthUsersById(service, [
-          ...(comments ?? []).map((c) => c.author_id as string),
-          ...(issues ?? [])
-            .map((i) => i.assignee_id)
-            .filter((v): v is string => typeof v === "string"),
-          ...(typeof objective.lead_user_id === "string"
-            ? [objective.lead_user_id]
-            : []),
+      const read = await readObjective(
+        service,
+        service,
+        {
+          projectId,
+          projectKey: scope.access.project.key,
+          objectiveId: args.objective_id,
+          actorId: scope.userId,
+          columns: "*",
+        },
+        (objective) => Promise.all([
+          issueStore(service).select("id, number, title, status, priority, effort, assignee_id")
+            .is("deleted_at", null)
+            .eq("objective_id", objective.id)
+            .order("number", { ascending: true })
+            .then(({ data }) => data ?? []),
+          recentActivity({ objective_id: objective.id as string }, scope.userId, projectId),
         ]),
-        resolveApiKeyActors(
-          (comments ?? []).map((c) => c.api_key_id as string | null),
-        ),
+      );
+      if (!read.ok) {
+        return read.reason === "not_found"
+          ? fail("not_found", "Objective not found in this project.")
+          : fail("database_error", read.reason === "database_error" ? read.message : "Unable to read objective comments.");
+      }
+      const { objective, extras: [issues, activity] } = read;
+
+      const users = await fetchAuthUsersById(service, [
+        ...issues.map((i) => i.assignee_id).filter((v): v is string => typeof v === "string"),
+        ...(typeof objective.lead_user_id === "string" ? [objective.lead_user_id] : []),
       ]);
 
-      // Progression: same accounts and same weighting by effort as
-      // minddy_list_objectives (and that UI bar).
+      // Same counts and effort weighting as minddy_list_objectives (and the
+      // progress bar in the app).
       let done = 0;
       let totalPoints = 0;
       let earnedPoints = 0;
-      for (const issue of issues ?? []) {
+      for (const issue of issues) {
         if (isClosedStatus(issue.status as IssueStatus)) done += 1;
         const points = effortToPoints(issue.effort as IssueEffort | null);
         totalPoints += points;
@@ -2077,7 +1956,7 @@ export function registerMinddyTools(
       }
 
       return okWithImages({
-        linked_feedback: await listFeedbackForObjective(scope.access.project.id, objective.id),
+        linked_feedback: await listFeedbackForObjective(projectId, args.objective_id),
         objective: {
           ...objective,
           lead_name:
@@ -2086,15 +1965,15 @@ export function registerMinddyTools(
               : null,
           progress: {
             done,
-            total: (issues ?? []).length,
+            total: issues.length,
             percent:
               totalPoints === 0
                 ? 0
                 : Math.round((earnedPoints / totalPoints) * 100),
           },
-          resources: resourcesByComment.get(null) ?? [],
+          resources: read.resources,
         },
-        issues: (issues ?? []).map((i) => ({
+        issues: issues.map((i) => ({
           id: i.id,
           identifier: issueIdentifier(
             scope.access.project.key,
@@ -2110,41 +1989,8 @@ export function registerMinddyTools(
               ? displayName(toNamed(users.get(i.assignee_id)), "User")
               : null,
         })),
-        relations: relationRows.map((r) =>
-          r.kind === "objective"
-            ? {
-                relation: r.relation,
-                objective_id: r.other.id,
-                name: r.other.name,
-                status: r.other.status,
-                lead_user_id: r.other.lead_user_id,
-              }
-            : {
-                relation: r.relation,
-                issue_id: r.other.id,
-                identifier: r.other.identifier,
-                title: r.other.title,
-                status: r.other.status,
-              }
-        ),
-        comments: (comments ?? []).map((c) => {
-          const commentResources = resourcesByComment.get(c.id as string);
-          return {
-            id: c.id,
-            author: c.via_assistant
-              ? "Numo"
-              : c.via_mcp
-                ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
-                : displayName(
-                    toNamed(users.get(c.author_id as string)),
-                    "User",
-                  ),
-            body: c.body,
-            parent_id: c.parent_id,
-            created_at: c.created_at,
-            ...(commentResources ? { resources: commentResources } : {}),
-          };
-        }),
+        relations: read.relations,
+        comments: read.comments,
         activity,
       });
     },

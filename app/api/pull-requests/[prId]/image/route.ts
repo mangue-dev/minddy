@@ -1,9 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  prCommentImageResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prCommentImageResponse } from "@/lib/server/agent/pr-files";
 
 /**
  * GET /api/pull-requests/[prId]/image?asset=<uuid> — an image pasted into an

@@ -45,7 +45,7 @@ import {
   listCandidateRepos,
   unlinkProject,
 } from "@/lib/server/git/repo-links";
-import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
+import { resolveLinkedRepository } from "@/lib/server/agent/repo-access";
 import { syncRepoPullRequests } from "@/lib/server/agent/pull-requests";
 import type { ProjectGitLink } from "@/lib/types";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
@@ -71,7 +71,7 @@ function isProviderConfigured(provider: RepoProviderId): boolean {
  */
 async function backfillRepoPullRequests(projectId: string): Promise<void> {
   try {
-    const target = await resolveRepoCloneTarget(projectId);
+    const target = await resolveLinkedRepository(projectId);
     if (!target) return;
     const { count, truncated } = await syncRepoPullRequests({
       provider: target.provider,

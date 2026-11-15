@@ -46,7 +46,7 @@ describe("unified Numo lifecycle boundary", () => {
       .sort();
 
     expect(entrypoints).toEqual([
-      "lib/server/agent/pr-actions.ts",
+      "lib/server/agent/pr-numo-review.ts",
       "lib/server/assistant/comment-agent.ts",
       "lib/server/numo/wake.ts",
       "lib/server/numo/watch-clock.ts",

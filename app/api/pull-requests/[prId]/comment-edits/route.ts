@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { authorizePrRequest } from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
 import { listPrCommentEdits } from "@/lib/server/agent/pr-comment-edits";
 
 /**

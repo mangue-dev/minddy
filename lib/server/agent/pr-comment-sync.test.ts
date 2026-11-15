@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   mirrorGithubCommentToIssue: vi.fn(),
   findSyncedThreadRoot: vi.fn(),
   finishSyncedForgeComment: vi.fn(),
-  resolveRepoCloneTarget: vi.fn(),
+  resolveLinkedRepository: vi.fn(),
   listPullRequestMirrorSources: vi.fn(),
   listMergeRequestMirrorSources: vi.fn(),
   issueProject: { project_id: "project-1" } as { project_id: string } | null,
@@ -60,7 +60,7 @@ vi.mock("@/lib/server/comment-store", () => ({
   findSyncedThreadRoot: mocks.findSyncedThreadRoot,
   finishSyncedForgeComment: mocks.finishSyncedForgeComment,
 }));
-vi.mock("./repo-access", () => ({ resolveRepoCloneTarget: mocks.resolveRepoCloneTarget }));
+vi.mock("./repo-access", () => ({ resolveLinkedRepository: mocks.resolveLinkedRepository }));
 vi.mock("./pr", async (importOriginal) => ({
   ...await importOriginal<typeof import("./pr")>(),
   listPullRequestMirrorSources: mocks.listPullRequestMirrorSources,
@@ -158,7 +158,7 @@ describe("syncPrCommentToIssues", () => {
 
 describe("backfillPendingPrComments", () => {
   beforeEach(() => {
-    mocks.resolveRepoCloneTarget.mockResolvedValue({ provider: "github", token: "ghs_test" });
+    mocks.resolveLinkedRepository.mockResolvedValue({ provider: "github", token: "ghs_test" });
     mocks.findSyncedThreadRoot.mockResolvedValue(null);
     mocks.listPullRequestMirrorSources.mockResolvedValue({
       reviews: [{ id: 5, state: "APPROVED", body: "Ship it.", user: { login: "lead" },
@@ -219,7 +219,7 @@ describe("backfillPendingPrComments", () => {
 
   it("reads a merge request's discussions on GitLab", async () => {
     mocks.links = [{ issue_id: "issue-a", comments_backfilled_at: null }];
-    mocks.resolveRepoCloneTarget.mockResolvedValue({ provider: "gitlab", token: "glpat" });
+    mocks.resolveLinkedRepository.mockResolvedValue({ provider: "gitlab", token: "glpat" });
     mocks.listMergeRequestMirrorSources.mockResolvedValue([
       { id: 1, body: "added 2 commits", system: true, discussionId: "d0", created_at: "2026-10-01T08:00:00Z" },
       { id: 2, body: "Why?", type: "DiffNote", position: { new_path: "a.rb", new_line: 3 },

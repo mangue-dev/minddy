@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  prAttachmentResponse,
-  readUploadedFile,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prAttachmentResponse, readUploadedFile } from "@/lib/server/agent/pr-attachments";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**

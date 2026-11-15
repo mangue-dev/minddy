@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { prMaintenanceActionResponse, updatePrCommentResponse, type PrScope } from "./pr-actions";
+import { prMaintenanceActionResponse } from "./pr-maintenance";
+import { updatePrCommentResponse } from "./pr-comments";
+import { type PrScope } from "./pr-scope";
 
 const record = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("./pr-comment-edits", () => ({ recordPrCommentEditQuiet: record }));

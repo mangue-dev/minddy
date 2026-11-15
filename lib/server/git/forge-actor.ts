@@ -24,7 +24,7 @@ import {
  * bot. The dividing line is *human vs agent*, not *writing vs reading*.
  *
  * On the GitLab side, the actor corrects a real identity bug in passing:
- * `resolveRepoCloneTargetForRepo` takes the connection carried by the LINK of
+ * `resolveLinkedRepositoryForRepo` takes the connection carried by the LINK of
  * project — that of which linked the repository. A member B therefore wrote under
  * the GitLab identity of member A. Here, it is HIS own connection, never that of the
  * link.

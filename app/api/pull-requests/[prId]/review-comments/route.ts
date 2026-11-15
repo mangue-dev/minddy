@@ -1,13 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  createPrReviewCommentResponse,
-  parseReviewCommentPayload,
-  parseReviewThreadPayload,
-  prReviewCommentsResponse,
-  setPrReviewThreadResolvedResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { createPrReviewCommentResponse, parseReviewCommentPayload, parseReviewThreadPayload, prReviewCommentsResponse, setPrReviewThreadResolvedResponse } from "@/lib/server/agent/pr-review-comments";
 
 /**
  * Pull request review comments (MIN-143) — those anchored to a line

@@ -87,7 +87,7 @@ const {
 } = await import(
   "@/lib/server/git/forge-provider"
 );
-const { resolveRepoCloneTarget } = await import("@/lib/server/agent/repo-access");
+const { resolveLinkedRepository } = await import("@/lib/server/agent/repo-access");
 
 beforeEach(() => {
   __clearRelayTokenCacheForTests();
@@ -252,7 +252,7 @@ describe("repo-access through the seam", () => {
       repo_full_name: "acme/app",
       default_branch: "trunk",
     };
-    const target = await resolveRepoCloneTarget("project-1");
+    const target = await resolveLinkedRepository("project-1");
     expect(installationTokenCalls).toEqual([
       {
         installationId: 42,
@@ -281,7 +281,7 @@ describe("repo-access through the seam", () => {
       default_branch: "main",
       git_connections: { source: "relay" },
     };
-    const target = await resolveRepoCloneTarget("project-1");
+    const target = await resolveLinkedRepository("project-1");
     expect(relayRequestCalls).toEqual([
       {
         path: "/api/relay/github/installation-token",
@@ -309,7 +309,7 @@ describe("repo-access through the seam", () => {
       repo_full_name: "acme/app",
       default_branch: null,
     };
-    const target = await resolveRepoCloneTarget("project-1");
+    const target = await resolveLinkedRepository("project-1");
     expect(gitlabTokenCalls).toEqual(["conn-2"]);
     expect(target).toMatchObject({
       provider: "gitlab",

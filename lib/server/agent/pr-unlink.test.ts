@@ -14,7 +14,8 @@ vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({ rpc: mocks
 vi.mock("./pr-live", () => ({ broadcastPrChanged: mocks.broadcast }));
 vi.mock("./issue-status-sync", () => ({ syncIssueStatusFromPr: mocks.syncStatus }));
 
-import { prUnlinkIssueResponse, type PrScope } from "./pr-actions";
+import { prUnlinkIssueResponse } from "./pr-linking";
+import { type PrScope } from "./pr-scope";
 
 const PR_ID = "62500000-0000-4000-8000-000000000030";
 const ISSUE_ID = "62500000-0000-4000-8000-000000000020";

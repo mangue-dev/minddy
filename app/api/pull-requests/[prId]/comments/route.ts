@@ -1,11 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  createPrCommentResponse,
-  prCommentsResponse,
-  updatePrCommentResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { createPrCommentResponse, prCommentsResponse, updatePrCommentResponse } from "@/lib/server/agent/pr-comments";
 
 /**
  * Pull request thread (MIN-143), served by the forge API

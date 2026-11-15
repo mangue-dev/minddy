@@ -57,7 +57,7 @@ vi.mock("./pull-requests", async (importOriginal) => ({
 }));
 
 import { PR_ACTIONS } from "@/lib/pull-request-contract";
-import { authorizePrRequest } from "./pr-actions";
+import { authorizePrRequest } from "./pr-access";
 import { GET as detail, POST as act } from "@/app/api/pull-requests/[prId]/route";
 import { GET as comments } from "@/app/api/pull-requests/[prId]/comments/route";
 import { GET as commits } from "@/app/api/pull-requests/[prId]/commits/route";

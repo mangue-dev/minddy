@@ -156,9 +156,9 @@ vi.mock("./issue-status-sync", () => ({
   syncIssueStatusFromPr: (...a: unknown[]) => syncStatus(...a),
 }));
 
-const cloneTarget = vi.fn(async () => null as { token: string } | null);
+const linkedRepository = vi.fn(async () => null as { token: string } | null);
 vi.mock("./repo-access", () => ({
-  resolveRepoCloneTargetForRepo: (...a: unknown[]) => cloneTarget(...(a as [])),
+  resolveLinkedRepositoryForRepo: (...a: unknown[]) => linkedRepository(...(a as [])),
 }));
 
 /** The scan reads the forge: we give it an empty deposit, which is enough to
@@ -176,8 +176,8 @@ beforeEach(() => {
   world.associations = [];
   broadcast.mockClear();
   syncStatus.mockClear();
-  cloneTarget.mockClear();
-  cloneTarget.mockResolvedValue(null);
+  linkedRepository.mockClear();
+  linkedRepository.mockResolvedValue(null);
 });
 
 const link = (over: { pr?: PrRow; issueId?: string; projectId?: string } = {}) =>
@@ -319,17 +319,17 @@ describe("resolveProjectPullRequest", () => {
   });
 
   it("scans the repository before giving up on an unknown number", async () => {
-    cloneTarget.mockResolvedValue({ token: "t" });
+    linkedRepository.mockResolvedValue({ token: "t" });
 
     await expect(resolve("#404")).resolves.toEqual({ error: "not_found" });
     // The catch-up has taken place: a PR opened thirty seconds ago on a
     // repository without webhook is not yet in base, and “not found” would be false.
-    expect(cloneTarget).toHaveBeenCalled();
+    expect(linkedRepository).toHaveBeenCalled();
     expect(sweep).toHaveBeenCalled();
   });
 
   it("handles forge failures during resolution", async () => {
-    cloneTarget.mockRejectedValue(new Error("forge down"));
+    linkedRepository.mockRejectedValue(new Error("forge down"));
     await expect(resolve("#404")).resolves.toEqual({ error: "not_found" });
   });
 });

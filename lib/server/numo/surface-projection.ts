@@ -12,6 +12,7 @@ import {
 import { commentDisplay, type CommentDisplay } from "@/lib/server/assistant/comment-live";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
 import type { PullRequestRow } from "@/lib/server/agent/pull-requests";
+import { resolvePrScope } from "@/lib/server/agent/pr-scope";
 import type { NumoTurn } from "./turns";
 import type {
   NumoSurfaceDestination,
@@ -287,7 +288,6 @@ async function projectPullRequest(
     .maybeSingle();
   if (error) throw new Error("numo_surface_pull_request_lookup_failed");
   if (!pr) return;
-  const { resolvePrScope } = await import("@/lib/server/agent/pr-actions");
   const scope = await resolvePrScope(projection.actor_id, pr as PullRequestRow);
   if (!scope) return;
   await scope.forge.createPullRequestComment({ ...scope.call, body });

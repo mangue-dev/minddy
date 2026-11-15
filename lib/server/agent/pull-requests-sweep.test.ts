@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ resolve: vi.fn(), sync: vi.fn(), stamp: vi.fn() }));
-vi.mock("./repo-access", () => ({ resolveRepoCloneTargetForRepo: mocks.resolve }));
+vi.mock("./repo-access", () => ({ resolveLinkedRepositoryForRepo: mocks.resolve }));
 vi.mock("./pull-requests", () => ({ stampRepoSync: mocks.stamp, syncRepoPullRequests: mocks.sync }));
 import { sweepRepo } from "./pull-requests-sweep";
 import type { VisibleRepo } from "./pull-requests";

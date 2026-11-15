@@ -2,7 +2,7 @@ import "server-only";
 
 import { rememberReviewQueue } from "./pull-request-review-queue";
 import type { RepoSyncState, VisibleRepo } from "./pull-requests";
-import { resolveRepoCloneTargetForRepo } from "./repo-access";
+import { resolveLinkedRepositoryForRepo } from "./repo-access";
 import { stampRepoSync, syncRepoPullRequests } from "./pull-requests";
 
 /** Share concurrent list and badge sweeps, without retaining credentials or results. */
@@ -39,7 +39,7 @@ function sweepWindowStart(previous: RepoSyncState | undefined): string | undefin
 
 async function performSweep(userId: string, repo: VisibleRepo, previous?: RepoSyncState): Promise<boolean> {
   try {
-    const target = await resolveRepoCloneTargetForRepo({
+    const target = await resolveLinkedRepositoryForRepo({
       userId,
       provider: repo.provider,
       repoFullName: repo.repoFullName,
