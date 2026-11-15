@@ -383,4 +383,3 @@ export const JOURNAL_TOOLS = numoToolsWhere((policy) => policy.surface === "jour
 export const REMINDER_WRITE_TOOLS = numoToolsWhere((policy) => policy.surface === "reminder_write");
 export const REMINDER_TOOLS = numoToolsWhere((policy) =>
   policy.surface === "reminder" || policy.surface === "reminder_write");
-
