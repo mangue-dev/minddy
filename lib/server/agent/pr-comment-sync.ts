@@ -6,16 +6,11 @@ import { mirrorGithubCommentToIssue } from "@/lib/server/git/issue-sync";
 import { issueStore } from "@/lib/server/issue-store";
 import {
   mirroredCommentBody,
-  mirrorFromGithubConversationComment,
-  mirrorFromGithubReview,
-  mirrorFromGithubReviewComment,
-  mirrorFromGitlabNote,
   type MirrorForge,
   type PrCommentMirror,
 } from "@/lib/pr-comment-mirror";
 import { repoWriteActor } from "./pr-activity";
-import { listPullRequestMirrorSources } from "./pr";
-import { listMergeRequestMirrorSources } from "./mr";
+import { forgeFor } from "./forge";
 import {
   findPullRequestByNumber,
   pullRequestIssueIds,
@@ -119,19 +114,12 @@ export async function syncPrCommentToIssues(opts: {
 
 /** Everything a PR already carries in writing, as mirrors, oldest first. */
 async function readPrMirrors(pr: PullRequestRow, token: string): Promise<PrCommentMirror[]> {
-  const call = { token, repoFullName: pr.repo_full_name, number: pr.number };
-  const mirrors = rowProvider(pr) === "gitlab"
-    ? (await listMergeRequestMirrorSources(call)).map((note) => mirrorFromGitlabNote(note, "created"))
-    : await listPullRequestMirrorSources(call).then((sources) => [
-        ...sources.reviews.map((review) => mirrorFromGithubReview(review, "created")),
-        ...sources.comments.map((comment) => mirrorFromGithubConversationComment(comment, "created")),
-        ...sources.reviewComments.map((comment) => mirrorFromGithubReviewComment(comment, "created")),
-      ]);
-  return mirrors
-    .filter((mirror): mirror is PrCommentMirror => !!mirror)
-    // Normalized ISO instants order as strings; the sort is stable, so a
-    // thread root read before its replies stays first on a tie.
-    .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+  const mirrors = await forgeFor(rowProvider(pr)).listCommentMirrors({
+    token, repoFullName: pr.repo_full_name, number: pr.number,
+  });
+  // Normalized ISO instants order as strings; the sort is stable, so a
+  // thread root read before its replies stays first on a tie.
+  return mirrors.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
 }
 
 /**

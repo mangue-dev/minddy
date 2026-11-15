@@ -1,6 +1,10 @@
 import type { ReviewThreadState } from "./pr-review-threads";
 
+/** Merge methods a forge can offer (MIN-138). */
 export type MergeMethod = "merge" | "squash" | "rebase";
+
+/** Normalized state of a CI check (MIN-138). */
+export type CheckState = "pending" | "success" | "failure" | "neutral";
 
 export type MergeabilityReason =
   | "clean"
@@ -49,7 +53,7 @@ export interface RepositoryCommitMessagePolicy {
 
 export interface ReadinessCheck {
   name: string;
-  state: "pending" | "success" | "failure" | "neutral";
+  state: CheckState;
   required: boolean | null;
 }
 

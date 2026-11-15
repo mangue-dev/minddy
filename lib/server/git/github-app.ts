@@ -11,10 +11,9 @@ import {
 import type { GithubIssueMetadata } from "./issue-sync-core";
 
 /**
- * GitHub App client (MIN-47), ported from AutoKap (github-app.ts) and reduced to the flow
- * inert binding: mint of the app JWT, exchange in installation token,
- * enumeration of repositories, metadata of the installed account. NO client
- * repo-scoped or webhooks (these will come with the code agent, MIN-46).
+ * GitHub App client (MIN-47), ported from AutoKap (github-app.ts): mint of the
+ * app JWT, exchange for an installation token, enumeration of repositories and
+ * issues, metadata of the installed account.
  *
  * Auth model: the app authenticates as itself via a short RS256 JWT
  * (`mintAppJwt`), exchange it for an installation token (`getInstallationToken`),
@@ -127,15 +126,13 @@ export interface InstallationToken {
 }
 
 /**
- * HOW TO RESTRICT THE TOKEN WE MINTE (MIN-327).
+ * How to restrict a minted token (MIN-327).
  *
- * Without these two fields, `POST /access_tokens` makes the MAXIMUM token of
- * the installation: **all** its repositories, **all** its permissions. It is this
- * token that went into the `.git/config` of the agent's microVM — therefore
- * readable by the model, therefore exfiltrable by an injection, therefore a key on
- * all the private deposits of the account for a project which has only linked one.
+ * Without a scope, `POST /access_tokens` returns the maximal token of the
+ * installation: every repository, every permission, a key to all the
+ * account's private repositories for a project that linked only one.
  *
- * The two fields are independent and cumulative:
+ * The fields are independent and cumulative:
  *
  * - `repositories` reduces the SCOPE. These are the SHORT names (`minddy`), never
  * `owner/name` — GitHub responds 422 on a slash. This is the restriction that
@@ -163,11 +160,9 @@ export interface InstallationTokenScope {
 // restricted token — the restriction would be true on the wire and false in memory,
 // exactly the kind of guard that looks calm and isn't.
 //
-// ON THE LIFESPAN (MIN-327): GitHub sets it at 1 hour and does not accept any
-// parameter to shorten it. What we can reduce is therefore not the
-// TIME the token is worth is what it OPENS — the scope and
-// permissions above. A microVM token in turn survives in the worst case
-// one hour, on a single repository, with `contents` for only permission.
+// On the lifespan (MIN-327): GitHub sets it at one hour and accepts no
+// parameter to shorten it, so what can be reduced is what the token opens
+// (the scope above), not how long it lasts.
 const SAFETY_WINDOW_MS = 5 * 60_000;
 const installationTokenCache = new Map<string, InstallationToken>();
 const installationTokenMints = new Map<string, Promise<InstallationToken>>();

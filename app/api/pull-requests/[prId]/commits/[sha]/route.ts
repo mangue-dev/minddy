@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid commit sha" }, { status: 400 });
   }
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
   return prCommitDiffResponse(auth.scope, sha);
 }

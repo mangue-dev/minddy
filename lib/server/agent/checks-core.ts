@@ -1,66 +1,15 @@
 /**
- * Standardization of CI checks of a PR/MR (MIN-138) — pure, without I/O or
- * `server-only`, therefore testable in node (same pattern as `branch-cleanup-core.ts`
- * and `mr-position.ts`). Callers (`pr.ts`, `mr.ts`) make network calls
- * and pass the raw objects here.
+ * Standardization of CI checks of a PR/MR (MIN-138): pure, without I/O.
+ * Callers (`pr.ts`, `mr.ts`) make the network calls and pass the raw objects
+ * here.
  *
  * The common vocabulary is reduced to four states, because that's all that
  * the display can say: in progress, successful, failed, neutral. The nuances of both
  * providers (`cancelled`, `timed_out`, `skipped`, `manual`…) map into them.
  */
 
-export type CheckState = "pending" | "success" | "failure" | "neutral";
-
-export interface PullRequestCheck {
-  name: string;
-  state: CheckState;
-  /**
-   * A pending check that has not started yet: waiting for a runner, an
-   * approval or a resource. Running and queued checks share the `pending`
-   * state — both keep the suite unfinished — but only a running one has a
-   * clock to show. Absent on reads cached before the field existed, and
-   * always false for commit statuses, whose API cannot tell the two apart.
-   */
-  queued?: boolean;
-  /** Check page at the forge, when it exists. */
-  url: string | null;
-  /** The integration that produced the check — “GitHub Actions”, “Socket
-      Security”… `null` when the check name already carries it (commit statuses
-      are named things such as “Vercel – ui”). */
-  appName: string | null;
-  /** Its logo, served by the provider. `null` means no logo is available (GitLab
-      exposes none), so the UI falls back to the provider icon. */
-  appAvatarUrl: string | null;
-  /** The one-line result supplied by the provider (“Deployment has completed”).
-      Empty for most GitHub Actions jobs, which communicate through state and duration. */
-  description: string | null;
-  /** Duration measured, when the forge gives the two limits. */
-  durationMs: number | null;
-  /** Start and end instants are kept so running checks can tick live in the UI. */
-  startedAt: string | null;
-  completedAt: string | null;
-  /** `null` means the provider or current token did not expose requiredness. */
-  required: boolean | null;
-  /** Opaque provider action used by the server to retry this check safely. */
-  rerunRef: { kind: "github_check_suite" | "gitlab_pipeline"; id: number } | null;
-}
-
-export interface ChecksSummary {
-  checks: PullRequestCheck[];
-  /** Stable branch or pull-request preview advertised by a successful check. */
-  deploymentUrl?: string | null;
-  /**
-   * Aggregated state: pending takes precedence while work remains, then failure,
-   * otherwise success. `null` means no check at all (repository without CI) — distinct from
-   * `checks: null` on the API side, which means “we could not read”.
-   */
-  state: CheckState | null;
-  /** Non-blocking checks (successful OR neutral) — the `n` of “n/m passed”. */
-  passing: number;
-  total: number;
-  startedAt: string | null;
-  completedAt: string | null;
-}
+import type { CheckState } from "@/lib/pr-readiness";
+import type { ChecksSummary, PullRequestCheck } from "@/lib/pull-request-contract";
 
 /** Display order: what requires action first. */
 const SEVERITY: Record<CheckState, number> = {

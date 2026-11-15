@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const path = request.nextUrl.searchParams.get("path");
   if (!path) return NextResponse.json({ error: "Path required" }, { status: 400 });
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
   return prCommitFileSourceResponse(auth.scope, sha, path);
 }

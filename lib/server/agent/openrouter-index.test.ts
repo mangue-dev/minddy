@@ -18,17 +18,18 @@ vi.mock("@/lib/server/ai-provider-request", () => ({
 }));
 
 /**
- * Reading the OpenRouter index — the only source of prices, hence the displayed multiplier and plan cap. What matters: that the real form
- * of `/models` (prices in CHAINS, per TOKEN) comes out in USD at
- * million tokens, and that a suffixed id does not become “of unknown price”,
- * which would make it pass under all the ceilings.
+ * Reading the OpenRouter index, the only source of prices and therefore of the
+ * displayed multiplier and the plan cap. What matters: the real shape of
+ * `/models` (prices as STRINGS, per TOKEN) comes out in USD per million
+ * tokens, and a suffixed id does not become “unknown price”, which would let
+ * it slip under every ceiling.
  *
- * The index is a PROCESS cache: each test reimports it new
- * (`vi.resetModules()` + dynamic `import()`), otherwise the first test
- * loaded would serve all the others.
+ * The index is a PROCESS cache: each test reimports a fresh copy
+ * (`vi.resetModules()` + dynamic `import()`), otherwise the first test to load
+ * it would serve all the others.
  */
 
-/** Faithful extract from OpenRouter's response (price per token, in chains). */
+/** Faithful excerpt of OpenRouter's response (price per token, as strings). */
 const PAYLOAD = {
   data: [
     {
@@ -37,8 +38,8 @@ const PAYLOAD = {
       context_length: 163840,
       supported_parameters: ["tools", "reasoning"],
       architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-      // The real object published by OpenRouter: the efforts come from the HEAVIEST
-      // at the lightest, and `none` is the word for “do not reason”.
+      // The real object OpenRouter publishes: efforts run from the HEAVIEST to
+      // the lightest, and `none` is its word for “do not reason”.
       reasoning: {
         mandatory: false,
         default_effort: "medium",
@@ -52,7 +53,7 @@ const PAYLOAD = {
       context_length: 200000,
       supported_parameters: ["tools"],
       architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] },
-      // The Claudes: they reason, but do not publish any enumeration.
+      // Claude models reason but publish no enumeration.
       reasoning: { mandatory: false },
       pricing: { prompt: "0.000005", completion: "0.000025" },
     },
@@ -76,7 +77,7 @@ const PAYLOAD = {
       supported_parameters: [],
       pricing: { prompt: "0.00000002", completion: "0" },
     },
-    // A referral: not a model, a meta-endpoint which chooses one.
+    // A router: not a model, but a meta-endpoint that picks one.
     {
       id: "openrouter/auto",
       name: "Auto Router",
@@ -88,7 +89,7 @@ const PAYLOAD = {
       },
       pricing: { prompt: "-1", completion: "-1" },
     },
-    // A family ALIAS: same mechanism, but it carries a `alias_target`.
+    // A family ALIAS: same mechanism, but it carries an `alias_target`.
     {
       id: "~anthropic/claude-opus-latest",
       name: "Anthropic: Claude Opus Latest",
@@ -101,7 +102,7 @@ const PAYLOAD = {
       },
       pricing: { prompt: "0.000005", completion: "0.000025" },
     },
-    // It renders the IMAGE, and still declares `tools`.
+    // It outputs an IMAGE, yet still declares `tools`.
     {
       id: "google/gemini-3-pro-image",
       name: "Gemini 3 Pro Image",
@@ -112,7 +113,7 @@ const PAYLOAD = {
   ],
 };
 
-/** A new index, powered by `payload` (or failed upstream). */
+/** A fresh index, fed by `payload` (or by a failing upstream). */
 async function freshIndex(payload: unknown = PAYLOAD, status = 200) {
   vi.resetModules();
   const fetchMock = vi.fn(
@@ -150,13 +151,13 @@ describe("cached model capabilities", () => {
 });
 
 describe("getOpenRouterModelInfo", () => {
-  it("convertit les prix par token en USD au million de tokens", async () => {
+  it("converts per-token prices to USD per million tokens", async () => {
     const { getOpenRouterModelInfo } = await freshIndex();
     const info = await getOpenRouterModelInfo("deepseek/deepseek-v4-flash");
     expect(info?.pricing).toEqual({ inputUsdPerMTok: 0.1, outputUsdPerMTok: 0.32 });
   });
 
-  it("lit aussi la fenêtre de contexte et l'entrée image", async () => {
+  it("also reads the context window and image input", async () => {
     const { getOpenRouterModelInfo } = await freshIndex();
     const flash = await getOpenRouterModelInfo("deepseek/deepseek-v4-flash");
     expect(flash?.contextLength).toBe(163840);
@@ -165,20 +166,20 @@ describe("getOpenRouterModelInfo", () => {
     expect(opus?.imageInput).toBe(true);
   });
 
-  it("retombe sur l'id NU pour un suffixe de routage", async () => {
-    // Without this fallback, pasting “:nitro” would be enough to render a “price” model
-    // unknown” — therefore authorized under any ceiling.
+  it("falls back to the BARE id for a routing suffix", async () => {
+    // Without this fallback, appending “:nitro” would be enough to make a model
+    // “unknown price”, and therefore allowed under any ceiling.
     const { getOpenRouterModelInfo } = await freshIndex();
     const nitro = await getOpenRouterModelInfo("anthropic/claude-opus-5:nitro");
     expect(nitro?.id).toBe("anthropic/claude-opus-5");
   });
 
-  it("rend null sur un modèle vraiment inconnu", async () => {
+  it("returns null for a truly unknown model", async () => {
     const { getOpenRouterModelInfo } = await freshIndex();
     expect(await getOpenRouterModelInfo("nobody/nothing")).toBeNull();
   });
 
-  it("répond sans relire /models une fois l'index chaud", async () => {
+  it("answers without refetching /models once the index is warm", async () => {
     const { getOpenRouterModelInfo, listOpenRouterIndex, fetchMock } = await freshIndex();
     await getOpenRouterModelInfo("deepseek/deepseek-v4-flash");
     await getOpenRouterModelInfo("anthropic/claude-opus-5");
@@ -195,9 +196,9 @@ describe("getOpenRouterModelInfo", () => {
     );
   });
 
-  it("déduplique les demandes concurrentes", async () => {
-    // When starting an invocation, the catalog, loop and cap
-    // request the index in the same millisecond.
+  it("deduplicates concurrent requests", async () => {
+    // When an invocation starts, the catalog, the loop and the cap all
+    // request the index within the same millisecond.
     const { getOpenRouterModelInfo, fetchMock } = await freshIndex();
     await Promise.all([
       getOpenRouterModelInfo("deepseek/deepseek-v4-flash"),
@@ -207,32 +208,32 @@ describe("getOpenRouterModelInfo", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("marque le tool-calling, y compris quand rien n'est déclaré", async () => {
-    // An EMPTY parameter list is not a refusal: the model remains listable.
+  it("flags tool calling, even when nothing is declared", async () => {
+    // An EMPTY parameter list is not a refusal: the model stays listable.
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("some/embedding-model"))?.tools).toBe(true);
     expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.tools).toBe(true);
   });
 });
 
-describe("aiguillages et modalités de sortie", () => {
-  it("marque comme aiguillage le routeur ET l'alias de famille", async () => {
-    // Both are recognized by the “Router” tokenizer; the alias also carries
-    // a `alias_target`, and one of the two signs is enough.
+describe("routers and output modalities", () => {
+  it("flags both the router AND the family alias as routers", async () => {
+    // Both are recognized by the “Router” tokenizer; the alias also carries an
+    // `alias_target`, and either sign is enough.
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("openrouter/auto"))?.router).toBe(true);
     expect((await getOpenRouterModelInfo("~anthropic/claude-opus-latest"))?.router).toBe(true);
     expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.router).toBe(false);
   });
 
-  it("distingue le texte de ce qui rend image, audio ou vidéo", async () => {
+  it("tells text output apart from image, audio or video output", async () => {
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("google/gemini-3-pro-image"))?.textOutput).toBe(false);
     expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.textOutput).toBe(true);
   });
 
   it("treats a model with no declared output as textual", async () => {
-    // The absence of an announcement is not an admission: it should not do so
+    // A missing declaration is not a confession: it must not make the model
     // disappear from the picker.
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("some/unknown-output"))?.textOutput).toBe(true);
@@ -248,9 +249,9 @@ describe("aiguillages et modalités de sortie", () => {
     ]);
   });
 
-  it("garde tout de même les aiguillages dans l'index", async () => {
-    // The catalog does not offer them, but a hand-pasted id must remain
-    // quantifiable — otherwise “unknown price”, therefore under all ceilings.
+  it("still keeps routers in the index", async () => {
+    // The catalog does not offer them, but a hand-pasted id must stay
+    // priceable; otherwise it is “unknown price”, and so under every ceiling.
     const { listOpenRouterIndex } = await freshIndex();
     const ids = (await listOpenRouterIndex()).map((m) => m.id);
     expect(ids).toContain("openrouter/auto");
@@ -258,32 +259,32 @@ describe("aiguillages et modalités de sortie", () => {
   });
 });
 
-describe("l'index nourrit le multiplicateur", () => {
-  it("situe Opus face au défaut de minddy", async () => {
+describe("the index feeds the multiplier", () => {
+  it("rates Opus against minddy's default", async () => {
     const { getOpenRouterModelInfo } = await freshIndex();
     const baseline = (await getOpenRouterModelInfo("deepseek/deepseek-v4-flash"))?.pricing;
     const opus = (await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.pricing;
-    // (5 + 25) / 2 = 15, contre (0.1 + 0.32) / 2 = 0.21.
+    // (5 + 25) / 2 = 15, versus (0.1 + 0.32) / 2 = 0.21.
     expect(modelCostMultiplier(opus, baseline)).toBe(71);
   });
 });
 
-describe("index illisible", () => {
-  it("ne lève pas et ne situe plus personne", async () => {
+describe("unreadable index", () => {
+  it("does not throw and rates no model", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { getOpenRouterModelInfo, listOpenRouterIndex } = await freshIndex(null, 500);
-    // Unknown prices → null multiplier → no model refused on a
-    // ignorance: it is the usage budget which remains the hard ceiling.
+    // Unknown prices → null multiplier → no model is refused out of
+    // ignorance: the usage budget remains the hard ceiling.
     await expect(listOpenRouterIndex()).resolves.toEqual([]);
     await expect(getOpenRouterModelInfo("anthropic/claude-opus-5")).resolves.toBeNull();
     spy.mockRestore();
   });
 });
 
-describe("les paliers de raisonnement publiés par le modèle", () => {
-  it("ressortent du moins cher au plus cher, `none` traduit en `off`", async () => {
-    // Our lists go in the other direction than OpenRouter's, and `off` says a
-    // little more than their `none`: send NO reasoning fields.
+describe("reasoning levels published by the model", () => {
+  it("come out from cheapest to most expensive, with `none` mapped to `off`", async () => {
+    // Our lists run the opposite way from OpenRouter's, and `off` means a
+    // little more than their `none`: send NO reasoning field at all.
     const { getOpenRouterModelInfo } = await freshIndex();
     const info = await getOpenRouterModelInfo("deepseek/deepseek-v4-flash");
     expect(info?.reasoning).toEqual({
@@ -292,22 +293,22 @@ describe("les paliers de raisonnement publiés par le modèle", () => {
     });
   });
 
-  it("un modèle qui n'énumère rien garde un objet VIDE, pas `null`", async () => {
-    // The nuance carries all the selector: `null` = nothing published, empty list =
-    // he reasons without saying how. Both fall back onto the landings
-    // generics, but `mandatory` only makes sense in the second case.
+  it("a model that enumerates nothing keeps an EMPTY object, not `null`", async () => {
+    // The whole selector rests on this nuance: `null` = nothing published, an
+    // empty list = it reasons without saying how. Both fall back to the generic
+    // levels, but `mandatory` only makes sense in the second case.
     const { getOpenRouterModelInfo } = await freshIndex();
     const info = await getOpenRouterModelInfo("anthropic/claude-opus-5");
     expect(info?.reasoning).toEqual({ efforts: [], mandatory: false });
   });
 
-  it("un modèle sans objet `reasoning` n'en invente pas", async () => {
+  it("a model without a `reasoning` object does not get one invented", async () => {
     const { getOpenRouterModelInfo } = await freshIndex();
     const info = await getOpenRouterModelInfo("some/embedding-model");
     expect(info?.reasoning).toBeNull();
   });
 
-  it("jette un palier qu'on ne sait pas nommer plutôt que de le deviner", async () => {
+  it("drops a level it cannot name rather than guessing it", async () => {
     // A level that cannot be displayed should not be selected either.
     const { getOpenRouterModelInfo } = await freshIndex({
       data: [

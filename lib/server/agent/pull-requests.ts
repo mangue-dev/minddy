@@ -12,7 +12,11 @@ import { isRepoProviderId, type RepoProviderId } from "@/lib/repo-providers";
 import { forgeFor } from "./forge";
 import { issueRefFromPr, parseIssueRef } from "./pr-ingest-core";
 import { broadcastPrChangedByNumber } from "./pr-live";
-import type { PullRequestRef } from "./pr";
+import type {
+  PullRequestLinkedIssue,
+  PullRequestRef,
+  PullRequestState,
+} from "@/lib/pull-request-contract";
 import { decodePullRequestUrlRow, encodePullRequestUrl,
   shouldEncryptPullRequestUrl } from "./pull-request-url-content";
 import { decodePullRequestContentRow, encodePullRequestContent,
@@ -30,8 +34,6 @@ import { createRepositoryNameDecoder, decodeRepositoryName, repositoryStorageNam
  * `project_git_links` — two projects that link the same repository see the same
  * line.
  */
-
-export type PullRequestState = "draft" | "open" | "merged" | "closed";
 
 export interface PullRequestRow {
   id: string;
@@ -398,12 +400,11 @@ export async function setPullRequestIssue(
 /**
  * Does this ticket already have a LIVING PR (draft or open)?
  *
- * This is the uniqueness of "one ticket, one PR" such that it stands up. A unique
- * index on `issue_id` would be wrong: a ticket legitimately chains multiple
- * PRs over runs (measured — tickets carry three terminal PRs), and it
- * would cause the scan to BATCH upload to a repository where two open branches
- * cite the same ticket. What doesn't make sense is TWO PRs in flight
- * on the same ticket: this is what we refuse at the time of the manual gesture.
+ * This is the "one ticket, one live PR" rule. A unique index on `issue_id`
+ * would be wrong: a ticket legitimately chains several PRs over time, and the
+ * index would fail a whole scan of a repository where two open branches cite
+ * the same ticket. What makes no sense is two PRs in flight on the same
+ * ticket, which the manual link refuses.
  */
 export async function hasLivePullRequest(issueId: string): Promise<boolean> {
   const { data, error } = await getServiceClient()
@@ -419,13 +420,13 @@ export async function hasLivePullRequest(issueId: string): Promise<boolean> {
 /**
  * THE pull request of a ticket, in the sense of "the one we are talking about".
  *
- * A ticket can carry several over the runs (see `hasLivePullRequest`),
+ * A ticket can carry several over time (see `hasLivePullRequest`),
  * but only one is alive at a time: that's the one we want, and failing that the
  * most recently hit at the forge. The order is the same as that of the page
  * Pull Requests, so that "this PR" means the same thing on both sides.
  *
  * No filter on the origin: a human PR, a PR attached by convention
- * and a PR opened by the agent are the same entity since MIN-143. The caller
+ * and a PR Numo opened are the same entity since MIN-143. The caller
  * has already verified their access to the ticket.
  */
 export async function findPullRequestForIssue(
@@ -684,12 +685,13 @@ export async function stampRepoSync(
  * and when reading when `synced_at` is old. There is no cron - the webhook
  * is the normal path, this one only fixes its holes.
  *
- * Attaching to the ticket NEVER overwrites a link already placed: a run could have placed it, or a previous scan may have read it on a branch since deleted.
+ * Attaching to the ticket never overwrites a link already placed: a person may
+ * have placed it, or a previous scan read it on a branch deleted since.
  * We therefore only resolve the PRs which do not have one.
  *
  * It also RECONCILIATES (MIN-164): until now it failed `pull_requests.state` and
- * stopped there — a merge whose webhook was lost left the run and the
- * false ticket FOREVER, including after passing the net supposed to repair the
+ * stopped there — a merge whose webhook was lost left the
+ * ticket wrong FOREVER, including after passing the net supposed to repair the
  *. The states which have moved since the last reading therefore leave
  * in `syncPrState` and the status of the ticket.
  *
@@ -884,8 +886,8 @@ export async function syncRepoPullRequests(opts: {
   // state, we did not see the gesture that produced it.
   //
   // From OLDEST to most recent: several PRs of the SAME ticket can have
-  // derived together (a ticket legitimately chains several over the course of
-  // runs — cf. `hasLivePullRequest`), and each rewrites the status of this ticket.
+  // drifted together (a ticket legitimately chains several over time, cf.
+  // `hasLivePullRequest`), and each rewrites the status of this ticket.
   // The last replay wins: without order, it's a coincidence, and the two forges
   // list by DECREASING freshness — so the oldest had the last
   // word, and a ticket whose last PR was merged returned to “to do”
@@ -956,15 +958,7 @@ export async function listVisibleRepos(
 }
 
 /** A PR of the list, with its ticket and the project of this ticket (RLS joins). */
-export interface LinkedPullRequestIssue {
-  id: string;
-  number: number;
-  title: string;
-  project_id: string;
-  project_key: string;
-  /** Shown next to the issue in the PR's linked-issues popover. */
-  status: string;
-}
+export type LinkedPullRequestIssue = Required<PullRequestLinkedIssue>;
 
 export interface PullRequestWithIssue extends PullRequestRow {
   issue: LinkedPullRequestIssue | null;

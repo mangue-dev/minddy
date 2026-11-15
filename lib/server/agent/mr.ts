@@ -15,7 +15,8 @@ import {
 } from "@/lib/pr-review-reactions";
 import { fromGitlabSystemNotes, type PrTimelineEvent } from "@/lib/pr-timeline";
 import { resolveDiffPosition } from "./mr-position";
-import { summarizeGitlabPipelines, type ChecksSummary, type RawPipeline } from "./checks-core";
+import { ForgeApiError } from "./forge-error";
+import { summarizeGitlabPipelines, type RawPipeline } from "./checks-core";
 import { reviewFallbackPrefix } from "./review-copy";
 import type { GitlabNoteSource } from "@/lib/pr-comment-mirror";
 import {
@@ -24,27 +25,23 @@ import {
   type MergeabilityReason,
   type RepositoryMergePolicy,
 } from "@/lib/pr-readiness";
+import type { ReviewThreadState } from "@/lib/pr-review-threads";
 import type {
-  PullRequestRef,
-  PullRequestFile,
+  ChecksSummary,
   PullRequestComment,
   PullRequestCommit,
-  CommitDiff,
-  CommitExtras,
+  PullRequestFile,
+  PullRequestRef,
   PullRequestReviewComment,
-  PullRequestReviewMessage,
   PullRequestReviewSummary,
   RepoMember,
-  ReviewSubmission,
-  ReviewThreadState,
   ReviewVerdict,
-  DeploymentOutcome,
-} from "./pr";
+} from "@/lib/pull-request-contract";
+import type { CommitDiff, CommitExtras, DeploymentOutcome, ReviewSubmission } from "./pr";
 
 /**
- * GitLab Merge Request Operations for Code Broker (MIN-69) — the mirror of
- * `pr.ts` for GitLab API v4, behind the same surface (neutral types from
- * `pr.ts`, identical signatures, exposed via `forge.ts`). Correspondence:
+ * GitLab merge request operations (MIN-69), the mirror of `pr.ts` for GitLab
+ * API v4 behind the same `Forge` surface. Correspondence:
  * • `number` = the `iid` of the MR (number per project, like a PR number);
  * • the repository is addressed by its full URL-encoded path (`group/project`);
  * • state: `opened`/`locked` → `open`, `merged` → `closed` + `merged: true`
@@ -55,13 +52,10 @@ import type {
  * Token: OAuth access token of the connected account (minted by resolveRepoCloneTarget).
  */
 
-/** GitLab API error with an HTTP status, analogous to `GithubApiError`. */
-export class GitlabApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
+export class GitlabApiError extends ForgeApiError {
+  constructor(message: string, status: number, retryAfter?: string | null) {
+    super(message, status, retryAfter);
     this.name = "GitlabApiError";
-    this.status = status;
   }
 }
 
@@ -91,7 +85,9 @@ async function glJson<T>(url: string, token: string, init?: RequestInit): Promis
   } catch {
     // Non-JSON body (rare): data remains null, default message applies.
   }
-  if (!res.ok) throw new GitlabApiError(errorMessage(data, res.status), res.status);
+  if (!res.ok) {
+    throw new GitlabApiError(errorMessage(data, res.status), res.status, res.headers.get("retry-after"));
+  }
   return data as T;
 }
 
@@ -169,7 +165,9 @@ async function glPagedBounded<T>(
     } catch {
       // idem glJson
     }
-    if (!res.ok) throw new GitlabApiError(errorMessage(data, res.status), res.status);
+    if (!res.ok) {
+    throw new GitlabApiError(errorMessage(data, res.status), res.status, res.headers.get("retry-after"));
+  }
     all.push(...((data as T[]) ?? []));
     if (stopWhen?.(all)) return { items: all, truncated: false };
     page = gitlabNextPage(res);
@@ -302,73 +300,6 @@ function toRef(mr: RawMr): PullRequestRef {
     ...toMergeable(mr),
     mergeFlowActive: !!mr.merge_when_pipeline_succeeds,
   };
-}
-
-/** MR open for `head` (run branch), or null. */
-export async function findOpenMergeRequest(opts: {
-  token: string;
-  repoFullName: string;
-  head: string;
-}): Promise<PullRequestRef | null> {
-  const mrs = await glJson<RawMr[]>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests` +
-      `?state=opened&source_branch=${encodeURIComponent(opts.head)}`,
-    opts.token,
-  );
-  return mrs.length > 0 ? toRef(mrs[0]) : null;
-}
-
-/**
- * Opens the MR of the run, or returns the one already open for this branch (resume).
- * GitLab responds 409 “Another open merge request already exists” in this case.
- *
- * GitHub parity on EMPTY branch: GitLab accepts MR without any commits —
- * Minddy rejects it with 422 (the same status as GitHub's “No commits between…”),
- * GitHub), otherwise the agent would open an empty MR and push the ticket for review.
- */
-export async function ensureMergeRequest(opts: {
-  token: string;
-  repoFullName: string;
-  head: string;
-  base: string;
-  title: string;
-  body: string;
-}): Promise<PullRequestRef> {
-  const compare = await glJson<{ commits?: unknown[] }>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/compare` +
-      `?from=${encodeURIComponent(opts.base)}&to=${encodeURIComponent(opts.head)}`,
-    opts.token,
-  );
-  if ((compare.commits ?? []).length === 0) {
-    throw new GitlabApiError("No commits between base and head branches", 422);
-  }
-  try {
-    const created = await glJson<RawMr>(
-      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests`,
-      opts.token,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          source_branch: opts.head,
-          target_branch: opts.base,
-          title: opts.title,
-          description: opts.body,
-        }),
-      },
-    );
-    return toRef(created);
-  } catch (err) {
-    if (err instanceof GitlabApiError && err.status === 409) {
-      const existing = await findOpenMergeRequest({
-        token: opts.token,
-        repoFullName: opts.repoFullName,
-        head: opts.head,
-      });
-      if (existing) return existing;
-    }
-    throw err;
-  }
 }
 
 export async function getMergeRequest(opts: {
@@ -664,71 +595,6 @@ export async function getCommitDiff(opts: {
   };
 }
 
-/**
- * CUMULATIVE Diff of a branch of work against its base — the mirror of the comparison
- * GitHub (`pr.ts`), for the diff view of a session WITHOUT MR. `from...to` differs
- * from the merge base (API default `straight=false`), like an MR.
- * The web URL is constructed by hand: the compare API does not return it.
- * Raises GitlabApiError(404) if the branch has not (yet) been pushed.
- */
-export async function compareBranches(opts: {
-  token: string;
-  repoFullName: string;
-  base: string;
-  head: string;
-}): Promise<{ files: PullRequestFile[]; url: string | null }> {
-  const compare = await glJson<{ diffs?: RawDiff[] }>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/compare` +
-      `?from=${encodeURIComponent(opts.base)}&to=${encodeURIComponent(opts.head)}`,
-    opts.token,
-  );
-  return {
-    files: (compare.diffs ?? []).map(toPullRequestFile),
-    url:
-      `${GITLAB_HOST}/${opts.repoFullName}/-/compare/` +
-      `${encodeURIComponent(opts.base)}...${encodeURIComponent(opts.head)}`,
-  };
-}
-
-/**
- * Merge base of two branches, the MR-less counterpart to `getMergeBaseSha`. It
- * supplies base context when expanding a diff for a session that has no MR yet.
- * GitLab exposes it directly through the `repository/merge_base` endpoint.
- */
-export async function getBranchesMergeBaseSha(opts: {
-  token: string;
-  repoFullName: string;
-  base: string;
-  head: string;
-}): Promise<string> {
-  const res = await glJson<{ id?: string }>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/merge_base` +
-      `?refs[]=${encodeURIComponent(opts.base)}&refs[]=${encodeURIComponent(opts.head)}`,
-    opts.token,
-  );
-  if (!res.id) throw new GitlabApiError("No merge base for these branches", 502);
-  return res.id;
-}
-
-/** Same ceiling as `pr.ts`: 5 pages of 100 are enough for a branch picker. */
-const MAX_BRANCH_PAGES = 5;
-
-/**
- * Repository branch names (agent launch base branch picker) —
- * mirror of `pr.ts`. The sorting (default first) is done by the caller.
- */
-export async function listBranches(opts: {
-  token: string;
-  repoFullName: string;
-}): Promise<string[]> {
-  const branches = await glPaged<{ name: string }>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/branches`,
-    opts.token,
-    MAX_BRANCH_PAGES,
-  );
-  return branches.map((b) => b.name);
-}
-
 /** Same ceiling as `pr.ts` (MAX_MEMBER_PAGES). */
 const MAX_MEMBER_PAGES = 2;
 
@@ -790,14 +656,13 @@ export async function listRepoMembers(opts: {
     }));
 }
 
-/** Same ceiling as `pr.ts` (MAX_PR_PAGES) for cleaning branches. */
+/** Same ceiling as `pr.ts` (MAX_PR_PAGES). */
 const MAX_MR_PAGES = 5;
 
 /**
- * ALL MRs in the repository, all states combined (MIN-102) — mirror of `pr.ts`.
- * `state=all` is doubly necessary here: GitLab counts `merged` and `closed`
- * as two DISTINCT states (`state=closed` does NOT bring back the merged ones), and
- * In any case, we want to see the MRs open to protect their branches.
+ * The project's MRs, mirror of `pr.ts`. `state=all` matters here: GitLab
+ * counts `merged` and `closed` as two distinct states, so `state=closed` does
+ * not return the merged ones.
  */
 export async function listPullRequests(opts: {
   token: string;
@@ -836,30 +701,6 @@ export async function listPullRequests(opts: {
     // edge is the only clue that there were any pages left.
     truncated: raw.length >= MAX_MR_PAGES * 100,
   };
-}
-
-/**
- * Removes a remote branch (MIN-102) — mirror of `deleteBranch` of `pr.ts`.
- * Unlike GitHub, the branch name is fully URL-encoded here because the GitLab
- * API expects one segment, not a path. A 404 becomes `"already-gone"`.
- */
-export async function deleteBranch(opts: {
-  token: string;
-  repoFullName: string;
-  branch: string;
-}): Promise<"deleted" | "already-gone"> {
-  try {
-    await glJson<unknown>(
-      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/branches/` +
-        encodeURIComponent(opts.branch),
-      opts.token,
-      { method: "DELETE" },
-    );
-    return "deleted";
-  } catch (err) {
-    if (err instanceof GitlabApiError && err.status === 404) return "already-gone";
-    throw err;
-  }
 }
 
 /**
@@ -1218,17 +1059,6 @@ export async function listMergeRequestApprovals(opts: {
     changesRequested: 0,
     requiredApprovals: data.approvals_required ?? null,
   };
-}
-
-/**
- * Reviews already submitted, with their text — STILL EMPTY on the GitLab side, and
- * this is the correct answer rather than a mistake: GitLab does not have a “review” object.
- * An approval is a signature without text (`/approvals`, counted
- * above), and everything written on an MR is a NOTE — therefore already used
- * by `listMergeRequestNotes`. Returning the grades here would count them twice.
- */
-export async function listMergeRequestReviewMessages(): Promise<PullRequestReviewMessage[]> {
-  return [];
 }
 
 /**

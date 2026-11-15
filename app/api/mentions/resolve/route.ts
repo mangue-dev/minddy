@@ -5,7 +5,7 @@ import { boundedText } from "@/lib/server/bounded-body";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { isMentionLinkType } from "@/lib/mention-link";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
-import type { PullRequestState } from "@/lib/mention-preview";
+import type { PullRequestState } from "@/lib/pull-request-contract";
 import {
   MAX_MENTION_REFS,
   mentionKey,

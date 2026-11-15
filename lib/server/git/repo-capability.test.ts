@@ -5,10 +5,10 @@ import {
 } from "./repo-capability";
 
 /**
- * The right of an account lies on a deposit (MIN-144), read on the ACTUAL charges
- * of the two forges. It's this verdict that decides whether minddy offers "Merge" or
- * explains why he doesn't offer it — to be wrong here, it's either a button that
- * fails in 403, or a gesture taken away from someone who was entitled to it.
+ * An account's access to a repository (MIN-144), read from the ACTUAL payloads
+ * of both forges. This verdict decides whether minddy offers "Merge" or
+ * explains why it does not. Getting it wrong means either a button that fails
+ * with a 403, or an action withheld from someone entitled to it.
  */
 
 describe("githubCapabilityFromRepo", () => {
@@ -38,8 +38,8 @@ describe("githubCapabilityFromRepo", () => {
   it("does not promote to write when `permissions` is missing", () => {
     expect(githubCapabilityFromRepo({ full_name: "acme/app" })).toBe("read");
     expect(githubCapabilityFromRepo(null)).toBe("read");
-    // A 404 never passes by here (the caller cuts before), but its body
-    // ne doit surtout pas se lire comme un droit.
+    // A 404 never gets here (the caller stops earlier), but its body must
+    // certainly not read as an access right.
     expect(githubCapabilityFromRepo({ message: "Not Found" })).toBe("read");
   });
 });
@@ -71,7 +71,7 @@ describe("gitlabCapabilityFromProject", () => {
   });
 
   it("uses the MAX of the project and group", () => {
-    // Common case: Maintainer of the group, no direct access to the project.
+    // Common case: group Maintainer, no direct access to the project.
     expect(
       gitlabCapabilityFromProject({
         permissions: { project_access: null, group_access: { access_level: 40 } },
@@ -87,7 +87,7 @@ describe("gitlabCapabilityFromProject", () => {
     ).toBe("write");
   });
 
-  it("donne read quand `permissions` est absent ou vide (projet public)", () => {
+  it("gives read when `permissions` is missing or empty (public project)", () => {
     expect(gitlabCapabilityFromProject({ id: 42 })).toBe("read");
     expect(
       gitlabCapabilityFromProject({

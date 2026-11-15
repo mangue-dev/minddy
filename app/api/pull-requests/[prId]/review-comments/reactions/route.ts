@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const parsed = parseReactionPayload(raw);
   if (!parsed.ok) return parsed.response;
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "write");
   if (!auth.ok) return auth.response;
   return setPrReviewCommentReactionResponse(auth.scope, parsed.payload);
 }

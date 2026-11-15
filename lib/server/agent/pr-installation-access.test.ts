@@ -7,6 +7,10 @@ const h = vi.hoisted(() => ({
   mint: vi.fn(async () => ({ token: "repository-token" })),
 }));
 
+vi.mock("next-intl/server", () => ({
+  getTranslations: async () => (key: string) => key,
+  getLocale: async () => "en",
+}));
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({ ok: true, user: { id: "reader" }, supabase: {} }),
 }));
@@ -52,8 +56,9 @@ vi.mock("./pull-requests", async (importOriginal) => ({
   }),
 }));
 
+import { PR_ACTIONS } from "@/lib/pull-request-contract";
 import { authorizePrRequest } from "./pr-actions";
-import { GET as detail } from "@/app/api/pull-requests/[prId]/route";
+import { GET as detail, POST as act } from "@/app/api/pull-requests/[prId]/route";
 import { GET as comments } from "@/app/api/pull-requests/[prId]/comments/route";
 import { GET as commits } from "@/app/api/pull-requests/[prId]/commits/route";
 import { GET as reviewComments } from "@/app/api/pull-requests/[prId]/review-comments/route";
@@ -83,14 +88,14 @@ describe("PR reads without a GitHub installation (MIN-648)", () => {
   it("authorizes a read using the installation of the bound connection", async () => {
     h.connectionInstallationId = 4242;
     const auth = await authorizePrRequest(
-      new NextRequest("https://minddy.example/api/pull-requests/pr-1"), "pr-1",
+      new NextRequest("https://minddy.example/api/pull-requests/pr-1"), "pr-1", "read",
     );
     expect(auth.ok).toBe(true);
     if (!auth.ok) throw new Error("Expected an authorized PR scope");
     expect(auth.scope.call).toEqual({ token: "repository-token", repoFullName: "acme/app", number: 42 });
     expect(h.mint).toHaveBeenCalledWith({
       installationId: 4242,
-      scope: { repositoryIds: [9001], permissions: undefined },
+      scope: { repositoryIds: [9001] },
     });
   });
 
@@ -98,11 +103,36 @@ describe("PR reads without a GitHub installation (MIN-648)", () => {
     h.connectionInstallationId = 4242;
     h.canAccessProject = false;
     const auth = await authorizePrRequest(
-      new NextRequest("https://minddy.example/api/pull-requests/pr-1"), "pr-1",
+      new NextRequest("https://minddy.example/api/pull-requests/pr-1"), "pr-1", "read",
     );
     expect(auth.ok).toBe(false);
     if (auth.ok) throw new Error("Expected an inaccessible PR");
     expect(auth.response.status).toBe(404);
+    expect(h.mint).not.toHaveBeenCalled();
+  });
+});
+
+describe("PR actions (MIN-693)", () => {
+  const post = (body: unknown) => act(
+    new NextRequest("https://minddy.example/api/pull-requests/pr-1", {
+      method: "POST",
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ prId: "pr-1" }) },
+  );
+
+  it.each(PR_ACTIONS)("refuses %s to a reader of every linking project", async (action) => {
+    // The mocked project access grants a role without write access.
+    h.connectionInstallationId = 4242;
+    const response = await post({ action });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: "readOnlyProject" });
+  });
+
+  it("refuses malformed bodies and unknown actions before any lookup", async () => {
+    h.connectionInstallationId = 4242;
+    expect((await post("not json")).status).toBe(400);
+    expect((await post({ action: "delete_repository" })).status).toBe(400);
     expect(h.mint).not.toHaveBeenCalled();
   });
 });

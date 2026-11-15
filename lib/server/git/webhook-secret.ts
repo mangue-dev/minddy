@@ -143,34 +143,6 @@ export async function ensureRepoWebhookSecret(params: {
   throw new Error("Webhook-secret initialization lost without a persisted winner");
 }
 
-/**
- * Replaces the secret on every link for a repository and returns the new value.
- * The caller must then update the GitLab hook; until it does, deliveries signed
- * with the previous value are intentionally rejected.
- */
-export async function rotateRepoWebhookSecret(params: {
-  provider: RepoProviderId;
-  externalRepoId: string;
-}): Promise<string> {
-  const secret = generateWebhookSecret();
-  const service = getServiceClient();
-  const links = await loadRepoLinks(params.provider, params.externalRepoId);
-  const cipher = await encodeRepoWebhookSecret(secret,
-    params.provider, params.externalRepoId, { service,
-      force: links.some((link) =>
-        protectedWebhookSecretVersion(link.webhook_secret_encrypted)>0) });
-  const { error } = await service
-    .from("project_git_links")
-    .update({
-      webhook_secret_encrypted: cipher,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("provider", params.provider)
-    .eq("external_repo_id", params.externalRepoId);
-  if (error) throw new Error(error.message);
-  return secret;
-}
-
 /** What a webhook check found as material to compare. */
 export interface WebhookSecretCandidates {
   /** Repository-specific secrets; multiple values cover a partial rotation. */

@@ -1,5 +1,5 @@
 import type { PrActionEventType } from "@/lib/pr-events";
-import type { PullRequestState } from "./pull-requests";
+import type { PullRequestState } from "@/lib/pull-request-contract";
 
 /**
  * The PURE rules which say, of a forging event, what STATE it describes and
@@ -9,8 +9,8 @@ import type { PullRequestState } from "./pull-requests";
  * of correspondence table which makes a mistake silently (a wrong action
  * spelled doesn't raise anything, it simply never traces anything).
  *
- * What remains on the roads: signature verification, resolution of
- * runs and writing. Here, only functions without side effects.
+ * What remains in the routes: signature verification, lookups and writes.
+ * Here, only functions without side effects.
  *
  * STATE was added to it by MIN-164, and for the same reason: each receiver
  * translated “what the forge says” into minddy state in its own way, and two of these
@@ -46,7 +46,7 @@ export function githubPrState(pr: GithubPrStateInput): PullRequestState {
 }
 
 /**
- * `pull_request` actions whose state DRIVES the life cycle of the run and the ticket
+ * `pull_request` actions whose state drives the ticket
  * — narrower than simply INGESTED actions (`edited`, `synchronize`:
  * the RA changes, its state does not).
  *
@@ -85,9 +85,9 @@ export function githubPrStateForAction(
  *
  * `synchronize` is the GitHub name of a PUSH on the PR branch: it is the
  * only signal of “someone committed to this” — the payload only carries the
- * sha before/after, never the number of commits, hence a sentence that doesn't count
- * Nothing. The other actions (`edited`, `labeled`, `assigned`…) are noise of
- * forge, pas des faits du ticket.
+ * sha before/after, never the number of commits, hence a sentence that counts
+ * nothing. The other actions (`edited`, `labeled`, `assigned`…) are forge
+ * noise, not facts of the ticket.
  *
  * `converted_to_draft` / `ready_for_review` remain outside: they change the STATE
  * (and therefore the status of the ticket, which tells itself), but minddy does not have

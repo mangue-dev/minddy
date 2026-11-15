@@ -19,7 +19,7 @@ export async function GET(
   { params }: RouteContext,
 ) {
   const { prId } = await params;
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
 
   const raw = new URL(request.url).searchParams.get("commentId");

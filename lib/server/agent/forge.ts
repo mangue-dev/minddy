@@ -4,57 +4,44 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import * as github from "./pr";
 import * as gitlab from "./mr";
 import { GithubApiError } from "./pr";
-import { GitlabApiError } from "./mr";
+import type { CommitDiff, CommitExtras, DeploymentOutcome, ReviewSubmission } from "./pr";
+import type { PrTimelineEvent } from "@/lib/pr-timeline";
+import type { ReviewThreadState } from "@/lib/pr-review-threads";
+import type { ReviewCommentReaction, ReviewReactionContent } from "@/lib/pr-review-reactions";
+import {
+  mirrorFromGithubConversationComment,
+  mirrorFromGithubReview,
+  mirrorFromGithubReviewComment,
+  mirrorFromGitlabNote,
+  type PrCommentMirror,
+} from "@/lib/pr-comment-mirror";
+import type { MergeMethod, RepositoryMergePolicy } from "@/lib/pr-readiness";
 import type {
-  PullRequestRef,
-  PullRequestFile,
+  ChecksSummary,
+  CheckRerunRef,
   PullRequestComment,
   PullRequestCommit,
-  CommitDiff,
-  CommitExtras,
+  PullRequestFile,
+  PullRequestRef,
   PullRequestReviewComment,
-  PullRequestReviewMessage,
   PullRequestReviewSummary,
   RepoMember,
-  ReviewCommentReaction,
-  ReviewReactionContent,
-  ReviewSubmission,
-  ReviewThreadState,
   ReviewVerdict,
-  DeploymentOutcome,
-} from "./pr";
-import type { PrTimelineEvent } from "@/lib/pr-timeline";
-import type { ChecksSummary } from "./checks-core";
-import type { RepositoryMergePolicy } from "@/lib/pr-readiness";
+} from "@/lib/pull-request-contract";
+
+export { ForgeApiError, isForgeApiError } from "./forge-error";
 
 /**
- * Provider abstraction of agent PR/MR operations (MIN-69). Each provider
- * exposes the SAME surface (the signatures of `pr.ts`, including neutral types);
- * callers resolve the client via `forgeFor(target.provider)` instead of importing
- * `pr.ts` live. “PR” remains the neutral vocabulary on the code side — a merge
- * GitLab request is presented under the same types (number = `iid`).
- *
- * The concrete modules each keep their error class (`GithubApiError` /
- * `GitlabApiError`, both carrying an HTTP `status`): `isForgeApiError`
- * is the common route test. No shared parent class — it would create a tricky
- * import cycle (forge → pr → forge) when evaluating modules.
+ * Provider abstraction of PR/MR operations (MIN-69). Each provider exposes the
+ * same surface; callers resolve the client with `forgeFor(target.provider)`
+ * instead of importing `pr.ts` or `mr.ts`. "PR" remains the neutral vocabulary
+ * on the code side: a GitLab merge request uses the same types (number = `iid`).
  */
 
-/** API provider error (GitHub or GitLab), still carrying HTTP status. */
-export type ForgeApiError = GithubApiError | GitlabApiError;
-
-export function isForgeApiError(err: unknown): err is ForgeApiError {
-  return err instanceof GithubApiError || err instanceof GitlabApiError;
-}
-
-/** Merge methods offered by a forge (MIN-138). */
-export type MergeMethod = "merge" | "squash" | "rebase";
-
 /**
- * Common surface for PR/MR operations. Deliberately NARROWER than the
- * concrete modules: no `commitId` * (each provider resolves its own review anchor), no multi-line comment (GitHub option that GitLab
- * would silently ignore), no `findOpen*` (internal detail of `ensure*`).
- * Expand only with a real implementation on both sides.
+ * Common surface for PR/MR operations. Deliberately narrower than the
+ * concrete modules: no `commitId` (each provider resolves its own review
+ * anchor). Expand only with a real implementation on both sides.
  *
  * The merge method has joined the surface (MIN-138): it now has
  * a real implementation on both sides — but not the same MENU, hence
@@ -70,25 +57,21 @@ export type MergeMethod = "merge" | "squash" | "rebase";
  *
  * | Gesture | Identity | Bearer |
  * | --- | --- | --- |
- * | `ensurePullRequest`, `reopenPullRequest` (execute.ts) | agent | `target.token` |
- * | `deleteBranch` (branch-cleanup.ts) | agent | `target.token` |
- * | Numo review comments (pr-tools.ts) | agent | run token |
- * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | human | `actorCall` |
+ * | `mergePullRequest`, `closePullRequest`, `reopenPullRequest`, `markReadyForReview`, `convertToDraft` from the PR page | human | `actorCall` |
+ * | `mergePullRequest`, `updatePullRequestTitle`/`Body`, comments from Numo (`pull-request-writes.ts`) | minddy | installation token |
  * | `submitReview` (the person's verdict) | human | `actorCall` |
  * | `createPullRequestComment`, `updatePullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` from UI PR | human | `actorCall` |
- * | `setReviewThreadResolved` | human or agent | `actorCall` from the PR page; installation token from Numo and the code agent |
+ * | `setReviewThreadResolved` | human or minddy | `actorCall` from the PR page; installation token from Numo |
  * | `setReviewCommentReaction`, `setConversationReaction` | human | `actorCall` + `login` |
  *
- * The three comment methods serve BOTH identities: it is the gesture
- * that decides, not the method. Numo rereads under the bot; the same method, called
- * from the PR panel, starts from the person's account.
+ * The comment methods serve both identities: the gesture decides, not the
+ * method. Numo writes under the bot; the same method, called from the PR
+ * panel, uses the person's account.
  *
  * `setReviewThreadResolved` is two-faced the same way: resolving from the
- * PR page is the human's gesture and carries their name, while Numo and the
- * code agent close a conversation they addressed themselves under minddy's
- * account (`pull-request-writes.ts`, `project-pr-tools.ts`) — a reader must
- * be able to tell a machine's closure from a person's, exactly as for
- * comments. The forge does not care: it writes under the token it is given.
+ * PR page is the human's gesture and carries their name, while Numo closes a
+ * conversation under minddy's account (`pull-request-writes.ts`), so a reader
+ * can tell a machine's closure from a person's.
  *
  * READS all remain on the installation token: any member
  * of the minddy project must see the PR without a connected git account. The only exception
@@ -99,8 +82,9 @@ export interface Forge {
   /** Merge methods actually offered — GitLab sets its strategy at the
  level of the project, only `squash` is a parameter of the merge call. */
   mergeMethods: readonly MergeMethod[];
-  /** Names of the repository branches (basic branch picker at launch). */
-  listBranches(opts: { token: string; repoFullName: string }): Promise<string[]>;
+  /** The forge reads reactions comment by comment (GitLab), so a caller must
+      know the comment ids first; GitHub reads them for the whole PR at once. */
+  reactionsNeedCommentIds: boolean;
   /** Request a review using the connected human account, preserving other requests. */
   requestPullRequestReviewer(opts: { token: string; repoFullName: string; number: number; login: string }): Promise<void>;
   /**
@@ -113,9 +97,9 @@ export interface Forge {
  * forge itself offers under an at sign.
  */
   listRepoMembers(opts: { token: string; repoFullName: string }): Promise<RepoMember[]>;
-  /** ALL PR/MRs in the repository, all states — agent branch cleaning
- (MIN-102) needs closed ones to choose AND open ones to protect.
- `truncated`: pagination has been cut, the list is not exhaustive. */
+  /** The repository's PR/MRs, all states by default (the sweep needs merged
+ and closed ones), or open ones only (the review queue). `truncated`:
+ pagination has been cut, the list is not exhaustive. */
   listPullRequests(opts: {
     token: string;
     repoFullName: string;
@@ -125,21 +109,6 @@ export interface Forge {
     /** Only the PRs updated since this instant (an incremental sweep). */
     updatedSince?: string;
   }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }>;
-  /** Delete a remote branch. `"already-gone"` (and not an error) when
- the reference no longer exists: replaying a household is not a failure. */
-  deleteBranch(opts: {
-    token: string;
-    repoFullName: string;
-    branch: string;
-  }): Promise<"deleted" | "already-gone">;
-  ensurePullRequest(opts: {
-    token: string;
-    repoFullName: string;
-    head: string;
-    base: string;
-    title: string;
-    body: string;
-  }): Promise<PullRequestRef>;
   getPullRequest(opts: {
     token: string;
     repoFullName: string;
@@ -187,24 +156,6 @@ export interface Forge {
     repoFullName: string;
     sha: string;
   }): Promise<CommitDiff>;
-  /** CUMULATIVE diff of the working branch against its base — the diff view of a
- session WITHOUT PR (same files/patches as listPullRequestFiles, from the
- merge base). 404 provider if the branch has not (yet) been pushed.
- `url`: the compare web page of the provider (“see on…” links). */
-  compareBranches(opts: {
-    token: string;
-    repoFullName: string;
-    base: string;
-    head: string;
-  }): Promise<{ files: PullRequestFile[]; url: string | null }>;
-  /** Base merge of two BRANCHES — the PR-free counterpart of getMergeBaseSha, base
- of the context unfolding of the diff view of a PR-free session. */
-  getBranchesMergeBaseSha(opts: {
-    token: string;
-    repoFullName: string;
-    base: string;
-    head: string;
-  }): Promise<string>;
   /** Base of the diff served: merge base ALIVE (GitHub, diff recalculated on the fly)
  or `diff_refs.base_sha` PERSISTED (GitLab, diff frozen at the last push). */
   getMergeBaseSha(opts: {
@@ -246,7 +197,7 @@ export interface Forge {
     token: string;
     repoFullName: string;
     number: number;
-    ref: { kind: "github_check_suite" | "gitlab_pipeline"; id: number };
+    ref: CheckRerunRef;
   }): Promise<void>;
   updatePullRequestTitle(opts: {
     token: string;
@@ -305,19 +256,10 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestReviewSummary>;
-  /** The TEXT of the reviews already submitted (MIN-141) — what the count does not say
-, and which the PR thread does not carry (`pulls/{n}/reviews`). Empty side
- GitLab, where there is no review object: everything written there is a
- note, already served by `listPullRequestComments`. */
-  listReviewMessages(opts: {
-    token: string;
-    repoFullName: string;
-    number: number;
-  }): Promise<PullRequestReviewMessage[]>;
   /** CI checks. `number` AND `sha` are requested because the two forges
  do not address the same thing: GitHub queries the head COMMIT, GitLab
  the MR pipelines. Each implementation ignores the field that it
- does not use (same arrangement as `getBranchesMergeBaseSha`). */
+ does not use. */
   listChecks(opts: {
     token: string;
     repoFullName: string;
@@ -420,6 +362,13 @@ export interface Forge {
  * instance has confirmed here. An empty table makes the PR as it
  * was rendering before; inventing it would have made links dead.
  */
+  /** Everything the PR carries in writing (reviews, conversation, line
+      comments), as ticket mirrors (MIN-802), in no particular order. */
+  listCommentMirrors(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+  }): Promise<PrCommentMirror[]>;
   listImageAssets(opts: {
     token: string;
     repoFullName: string;
@@ -550,25 +499,76 @@ export interface Forge {
   }): Promise<void>;
 }
 
+type ForgeMethodName = {
+  [K in keyof Forge]: Forge[K] extends (...args: never[]) => unknown ? K : never;
+}[keyof Forge];
+
+/**
+ * Whether each `Forge` method only reads. A display request (GET) shares
+ * concurrent identical reads (`withGithubReadScope`); a write never does.
+ * The record is exhaustive, so a new method must be classified here.
+ */
+export const FORGE_METHOD_ACCESS = {
+  requestPullRequestReviewer: "write",
+  listRepoMembers: "read",
+  listPullRequests: "read",
+  getPullRequest: "read",
+  getRepositoryMergePolicy: "read",
+  listPullRequestFiles: "read",
+  listPullRequestCommits: "read",
+  listPullRequestCommitExtras: "read",
+  getCommitDiff: "read",
+  getMergeBaseSha: "read",
+  getFileAtRef: "read",
+  getFileBytesAtRef: "read",
+  mergePullRequest: "write",
+  updatePullRequestBranch: "write",
+  rerunPullRequestCheck: "write",
+  updatePullRequestTitle: "write",
+  updatePullRequestBody: "write",
+  enablePullRequestMergeFlow: "write",
+  disablePullRequestMergeFlow: "write",
+  submitReview: "write",
+  listReviews: "read",
+  listChecks: "read",
+  markReadyForReview: "write",
+  convertToDraft: "write",
+  closePullRequest: "write",
+  reopenPullRequest: "write",
+  listPullRequestComments: "read",
+  listTimeline: "read",
+  getPullRequestDeployment: "read",
+  createPullRequestComment: "write",
+  updatePullRequestComment: "write",
+  listCommentMirrors: "read",
+  listImageAssets: "read",
+  listPullRequestReviewComments: "read",
+  createPullRequestReviewComment: "write",
+  replyToPullRequestReviewComment: "write",
+  listReviewThreads: "read",
+  setReviewThreadResolved: "write",
+  listReviewCommentReactions: "read",
+  setReviewCommentReaction: "write",
+  listConversationReactions: "read",
+  setConversationReaction: "write",
+} as const satisfies Record<ForgeMethodName, "read" | "write">;
+
+export const FORGE_READ_METHODS = (Object.keys(FORGE_METHOD_ACCESS) as ForgeMethodName[])
+  .filter((name) => FORGE_METHOD_ACCESS[name] === "read");
+
 const githubForge: Forge = {
   provider: "github",
   mergeMethods: ["squash", "merge", "rebase"],
-  listBranches: github.listBranches,
+  reactionsNeedCommentIds: false,
   listRepoMembers: github.listRepoMembers,
   requestPullRequestReviewer: github.requestPullRequestReviewer,
   listPullRequests: github.listPullRequests,
-  deleteBranch: github.deleteBranch,
-  ensurePullRequest: github.ensurePullRequest,
   getPullRequest: github.getPullRequest,
   getRepositoryMergePolicy: github.getRepositoryMergePolicy,
   listPullRequestFiles: github.listPullRequestFiles,
   listPullRequestCommits: github.listPullRequestCommits,
   listPullRequestCommitExtras: github.listPullRequestCommitExtras,
   getCommitDiff: github.getCommitDiff,
-  compareBranches: github.compareBranches,
-  // The GitHub comparison is already branch-to-branch: the same function serves the
-  // two surfaces (the `number` of the interface is not used there).
-  getBranchesMergeBaseSha: github.getMergeBaseSha,
   getMergeBaseSha: github.getMergeBaseSha,
   getFileAtRef: github.getFileAtRef,
   getFileBytesAtRef: github.getFileBytesAtRef,
@@ -581,7 +581,6 @@ const githubForge: Forge = {
   enablePullRequestMergeFlow: github.enablePullRequestMergeFlow,
   submitReview: github.submitPullRequestReview,
   listReviews: github.listPullRequestReviews,
-  listReviewMessages: github.listPullRequestReviewMessages,
   listChecks: github.listPullRequestChecks,
   // The GraphQL mutation only addresses the PR by its `node_id`: without it (a PR
   // read by the *list* endpoint, which does not serve it), we refuse outright rather than
@@ -605,6 +604,14 @@ const githubForge: Forge = {
   getPullRequestDeployment: github.getPullRequestDeployment,
   createPullRequestComment: github.createPullRequestComment,
   updatePullRequestComment: github.updatePullRequestComment,
+  listCommentMirrors: async (opts) => {
+    const sources = await github.listPullRequestMirrorSources(opts);
+    return [
+      ...sources.reviews.map((review) => mirrorFromGithubReview(review, "created")),
+      ...sources.comments.map((comment) => mirrorFromGithubConversationComment(comment, "created")),
+      ...sources.reviewComments.map((comment) => mirrorFromGithubReviewComment(comment, "created")),
+    ].filter((mirror): mirror is PrCommentMirror => !!mirror);
+  },
   listImageAssets: github.listPullRequestImageAssets,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
   // GitHub requires `commit_id` = the HEAD of the PR, read on the spot with each sending
@@ -651,20 +658,16 @@ const gitlabForge: Forge = {
   // No `rebase`: GitLab sets the strategy at the project level, only the
   // squash is a parameter to the merge call.
   mergeMethods: ["squash", "merge"],
-  listBranches: gitlab.listBranches,
+  reactionsNeedCommentIds: true,
   listRepoMembers: gitlab.listRepoMembers,
   requestPullRequestReviewer: gitlab.requestPullRequestReviewer,
   listPullRequests: gitlab.listPullRequests,
-  deleteBranch: gitlab.deleteBranch,
-  ensurePullRequest: gitlab.ensureMergeRequest,
   getPullRequest: gitlab.getMergeRequest,
   getRepositoryMergePolicy: gitlab.getRepositoryMergePolicy,
   listPullRequestFiles: gitlab.listMergeRequestChanges,
   listPullRequestCommits: gitlab.listMergeRequestCommits,
   listPullRequestCommitExtras: gitlab.listMergeRequestCommitExtras,
   getCommitDiff: gitlab.getCommitDiff,
-  compareBranches: gitlab.compareBranches,
-  getBranchesMergeBaseSha: gitlab.getBranchesMergeBaseSha,
   getMergeBaseSha: gitlab.getMergeBaseSha,
   getFileAtRef: gitlab.getFileAtRef,
   getFileBytesAtRef: gitlab.getFileBytesAtRef,
@@ -677,7 +680,6 @@ const gitlabForge: Forge = {
   enablePullRequestMergeFlow: gitlab.enableMergeRequestAutoMerge,
   submitReview: gitlab.submitMergeRequestReview,
   listReviews: gitlab.listMergeRequestApprovals,
-  listReviewMessages: gitlab.listMergeRequestReviewMessages,
   listChecks: gitlab.listMergeRequestChecks,
   markReadyForReview: gitlab.markMergeRequestReadyForReview,
   convertToDraft: gitlab.convertMergeRequestToDraft,
@@ -692,6 +694,10 @@ const gitlabForge: Forge = {
   // path relative to the project, not a signed asset. Nothing measured, therefore nothing
   // invented — the MR returns as before.
   listImageAssets: async () => new Map<string, string>(),
+  listCommentMirrors: async (opts) =>
+    (await gitlab.listMergeRequestMirrorSources(opts))
+      .map((note) => mirrorFromGitlabNote(note, "created"))
+      .filter((mirror): mirror is PrCommentMirror => !!mirror),
   listPullRequestReviewComments: gitlab.listMergeRequestDiffComments,
   // `startLine`/`startSide` are left out, explicitly: a note
   // GitLab anchors to ONE line (`old_line`/`new_line`). Sneak them through

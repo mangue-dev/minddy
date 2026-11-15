@@ -61,8 +61,14 @@ vi.mock("@/lib/server/comment-store", () => ({
   finishSyncedForgeComment: mocks.finishSyncedForgeComment,
 }));
 vi.mock("./repo-access", () => ({ resolveRepoCloneTarget: mocks.resolveRepoCloneTarget }));
-vi.mock("./pr", () => ({ listPullRequestMirrorSources: mocks.listPullRequestMirrorSources }));
-vi.mock("./mr", () => ({ listMergeRequestMirrorSources: mocks.listMergeRequestMirrorSources }));
+vi.mock("./pr", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./pr")>(),
+  listPullRequestMirrorSources: mocks.listPullRequestMirrorSources,
+}));
+vi.mock("./mr", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./mr")>(),
+  listMergeRequestMirrorSources: mocks.listMergeRequestMirrorSources,
+}));
 
 const { backfillPendingPrComments, syncPrCommentToIssues } = await import("./pr-comment-sync");
 

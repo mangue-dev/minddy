@@ -15,7 +15,8 @@ import {
   type PrActionEventType,
 } from "@/lib/pr-events";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
-import { findPullRequestByNumber, type PullRequestState } from "./pull-requests";
+import type { PullRequestState } from "@/lib/pull-request-contract";
+import { findPullRequestByNumber } from "./pull-requests";
 
 /**
  * Window during which an identical gesture ALREADY drawn is echoed. The hook
@@ -140,7 +141,7 @@ export async function minddyUsersForForgeAccount(opts: {
  * the forge, and identity alone no longer distinguishes the two — without this
  * guard, every merge from minddy produces TWO activity lines (one from the
  * route, then one from the hook), two integration webhook dispatches, and an
- * inbox notification to the run author for their own gesture.
+ * inbox notification to the person for their own gesture.
  *
  * What we therefore seek is precise: an event of the SAME type, on the SAME PR,
  * written a few seconds ago BY THE MEMBER who owns this forge account. Another
@@ -150,7 +151,7 @@ export async function minddyUsersForForgeAccount(opts: {
  * (MIN-154): the login is a display name that is never refreshed, and a rename
  * on GitHub or GitLab made this guard silently stop working forever. The result
  * was two identical activity lines on the ticket, two integration webhook
- * dispatches, and an inbox notification to the run author for their own gesture.
+ * dispatches, and an inbox notification to the person for their own gesture.
  *
  * Best effort, and the race is not always won: if the hook arrives before the
  * route writes its event, we fall back to the previous behavior (a duplicate) —

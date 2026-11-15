@@ -3,19 +3,20 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { setPullRequestReviewCommentReaction } from "./pr";
 
 /**
- * MIN-145: WITHDRAWAL of a reaction is the only gesture which must find, in
- * a list, which of the reactions is "mine" — the GitHub REST does not know how to delete without an id, and only distinguishes reactions by their author.
+ * MIN-145: REMOVING a reaction is the only action that must find, in a list,
+ * which reaction is "mine": GitHub's REST API cannot delete without an id, and
+ * tells reactions apart only by their author.
  *
- * What is happening here is in one sentence: **the login we pass is a cache,
- * the token is the authority.** `git_user_identities.account_login` is written at the
- * account connection and never refreshed; who renames their GitHub account keeps
- * a valid token, sees its reaction lit (`viewerHasReacted` comes from the token),
- * and could never withdraw it again if the stored name was authentic. Removing
- * would respond to `ok` without removing anything: a click with no effect, no message, to
- * repeat indefinitely.
+ * It comes down to one sentence: **the login we pass is a cache, the token is
+ * the authority.** `git_user_identities.account_login` is written when the
+ * account is linked and never refreshed. Someone who renames their GitHub
+ * account keeps a valid token and sees their reaction lit (`viewerHasReacted`
+ * comes from the token), but could never remove it if the stored name were
+ * authoritative. Removal would answer `ok` without removing anything: a click
+ * with no effect and no message, repeated forever.
  *
- * Payloads mimic `GET /repos/…/pulls/comments/{id}/reactions`: this is
- * the form that we parse (`user.login`, `content`, `id`).
+ * Payloads mimic `GET /repos/…/pulls/comments/{id}/reactions`, the shape we
+ * parse (`user.login`, `content`, `id`).
  */
 
 const COMMENT = 42;
@@ -66,7 +67,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("retire la réaction du login passé, sans demander qui porte le token", async () => {
+it("removes the passed login's reaction without asking who owns the token", async () => {
   reactions = [
     { id: 3, content: "+1", user: { login: "minddy-app[bot]" } },
     { id: 7, content: "+1", user: { login: "mangue-dev" } },
@@ -75,13 +76,13 @@ it("retire la réaction du login passé, sans demander qui porte le token", asyn
   await remove("mangue-dev");
 
   expect(deletions()).toEqual([`${REACTIONS_URL}/7`]);
-  // The name is enough in the current case: no more round trips.
+  // The name is enough in the common case: no extra round trip.
   expect(askedWhoIAm()).toBe(false);
 });
 
-it("retrouve la sienne après un renommage de compte, et n'emporte pas celle du bot", async () => {
-  // The account is now called `mangue-new`; minddy has memorized `mangue-old`
-  // on login day, and nothing ever fixed it.
+it("finds its own reaction after an account rename and leaves the bot's alone", async () => {
+  // The account is now called `mangue-new`; minddy stored `mangue-old` on the
+  // day it was linked, and nothing ever corrected it.
   currentLogin = "mangue-new";
   reactions = [
     { id: 3, content: "+1", user: { login: "minddy-app[bot]" } },
@@ -94,31 +95,31 @@ it("retrouve la sienne après un renommage de compte, et n'emporte pas celle du 
   expect(deletions()).toEqual([`${REACTIONS_URL}/9`]);
 });
 
-it("ne retire rien quand la réaction est celle de quelqu'un d'autre", async () => {
+it("removes nothing when the reaction belongs to someone else", async () => {
   reactions = [{ id: 3, content: "+1", user: { login: "minddy-app[bot]" } }];
 
   await remove("mangue-dev");
 
-  // The stored name could be out of date: we asked the question…
+  // The stored name may be stale, so the question was asked…
   expect(askedWhoIAm()).toBe(true);
-  // …and the response doesn't change anything, the bot's response stays with the bot.
+  // …and the answer changes nothing: the bot's reaction stays with the bot.
   expect(deletions()).toEqual([]);
 });
 
-it("ne demande rien quand il n'y a plus aucune réaction à départager", async () => {
+it("asks nothing when no reaction is left to tell apart", async () => {
   reactions = [];
 
   await remove("mangue-dev");
 
-  // “Already removed” is the common case of double-clicking: it should not cost
-  // un appel de plus.
+  // “Already removed” is the usual double-click case: it must not cost an
+  // extra call.
   expect(askedWhoIAm()).toBe(false);
   expect(deletions()).toEqual([]);
 });
 
-it("refuse d'agir sans login, avant tout appel réseau", async () => {
-  // The safeguard of the ticket: a caller without an actor (therefore on the token
-  // installation) would place the reaction under `minddy-app[bot]`.
+it("refuses to act without a login, before any network call", async () => {
+  // The issue's safeguard: a caller without an actor (and so on the
+  // installation token) would put the reaction under `minddy-app[bot]`.
   await expect(remove(null)).rejects.toThrow(/login/i);
   expect(calls).toEqual([]);
 });

@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { mentionTargetKey, type MentionLinkType, type MentionMeta } from "@/lib/mention-link";
 import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validation";
-import { isPullRequestState, type PullRequestState } from "@/lib/mention-preview";
+import { isPullRequestState, type PullRequestState } from "@/lib/pull-request-contract";
 
 /**
  * What the signed-in reader may see of a typed mention (MIN-734), resolved by

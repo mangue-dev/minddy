@@ -28,7 +28,7 @@ import {
   type InstallationTokenMinter,
   type RemoteGithubIssueComment,
 } from "./github-app";
-import { forgeProviderForConnection } from "./forge-provider";
+import { mintLinkedRepositoryToken } from "./linked-repository-token";
 import { decodeRepositoryName, registerRepositoryName,
   shouldProtectRepositoryNames } from "./repository-name-content";
 import { getGitlabAccessToken, listGitlabOpenIssues } from "./gitlab-app";
@@ -72,18 +72,11 @@ import {
 export const REMOTE_BACKFILL_MAX = 500;
 
 function githubIssueMinter(target: IssueSyncTarget): InstallationTokenMinter {
-  const repositoryId = Number(target.externalRepoId);
-  if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) {
-    throw new Error("GitHub issue sync requires a stable repository id");
-  }
-  const forge = forgeProviderForConnection(target.connectionSource);
-  return ({ installationId, scope }) =>
-    forge.getInstallationToken({
+  return ({ installationId }) =>
+    mintLinkedRepositoryToken({
       installationId,
-      scope: {
-        ...scope,
-        repositoryIds: [repositoryId],
-      },
+      externalRepoId: target.externalRepoId,
+      connectionSource: target.connectionSource,
     });
 }
 
@@ -759,9 +752,6 @@ async function backfillGithubIssueComments(
   issues: BackfilledIssue[],
 ): Promise<void> {
   if (target.installationId == null || !target.repoFullName) return;
-  // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED connection
-  // mints its listing tokens through the Cloud control plane, like every other
-  // GitHub call site.
   const mint = githubIssueMinter(target);
   for (const issue of issues) {
     try {
@@ -1002,9 +992,6 @@ async function runRemoteIssueBackfill(target: IssueSyncTarget): Promise<number> 
   let remoteIssues: BackfilledIssue[];
   if (target.provider === "github") {
     if (target.installationId == null || !target.repoFullName) return 0;
-    // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED
-    // connection mints through the Cloud control plane — the local mint would
-    // throw without a local app key, or hit the wrong App in a mixed setup.
     const mint = githubIssueMinter(target);
     const issues = await listRepoOpenIssues(
       target.installationId,

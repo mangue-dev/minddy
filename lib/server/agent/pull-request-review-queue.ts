@@ -1,6 +1,6 @@
 import "server-only";
 import type { VisibleRepo } from "./pull-requests";
-import type { PullRequestRef } from "./pr";
+import type { PullRequestRef } from "@/lib/pull-request-contract";
 import { forgeFor } from "./forge";
 import { resolveRepoCloneTargetForRepo } from "./repo-access";
 

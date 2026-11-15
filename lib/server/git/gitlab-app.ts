@@ -31,45 +31,31 @@ export const GITLAB_HOOK_MARKER = "minddy-forge-webhook";
 
 /**
  * OAuth GitLab app + token plumbing (MIN-47), AutoKap scope
- * (gitlab-app.ts): user authorizes once (connect), minddy stores the
+ * (gitlab-app.ts): the user authorizes once (connect), minddy stores the
  * access+refresh tokens (encrypted) and reuses the account on all its projects.
- * The access tokens expire (~2h) and are lazily refreshed at mint time. gitlab.com SaaS only. The code agent (MIN-69) consumes these
- * tokens via `getGitlabAccessToken` (clone + MR module `lib/server/agent/mr.ts`);
- * webhook `/api/webhooks/gitlab` is provisioned on the repository by
- * `ensureGitlabIssuesHook` at activation of issue synchronization (MIN-97), and
- * remains to be created by hand for repositories that only use the agent.
+ * Access tokens expire (~2h) and are lazily refreshed at mint time; gitlab.com
+ * SaaS only. The merge request module (`lib/server/agent/mr.ts`) consumes them
+ * through `getGitlabAccessToken`. The `/api/webhooks/gitlab` hook is provisioned
+ * on the repository by `ensureGitlabIssuesHook`.
  */
 
-// `api` is the only scope needed — and the only one that works. It gives access
-// complete read+write to the API (files/tree/compare, commits, merge requests,
-// webhooks), the GitLab equivalent of Contents R/W + Pull-requests R/W from the GitHub App.
+// `api` is the only scope needed, and the only one that works: full API read
+// and write (files, commits, merge requests, webhooks), the GitLab equivalent
+// of the GitHub App's Contents and Pull requests permissions.
 //
-// AND IT IS A SCOPE THAT WE CANNOT REDUCE (MIN-327), to be said rather than
-// leave guessing. The token that is given to the agent's microVM is CET access
-// token: `api`, on the ENTIRE ACCOUNT of the person who linked the deposit — not on
-// the only repository of the project. On the GitHub side, the mint accepts `repositories` and
-// `permissions` and the agent receives a token scoped at the deposit, in writing or in
-// lecture selon son ancrage (`RepoTokenAccess`, lib/server/agent/repo-access.ts) ;
-// GitLab has **no** equivalent:
-//
-// - an OAuth token is not down-scoped at the time of use — the scope is
-// frozen at authorization, and `read_repository` alone would not suffice for the rest
-//     du travail de l'agent (MR, discussions, compare) ;
-// - the only mechanism with reduced scope, the *project access token*, is a token
-// PERSISTENT to create, store, track and revoke, with a minimum duration of one
-//     day. We would exchange a token of one hour too large for a token of one
-// well-scored day, plus a whole life cycle to keep up.
-//
-// Assumed consequence, of the same kind as the absence of bot identity (MIN-146):
-// a GitLab REVIEW session runs with a token that can write, where its
-// GitHub equivalent only has `contents: read`. It's written here, in SECURITY.md,
-// and the binding UI already says under which account the agent is acting.
+// It cannot be reduced (MIN-327): an OAuth token is not down-scoped at use
+// time, and GitLab's only narrower mechanism, the project access token, is a
+// persistent credential (one day minimum) to create, store and revoke. So a
+// GitLab token covers the whole account of the person who linked the
+// repository, where the GitHub installation token is scoped to one
+// repository. Same kind of assumed gap as the missing bot identity (MIN-146);
+// SECURITY.md says it and the link UI names the acting account.
 export const GITLAB_OAUTH_SCOPES = "api";
 
 // Refresh when the access token is in this expiry window.
 const REFRESH_SKEW_MS = 5 * 60 * 1000;
-// Maintainer = 40 (create webhooks + merger MRs). The future agent opens a webhook
-// AND merge, so the selector only surfaces projects to Maintainer+.
+// Maintainer = 40: creating the webhook and merging MRs both need it, so the
+// selector only surfaces projects where the account is Maintainer or above.
 const MIN_ACCESS_LEVEL_MAINTAINER = 40;
 const PROJECTS_PER_PAGE = 100;
 
@@ -567,9 +553,9 @@ interface GitlabHookWrite {
  *
  * Absent → creation (issues + merge requests + notes + reactions + pipelines,
  * never pushes). Present → a PUT which ONLY toggles `issues_events`. Never
- * DELETE: the same hook carries the agent's MR sync (MIN-69), the
- * MR comments from the activity log and the direct PR (MIN-161) — the
- * deactivating is putting back `issues_events: false`, not deleting the line.
+ * DELETE: the same hook carries the MR sync (MIN-69), the MR comments of the
+ * activity log and the live PR panel (MIN-161), so deactivating puts back
+ * `issues_events: false` instead of deleting the hook.
  *
  * `opts.secret` is the secret SPECIFIC TO THIS DEPOSIT (MIN-333), minted by
  * `ensureRepoWebhookSecret`: it is the caller who provides it, because it is

@@ -55,7 +55,8 @@ import {
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MentionHover } from "@/components/mention-hover";
-import { isPreviewMentionType, type PullRequestState } from "@/lib/mention-preview";
+import { isPreviewMentionType } from "@/lib/mention-preview";
+import type { PullRequestState } from "@/lib/pull-request-contract";
 import type { MentionMeta } from "@/lib/mention-link";
 import type { IssueStatus } from "@/lib/issue-constants";
 

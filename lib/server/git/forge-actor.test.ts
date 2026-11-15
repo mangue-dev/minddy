@@ -1,14 +1,15 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 /**
- * What the forge responds to when it refuses the TOKEN, not the deposit.
+ * What to answer when the forge rejects the TOKEN, not the repository.
  *
- * Historical fallback sent any non-404 failure to `read`. A 401 became
- * therefore "connected account, limited rights" - the worst possible sentence, served to the
- * OWNER of the repository ("your git account can neither merge nor resolve the
- * children of this repository"), then a bare `Bad credentials` at the first gesture. Three cases,
- * and the third is the safeguard: 403 must REMAIN a fallback to `read`, otherwise
- * an exhausted API quota would start demanding reauthorization.
+ * The historical fallback sent every non-404 failure to `read`. A 401 thus
+ * became "linked account, limited rights", the worst possible message, served
+ * to the repository's OWNER ("your Git account can neither merge nor resolve
+ * threads in this repository"), followed by a bare `Bad credentials` on the
+ * first action. Three cases, and the third is the safeguard: a 403 must STAY a
+ * fallback to `read`, otherwise an exhausted API quota would start demanding
+ * reauthorization.
  */
 
 let tokens: string[];
@@ -18,8 +19,8 @@ let probes: string[];
 
 vi.mock("./user-identities", () => ({
   getGithubUserToken: async (_userId: string, opts: { force?: boolean } = {}) => {
-    // A forced rotation consumes the next token; without it, we return the one
-    // which is in base — exactly the contract of the real function.
+    // A forced rotation consumes the next token; otherwise the stored one is
+    // returned, exactly the real function's contract.
     const token = opts.force && tokens.length > 1 ? tokens[1] : tokens[0];
     if (opts.force && tokens.length > 1) tokens = tokens.slice(1);
     minted.push({ token, force: !!opts.force });
@@ -37,7 +38,7 @@ function json(status: number, body: unknown): Response {
   });
 }
 
-/** The module keeps in-process caches: each case starts from a new module. */
+/** The module keeps in-process caches: each case starts from a fresh module. */
 async function freshResolve() {
   vi.resetModules();
   const mod = await import("./forge-actor");
@@ -71,7 +72,7 @@ it("repairs a token rejected by the forge when rotation succeeds", async () => {
 
   const actor = await resolveForgeActor(opts);
 
-  // The owner of the repository regains his right to merge, without doing anything.
+  // The repository owner gets their merge right back without doing anything.
   expect(actor).toMatchObject({ kind: "actor", token: "frais", capability: "write" });
   expect(minted).toEqual([
     { token: "mort", force: false },
@@ -79,7 +80,7 @@ it("repairs a token rejected by the forge when rotation succeeds", async () => {
   ]);
 });
 
-it("says « reauthorize » rather than « read-only » when nothing can save it", async () => {
+it("says \"reauthorize\" rather than \"read-only\" when nothing can save it", async () => {
   tokens = ["mort"];
   responses = [() => json(401, { message: "Bad credentials" })];
   const resolveForgeActor = await freshResolve();
@@ -102,9 +103,9 @@ it("does not replay rotation for a token already known to be dead", async () => 
   const actor = await resolveForgeActor(opts);
 
   expect(actor).toMatchObject({ kind: "none", reason: "expired" });
-  // The second pass mints the token then stops abruptly: no more probe, no
-  // OAuth exchange — the panel of a PR repolles every 15 s, at three or
-  // four requests per turn.
+  // The second pass mints the token and stops right there: no new probe, no
+  // OAuth exchange. A PR panel polls every 15 s, with three or four requests
+  // per round.
   expect(minted.length).toBe(before + 1);
   expect(probes.length).toBe(1);
 });
@@ -120,7 +121,7 @@ it("keeps the `read` fallback for a 403 — quota, organization SSO", async () =
   expect(minted).toEqual([{ token: "vivant", force: false }]);
 });
 
-it("garde le 404 : la forge cache l'existence d'un dépôt qu'on ne voit pas", async () => {
+it("keeps the 404: the forge hides the existence of a repository the user cannot see", async () => {
   tokens = ["vivant"];
   responses = [() => json(404, { message: "Not Found" })];
   const resolveForgeActor = await freshResolve();

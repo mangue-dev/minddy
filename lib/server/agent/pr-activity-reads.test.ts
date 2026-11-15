@@ -13,7 +13,7 @@ function scopeFor(provider: "github" | "gitlab", forge: Record<string, unknown>)
     target: { provider },
     call: { token: "token", repoFullName: "acme/app", number: 42 },
     actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
-    forge,
+    forge: { reactionsNeedCommentIds: provider === "gitlab", ...forge },
   } as unknown as PrScope;
 }
 

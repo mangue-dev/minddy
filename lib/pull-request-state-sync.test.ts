@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { AgentRunPrResponse, PullRequestListItem } from "./agent-api";
+import type { PullRequestDetailResponse, PullRequestListItem } from "./agent-api";
 import { pullRequestStatesToReconcile } from "./pull-request-state-sync";
 
 const row = (prId: string, pr_state: PullRequestListItem["pr_state"] = "open") =>
   ({ prId, pr_state, updated_at: "2026-10-27T10:00:00Z" }) as PullRequestListItem;
-const merged = { state: "closed", merged: true, draft: false, updatedAt: "2026-10-27T10:05:00Z" } as AgentRunPrResponse["pr"];
-const readiness = (state: string) => ({ state }) as NonNullable<AgentRunPrResponse["readiness"]>;
+const merged = { state: "closed", merged: true, draft: false, updatedAt: "2026-10-27T10:05:00Z" } as PullRequestDetailResponse["pr"];
+const readiness = (state: string) => ({ state }) as NonNullable<PullRequestDetailResponse["readiness"]>;
 const none = { detail: () => undefined, readinessByPrId: {}, notBefore: () => 0 };
 
 describe("pullRequestStatesToReconcile (MIN-817)", () => {

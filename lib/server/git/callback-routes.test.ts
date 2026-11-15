@@ -3,17 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * MIN-324 — the three forge callbacks, exercised branch by branch.
  *
- * Two things to hold, and they are independent:
+ * Two independent things must hold:
  *
- * 1. **The confrontation `state` ↔ session.** One `state` signed proves that it was
- * minted; it does not prove who presents it. Without a corresponding session,
- * no writing — neither installation upsert, nor exchange of the `code` (burning the
- * would only serve to deprive the victim of his).
- * 2. **Cookies returned (MIN-293).** These routes are the first to open
- * cookies session, with a token that may be expired: each
- * output, including error redirects, must pass back through
- * `applyCookies`. We check it on EACH branch rather than counting the
- * `return` of the file.
+ * 1. **Checking `state` against the session.** A signed `state` proves it was
+ *    minted; it does not prove who presents it. Without a matching session,
+ *    nothing is written: no installation upsert, no exchange of the `code`
+ *    (burning it would only deprive the victim of theirs).
+ * 2. **Returned cookies (MIN-293).** These routes are the first to open the
+ *    session cookies, with a token that may have expired: every exit,
+ *    including error redirects, must go back through `applyCookies`. Each
+ *    branch is checked rather than counting the file's `return` statements.
  */
 
 process.env.GIT_STATE_SECRET = "test-git-state-secret-long-enough-32";
@@ -106,7 +105,7 @@ function signedIn(userId: string | null) {
   );
 }
 
-/** The cookies invariant: true for all output, whatever the branch. */
+/** The cookie invariant: true for every exit, whatever the branch. */
 function expectCookiesApplied(response: { cookies: { get: (n: string) => unknown } }) {
   expect(response.cookies.get(REFRESHED.name)).toBeTruthy();
 }
@@ -139,7 +138,7 @@ describe("GET /api/git/github/setup", () => {
       origin: "account",
     });
 
-  it("session absente → git=error, et aucune installation enregistrée", async () => {
+  it("missing session → git=error, and no installation stored", async () => {
     signedIn(null);
     const response = await setupGET(
       request("/api/git/github/setup", {
@@ -152,7 +151,7 @@ describe("GET /api/git/github/setup", () => {
     expectCookiesApplied(response);
   });
 
-  it("session ≠ state.userId → git=error : c'est le vol d'installation", async () => {
+  it("session ≠ state.userId → git=error: this is installation theft", async () => {
     signedIn(ATTACKER);
     const response = await setupGET(
       request("/api/git/github/setup", {
@@ -165,7 +164,7 @@ describe("GET /api/git/github/setup", () => {
     expectCookiesApplied(response);
   });
 
-  it("session = state.userId → chemin nominal", async () => {
+  it("session = state.userId → happy path", async () => {
     signedIn(OWNER);
     const response = await setupGET(
       request("/api/git/github/setup", {
@@ -180,14 +179,14 @@ describe("GET /api/git/github/setup", () => {
     expectCookiesApplied(response);
   });
 
-  it("state absent → git=error, cookies rendus quand même", async () => {
+  it("missing state → git=error, cookies still returned", async () => {
     signedIn(OWNER);
     const response = await setupGET(request("/api/git/github/setup", {}));
     expect(location(response)).toContain("git=error");
     expectCookiesApplied(response);
   });
 
-  it("installation_id absent → git=error, cookies rendus quand même", async () => {
+  it("missing installation_id → git=error, cookies still returned", async () => {
     signedIn(OWNER);
     const response = await setupGET(
       request("/api/git/github/setup", { state: state() }),
@@ -196,7 +195,7 @@ describe("GET /api/git/github/setup", () => {
     expectCookiesApplied(response);
   });
 
-  it("erreur en aval → git=error sans détail, cookies rendus", async () => {
+  it("downstream error → git=error without details, cookies returned", async () => {
     signedIn(OWNER);
     upsertGithubConnection.mockRejectedValue(
       new Error("GitHub installation is already linked to another account"),
@@ -222,7 +221,7 @@ describe("GET /api/git/github/user-callback", () => {
       origin: "settings",
     });
 
-  it("session absente → git=error, et le code n'est pas échangé", async () => {
+  it("missing session → git=error, and the code is not exchanged", async () => {
     signedIn(null);
     const response = await userCallbackGET(
       request("/api/git/github/user-callback", { state: state(), code: "c" }),
@@ -233,7 +232,7 @@ describe("GET /api/git/github/user-callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("session ≠ state.userId → le jeton de la victime n'est jamais demandé", async () => {
+  it("session ≠ state.userId → the victim's token is never requested", async () => {
     signedIn(ATTACKER);
     const response = await userCallbackGET(
       request("/api/git/github/user-callback", { state: state(), code: "c" }),
@@ -243,7 +242,7 @@ describe("GET /api/git/github/user-callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("session = state.userId → chemin nominal", async () => {
+  it("session = state.userId → happy path", async () => {
     signedIn(OWNER);
     const response = await userCallbackGET(
       request("/api/git/github/user-callback", { state: state(), code: "c" }),
@@ -255,7 +254,7 @@ describe("GET /api/git/github/user-callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("state absent → git=error, cookies rendus", async () => {
+  it("missing state → git=error, cookies returned", async () => {
     signedIn(OWNER);
     const response = await userCallbackGET(
       request("/api/git/github/user-callback", { code: "c" }),
@@ -264,7 +263,7 @@ describe("GET /api/git/github/user-callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("code absent → git=error, cookies rendus", async () => {
+  it("missing code → git=error, cookies returned", async () => {
     signedIn(OWNER);
     const response = await userCallbackGET(
       request("/api/git/github/user-callback", { state: state() }),
@@ -273,7 +272,7 @@ describe("GET /api/git/github/user-callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("échec de l'échange → git=error, cookies rendus", async () => {
+  it("failed exchange → git=error, cookies returned", async () => {
     signedIn(OWNER);
     exchangeGithubUserCode.mockRejectedValue(new Error("bad code"));
     const response = await userCallbackGET(
@@ -293,7 +292,7 @@ describe("GET /api/git/gitlab/callback", () => {
       origin: "account",
     });
 
-  it("session absente → git=error, et le code n'est pas échangé", async () => {
+  it("missing session → git=error, and the code is not exchanged", async () => {
     signedIn(null);
     const response = await gitlabGET(
       request("/api/git/gitlab/callback", { state: state(), code: "c" }),
@@ -314,7 +313,7 @@ describe("GET /api/git/gitlab/callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("session = state.userId → chemin nominal", async () => {
+  it("session = state.userId → happy path", async () => {
     signedIn(OWNER);
     const response = await gitlabGET(
       request("/api/git/gitlab/callback", { state: state(), code: "c" }),
@@ -326,7 +325,7 @@ describe("GET /api/git/gitlab/callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("state absent → git=error, cookies rendus", async () => {
+  it("missing state → git=error, cookies returned", async () => {
     signedIn(OWNER);
     const response = await gitlabGET(
       request("/api/git/gitlab/callback", { code: "c" }),
@@ -335,7 +334,7 @@ describe("GET /api/git/gitlab/callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("code absent → git=error, cookies rendus", async () => {
+  it("missing code → git=error, cookies returned", async () => {
     signedIn(OWNER);
     const response = await gitlabGET(
       request("/api/git/gitlab/callback", { state: state() }),
@@ -344,7 +343,7 @@ describe("GET /api/git/gitlab/callback", () => {
     expectCookiesApplied(response);
   });
 
-  it("échec de l'échange → git=error, cookies rendus", async () => {
+  it("failed exchange → git=error, cookies returned", async () => {
     signedIn(OWNER);
     exchangeGitlabCode.mockRejectedValue(new Error("bad code"));
     const response = await gitlabGET(

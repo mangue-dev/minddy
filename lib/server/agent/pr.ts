@@ -1,5 +1,6 @@
 import "server-only";
 import { githubResponseText } from "./github-read-flight";
+import { ForgeApiError } from "./forge-error";
 
 import { aiReviewProviderForLogin } from "@/lib/pr-ai-review/providers";
 
@@ -7,7 +8,6 @@ import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
 import { collectSignedAssets } from "@/lib/forge-image-assets";
 import {
   summarizeGithubChecks,
-  type ChecksSummary,
   type RawCheckRun,
   type RawCommitStatus,
 } from "./checks-core";
@@ -38,65 +38,23 @@ import {
   type MergeabilityReason,
   type RepositoryMergePolicy,
 } from "@/lib/pr-readiness";
+import type {
+  ChecksSummary,
+  PullRequestComment,
+  PullRequestCommit,
+  PullRequestFile,
+  PullRequestRef,
+  PullRequestReviewComment,
+  PullRequestReviewSummary,
+  RepoMember,
+  ReviewVerdict,
+} from "@/lib/pull-request-contract";
 
 /**
- * GitHub Pull Request Operations for Code Agent (MIN-46): Open PR
- * of a run, read it (metadata + files/patches for in-app review),
- * merge or close it. All scoped by a fresh installation token
- * (getInstallationToken via resolveRepoCloneTarget). `repoFullName` = `owner/name`.
+ * GitHub pull request operations behind the `Forge` surface (`forge.ts`).
+ * `repoFullName` is `owner/name`; the caller picks the token (installation or
+ * the person's own account, see the identity table in `forge.ts`).
  */
-
-export interface PullRequestRef {
-  number: number;
-  url: string;
-  state: string;
-  draft?: boolean;
-  merged?: boolean;
-  title?: string;
-  body?: string | null;
-  head?: string;
-  /** Provider-qualified head name used by GitHub's classic merge title. */
-  headLabel?: string;
-  /** `true` only when the forge confirms that the head branch lives in the base repository. */
-  headFromBaseRepository?: boolean;
-  base?: string;
-  /** Head SHA — immutable anchor to calculate the merge base (getMergeBaseSha). */
-  headSha?: string;
-  /** Number of PR commits, as counted by the forge. GitHub returns it when
-      fetching one PR (never in the list); GitLab does not return it, so it stays
-      `undefined` and the caller falls back to the commit list length. */
-  commitCount?: number;
-  /** Author and opening date: `body` opens the thread as a comment, it needs its header. */
-  user?: { login: string; avatar_url: string | null } | null;
-  createdAt?: string;
-  /** Last activity AT THE FORGE — sorting the PR list (MIN-143). */
-  updatedAt?: string;
-  /** Merger date, when there is one (MIN-143: the table keeps it). */
-  mergedAt?: string | null;
-  /** GraphQL identifier of the PR — only key accepted by mutations (MIN-138:
-      the draft → ready toggle ONLY exists in GraphQL). GitLab: never populated. */
-  nodeId?: string;
-  /** Can PR be merged? `null`/`undefined` = UNKNOWN, not “no”:
-      GitHub calculates mergeability asynchronously (verified — a fresh PR
-      responds `mergeable: null` + `mergeable_state: "unknown"` for a few
-      seconds), and the *list* endpoint does not return these two fields at all. */
-  mergeable?: boolean | null;
-  /** Detailed mergeability status: `clean`, `blocked` (the repository requires
-      approvals or checks), `dirty` (conflict), `unstable` (optional checks are
-      failing), or `unknown`. */
-  mergeableState?: string | null;
-  mergeabilityReason?: MergeabilityReason | null;
-  mergeFlowActive?: boolean;
-  reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
-  /** Direct reviewer requests that are still pending at the forge. */
-  requestedReviewers?: Array<{ login: string; avatar_url: string | null }>;
-  /** Fully rendered GitLab defaults for the merge dialog. */
-  defaultMergeCommitMessage?: string | null;
-  defaultSquashCommitMessage?: string | null;
-}
-
-/** Verdict of a review, in neutral vocabulary (GitHub: APPROVE / REQUEST_CHANGES / COMMENT). */
-export type ReviewVerdict = "approve" | "request_changes" | "comment";
 
 /**
  * What REALLY happened at the forge when minddy submitted a review.
@@ -111,66 +69,6 @@ export type ReviewVerdict = "approve" | "request_changes" | "comment";
  */
 export interface ReviewSubmission {
   published: "review" | "comment";
-}
-
-/** PR approval count — everything minddy shows about it. */
-export interface PullRequestReviewSummary {
-  approvals: number;
-  changesRequested: number;
-  requiredApprovals?: number | null;
-}
-
-export interface PullRequestFile {
-  filename: string;
-  status: string;
-  additions: number;
-  deletions: number;
-  patch?: string;
-  /** Path BEFORE the PR if the file has been renamed — it addresses the base version. */
-  previous_filename?: string;
-}
-
-/**
- * A PR commit — what the Commits tab shows.
- *
- * TWO authors, who do not say the same thing: `author` is the ACCOUNT of the
- * forge, when she was able to attach the commit email to a user (it's him
- * which bears the avatar and the login), while `authorName` is the name written IN
- * the commit, which git always has. A commit pushed from a machine whose
- * the email is not declared at the forge only has the second — and on the GitLab side,
- * whose MR commits API does not serve any account, there is never just him.
- */
-export interface PullRequestCommit {
-  sha: string;
-  /** COMPLETE message: first line = title, the rest = body (often empty). */
-  message: string;
-  author: { login: string; avatar_url: string | null } | null;
-  authorName: string | null;
-  /** Author email — the only key that duplicates a co-signer from
-      the main author when neither form bears any account. */
-  authorEmail: string | null;
-  authoredAt: string | null;
-  url: string | null;
-  /** Signature verified by the forge. `null` = UNKNOWN, not “unsigned”:
-      GitLab does not serve it on this endpoint (one call per commit is required). */
-  verified: boolean | null;
-  /**
-   * FIRST parent — the “before” side of the diff of this commit alone. It is he who
-   * addresses the base version of a file to context unfolding. `null` on a
-   * root commit (no parent), where there is nothing to unfold before.
-   */
-  parentSha: string | null;
-  /** Lines added and removed by this commit. `null` means not yet read because
-      neither forge includes these figures in the list (see `…CommitExtras`). */
-  additions: number | null;
-  deletions: number | null;
-  /**
-   * All authors, including the primary one (MIN-159). A co-signed commit has
-   * several, which is common when an agent authored the change. Empty until
-   * `…CommitExtras` responds; the caller then falls back to `author` and
-   * `authorName`, which represent only the primary author.
-   */
-  authors: CommitAuthor[];
 }
 
 /** What the commits list does NOT carry, and which a second call will fetch:
@@ -192,96 +90,10 @@ export interface CommitDiff {
   parentSha: string | null;
 }
 
-/**
- * A FORGE account that can be mentioned on a PR (MIN-162) — not a
- * member minddy: the comment goes to the forge, where a `@` does not designate
- * someone only if he designates an account from there.
- */
-export interface RepoMember {
-  /** The name as it is written after the at sign — `@login`, raw. */
-  login: string;
-  avatar_url: string | null;
-  /** Name displayed when the forge has one (GitLab), otherwise the login only. */
-  name: string | null;
-}
-
-/** PR conversation comment (GitHub endpoint issues/{n}/comments). */
-export interface PullRequestComment {
-  id: number;
-  body: string;
-  user: { login: string; avatar_url: string | null } | null;
-  created_at: string;
-  /** Last edit AT THE FORGE — the "(edited)" marker. `null` when GitHub has
-      never carried it (or the comment was never edited): compare against
-      `created_at` to decide. */
-  updated_at?: string | null;
-  html_url: string;
-}
-
-/**
- * REVIEW comment: anchored to a line in the diff (endpoint pulls/{n}/comments),
- * where `PullRequestComment` lives in the flat thread of the conversation.
- *
- * `line` is the line in the CURRENT version of the PR, `original_line` that of
- * commit where the comment was posted. GitHub puts `line: null` when it doesn't know
- * no longer attach the comment to the current diff (“outdated”) — but the opposite
- * is NOT true: `line` not null does not guarantee that the line is in the diff
- * (checked against the API: a comment placed on a CONTEXT line keeps its
- * `line` even after the diff has moved elsewhere in the file). Side
- * rendered, only the effective resolution in the hunks is authentic.
- */
-export interface PullRequestReviewComment {
-  id: number;
-  body: string;
-  path: string;
-  /** Line in the current diff, or null if GitHub no longer knows how to attach it. */
-  line: number | null;
-  /** Line at the original commit — the display fallback when `line` is null. */
-  original_line: number | null;
-  side: "LEFT" | "RIGHT";
-  /** First line of a MULTI-LINE remark (MIN-181) — `line` is then
-      the LAST. `null` on a single line remark, and always `null`
-      on the GitLab side, where a note is anchored on a line. Without these two fields, a
-      remark made on lines 6 to 15 is reread as a remark on the
-      15: the anchor is right, the beach has disappeared. */
-  start_line: number | null;
-  /** First line at the original commit, retained after the thread becomes outdated. */
-  original_start_line: number | null;
-  start_side: "LEFT" | "RIGHT" | null;
-  /** Thread root (GitHub standardizes: replying to a reply points to the root). */
-  in_reply_to_id: number | null;
-  /** Review which bears this comment (MIN-159) — the key which stores it under it
-      in the conversation thread. `null` on the GitLab side, which has no review object. */
-  review_id: number | null;
-  /** Excerpt from the diff around the line, as at the time of the comment. */
-  diff_hunk: string;
-  user: { login: string; avatar_url: string | null } | null;
-  created_at: string;
-  html_url: string;
-}
-
-/**
- * The state of a FIL (resolution) lives in the pure module `lib/pr-review-threads` —
- * it is shared with the client, who matches the two lists for rendering. Re-exported
- * here so that `mr.ts` and `forge.ts` import it like other PR types.
- */
-export type { ReviewThreadState } from "@/lib/pr-review-threads";
-export type {
-  ReviewCommentReaction,
-  ReviewReactionContent,
-} from "@/lib/pr-review-reactions";
-export type { PrTimelineEvent } from "@/lib/pr-timeline";
-export type { CommitAuthor } from "@/lib/commit-authors";
-
-/** GitHub API error with HTTP status (allows you to distinguish 422 “no commits”). */
-export class GithubApiError extends Error {
-  status: number;
-  retryAfter?: string | null;
+export class GithubApiError extends ForgeApiError {
   constructor(message: string, status: number, retryAfter?: string | null) {
-    super(message);
+    super(message, status, retryAfter);
     this.name = "GithubApiError";
-    this.status = status;
-    this.retryAfter = retryAfter;
   }
 }
 
@@ -453,63 +265,6 @@ export function refineGithubMergeabilityReason(
   if (reviewDecision === "CHANGES_REQUESTED") return "changes_requested";
   if (reviewDecision === "REVIEW_REQUIRED") return "approval_required";
   return reason;
-}
-
-/** PR open for `head` (run branch), or null. */
-export async function findOpenPullRequest(opts: {
-  token: string;
-  repoFullName: string;
-  head: string;
-}): Promise<PullRequestRef | null> {
-  const { owner, repo } = splitRepo(opts.repoFullName);
-  const pulls = await ghJson<RawPull[]>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls?state=open&head=${owner}:${encodeURIComponent(opts.head)}`,
-    opts.token,
-  );
-  return pulls.length > 0 ? toRef(pulls[0], opts.repoFullName) : null;
-}
-
-/**
- * Opens the PR of the run, or returns the one already open for this branch (resume).
- * Raises GithubApiError(422) “No commits between…” if the branch has no diff.
- */
-export async function ensurePullRequest(opts: {
-  token: string;
-  repoFullName: string;
-  head: string;
-  base: string;
-  title: string;
-  body: string;
-}): Promise<PullRequestRef> {
-  const { owner, repo } = splitRepo(opts.repoFullName);
-  try {
-    const created = await ghJson<RawPull>(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls`,
-      opts.token,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: opts.title,
-          head: opts.head,
-          base: opts.base,
-          body: opts.body,
-        }),
-      },
-    );
-    return toRef(created, opts.repoFullName);
-  } catch (err) {
-    // 422 “A pull request already exists” → we find and return the existing one.
-    if (err instanceof GithubApiError && err.status === 422) {
-      const existing = await findOpenPullRequest({
-        token: opts.token,
-        repoFullName: opts.repoFullName,
-        head: opts.head,
-      });
-      if (existing) return existing;
-    }
-    throw err;
-  }
 }
 
 export async function getPullRequest(opts: {
@@ -895,32 +650,6 @@ export async function getCommitDiff(opts: {
   };
 }
 
-/** Pages of 100 drained at most for the branch picker — beyond that, a deposit
-    has too many branches for an exhaustive list to still be useful for choosing. */
-const MAX_BRANCH_PAGES = 5;
-
-/**
- * Repository branch names (agent launch base branch picker).
- * Paged up to MAX_BRANCH_PAGES × 100 — sorting (default first) is done by
- * the caller, GitHub does not offer either sorting or searching on this endpoint.
- */
-export async function listBranches(opts: {
-  token: string;
-  repoFullName: string;
-}): Promise<string[]> {
-  const { owner, repo } = splitRepo(opts.repoFullName);
-  const names: string[] = [];
-  for (let page = 1; page <= MAX_BRANCH_PAGES; page++) {
-    const batch = await ghJson<Array<{ name: string }>>(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches?per_page=100&page=${page}`,
-      opts.token,
-    );
-    names.push(...batch.map((b) => b.name));
-    if (batch.length < 100) break;
-  }
-  return names;
-}
-
 /** Two pages = 200 accounts. Beyond that, a list of suggestions no longer helps
     person: you type three letters, you don't pull out a directory. */
 const MAX_MEMBER_PAGES = 2;
@@ -967,19 +696,15 @@ export async function listRepoMembers(opts: {
   return members;
 }
 
-/** Same spirit as MAX_BRANCH_PAGES: 500 PR is enough for a household of branches,
-    and the order `updated desc` puts the most recent — the only ones still alive
-    in the user's head — on the first page. */
+/** At most 500 PRs: the `updated desc` order puts the live ones on the first pages. */
 const MAX_PR_PAGES = 5;
 
 /**
- * ALL PRs in the repository, all states combined (MIN-102, cleaning of branches
- * agent). `state=all` is essential: `state=closed` from GitHub covers the
- * refused AND merged, but we also want to see the PRs OPEN so as not to
- * never propose the deletion of a branch which carries one.
+ * The repository's PRs, newest activity first: every state by default (the
+ * repository sweep needs merged and closed ones), or only open ones for the
+ * review queue.
  *
- * `truncated` warns the caller that beyond MAX_PR_PAGES × 100 the list is
- * cut — the preview then says it on screen rather than lying by omission.
+ * `truncated` warns the caller that beyond MAX_PR_PAGES × 100 the list is cut.
  */
 export async function listPullRequests(opts: {
   token: string;
@@ -1018,35 +743,6 @@ export async function listPullRequests(opts: {
 }
 
 /**
- * Delete a remote branch (MIN-102). Returns `"deleted"`, or
- * `"already-gone"` if the reference no longer exists — a replayed household should not
- * look like a breakdown. GitHub responds 422 “Reference does not exist” (and
- * no 404) when the ref has already disappeared.
- */
-export async function deleteBranch(opts: {
-  token: string;
-  repoFullName: string;
-  branch: string;
-}): Promise<"deleted" | "already-gone"> {
-  const { owner, repo } = splitRepo(opts.repoFullName);
-  // Ref left as is — same reasons as getMergeBaseSha: our branches
-  // carry `/` (`minddy/agent/…`) and %2F would break the road.
-  try {
-    await ghJson<unknown>(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/refs/heads/${opts.branch}`,
-      opts.token,
-      { method: "DELETE" },
-    );
-    return "deleted";
-  } catch (err) {
-    if (err instanceof GithubApiError && (err.status === 422 || err.status === 404)) {
-      return "already-gone";
-    }
-    throw err;
-  }
-}
-
-/**
  * PR **merge base** SHA — the reference point for GitHub patches.
  *
  * GitHub defers a three-point PR (`base...head`): line numbers
@@ -1073,49 +769,6 @@ export async function getMergeBaseSha(opts: {
   const sha = comparison.merge_base_commit?.sha;
   if (!sha) throw new GithubApiError("No merge base for this pull request", 502);
   return sha;
-}
-
-/**
- * CUMULATIVE diff of a working branch against its base — the diff view of a session
- * WITHOUT PR (the GitHub comparison serves files in the same format as pulls/{n}/files,
- * from the merge base, like a PR). `?per_page=1` bounds the list of COMMITS
- * embedded in the response: the files are only served on the
- * first page and arrive complete (GitHub ceiling: 300).
- * Raises GithubApiError(404) if the branch has not (yet) been pushed.
- */
-export async function compareBranches(opts: {
-  token: string;
-  repoFullName: string;
-  base: string;
-  head: string;
-}): Promise<{ files: PullRequestFile[]; url: string | null }> {
-  const { owner, repo } = splitRepo(opts.repoFullName);
-  // Refs left as is — same reasons as getMergeBaseSha (slash branches).
-  const comparison = await ghJson<{
-    html_url?: string;
-    files?: Array<{
-      filename: string;
-      status: string;
-      additions: number;
-      deletions: number;
-      patch?: string;
-      previous_filename?: string;
-    }>;
-  }>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${opts.base}...${opts.head}?per_page=1`,
-    opts.token,
-  );
-  return {
-    files: (comparison.files ?? []).map((f) => ({
-      filename: f.filename,
-      status: f.status,
-      additions: f.additions,
-      deletions: f.deletions,
-      patch: f.patch,
-      previous_filename: f.previous_filename,
-    })),
-    url: comparison.html_url ?? null,
-  };
 }
 
 /** Segment-by-segment encoded file path: encodeURIComponent would swallow `/`. */
@@ -1433,21 +1086,6 @@ interface RawReview {
 }
 
 /**
- * The TEXT of a review already submitted, with its verdict — what the count
- * of approvals does not say. Read via Numo's replay pass (MIN-141):
- * a point already raised by someone does not need to be raised a second time, and the
- * body of a review lives elsewhere than the thread (`pulls/{n}/reviews`, never
- * `issues/{n}/comments`).
- */
-export interface PullRequestReviewMessage {
-  author: string | null;
-  /** `approved` | `changes_requested` | `commented` | `dismissed`. */
-  state: string;
-  body: string;
-  submittedAt: string | null;
-}
-
-/**
  * PR approval count. GitHub keeps ALL review history
  * (approve, then request changes, leave the two lines): only the
  * LATEST sharp review of every user counts, exactly like the
@@ -1484,32 +1122,6 @@ export async function listPullRequestReviews(opts: {
     approvals: verdicts.filter((v) => v === "approved").length,
     changesRequested: verdicts.filter((v) => v === "changes_requested").length,
   };
-}
-
-/**
- * Reviews already submitted, WITH their text (from oldest to most recent).
- * Same endpoint as the count above, different reading: here we keep what has
- * been WRITTEN. Reviews without a body are ruled out — naked approval does not bring
- * nothing to read again, its existence can already be read in the countdown.
- */
-export async function listPullRequestReviewMessages(opts: {
-  token: string;
-  repoFullName: string;
-  number: number;
-}): Promise<PullRequestReviewMessage[]> {
-  const { owner, repo } = splitRepo(opts.repoFullName);
-  const reviews = await ghJson<RawReview[]>(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100&page=1`,
-    opts.token,
-  );
-  return reviews
-    .filter((r) => (r.body ?? "").trim())
-    .map((r) => ({
-      author: r.user?.login ?? null,
-      state: (r.state ?? "commented").toLowerCase(),
-      body: (r.body ?? "").trim(),
-      submittedAt: r.submitted_at ?? null,
-    }));
 }
 
 /**

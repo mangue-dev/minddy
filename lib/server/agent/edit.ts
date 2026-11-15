@@ -1,27 +1,23 @@
 import { createTwoFilesPatch, diffLines } from "diff";
 
 /**
- * Code Agent String Replacement Editing Engine (MIN-46) — the
- * heart of the “real editor”. Ported from the opencode `edit` tool
- * (https://github.com/sst/opencode, MIT), itself derived from the approaches of
- * Cline and gemini-cli. We keep the logic PURE (no I/O, no Effect/LSP/
- * permission): `replace()` applies robust substitution, `applyEdit()`
- * returns the new content + a unified diff.
+ * String replacement editing engine (MIN-46), used by the text-edit tools of
+ * Numo and the MCP server (`lib/server/text-edit.ts`). Ported from the opencode
+ * `edit` tool (https://github.com/sst/opencode, MIT), itself derived from the
+ * approaches of Cline and gemini-cli. Pure: `replace()` applies a robust
+ * substitution, `applyEdit()` returns the new content and a unified diff.
  *
- * Principle: the model provides `oldString` (the exact text to replace) and
- * `newString`. An exact replacement fails as soon as the model drifts from a space,
- * an indentation, escape or end of line — common on
- * eco models. We therefore attempt a CASCADE of matching strategies, from the most
- * strict to the most tolerant, until one locates the block. Failure
- * reste BRUYANT (throw) : jamais de corruption silencieuse.
+ * The model provides `oldString` (the exact text to replace) and `newString`.
+ * An exact replacement fails as soon as the model drifts by a space, an
+ * indentation, an escape or a line ending, so a cascade of matching
+ * strategies runs from the strictest to the most tolerant. Failure stays loud
+ * (throw): never a silent corruption.
  */
 
 /**
- * Why a substitution was refused. The message remains that which the agent
- * of code reads forever (`execute.ts` only knows `.message`); This
- * `reason` is added next to it for callers who need to REWRITE the message —
- * the MCP tool `minddy_edit_issue_text` edits a ticket plan, not a file,
- * and has neither “the file” nor `write_file` to offer (MIN-186).
+ * Why a substitution was refused, next to the message, for callers that
+ * rewrite the message for their own surface: `minddy_edit_issue_text` edits a
+ * ticket field, not a file (MIN-186).
  */
 export type ReplaceFailure =
   | "identical"
@@ -31,14 +27,9 @@ export type ReplaceFailure =
   | "ambiguous";
 
 /**
- * What the cascade did to achieve this result (MIN-246). We don't referee it
- * not, we MEASURE it: which place to resolve, at what rank of the cascade, with
- * what similarity when it calculates one, and how many candidates were
- * discarded along the way. `exec-tool` aggregates it by calling tool and `agent-loop`
- * persists in the `tool_result` event — it NEVER leaves the model.
- *
- * On a failure, she travels to `ReplaceError`: it is the only place where
- * we know that a `not_found` saw twelve candidates pass or none.
+ * What the cascade did to reach its result (MIN-246): which replacer resolved,
+ * at what rank, with what similarity, and how many candidates were discarded.
+ * A failure carries it on `ReplaceError`.
  */
 export interface ReplaceTrace {
   /** Name of the replacer who resolved (absent: none resolved). */
@@ -71,7 +62,7 @@ export class ReplaceError extends Error {
   }
 }
 
-// ── Fins de ligne ────────────────────────────────────────────────────────────
+// ── Line endings ────────────────────────────────────────────────────────────
 
 function normalizeLineEndings(text: string): string {
   return text.replaceAll("\r\n", "\n");
@@ -599,93 +590,6 @@ export function replaceTraced(
   );
 }
 
-// ── Telemetry (MIN-246) ────────────────────────── ───────────────────────────
-
-/** A substitution which was successful, as it starts at base. */
-export interface EditTelemetryMatch {
-  replacer: string;
-  rank: number;
-  similarity?: number;
-  /** `apply_patch` only: rank of the anchoring attempt which passed. */
-  attempt?: number;
-  rejected_disproportionate?: number;
-  rejected_ambiguous?: number;
-}
-
-/** A substitution refused: the reason, and what the waterfall had seen. */
-export interface EditTelemetryFailure {
-  reason: string;
-  candidates: number;
-  rejected_disproportionate?: number;
-}
-
-/**
- * What ONE call from an editing tool made go through the cascade. It is
- * diagnostic telemetry for the caller and is never returned to the model.
- */
-export interface EditTelemetry {
-  tool: "edit_file" | "apply_edits" | "apply_patch";
-  matched: EditTelemetryMatch[];
-  failed: EditTelemetryFailure[];
-  /** `apply_patch`: the envelope itself was unreadable (FORMAT failure). */
-  parse_error?: string;
-  /** Present ONLY when the list has been completed: a statement which includes
-   * Substitutions should not take a cap for a total. */
-  matched_total?: number;
-  failed_total?: number;
-}
-
-/** Entries kept per call — a batch of 40 files does not have to weigh in base. */
-const TELEMETRY_CAP = 20;
-
-/** Rounding: three decimal places are enough to compare a similarity to a threshold. */
-function round3(n: number): number {
-  return Math.round(n * 1000) / 1000;
-}
-
-export function telemetryMatch(trace: ReplaceTrace & { attempt?: number }): EditTelemetryMatch {
-  return {
-    replacer: trace.replacer ?? "unknown",
-    rank: trace.rank ?? 0,
-    ...(trace.similarity !== undefined ? { similarity: round3(trace.similarity) } : {}),
-    ...(trace.attempt !== undefined ? { attempt: trace.attempt } : {}),
-    ...(trace.rejectedDisproportionate > 0
-      ? { rejected_disproportionate: trace.rejectedDisproportionate }
-      : {}),
-    ...(trace.rejectedAmbiguous > 0 ? { rejected_ambiguous: trace.rejectedAmbiguous } : {}),
-  };
-}
-
-/**
- * Failure as it counts. `reason` comes from `ReplaceError` when it is
- * waterfall who refused; any other failure (missing file, unreadable hunk)
- * aggregates under a separate pattern — it is not the same measure.
- */
-export function telemetryFailure(err: unknown): EditTelemetryFailure {
-  if (err instanceof ReplaceError) {
-    return {
-      reason: err.reason,
-      candidates: err.trace.candidates,
-      ...(err.trace.rejectedDisproportionate > 0
-        ? { rejected_disproportionate: err.trace.rejectedDisproportionate }
-        : {}),
-    };
-  }
-  return { reason: "other", candidates: 0 };
-}
-
-/** Cape lists a telemetry and returns it, or `undefined` if empty. */
-export function sealTelemetry(t: EditTelemetry): EditTelemetry | undefined {
-  if (t.matched.length === 0 && t.failed.length === 0 && !t.parse_error) return undefined;
-  return {
-    ...t,
-    matched: t.matched.slice(0, TELEMETRY_CAP),
-    failed: t.failed.slice(0, TELEMETRY_CAP),
-    ...(t.matched.length > TELEMETRY_CAP ? { matched_total: t.matched.length } : {}),
-    ...(t.failed.length > TELEMETRY_CAP ? { failed_total: t.failed.length } : {}),
-  };
-}
-
 /** Removes common indentation from content lines of a diff (readability). */
 export function trimDiff(diff: string): string {
   const isContent = (line: string) =>
@@ -710,7 +614,7 @@ export function trimDiff(diff: string): string {
 }
 
 export interface EditResult {
-  /** Nouveau contenu complet du fichier. */
+  /** Complete new content. */
   content: string;
   /** Unified diff (common indentation removed), ready to display. */
   diff: string;
@@ -720,13 +624,7 @@ export interface EditResult {
   trace: ReplaceTrace;
 }
 
-/**
- * Unified diff between two contents, formatted like that of `applyEdit`. THE
- * paths that apply MULTIPLE substitutions in the same file
- * (`apply_edits`, `apply_patch`) en ont besoin sans repasser par `applyEdit` :
- * what is worth returning to the model is the diff of the file once all
- * the substitutions made, not a diff by substitution.
- */
+/** Unified diff between two contents, formatted like that of `applyEdit`. */
 export function diffFiles(path: string, before: string, after: string): string {
   return trimDiff(
     createTwoFilesPatch(path, path, normalizeLineEndings(before), normalizeLineEndings(after)),

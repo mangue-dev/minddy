@@ -28,7 +28,7 @@ export const maxDuration = 60;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
   return prReviewCommentsResponse(auth.scope);
 }
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const parsed = parseReviewCommentPayload(raw);
   if (!parsed.ok) return parsed.response;
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "write");
   if (!auth.ok) return auth.response;
   return createPrReviewCommentResponse(auth.scope, parsed.payload, auth.userId);
 }
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const parsed = parseReviewThreadPayload(raw);
   if (!parsed.ok) return parsed.response;
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "write");
   if (!auth.ok) return auth.response;
   return setPrReviewThreadResolvedResponse(auth.scope, parsed.payload);
 }

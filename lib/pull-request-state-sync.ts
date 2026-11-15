@@ -1,7 +1,7 @@
-import type { AgentRunPrResponse, PullRequestListItem } from "./agent-api";
+import type { PullRequestDetailResponse, PullRequestListItem } from "./agent-api";
 import { pullRequestStateToPropagate } from "./pr-state";
 
-type Readiness = NonNullable<AgentRunPrResponse["readiness"]>;
+type Readiness = NonNullable<PullRequestDetailResponse["readiness"]>;
 
 /**
  * One PR state for the whole page (MIN-817). The list row, the grouped
@@ -17,7 +17,7 @@ type Readiness = NonNullable<AgentRunPrResponse["readiness"]>;
 export function pullRequestStatesToReconcile(
   rows: readonly PullRequestListItem[],
   sources: {
-    detail: (prId: string) => { pr: AgentRunPrResponse["pr"] | null | undefined; fetchedAt: number } | undefined;
+    detail: (prId: string) => { pr: PullRequestDetailResponse["pr"] | null | undefined; fetchedAt: number } | undefined;
     readinessByPrId: Readonly<Record<string, Readiness>>;
     notBefore: (prId: string) => number;
   },

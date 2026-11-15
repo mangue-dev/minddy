@@ -29,7 +29,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import {
   actOnPullRequestApi,
   prEndpoint,
-  type AgentRunPrResponse,
+  type PullRequestDetailResponse,
   type PullRequestListItem,
 } from "@/lib/agent-api";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
@@ -52,7 +52,7 @@ type ReviewComments = NonNullable<Awaited<ReturnType<ReturnType<typeof prReviewC
 type SettledMenuRead = {
   prId: string;
   openedAt: number;
-  detail: AgentRunPrResponse | undefined;
+  detail: PullRequestDetailResponse | undefined;
   /** The detail read of this opening succeeded. */
   fresh: boolean;
   /** Undefined when the review threads could not be read. */

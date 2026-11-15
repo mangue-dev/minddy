@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgentRunPrResponse } from "./agent-api";
+import type { PullRequestDetailResponse } from "./agent-api";
 import type { PullRequestReadiness, ReadinessBlocker } from "./pr-readiness";
 import { prMenuCanMerge, prMenuNeedsFix, prMenuStateTargets } from "./pr-context-menu";
 
@@ -41,15 +41,15 @@ describe("prMenuCanMerge", () => {
 });
 
 describe("prMenuNeedsFix", () => {
-  const data = (overrides: Partial<AgentRunPrResponse> = {}) =>
-    ({ checks: null, readiness: readiness(), ...overrides }) as AgentRunPrResponse;
+  const data = (overrides: Partial<PullRequestDetailResponse> = {}) =>
+    ({ checks: null, readiness: readiness(), ...overrides }) as PullRequestDetailResponse;
 
   it("is false for a clean pull request", () => {
     expect(prMenuNeedsFix(data(), 0)).toBe(false);
   });
 
   it("is true for a failing check, an unresolved conversation, a conflict or an out-of-date branch", () => {
-    const failing = { checks: [{ state: "failure" }] } as unknown as AgentRunPrResponse["checks"];
+    const failing = { checks: [{ state: "failure" }] } as unknown as PullRequestDetailResponse["checks"];
     expect(prMenuNeedsFix(data({ checks: failing }), 0)).toBe(true);
     expect(prMenuNeedsFix(data(), 1)).toBe(true);
     expect(prMenuNeedsFix(data({ readiness: readiness({ blockers: [blocker("conflicts")] }) }), 0)).toBe(true);
@@ -57,7 +57,7 @@ describe("prMenuNeedsFix", () => {
   });
 
   it("ignores a pending check and an approval blocker", () => {
-    const pending = { checks: [{ state: "pending" }] } as unknown as AgentRunPrResponse["checks"];
+    const pending = { checks: [{ state: "pending" }] } as unknown as PullRequestDetailResponse["checks"];
     expect(prMenuNeedsFix(data({ checks: pending, readiness: readiness({ blockers: [blocker("approvals")] }) }), 0)).toBe(false);
   });
 });

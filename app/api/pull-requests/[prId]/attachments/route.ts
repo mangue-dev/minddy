@@ -23,7 +23,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // body in memory: do it before knowing who is calling, offer to an anonymous person
   // the memory of a function, as many times as he wants, for a query
   // which will end in 401. The order is the same on the facade by run.
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "write");
   if (!auth.ok) return auth.response;
   // Limit repeated uploads independently of the shared per-file size limit.
   const rl = checkSessionRateLimit(auth.userId, "pr-attachment-create");

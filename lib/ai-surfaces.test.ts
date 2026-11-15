@@ -6,21 +6,20 @@ import {
   parseAiSurfaces,
   parseByokFeatureModels,
   surfaceForModelKey,
-  workerModelSurfaceForAgentRun,
 } from "@/lib/ai-surfaces";
 
 describe("AI surfaces", () => {
-  it("accepte toutes les surfaces et permet de tout laisser au quota Minddy", () => {
+  it("accepts every surface and an empty list that leaves everything on the Minddy quota", () => {
     expect(parseAiSurfaces(AI_SURFACES)).toEqual(AI_SURFACES);
     expect(parseAiSurfaces([])).toEqual([]);
   });
 
-  it("refuse les surfaces inconnues et les doublons", () => {
+  it("rejects unknown and duplicate surfaces", () => {
     expect(parseAiSurfaces(["agent", "unknown"])).toBeNull();
     expect(parseAiSurfaces(["assistant", "assistant"])).toBeNull();
   });
 
-  it("nettoie les modèles vides et refuse les clés inconnues", () => {
+  it("drops blank models and rejects unknown keys", () => {
     expect(
       parseByokFeatureModels({ assistant_model: "  claude-sonnet-5  ", brief_model: " " }),
     ).toEqual({ assistant_model: "claude-sonnet-5" });
@@ -32,19 +31,11 @@ describe("AI surfaces", () => {
       .toEqual({ assistant_model: "current-model" });
   });
 
-  it("relie chaque modèle à sa surface et à sa clé admin", () => {
+  it("maps each model to its surface and admin default key", () => {
     expect(surfaceForModelKey("smart_fill_model")).toBe("automations");
     expect(surfaceForModelKey("feedback_embedding_model")).toBe("feedback");
     expect(byokFeatureDefaultModelKey("anthropic", "assistant_model")).toBe(
       "byok_default_anthropic_assistant_model",
     );
-  });
-
-  it("preserves legacy automation providers while routing new workers through account settings", () => {
-    const automation = { chain_id: "chain-1", routine_id: null };
-    expect(workerModelSurfaceForAgentRun(automation)).toBe("automations");
-    expect(
-      workerModelSurfaceForAgentRun({ ...automation, worker_model_source: "account" }),
-    ).toBe("agent");
   });
 });

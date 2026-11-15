@@ -6,14 +6,46 @@ import { fetchClientRead } from "./client-read";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
-import type { CommitAuthor } from "@/lib/commit-authors";
 import type {
   ReviewCommentReaction,
   ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
 import { trackEvent } from "./analytics";
-import type { PullRequestReadiness } from "./pr-readiness";
-import type { IssueStatus } from "./issue-constants";
+import type { MergeMethod, PullRequestReadiness } from "./pr-readiness";
+import type {
+  CheckRerunRef,
+  ForgeAccount,
+  PrMaintenanceAction,
+  PrStateAction,
+  PullRequestComment,
+  PullRequestCommit,
+  PullRequestDetailResponse,
+  PullRequestFile,
+  PullRequestListItem,
+  PullRequestReviewComment,
+  PullRequestState,
+  RepoMember,
+  ReviewVerdict,
+} from "./pull-request-contract";
+
+// The wire records are shared with the server through the contract module;
+// the fetchers below are typed with them.
+export type { CheckState, MergeMethod } from "./pr-readiness";
+export type {
+  ChecksSummary,
+  PrViewer,
+  PullRequestCheck,
+  PullRequestComment,
+  PullRequestCommit,
+  PullRequestDetailResponse,
+  PullRequestFile,
+  PullRequestListItem,
+  PullRequestRef,
+  PullRequestReviewComment,
+  PullRequestReviewSummary,
+  RepoMember,
+  ReviewVerdict,
+} from "./pull-request-contract";
 
 /**
  * Pull request client fetchers (MIN-138, MIN-143): the PR list, its detail,
@@ -88,161 +120,10 @@ export async function fetchIssuePullRequestApi(
   return parseJson(await fetchClientRead(`/api/issues/${issueId}/pull-request`));
 }
 
-export interface PullRequestRef {
-  number: number;
-  url: string;
-  state: string;
-  draft?: boolean;
-  merged?: boolean;
-  title?: string;
-  body?: string | null;
-  head?: string;
-  /** Provider-qualified head name used by the default merge commit title. */
-  headLabel?: string;
-  /** `true` only when the forge confirms that the head branch lives in the base repository. */
-  headFromBaseRepository?: boolean;
-  base?: string;
-  /** Head SHA — the EXACT diff served. Compared to the SHA that was reread by the last
-   * Numo review to see if relaunch would have anything new to read. */
-  headSha?: string;
-  /** How many commits the PR carries, according to the forge. GitHub itself counts it;
-      GitLab does not serve it and leaves the field absent (the caller then falls back to
-      the length of the commit list, as long as it is not truncated). */
-  commitCount?: number;
-  /** Author and opening date: `body` opens the conversation thread as a comment. */
-  user?: { login: string; avatar_url: string | null } | null;
-  createdAt?: string;
-  /** Last forge edit of the body — the "(edited)" marker reads it. */
-  updatedAt?: string;
-  /** `null`/absent = UNKNOWN fusionability (forges calculate it using
-      asynchronous), never display as “blocked” — MIN-138. */
-  mergeable?: boolean | null;
-  /** `clean` · `blocked` (repository requires approvals/checks) · `dirty` (conflict)
-      · `unstable` (checks not required in failure) · `unknown`. */
-  mergeableState?: string | null;
-  /** Provider refusal normalized to one actionable reason. */
-  mergeabilityReason?: import("./pr-readiness").MergeabilityReason | null;
-  mergeFlowActive?: boolean;
-  reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
-  /** Direct reviewer requests that are still pending at the forge. */
-  requestedReviewers?: Array<{ login: string; avatar_url: string | null }>;
-  /** Fully rendered GitLab defaults for the merge dialog. */
-  defaultMergeCommitMessage?: string | null;
-  defaultSquashCommitMessage?: string | null;
-}
-
-/** Normalized status of a CI check (MIN-138) — mirror of `lib/server/agent/checks-core.ts`. */
-export type CheckState = "pending" | "success" | "failure" | "neutral";
-
-export interface PullRequestCheck {
-  name: string;
-  state: CheckState;
-  /** Pending but not started yet (waiting for a runner or a resource). */
-  queued?: boolean;
-  url: string | null;
-  /** The integration that produced the check (“GitHub Actions”, “Vercel”…),
-      when the check name does not already have it. */
-  appName: string | null;
-  /** Its logo at the forge. `null` → the UI falls back to the forge icon. */
-  appAvatarUrl: string | null;
-  /** The result in one line, as the forge formulates it. */
-  description: string | null;
-  durationMs: number | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  required: boolean | null;
-  rerunRef: { kind: "github_check_suite" | "gitlab_pipeline"; id: number } | null;
-}
-
-export interface ChecksSummary {
-  checks: PullRequestCheck[];
-  /** Stable branch or pull-request preview advertised by a successful check. */
-  deploymentUrl?: string | null;
-  /** Aggregate: failure wins, then “in progress”. `null` = no check. */
-  state: CheckState | null;
-  /** Non-blocking checks (successful or neutral) — the `n` of “n/m passed”. */
-  passing: number;
-  total: number;
-  startedAt: string | null;
-  completedAt: string | null;
-}
-
-/** Merge methods offered by the forge of the linked repository. */
-export type MergeMethod = "merge" | "squash" | "rebase";
-
-export interface PullRequestReviewSummary {
-  approvals: number;
-  changesRequested: number;
-  requiredApprovals?: number | null;
-}
-
-/**
- * Response from the GET of the PR of a run. Two nuances of “no checks”:
- * `checks: null` = on n'a pas pu lire (`checksError` dit pourquoi — `forbidden`
- * = GitHub permission that the installation did not accept), `checks.total === 0`
- * = the repository has no CI. Same thing for `reviews: null`.
- */
-/**
- * What the current user can do on this PR (MIN-144). On GitHub
- * like on GitLab, a human gesture starts from HIS Git account: without account
- * connected, or without rights to the deposit, minddy says it instead of offering a button
- * who would lie about the author.
- */
-export interface PrViewer {
-  provider: RepoProviderId;
-  /** Does the provider have the means to authorize an account (self-host without env)? */
-  configured: boolean;
-  connected: boolean;
-  /** An account is connected but the forge REFUSES its token: to be reauthorized.
-      Absent on a tab that remained open since a version before this field. */
-  expired?: boolean;
-  login: string | null;
-  /** Avatar of the connected forge account that will author human actions. */
-  avatarUrl?: string | null;
-  /** `write` = merge/resolve, `read` = reviewer/comment, `none` = nothing. */
-  capability: "write" | "read" | "none";
-  /** The account under which Numo writes at the forge – enough to recognize SES
-      messages in the thread (MIN-162). `null` on the GitLab side, where nothing
-      distinguishes (MIN-146), and on a tab that has remained open since a version
-      before this field. */
-  numoLogin?: string | null;
-  /** The viewer only reads the linking project (Reader role, MIN-693): every
-      PR action is refused whatever the forge account may do. Absent on older
-      responses. */
-  projectReadOnly?: boolean;
-}
-
-export interface AgentRunPrResponse {
-  pr: PullRequestRef | null;
-  files: PullRequestFile[];
-  provider?: RepoProviderId;
-  checks?: ChecksSummary | null;
-  checksError?: "forbidden" | "unknown" | null;
-  /** The preview a check advertises; the deployment card comes from
-      `fetchPullRequestDeploymentApi`. */
-  deploymentUrl?: string | null;
-  reviews?: PullRequestReviewSummary | null;
-  viewer?: PrViewer;
-  mergeMethods?: MergeMethod[];
-  mergePolicy?: import("./pr-readiness").RepositoryMergePolicy | null;
-  readiness?: import("./pr-readiness").PullRequestReadiness | null;
-  reviewThreads?: import("./pr-review-threads").ReviewThreadState[] | null;
-}
-
-export interface PullRequestFile {
-  filename: string;
-  status: string;
-  additions: number;
-  deletions: number;
-  patch?: string;
-  /** Path BEFORE the PR if the file has been renamed — it addresses the base version. */
-  previous_filename?: string;
-}
-
 export async function fetchPullRequestApi(
   prId: string,
   signal?: AbortSignal,
-): Promise<AgentRunPrResponse> {
+): Promise<PullRequestDetailResponse> {
   return parseJson(await fetchClientRead(`/api/pull-requests/${prId}`, { signal, cache: "no-store" }));
 }
 
@@ -339,13 +220,13 @@ export function prFileRawUrl(
 
 export async function actOnPullRequestApi(
   prId: string,
-  action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
+  action: PrStateAction,
   options: {
     method?: MergeMethod;
     commitTitle?: string;
     commitMessage?: string;
   } = {},
-): Promise<{ ok: true; pr_state: PullRequestListItem["pr_state"] }> {
+): Promise<{ ok: true; pr_state: PullRequestState }> {
   trackEvent("pr_review_submitted", { verdict: action });
   return parseJson(
     await fetch(prEndpoint(prId), {
@@ -376,17 +257,11 @@ export async function mergeWithNumoApi(
 
 export async function maintainPullRequestApi(
   prId: string,
-  action:
-    | "update_branch"
-    | "rerun_check"
-    | "update_title"
-    | "update_body"
-    | "enable_auto_merge"
-    | "disable_auto_merge",
+  action: PrMaintenanceAction,
   payload: {
     title?: string;
     body?: string;
-    rerunRef?: PullRequestCheck["rerunRef"];
+    rerunRef?: CheckRerunRef | null;
   } = {},
 ): Promise<{ ok: true; title?: string }> {
   return parseJson(
@@ -429,9 +304,6 @@ export async function unlinkPullRequestIssueApi(
   }));
 }
 
-/** Verdict of a review submitted from minddy (MIN-138). */
-export type ReviewVerdict = "approve" | "request_changes" | "comment";
-
 /**
  * Submits a review on PR (MIN-138).
  *
@@ -473,46 +345,6 @@ export async function requestPullRequestReviewerApi(prId: string, login: string)
 
 /** List filtering state — served by the SERVER (`?state=`). */
 export type PullRequestStateFilter = "open" | "merged" | "closed" | "completed" | "all";
-
-export interface PullRequestListItem {
-  /** The item IS the PR. */
-  prId: string;
-  /** Authenticated viewer authored this PR at the forge. */
-  createdByMe?: boolean;
-  /** The viewer has a pending review request at the forge. */
-  reviewRequestedForMe?: boolean;
-  pr_number: number;
-  pr_url: string | null;
-  pr_state: "draft" | "open" | "merged" | "closed";
-  /** Linked Repository Provider — controls PR/MR vocabulary and links (MIN-69). */
-  provider: RepoProviderId;
-  title: string | null;
-  /** Who opened it at the forge. */
-  author: { login: string; avatar_url: string | null } | null;
-  head_branch: string | null;
-  created_at: string;
-  updated_at: string;
-  issue: { id: string; number: number; title: string } | null;
-  issues?: Array<{ id: string; number: number; title: string; project_id: string; project_key: string; status?: IssueStatus }>;
-  project: {
-    id: string;
-    key: string;
-    name: string;
-    icon_url: string | null;
-    orb_seed: string | null;
-  } | null;
-}
-
-export interface PullRequestComment {
-  id: number;
-  body: string;
-  user: { login: string; avatar_url: string | null } | null;
-  created_at: string;
-  /** Last edit AT THE FORGE — the "(edited)" marker reads `updated_at` vs
-      `created_at`. `null` when the forge never carried it. */
-  updated_at?: string | null;
-  html_url: string;
-}
 
 export interface PullRequestListResponse {
   pullRequests: PullRequestListItem[];
@@ -573,45 +405,6 @@ export async function fetchPullRequestCommentsApi(prId: string, signal?: AbortSi
 }
 
 /**
- * A PR commit. TWO authors, and they do not say the same thing:
- * `author` is the ACCOUNT of the forge (avatar + login), when it was able to attach
- * the commit email; `authorName` is the name written IN the commit, which git has
- * always. On the GitLab side, whose API does not serve any account on this endpoint, it
- * There is only ever the second - hence the fallback of the rendering on it.
- */
-export interface PullRequestCommit {
-  sha: string;
-  /** FULL message: first line = title, the rest = body. */
-  message: string;
-  author: { login: string; avatar_url: string | null } | null;
-  authorName: string | null;
-  /** Author email — the deduplication key with co-signers. */
-  authorEmail: string | null;
-  authoredAt: string | null;
-  url: string | null;
-  /** Signature verified. `null` = UNKNOWN (GitLab doesn't serve it), not "no". */
-  verified: boolean | null;
-  /** First parent — the "before" side of this commit's diff. */
-  parentSha: string | null;
-  /** Lines added/removed BY THIS COMMIT. `null` = the forge did not know the
-      give (GraphQL failed, or MR too long on the GitLab side): the indicator
-      +/− then disappears, but the commit diff remains open. */
-  additions: number | null;
-  deletions: number | null;
-  /**
-   * ALL its authors, principal at the head (MIN-159). A co-signed commit
-   * (`Co-authored-by:`) has several — the common case as soon as an agent has held
-   * the keyboard — and the screen stacks avatars, like the forge.
-   *
-   * OPTIONAL although the road always fills it: a tab remained open
-   * during a deployment keeps in cache the response of the previous version, which
-   * did not have this field. The guy says it, so that every reading keeps it —
-   * otherwise the entire page falls on a `.length` of `undefined`.
-   */
-  authors?: CommitAuthor[];
-}
-
-/**
  * The commits that make up the PR, from oldest to newest on the forge side —
  * the Commits tab then displays them from newest to oldest.
  * `truncated`: PR has more than Minddy lists at once.
@@ -621,13 +414,6 @@ export async function fetchPullRequestCommitsApi(
   signal?: AbortSignal,
 ): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
   return parseJson(await fetchClientRead(`${prEndpoint(prId)}/commits`, { signal }));
-}
-
-/** An account of the forge, as the commentary composer suggests. */
-export interface RepoMember {
-  login: string;
-  avatar_url: string | null;
-  name: string | null;
 }
 
 /**
@@ -653,7 +439,7 @@ export interface PrCommitDiff {
   url: string | null;
   parentSha: string | null;
   message: string;
-  author: { login: string; avatar_url: string | null } | null;
+  author: ForgeAccount | null;
   authorName: string | null;
   authoredAt: string | null;
   provider?: RepoProviderId;
@@ -692,40 +478,6 @@ export async function setPrCommentReactionApi(
       }),
     }),
   );
-}
-
-/**
- * Review comment: anchored to a line in the diff, unlike
- * `PullRequestComment` which lives in the flat thread of the conversation.
- *
- * `line` non-zero does NOT mean “the line is in the diff”: GitHub
- * keeps as long as he knows how to find the line in his head, even if the diff has
- * moved elsewhere. It is the resolution in the rendered hunks that decides
- * l'affichage inline — voir `pr-diff`.
- */
-export interface PullRequestReviewComment {
-  id: number;
-  body: string;
-  path: string;
-  line: number | null;
-  original_line: number | null;
-  side: "LEFT" | "RIGHT";
-  /** First line of a MULTI-LINE remark (MIN-181) — `line` is then
-      the last. `null` for a single-line remark, and always
-      `null` on the GitLab side, where a note is anchored on a line. */
-  start_line: number | null;
-  /** First line at the original commit, retained when GitHub marks the thread outdated. */
-  original_start_line: number | null;
-  start_side: "LEFT" | "RIGHT" | null;
-  /** Root of the thread, or null if this comment IS the root. */
-  in_reply_to_id: number | null;
-  /** Review that carries this comment (MIN-159) — the conversation thread ranges
-      the points of a review UNDER it. `null` on the GitLab side, without review purpose. */
-  review_id: number | null;
-  diff_hunk: string;
-  user: { login: string; avatar_url: string | null } | null;
-  created_at: string;
-  html_url: string;
 }
 
 /**

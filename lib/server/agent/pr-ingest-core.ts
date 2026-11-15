@@ -55,7 +55,7 @@ function firstReference(
   return `${key}-${number}`;
 }
 
-/** Lignes du corps qui FERMENT un ticket (`Fixes MIN-42`, `Closes: MIN-42`). */
+/** Body lines that CLOSE a ticket (`Fixes MIN-42`, `Closes: MIN-42`). */
 function closingLines(body: string | null | undefined): string {
   if (!body) return "";
   const keyword = new RegExp(`^\\s*(?:${CLOSING_KEYWORDS})\\b`, "i");
