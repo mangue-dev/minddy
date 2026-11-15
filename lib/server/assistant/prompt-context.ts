@@ -35,7 +35,7 @@ export async function gatherProjectPromptContext({
     { data: pages },
   ] = await Promise.all([
     issueStore(supabase).select("status").eq("project_id", project.id).is("deleted_at", null),
-    issueStore(supabase).select("number, title, status")
+    issueStore(supabase).select("id, number, title, status")
       .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("updated_at", { ascending: false })
@@ -89,6 +89,7 @@ export async function gatherProjectPromptContext({
     key: project.key,
     statusCounts,
     recentIssues: (recentIssues ?? []).map((i) => ({
+      id: i.id as string,
       identifier: issueIdentifier(project.key, i.number as number),
       title: i.title as string,
       status: i.status as string,
