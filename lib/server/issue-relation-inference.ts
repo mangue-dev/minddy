@@ -103,6 +103,21 @@ export function contentFingerprint(title: string, description: string | null): s
     .digest("hex");
 }
 
+/**
+ * A version for text no vector covers, derived from its fingerprint
+ * (MIN-1001): the same text gets the same id, so a verdict on an unindexed
+ * pair is reused on the next save instead of being asked again, and any edit
+ * changes it. Shaped as a version 5 UUID to fit the `uuid` columns; a random
+ * `content_version` (version 4) can never equal it. Pure.
+ */
+export function fingerprintVersion(fingerprint: string): string {
+  const hex = fingerprint.slice(0, 32).padEnd(32, "0").split("");
+  hex[12] = "5";
+  hex[16] = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  const h = hex.join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 /** The text an issue is indexed as: title first, then the description. */
 export function embeddingText(title: string, description: string | null): string {
   const body = description?.trim();
@@ -567,19 +582,25 @@ export async function runIssueAiPass(input: {
       if (!candidate || seen.has(n.id) || dismissed.has(n.id) || linked.has(n.id)) continue;
       seen.add(n.id);
       // A candidate whose vector predates its current text (edited without
-      // reindexing: indexing off, repository sync, budget) gets a throwaway
-      // version: no verdict cached on its former text is reused, and the new
-      // verdict is never filed under the outdated version.
+      // reindexing: indexing off, repository sync, budget), or that has no
+      // vector, gets the version of its current text: no verdict cached on
+      // its former text is reused, the new verdict is never filed under the
+      // outdated version, and the next save reuses it while the text holds.
       const vector = vectorRows.get(n.id);
-      const fresh = vector && vector.content_hash === contentFingerprint(candidate.title, candidate.description);
-      chosen.push({ candidate, version: fresh ? vector.content_version : randomUUID(), score: n.score });
+      const candidateFingerprint = contentFingerprint(candidate.title, candidate.description);
+      const fresh = vector && vector.content_hash === candidateFingerprint;
+      chosen.push({
+        candidate,
+        version: fresh ? vector.content_version : fingerprintVersion(candidateFingerprint),
+        score: n.score,
+      });
       if (chosen.length >= MAX_RELATION_CANDIDATES) break;
     }
     result.candidates = chosen.length;
     // No candidate, no decision, no charge.
     if (chosen.length === 0) return { ...result, skipped: "no_candidates" };
 
-    const subjectVersion = own?.content_version ?? randomUUID();
+    const subjectVersion = own?.content_version ?? fingerprintVersion(fingerprint);
     const verdicts = new Map<string, RelationVerdict>();
     const cachedIds = new Set<string>();
     const undecided: typeof chosen = [];

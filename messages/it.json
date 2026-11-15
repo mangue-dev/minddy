@@ -491,6 +491,7 @@
     "historyFeatureIssueSearch": "Ricerca dei ticket",
     "historyFeatureNumoWake": "Numo · smistamento eventi",
     "historyFeatureNumoHomeBrief": "Numo · riepilogo della home",
+    "historyFeatureMergeMessage": "Pull request · messaggio di unione",
     "agentsGateTitle": "Il lavoro con Numo non è disponibile",
     "agentsGateDescription": "Il lavoro con Numo non è attivo per questo account.",
     "notOnPlan": "Il tuo piano non include questa funzione.",
@@ -4271,7 +4272,10 @@
     "watchProposalFailed": "Impossibile creare il promemoria. Chiedi a Numo di proporlo di nuovo.",
     "compactingContext": "Compattazione del contesto…",
     "contextCompacted": "Contesto compattato",
-    "contextCompactionFailed": "Impossibile compattare il contesto"
+    "contextCompactionFailed": "Impossibile compattare il contesto",
+    "loadingTools": "Caricamento degli strumenti…",
+    "toolsLoaded": "{count, plural, one {Caricato # strumento} other {Caricati # strumenti}}",
+    "loadToolsFailed": "Impossibile caricare gli strumenti"
   },
   "PullRequests": {
     "descriptionMoreActions": "Azioni della descrizione",
@@ -4922,6 +4926,7 @@
         "issue_search": "Ricerca dei ticket",
         "numo_wake": "Smistamento eventi di Numo",
         "numo_home_brief": "Riepilogo della home di Numo",
+        "merge_message": "Messaggi di commit di unione",
         "faq_ask": "Riquadro domande delle FAQ"
       },
       "loadingCalls": "Caricamento delle chiamate…",

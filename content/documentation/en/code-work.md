@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 24,
+  "revision": 25,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-15",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 25,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-1001: usage sentence of the Merge with Numo paragraph, source audit against lib/server/agent/pr-state-actions.ts, lib/usage-features.ts, lib/billing-plans.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (en passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1001 merge usage sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-15"
   },
   "related": [
     "issues",
@@ -88,7 +88,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -155,6 +155,6 @@ What people write on a linked pull request or merge request also appears in the 
 
 Use **Request a review** to choose a reviewer when a second review is needed. Check the draft or ready-for-review state, unresolved discussions, requested reviews and provider merge policy.
 
-Merge only after the applicable checks and reviews are satisfied and your provider account has permission. **Merge with Numo** lets Numo write the merge commit title and description from the pull request, then merges as soon as they are ready. A visible action can still be rejected by the forge. If the displayed state is stale, refresh and inspect the provider before repeating an action. A linked preview depends on a real provider deployment.
+Merge only after the applicable checks and reviews are satisfied and your provider account has permission. **Merge with Numo** lets Numo write the merge commit title and description from the pull request, then merges as soon as they are ready. The message counts toward your AI usage and appears as **Pull request · merge message** in your usage history. When your AI usage is used up, Numo writes nothing and the pull request is not merged: merge it without Numo. A visible action can still be rejected by the forge. If the displayed state is stale, refresh and inspect the provider before repeating an action. A linked preview depends on a real provider deployment.
 
 Right-click a pull request in the list to change its state, merge it or ask for a fix without opening it. An open pull request offers **Convert to draft** and **Close pull request**, a draft offers **Ready for review** and **Close pull request**, and a closed one offers **Reopen**; each change asks for confirmation. A merged pull request offers no state change. Write actions appear only when your provider account can write to the repository, and stay unavailable until the menu has re-read the pull request. **Merge** appears when the pull request is open, not a draft and ready to merge; it opens the pull request on its usual merge confirmation. **Copy fix prompt** and **Fix with Numo** appear when a check fails, a conversation is unresolved, or the branch conflicts or is out of date. **Fix with Numo** sends that prompt to Numo with the pull request as context. Numo can read the pull request, answer a review conversation that needs no code change and resolve conversations the branch already addresses, but it does not change code or push commits; for the code changes, use **Copy fix prompt** and paste it into your coding agent. Permissions and mergeability are checked again when you confirm.

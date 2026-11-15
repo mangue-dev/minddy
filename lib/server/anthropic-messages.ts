@@ -151,11 +151,31 @@ function parseArguments(value: unknown): Json {
  * blocks of a user turn; consecutive turns of one role are merged, as the API
  * requires alternating roles.
  */
+/**
+ * System text blocks; a part that carries `cache_control` keeps it, so the
+ * stable head of Numo's prompt stays cached when its per-turn tail changes.
+ */
+function systemBlocks(content: unknown): Json[] {
+  if (!Array.isArray(content)) {
+    const text = textOf(content);
+    return text ? [{ type: "text", text }] : [];
+  }
+  const blocks: Json[] = [];
+  for (const part of content) {
+    if (!part || typeof part !== "object" || (part as Json).type !== "text") continue;
+    const text = String((part as Json).text ?? "");
+    if (!text) continue;
+    const cache = (part as Json).cache_control;
+    blocks.push({ type: "text", text, ...(cache ? { cache_control: cache } : {}) });
+  }
+  return blocks;
+}
+
 export function toAnthropicMessages(messages: unknown[]): {
-  system: string | undefined;
+  system: string | Json[] | undefined;
   messages: AnthropicMessage[];
 } {
-  const system: string[] = [];
+  const system: Json[] = [];
   const out: AnthropicMessage[] = [];
   const push = (role: AnthropicMessage["role"], blocks: Json[]) => {
     if (blocks.length === 0) return;
@@ -167,8 +187,7 @@ export function toAnthropicMessages(messages: unknown[]): {
     if (!raw || typeof raw !== "object") continue;
     const message = raw as ChatMessage;
     if (message.role === "system" || message.role === "developer") {
-      const text = textOf(message.content);
-      if (text) system.push(text);
+      system.push(...systemBlocks(message.content));
     } else if (message.role === "user") {
       push("user", contentBlocks(message.content));
     } else if (message.role === "assistant") {
@@ -194,7 +213,11 @@ export function toAnthropicMessages(messages: unknown[]): {
       }]);
     }
   }
-  return { system: system.length > 0 ? system.join("\n\n") : undefined, messages: out };
+  if (system.length === 0) return { system: undefined, messages: out };
+  // Plain text unless a block asks for a cache breakpoint.
+  return system.some((block) => block.cache_control)
+    ? { system, messages: out }
+    : { system: system.map((block) => block.text).join("\n\n"), messages: out };
 }
 
 function toAnthropicTools(tools: unknown): Json[] | undefined {
@@ -305,7 +328,16 @@ function toChatUsage(usage: AnthropicUsage) {
   const prompt = (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0)
     + (usage.cache_creation_input_tokens ?? 0);
   const completion = usage.output_tokens ?? 0;
-  return { prompt_tokens: prompt, completion_tokens: completion, total_tokens: prompt + completion };
+  return {
+    prompt_tokens: prompt,
+    completion_tokens: completion,
+    total_tokens: prompt + completion,
+    // The chat-completion names the ledger reads (MIN-1001).
+    prompt_tokens_details: {
+      cached_tokens: usage.cache_read_input_tokens ?? 0,
+      cache_write_tokens: usage.cache_creation_input_tokens ?? 0,
+    },
+  };
 }
 
 /** A non-streaming Messages API reply → a chat completion object. */

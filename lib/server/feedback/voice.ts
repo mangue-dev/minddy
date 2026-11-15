@@ -365,6 +365,10 @@ export async function runFeedbackVoicePass({
       tools: [UPDATE_FEEDBACK_TOOL],
       toolChoice: { type: "function", function: { name: "update_feedback" } },
       maxOutputTokens: 4096,
+      // Filling a form from a transcript is extraction: no optional reasoning
+      // (MIN-1001). A model that must reason refuses with a 400, which
+      // `fetchAiChat` replays without the field.
+      reasoning: { enabled: false },
     }),
     "Numo (minddy)",
     "[feedback-voice]",
@@ -394,6 +398,8 @@ export async function runFeedbackVoicePass({
       completionTokens: u.completionTokens,
       totalTokens: u.totalTokens,
       cost: u.cost,
+      cachedTokens: u.cachedTokens,
+      cacheWriteTokens: u.cacheWriteTokens,
       billTo,
       projectId,
     },

@@ -213,6 +213,8 @@ export async function POST(request: NextRequest) {
     completionTokens: u.completionTokens,
     totalTokens: u.totalTokens,
     cost: u.cost,
+    cachedTokens: u.cachedTokens,
+    cacheWriteTokens: u.cacheWriteTokens,
     billTo: BILL_TO,
   };
   after(() => recordAiUsage([usage]));

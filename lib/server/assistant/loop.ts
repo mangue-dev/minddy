@@ -17,6 +17,8 @@ import {
 } from "./execute-tool";
 import type { AssistantToolDef } from "./tools";
 import { numoToolPolicy } from "./tool-policy";
+import { matchDeferredTools, SEARCH_TOOLS_NAME } from "./tool-loading";
+import { toolRulesFor } from "./prompt";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
 import { managedAiKeyMode } from "@/lib/managed-services";
@@ -78,6 +80,12 @@ export interface GenerationInfo {
   totalTokens: number | null;
   /** USD cost reported by OpenRouter (null if not provided). */
   cost: number | null;
+  /**
+   * Prompt tokens read from and written to the provider's cache (MIN-1001),
+   * `null` when the provider says nothing: the ledger's hit rate.
+   */
+  cachedTokens?: number | null;
+  cacheWriteTokens?: number | null;
 }
 
 export interface ProcessChatResult {
@@ -221,6 +229,36 @@ export async function modelSupportsCaching(
 }
 
 /**
+ * A second cache breakpoint, on the latest user message (MIN-1001), when the
+ * system prompt carries the first one. Every round of a turn resends the whole
+ * history; with the breakpoint, the rounds after the first read everything up
+ * to the user's message from cache instead of paying it again. Anthropic and
+ * Gemini models on OpenRouter take at most four breakpoints: this makes two.
+ */
+export function withHistoryCacheBreakpoint(messages: ChatMessage[]): ChatMessage[] {
+  const system = messages[0];
+  if (system?.role !== "system" || !Array.isArray(system.content)
+    || !system.content.some((part) => part.type === "text" && part.cache_control)) {
+    return messages;
+  }
+  let index = messages.length - 1;
+  while (index > 0 && messages[index].role !== "user") index -= 1;
+  if (index <= 0) return messages;
+  const message = messages[index];
+  const parts: ChatContentPart[] = typeof message.content === "string"
+    ? [{ type: "text", text: message.content }]
+    : Array.isArray(message.content) ? [...message.content] : [];
+  let textIndex = parts.length - 1;
+  while (textIndex >= 0 && parts[textIndex].type !== "text") textIndex -= 1;
+  const part = parts[textIndex];
+  if (!part || part.type !== "text" || !part.text) return messages;
+  parts[textIndex] = { ...part, cache_control: { type: "ephemeral" } };
+  const next = [...messages];
+  next[index] = { ...message, content: parts };
+  return next;
+}
+
+/**
  * Attachment capabilities must be resolved before constructing provider input.
  * This shares the catalog used by model validation and prompt-cache hints.
  */
@@ -277,6 +315,12 @@ export interface ProcessChatContext extends ToolContext {
     generation: GenerationInfo,
     roundCount: number,
   ) => Promise<void>;
+  /**
+   * The turn's pool tools not sent yet (MIN-1001), loaded by search_tools or
+   * by a direct call. Present, a call to a tool outside the turn's pool is
+   * refused; absent (internal callers), the tool list is fixed.
+   */
+  deferredTools?: AssistantToolDef[];
   /**
    * Context compaction (MIN-954). Absent, the history is sent as it is.
    * `summary` is the stored summary of the conversation's start, if any.
@@ -381,10 +425,61 @@ async function saveCompactionStep(
  */
 export async function processChat(
   messages: ChatMessage[],
-  tools: AssistantToolDef[],
+  initialTools: AssistantToolDef[],
   emitter: SafeEmitter,
   context: ProcessChatContext
 ): Promise<ProcessChatResult> {
+  // The list grows when the turn loads deferred tools (MIN-1001); a loaded
+  // tool joins the end, so the cached prefix of the next round holds.
+  const tools = [...initialTools];
+  const deferredPool = [...(context.deferredTools ?? [])];
+  const loadingTools = context.deferredTools !== undefined;
+  /**
+   * A call the loop answers itself: search_tools, or a refusal for a tool
+   * outside the turn's pool. `null` runs the tool, after loading it when the
+   * model called a deferred tool by name.
+   */
+  const localToolExecution = (name: string, args: Record<string, unknown>): ToolExecution | null => {
+    if (!loadingTools) return null;
+    if (name === SEARCH_TOOLS_NAME) {
+      const query = typeof args.query === "string" ? args.query : "";
+      const matched = matchDeferredTools(query, deferredPool);
+      // Already loaded: say so rather than fail, the model may have missed it.
+      const available = matched.length === 0 ? matchDeferredTools(query, tools) : [];
+      if (available.length > 0) {
+        return {
+          success: true,
+          result: { loaded: [], already_available: available.map((tool) => tool.function.name) },
+        };
+      }
+      if (matched.length === 0) {
+        return {
+          success: false,
+          result: {
+            error: `No tool to load matches "${query}". Pass names listed under "More tools".`,
+            available: deferredPool.map((tool) => tool.function.name),
+          },
+        };
+      }
+      for (const tool of matched) {
+        deferredPool.splice(deferredPool.indexOf(tool), 1);
+        tools.push(tool);
+      }
+      const loaded = matched.map((tool) => tool.function.name);
+      const rules = toolRulesFor(new Set(loaded));
+      return {
+        success: true,
+        result: { loaded, ...(rules ? { rules } : {}), next: "Call them from your next step." },
+      };
+    }
+    if (tools.some((tool) => tool.function.name === name)) return null;
+    const index = deferredPool.findIndex((tool) => tool.function.name === name);
+    if (index >= 0) {
+      tools.push(...deferredPool.splice(index, 1));
+      return null;
+    }
+    return { success: false, result: { error: `${name} is not available in this turn. Do not retry.` } };
+  };
   // Numo turns always pass their resolved runtime. The shared-key default only
   // serves a shared-key deployment: on Minddy Cloud, every billed call pays
   // with its account's own key (MIN-761).
@@ -550,6 +645,7 @@ export async function processChat(
       completion_tokens?: number;
       total_tokens?: number;
       cost?: number;
+      prompt_tokens_details?: { cached_tokens?: number | null; cache_write_tokens?: number | null } | null;
     } | null = null;
     let modelUsed: string | null = null;
     let terminalFinish: string | null = null;
@@ -621,8 +717,13 @@ export async function processChat(
           closeRound();
           break;
         }
-        const modelMessages = await withConversationAttachmentPreviews(messages, context, () =>
+        const previewMessages = await withConversationAttachmentPreviews(messages, context, () =>
           providerInputModalities(aiRuntime, requestModel));
+        // The native Anthropic transport caches automatically up to the last
+        // block; OpenRouter needs the breakpoint written in the message.
+        const modelMessages = aiRuntime.provider === "openrouter"
+          ? withHistoryCacheBreakpoint(previewMessages)
+          : previewMessages;
         // Some providers end normally after reasoning without any visible text.
         // Change that request during repair only when the catalog explicitly
         // permits disabling reasoning; mandatory and unknown models keep theirs.
@@ -633,6 +734,8 @@ export async function processChat(
           closeRound();
           break;
         }
+        // This round's tools: search_tools may grow the list for the next one.
+        const roundTools = [...tools];
         call = await fetchAiChat(
           aiRuntime,
           requestModel,
@@ -642,7 +745,7 @@ export async function processChat(
             stream: true,
             maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
             reasoning: repairWithoutReasoning ? { enabled: false } : { effort: reasoningLevel },
-            ...(tools.length > 0 && !forceConclusion ? { tools } : {}),
+            ...(roundTools.length > 0 && !forceConclusion ? { tools: roundTools } : {}),
           }),
           "Numo (minddy)",
           "[assistant]",
@@ -824,6 +927,8 @@ export async function processChat(
         completionTokens: usageInfo?.completion_tokens ?? null,
         totalTokens: usageInfo?.total_tokens ?? null,
         cost: usageInfo?.cost ?? null,
+        cachedTokens: usageInfo?.prompt_tokens_details?.cached_tokens ?? null,
+        cacheWriteTokens: usageInfo?.prompt_tokens_details?.cache_write_tokens ?? null,
       };
       generations.push(generation);
       await context.onGeneration?.(generation, roundCount);
@@ -1051,7 +1156,12 @@ export async function processChat(
 
         let execution: ToolExecution;
         const cancellableRead = numoToolPolicy(acc.name)?.cancellableRead === true;
-        const ledgerClaim = context.toolLedger
+        // Answered by the loop: pure, so it runs again on a resumed round
+        // rather than going through the durable ledger.
+        const local = localToolExecution(acc.name, args);
+        const ledgerClaim = local
+          ? { action: "local" as const }
+          : context.toolLedger
           ? await context.toolLedger.claim({
               toolCallId: acc.id,
               toolName: acc.name,
@@ -1065,7 +1175,9 @@ export async function processChat(
         if (ledgerClaim.action === "lost_claim") {
           throw new Error("Numo turn execution claim was lost");
         }
-        if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
+        if (local) {
+          execution = local;
+        } else if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
           execution = ledgerClaim.execution;
         } else {
           if (stopObserved || await context.shouldStop?.()) {
@@ -1138,10 +1250,13 @@ export async function processChat(
             content: JSON.stringify(forModel),
             tool_call_id: acc.id,
             tool_name: acc.name,
-            metadata:
-              modelResult === undefined
-                ? { success }
-                : { success, result: persistedResult },
+            metadata: {
+              ...(modelResult === undefined ? { success } : { success, result: persistedResult }),
+              // What a later turn reloads (`loadedToolNames`).
+              ...(acc.name === SEARCH_TOOLS_NAME && success
+                ? { loaded: (result as { loaded?: unknown }).loaded }
+                : {}),
+            },
           });
         }
 

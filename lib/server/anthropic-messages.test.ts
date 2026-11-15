@@ -160,7 +160,11 @@ describe("toChatCompletionsResponse", () => {
       .toBe("{\"q\":\"x\"}");
     expect(chunks.flatMap((chunk) => chunk.choices.map((choice) => choice.finish_reason)))
       .toContain("tool_calls");
-    expect(chunks.at(-1)?.usage).toEqual({ prompt_tokens: 15, completion_tokens: 20, total_tokens: 35 });
+    expect(chunks.at(-1)?.usage).toEqual({
+      prompt_tokens: 15, completion_tokens: 20, total_tokens: 35,
+      // The ledger's cache hit rate (MIN-1001).
+      prompt_tokens_details: { cached_tokens: 5, cache_write_tokens: 0 },
+    });
   });
 
   it("reports an in-stream error in the chat error shape", async () => {
@@ -251,7 +255,10 @@ describe("Claude thinking blocks across tool rounds (MIN-979)", () => {
       { type: "reasoning.text", text: "Plan the call.", signature: "sig-1", format: "anthropic-claude-v1" },
       { type: "reasoning.encrypted", data: "opaque", format: "anthropic-claude-v1" },
     ]);
-    expect(chunks.at(-1)?.usage).toEqual({ prompt_tokens: 12, completion_tokens: 30, total_tokens: 42 });
+    expect(chunks.at(-1)?.usage).toEqual({
+      prompt_tokens: 12, completion_tokens: 30, total_tokens: 42,
+      prompt_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
+    });
   });
 
   it("keeps thinking blocks on a JSON reply", () => {

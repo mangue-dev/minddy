@@ -103,10 +103,15 @@ export async function forcedToolCall(
   userMessage: string,
   toolName: string,
   parameters: Record<string, unknown>,
-  options?: {
+  options: {
     xTitle?: string;
     logPrefix?: string;
-    record?: ForcedToolCallRecord;
+    /**
+     * Who pays, and under which feature: required (MIN-1001), so no paid
+     * call leaves the ledger. A call without it ran on the shared anonymous
+     * key and counted for no one.
+     */
+    record: ForcedToolCallRecord;
     /** Actual type of the call: allows you to resolve its BYOK model. */
     modelKey?: ByokModelKey;
     /** Special case where the same model belongs to another surface (feedback voice). */
@@ -133,12 +138,15 @@ export async function forcedToolCall(
     /** Cancel auxiliary work with the execution that requested it. */
     signal?: AbortSignal;
     /**
- * Reasoning effort to request, when the provider knows how to express one.
- * Absent = nothing is sent, and the model applies its family default — which
- * on a mandatory-reasoning model can be its MOST expensive level, counted
- * inside `maxTokens` and able to eat the whole budget before the tool call
- * is emitted (MIN-594).
- */
+     * Reasoning effort to request, when the provider knows how to express one.
+     * Absent = the cheapest request (MIN-1001): `low`, with optional reasoning
+     * disabled when the catalog confirms it (`preferNonReasoning` then
+     * defaults to true). Leaving the field out ran the model at its family
+     * default, which on a mandatory-reasoning model can be its MOST expensive
+     * level, counted inside `maxTokens` and able to eat the whole budget
+     * before the tool call is emitted (MIN-594). A structured output is
+     * extraction or classification; a call that needs judgment says so.
+     */
     reasoning?: ReasoningLevel;
     /** Disable reasoning only when OpenRouter metadata explicitly marks it optional. */
     preferNonReasoning?: boolean;
@@ -146,6 +154,8 @@ export async function forcedToolCall(
 ): Promise<Record<string, unknown> | null> {
   if (options?.signal?.aborted) return null;
   const logPrefix = options?.logPrefix ?? "[feedback-llm]";
+  const requestedReasoning: ReasoningLevel = options?.reasoning ?? "low";
+  const preferNonReasoning = options?.preferNonReasoning ?? options?.reasoning === undefined;
 
   const billedUserId = await (async (): Promise<string | null> => {
     const billTo = options?.record?.billTo;
@@ -208,7 +218,7 @@ export async function forcedToolCall(
   };
 
   try {
-    const reasoningOptional = options?.preferNonReasoning && provider === "openrouter"
+    const reasoningOptional = preferNonReasoning && provider === "openrouter"
       ? await canDisableReasoning(resolvedModel, signal)
       : false;
     // A fixed code, so a slow reasoning generation can be traced to a missing catalog.
@@ -262,7 +272,7 @@ export async function forcedToolCall(
         maxOutputTokens: options?.maxTokens ?? 1024,
         ...(disableReasoning
           ? { reasoning: { enabled: false as const } }
-          : options?.reasoning ? { reasoning: { effort: options.reasoning } } : {}),
+          : { reasoning: { effort: requestedReasoning } }),
       }),
       options?.xTitle ?? "Feedback (minddy)",
       logPrefix,
@@ -307,6 +317,8 @@ export async function forcedToolCall(
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
+        cachedTokens: u.cachedTokens,
+        cacheWriteTokens: u.cacheWriteTokens,
         billTo: options.record.billTo,
         projectId: options.record.projectId ?? null,
         conversationId: options.record.conversationId ?? null,

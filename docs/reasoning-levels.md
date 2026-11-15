@@ -1,6 +1,6 @@
 # Numo reasoning levels, provider by provider
 
-> **Date**: 2026-07-29, reviewed on 2026-10-05, 2026-10-16, 2026-10-28 and 2026-11-01 · **Tickets**: MIN-122, MIN-721, MIN-826
+> **Date**: 2026-07-29, reviewed on 2026-10-05, 2026-10-16, 2026-10-28, 2026-11-01 and 2026-11-15 · **Tickets**: MIN-122, MIN-721, MIN-826, MIN-1001
 >
 > What the user chooses, what really goes on the wire, and what happens
 > when the model in front does not accept it.
@@ -120,8 +120,14 @@ waits at most `COLD_CATALOG_WAIT_MS` (1.5 seconds) inside the 20-second
 deadline before the request is sent. A catalog still missing after that wait,
 or mandatory/unknown reasoning, retains the existing low-effort request for
 that call and logs `reasoning_metadata_unavailable`. A failed refresh leaves cached metadata usable. Direct BYOK
-providers keep their provider-specific effort translation. Smart Assign and
-Feedback Review do not opt into this policy.
+providers keep their provider-specific effort translation.
+
+Since MIN-1001 this policy is the default of `forcedToolCall`: a caller that
+names no `reasoning` gets `preferNonReasoning` with a `low` fallback, so Smart
+Assign, Feedback Review, conversation titles, dictation cleanup, CSV mapping
+and the page import plan no longer run at the model's family default. A call
+that needs judgment names its level (`brief-to-issues.ts`,
+`pr-state-actions.ts` and `ai-instruction-proposals.ts` ask for `low`).
 
 The forced tool helper reports `request_timeout` when its deadline interrupts
 the request or response body. Invalid response JSON remains
@@ -178,7 +184,9 @@ Thinking summaries stream as `delta.reasoning`, the field the Numo reasoning
 feed already reads. Callers see no difference. The native API accepts tool
 history without the earlier thinking blocks, which the chat history does not
 keep. Every request also sets top-level `cache_control` (automatic prompt
-caching of the system prompt and tools Numo resends each round). Numo now
+caching of the system prompt and tools Numo resends each round), and a system
+text part that carries `cache_control` keeps it as its own block (see
+[Prompt caching and cost](#prompt-caching-and-cost)). Numo now
 sends images and PDFs to Claude, which every current model reads.
 
 Thinking takes its share of `max_tokens`: when adaptive thinking runs, the
@@ -284,9 +292,108 @@ default applies, and a level the model no longer accepts is lowered with
 
 ## The compaction reasoning
 
-The **compaction** call (the stale history middle summary) does not receive
-never a level of reasoning: it is a mechanical summarization, reflection
-would only be cost.
+The **compaction** call (the summary of the history's older middle) never
+takes the conversation's reasoning level: it is a mechanical summary, and
+reflection would only be cost. It sends `reasoning: { enabled: false }`; a
+model that must reason refuses with a 400 and `fetchAiChat` replays the
+request without the field.
+
+## Prompt caching and cost
+
+Every text task runs the model of the `assistant_model` role (MIN-954), which
+an instance may point at a large model. The cost rules below therefore hold
+whatever the model (MIN-1001):
+
+- **Numo's prompt is ordered for caching.** A provider reuses a prompt prefix
+  only while it is byte-identical. `buildSystemPrompt` puts the static rules
+  first and the project's structure (members, objectives, categories, wiki
+  map) after them; what changes from turn to turn follows in a second part
+  (`buildProjectSnapshotBlock` for status counts and recent issues, then
+  access, project AI instructions, admin, memory, journal, routine blocks) and
+  the minute-precision clock closes it (`lib/server/numo/turns.ts`).
+  Providers with automatic prefix caching (OpenAI, DeepSeek, Gemini) reuse the
+  stable part from the order alone.
+- **Explicit breakpoints where the provider needs them.** On the native
+  Anthropic transport and on OpenRouter models whose catalog entry reports
+  prompt caching, the stable part carries `cache_control`, so the next turn
+  reads it from cache even though its clock differs. On OpenRouter, each round
+  also marks the latest user message (`withHistoryCacheBreakpoint` in
+  `lib/server/assistant/loop.ts`), so every tool round after the first reads
+  the history from cache. That makes two of the four breakpoints Anthropic
+  accepts. The native transport needs no second one: its top-level
+  `cache_control` caches up to the last block.
+- **Tool definitions are most of the prefix.** The 114 conversation tools
+  weigh about five times the system prompt. Text repeated on every tool
+  points to the prompt instead of restating it: `PROJECT_ID_DESCRIPTION` and
+  `MENTIONS_IN_MARKDOWN` in `lib/server/assistant/tools.ts` refer to the
+  "Action targets" and Mentions rules, the `plan` field to the Plans section.
+  Zod-generated schemas go through `withoutUuidPatterns`
+  (`lib/server/json-schema-compact.ts`): `format: "uuid"` stays, its regex
+  goes, and the server still validates every argument with Zod. A tool whose
+  description also serves MCP clients (`create_routine`) keeps its full text,
+  and the prompt rule drops what it repeats.
+- **Rarely used tools load on demand.** Over 60 days of production, 1,037
+  tool calls used 56 of the 114 tools and the top 20 made 88 % of them. A
+  turn keeps every filter of `offeredTools` (`lib/server/numo/turns.ts`) for
+  its pool, then sends only `CORE_TOOL_NAMES` and the tools this conversation
+  already loaded or called (`lib/server/assistant/tool-loading.ts`), about a
+  third of the tool text. The rest stays behind `search_tools`, which the
+  loop answers itself (`processChat` in `lib/server/assistant/loop.ts`): it
+  matches names, a family or keywords among the deferred tools only, adds
+  them at the end of the list from the next round on, and returns the family
+  rules the prompt left out (`toolRulesFor`). A "More tools" catalog in the
+  stable prompt lists each family in one line. A direct call to a deferred
+  tool loads it too; a call to a tool outside the pool is refused. The tool
+  row of `search_tools` stores `metadata.loaded` (encrypted with the row,
+  restored by hydration), which the next turn reads back (`loadedToolNames`).
+  Tools come first in a provider's cached prefix, so a load rewrites the cache
+  once, on the round that follows it. The catalog lists the whole deferrable
+  pool and never changes in a conversation, so the next turn reads the cache
+  again (checked live on preview, 2026-11-15: about 34K prompt tokens per
+  call on Claude Haiku 5.5, against at least 61K in production before).
+- **One-shot calls ask for the cheapest reasoning.** `forcedToolCall` defaults
+  to no optional reasoning (see [Smart Fill structured output](#smart-fill-structured-output));
+  the feedback voice pass and the compaction summary send
+  `reasoning: { enabled: false }`, replayed without the field by
+  `fetchAiChat` on a model that must reason; web search sends `minimal`, as
+  the FAQ box does, because its request has no such replay.
+- **Output ceilings fit the answer, reasoning included.** Only generated
+  tokens are billed, so a ceiling never costs on a short reply, but a cut
+  reply is paid and thrown away: Smart Assign's fallback allows 1,024 tokens
+  and Feedback Review 2,048 (its verdict shares the output with the post's
+  translation).
+- **Smart Fill skips the decision model.** It asks one yes/no per category,
+  and its confidence is the weakest verdict, so on production over the 60
+  days to 2026-11-15 about 87 % of its decisions fell under the floor and paid
+  the LLM after waiting for the decision model, while the shadow samples of
+  the confident rest agreed with the LLM in a quarter of cases at best.
+  `DEFAULT_LLM_FIRST_USE_CASES` in `lib/server/decisions/runner.ts` lists it
+  while `jev_llm_first` is unset; setting that key (even to `none`) replaces
+  the list. Relation decisions stay on the decision model: about half pass
+  the floor, and the decision model costs less than half of the LLM there.
+  Read the ledger by joining `jev_decision` rows to the LLM row of the same
+  `run_id`: a run with both paid both engines.
+- **Every paid call is in the ledger.** `forcedToolCall`, `requestEmbeddings`,
+  `embedTexts` and `generateShortTitle` take a required ledger record, so an
+  unrecorded call does not compile; `lib/server/ai-usage-coverage.test.ts`
+  checks that every other module calling a provider writes `ai_usage` or
+  hands what it spent to its caller. Each row carries the provider's
+  `cached_tokens` and `cache_write_tokens` with its cost. The merge commit
+  message (`pr-state-actions.ts`) ran on the shared anonymous key and was
+  billed to no one: it now bills the member who merges, under the
+  `merge_message` feature, after their budget check. Calls on a member's own
+  key stay out of the ledger by design (`keyMode: "byok"`).
+- **No call for an answer already known.** Relation verdicts on pairs no
+  vector covers are filed under a version derived from the text's
+  fingerprint (`fingerprintVersion` in `lib/server/issue-relation-inference.ts`),
+  so the next save reuses them until the text changes. The landing demo keeps
+  the ticket of each example sentence per locale, day and model in memory
+  (`lib/server/demo-dictation.ts`). The Smart Fill schema lists only the
+  categories and objectives the prompt names (`MAX_CONTEXT_ITEMS`).
+
+```bash
+npx vitest run lib/server/assistant/prompt-cache.test.ts lib/server/feedback/forced-tool-call.test.ts
+```
 
 ## Check
 

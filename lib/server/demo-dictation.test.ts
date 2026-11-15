@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  DEMO_SAMPLE_CACHE_LIMIT,
+  cachedDemoSampleTicket,
+  demoSampleCacheKey,
+  rememberDemoSampleTicket,
+  resetDemoSampleCache,
   isSameOrigin,
   resetDailyBudget,
   resolveAudioFormat,
@@ -12,6 +17,7 @@ import {
   type DemoCategory,
   type DemoMember,
 } from "./demo-dictation";
+import type { DemoTicket } from "@/lib/demo-dictation";
 
 /**
  * MIN-150 — which keeps the dictation demo public.
@@ -208,5 +214,24 @@ describe("demo tool response parsing", () => {
         choices: [{ message: { content: '{"title":"Fix checkout"}' } }],
       }),
     ).toEqual({ title: "Fix checkout" });
+  });
+});
+
+describe("example sentence cache (MIN-1001)", () => {
+  beforeEach(() => resetDemoSampleCache());
+  const ticket = { title: "Fix login" } as unknown as DemoTicket;
+  const key = (sample: string, today = "2026-11-15") =>
+    demoSampleCacheKey({ sample, locale: "en", today, model: "m" });
+
+  it("returns a sample's ticket for the same day only", () => {
+    rememberDemoSampleTicket(key("bug"), ticket);
+    expect(cachedDemoSampleTicket(key("bug"))).toBe(ticket);
+    expect(cachedDemoSampleTicket(key("bug", "2026-11-16"))).toBeUndefined();
+  });
+
+  it("drops the oldest entry past its bound", () => {
+    for (let i = 0; i <= DEMO_SAMPLE_CACHE_LIMIT; i += 1) rememberDemoSampleTicket(key(`s${i}`), ticket);
+    expect(cachedDemoSampleTicket(key("s0"))).toBeUndefined();
+    expect(cachedDemoSampleTicket(key(`s${DEMO_SAMPLE_CACHE_LIMIT}`))).toBe(ticket);
   });
 });

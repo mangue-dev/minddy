@@ -837,6 +837,11 @@ async function reviewWithLlm(
       xTitle: "Feedback Review (minddy)",
       logPrefix: "[feedback-review]",
       modelKey: "feedback_analysis_model",
+      // The verdict shares the output with the post's translation: a reply
+      // cut at the 1024 default returned nothing and the hourly batch paid
+      // for it again, up to three times (MIN-1001). Only generated tokens are
+      // billed, so the higher ceiling costs nothing on a short reply.
+      maxTokens: 2_048,
       record: {
         feature: "feedback_classify",
         // Basic review: it is the owner's budget which authorizes it (line 164),

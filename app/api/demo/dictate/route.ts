@@ -31,6 +31,9 @@ import {
   todayIn,
   withinDailyBudget,
   extractDemoFillTicketArguments,
+  cachedDemoSampleTicket,
+  demoSampleCacheKey,
+  rememberDemoSampleTicket,
 } from "@/lib/server/demo-dictation";
 import {
   DEMO_CATEGORY_IDS,
@@ -144,6 +147,7 @@ export async function POST(request: NextRequest) {
   let transcript = "";
   let locale: Locale = defaultLocale;
   let timeZone = "UTC";
+  let sampleId: string | null = null;
 
   if ((request.headers.get("content-type") ?? "").includes("multipart/form-data")) {
     let form: FormData;
@@ -243,6 +247,7 @@ export async function POST(request: NextRequest) {
     }
     locale = resolveLocale(body.locale);
     timeZone = resolveTimeZone(body.timeZone);
+    sampleId = body.sample;
     const t = await getTranslations({ locale, namespace: "Landing" });
     transcript = t(DEMO_SAMPLE_KEYS[body.sample]);
   }
@@ -258,6 +263,15 @@ export async function POST(request: NextRequest) {
 
   // ── Tidying up: one forced tool call, with a structured-output fallback ──
   const model = resolveFromValues("dictate_model", cfg).model;
+  // An example sentence already formatted today needs no model call.
+  const sampleKey = sampleId ? demoSampleCacheKey({ sample: sampleId, locale, today, model }) : null;
+  const cachedTicket = sampleKey ? cachedDemoSampleTicket(sampleKey) : undefined;
+  if (cachedTicket) {
+    return NextResponse.json(
+      { transcript: transcript.slice(0, 600), ticket: cachedTicket },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const prompt = buildDemoPrompt({ locale, today, members, categories });
   const fetchCompletion = async (requestedModel: string, useStructuredOutput: boolean) => {
     const result = await fetchOpenRouterWithSuffixFallback(
@@ -325,6 +339,8 @@ export async function POST(request: NextRequest) {
       completionTokens: u.completionTokens,
       totalTokens: u.totalTokens,
       cost: u.cost,
+      cachedTokens: u.cachedTokens,
+      cacheWriteTokens: u.cacheWriteTokens,
       billTo: BILL_TO,
     });
     return { data, model: result.model };
@@ -355,6 +371,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "failed" }, { status: 502 });
   }
 
+  if (sampleKey) rememberDemoSampleTicket(sampleKey, ticket);
   after(() => recordAiUsage(usageRows));
   return NextResponse.json(
     { transcript: transcript.slice(0, 600), ticket },

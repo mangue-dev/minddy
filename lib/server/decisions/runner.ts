@@ -73,6 +73,18 @@ import { billedUserIdOf, resolveDecisionRoute } from "@/lib/server/decisions/eng
 export const DEFAULT_DECISION_CONFIDENCE_FLOOR = 0.55;
 export const DEFAULT_DECISION_SHADOW_SAMPLE_RATE = 0.05;
 
+/**
+ * The use cases that skip the decision model while `jev_llm_first` is unset
+ * (MIN-1001). Smart Fill asks one yes/no per category, so its confidence is
+ * the weakest of up to sixty verdicts: on production over 60 days (to
+ * 2026-11-15) about 87 % of its decisions fell under the floor and paid the
+ * LLM too, after waiting for the decision model, and the shadow samples of
+ * the confident rest agreed with the LLM in a quarter of cases at best. The
+ * LLM alone is cheaper, faster and the reference. Setting `jev_llm_first`
+ * (even to a name that matches nothing, such as `none`) replaces this list.
+ */
+export const DEFAULT_LLM_FIRST_USE_CASES: readonly DecisionUseCase[] = ["smart_fill"];
+
 export interface DecisionModelSettings {
   /** Decision-model answers under this global confidence are discarded for the LLM pass. */
   confidenceFloor: number;
@@ -123,7 +135,9 @@ export async function loadDecisionModelSettings(): Promise<DecisionModelSettings
       cfg["jev_shadow_sample_rate"],
       DEFAULT_DECISION_SHADOW_SAMPLE_RATE
     ),
-    llmFirstUseCases: parseUseCaseList(cfg["jev_llm_first"]),
+    llmFirstUseCases: cfg["jev_llm_first"] == null
+      ? [...DEFAULT_LLM_FIRST_USE_CASES]
+      : parseUseCaseList(cfg["jev_llm_first"]),
   };
 }
 

@@ -72,8 +72,10 @@ import type { DecisionSpec } from "./types";
 
 const BILL_TO = { userId: "user-1" } as const;
 
+// A use case that asks the decision model first by default: Smart Fill skips
+// it unless `jev_llm_first` says otherwise (MIN-1001), tested on its own below.
 const SPEC: DecisionSpec = {
-  useCase: "smart_fill",
+  useCase: "issue_relations",
   state: { project: "p", issue: { title: "t" } },
   questions: [
     {
@@ -221,7 +223,7 @@ describe("runDecision", () => {
       const runId = runModelDecisionMock.mock.calls[0][1].runId;
       const logged = vi.mocked(console.warn).mock.calls.map((c) => c.join(" ")).join("\n");
       expect(logged).toContain(
-        `[decisions] smart_fill llm_failed after=model_low_confidence run=${runId} kept=priority`
+        `[decisions] issue_relations llm_failed after=model_low_confidence run=${runId} kept=priority`
       );
       expect(logged).not.toContain("high");
     });
@@ -328,7 +330,7 @@ describe("shadow sampling (MIN-567)", () => {
     await runDecision(SPEC, { billTo: BILL_TO });
     expect(afterOrNowMock).not.toHaveBeenCalled();
     getAppConfigValuesMock.mockResolvedValue({
-      jev_llm_first: "smart_fill",
+      jev_llm_first: "issue_relations",
       jev_shadow_sample_rate: "1",
     });
     await runDecision(SPEC, { billTo: BILL_TO });
@@ -346,9 +348,18 @@ describe("shadow sampling (MIN-567)", () => {
 });
 
 describe("LLM-first switch (MIN-567)", () => {
+  it("sends Smart Fill straight to the LLM while the list is unset (MIN-1001)", async () => {
+    runLlmDecisionMock.mockResolvedValue({
+      priority: { value: "high", probability: null, confidence: null },
+    });
+    const outcome = await runDecision({ ...SPEC, useCase: "smart_fill" }, { billTo: BILL_TO });
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "llm_first" });
+  });
+
   it("sends a listed use case straight to the LLM, without touching the decision model", async () => {
     getAppConfigValuesMock.mockResolvedValue({
-      jev_llm_first: "smart_fill",
+      jev_llm_first: "issue_relations",
       jev_shadow_sample_rate: "1",
     });
     roll(0);
@@ -409,12 +420,17 @@ describe("decision engine (MIN-980)", () => {
 });
 
 describe("loadDecisionModelSettings", () => {
-  it("defaults to floor 0.55, shadow rate 0.05, no LLM-first use case", async () => {
+  it("defaults to floor 0.55, shadow rate 0.05, Smart Fill LLM-first (MIN-1001)", async () => {
     await expect(loadDecisionModelSettings()).resolves.toEqual({
       confidenceFloor: 0.55,
       shadowSampleRate: 0.05,
-      llmFirstUseCases: [],
+      llmFirstUseCases: ["smart_fill"],
     });
+  });
+
+  it("lets a set LLM-first list, even one naming nothing, replace the default", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "none" });
+    await expect(loadDecisionModelSettings()).resolves.toMatchObject({ llmFirstUseCases: [] });
   });
 
   it("reads the calibrated values and clamps them into 0–1", async () => {
@@ -425,7 +441,7 @@ describe("loadDecisionModelSettings", () => {
     await expect(loadDecisionModelSettings()).resolves.toEqual({
       confidenceFloor: 0.7,
       shadowSampleRate: 0.5,
-      llmFirstUseCases: [],
+      llmFirstUseCases: ["smart_fill"],
     });
     getAppConfigValuesMock.mockResolvedValue({
       jev_confidence_floor: "12",
@@ -434,7 +450,7 @@ describe("loadDecisionModelSettings", () => {
     await expect(loadDecisionModelSettings()).resolves.toEqual({
       confidenceFloor: 1,
       shadowSampleRate: 0,
-      llmFirstUseCases: [],
+      llmFirstUseCases: ["smart_fill"],
     });
   });
 

@@ -61,7 +61,7 @@ function refusal() {
 }
 
 function call(model: string) {
-  return forcedToolCall(model, "system", "user", "pick", { type: "object" }, {
+  return forcedToolCall(model, "system", "user", "pick", { type: "object" }, { record: TEST_RECORD,
     logPrefix: "[test]",
   });
 }
@@ -92,6 +92,10 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
+
+/** Who pays in these tests: the platform, so no account key is resolved. */
+const TEST_RECORD = { feature: "smart_fill" as const, billTo: { platform: "test" } };
+
 describe("forcedToolCall optional reasoning", () => {
   it("disables optional reasoning on both routing attempts", async () => {
     modelInfoMock.mockReturnValue({ reasoning: { mandatory: false, efforts: ["high", "xhigh"] } });
@@ -101,7 +105,7 @@ describe("forcedToolCall optional reasoning", () => {
       reasoning.push(body.reasoning);
       return body.model.includes(":") ? refusal() : okResponse(body.model);
     });
-    expect(await forcedToolCall("deepseek/deepseek-v4-flash:nitro", "system", "user", "pick", {}, {
+    expect(await forcedToolCall("deepseek/deepseek-v4-flash:nitro", "system", "user", "pick", {}, { record: TEST_RECORD,
       preferNonReasoning: true, reasoning: "low",
     })).toEqual({ model: "deepseek/deepseek-v4-flash" });
     expect(modelInfoMock).toHaveBeenCalledWith("deepseek/deepseek-v4-flash:nitro");
@@ -119,7 +123,7 @@ describe("forcedToolCall optional reasoning", () => {
       reasoning = JSON.parse(init!.body as string).reasoning;
       return okResponse("configured-model");
     });
-    await forcedToolCall("configured-model", "system", "user", "pick", {}, {
+    await forcedToolCall("configured-model", "system", "user", "pick", {}, { record: TEST_RECORD,
       preferNonReasoning: true, reasoning: "low",
     });
     expect(reasoning).toEqual({ effort: "low", exclude: false });
@@ -182,7 +186,7 @@ describe("forcedToolCall optional reasoning", () => {
         setTimeout(() => resolve(okResponse("model")), 15_000);
       });
     });
-    const pending = forcedToolCall("model", "system", "user", "pick", {}, {
+    const pending = forcedToolCall("model", "system", "user", "pick", {}, { record: TEST_RECORD,
       preferNonReasoning: true, reasoning: "low", timeoutMs: 20_000,
     });
     await vi.advanceTimersByTimeAsync(0);
@@ -210,7 +214,7 @@ describe("forcedToolCall optional reasoning", () => {
       reasoning = JSON.parse(init!.body as string).reasoning;
       return okResponse("deepseek/deepseek-v4-flash");
     });
-    await forcedToolCall("deepseek/deepseek-v4-flash", "system", "user", "pick", {}, {
+    await forcedToolCall("deepseek/deepseek-v4-flash", "system", "user", "pick", {}, { record: TEST_RECORD,
       preferNonReasoning: true, reasoning: "low", logPrefix: "[test]",
     });
     expect(reasoning).toEqual({ enabled: false });
@@ -224,7 +228,7 @@ describe("forcedToolCall optional reasoning", () => {
       expect(JSON.parse(init!.body as string).reasoning).toEqual({ enabled: false });
       return okResponse("model");
     });
-    expect(await forcedToolCall("model", "system", "user", "pick", {}, {
+    expect(await forcedToolCall("model", "system", "user", "pick", {}, { record: TEST_RECORD,
       preferNonReasoning: true, reasoning: "low",
     })).toEqual({ model: "model" });
   });
@@ -236,7 +240,7 @@ describe("forcedToolCall optional reasoning", () => {
       expect(JSON.parse(init!.body as string).reasoning).toEqual({ effort: "low", exclude: false });
       return okResponse("model");
     });
-    expect(await forcedToolCall("model", "system", "user", "pick", {}, {
+    expect(await forcedToolCall("model", "system", "user", "pick", {}, { record: TEST_RECORD,
       preferNonReasoning: true, reasoning: "low", logPrefix: "[test]",
     })).toEqual({ model: "model" });
     expect(console.error).not.toHaveBeenCalled();
@@ -258,7 +262,7 @@ describe("forcedToolCall response failures", () => {
         reading();
       }),
     }) as unknown as Response);
-    const pending = forcedToolCall("model:nitro", "system", "user", "pick", {}, { timeoutMs: 20_000 });
+    const pending = forcedToolCall("model:nitro", "system", "user", "pick", {}, { record: TEST_RECORD, timeoutMs: 20_000 });
     await started;
     deadline.abort(new DOMException("Private provider detail", "TimeoutError"));
     expect(await pending).toBeNull();
@@ -293,7 +297,7 @@ describe("forcedToolCall routing suffix fallback", () => {
     const controller = new AbortController();
     controller.abort();
     const fetch = vi.spyOn(globalThis, "fetch");
-    expect(await forcedToolCall("m", "system", "user", "pick", {}, {
+    expect(await forcedToolCall("m", "system", "user", "pick", {}, { record: TEST_RECORD,
       signal: controller.signal,
     })).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
@@ -309,7 +313,7 @@ describe("forcedToolCall routing suffix fallback", () => {
         init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason), { once: true });
       });
     });
-    const pending = forcedToolCall("m", "system", "user", "pick", {}, { signal: controller.signal });
+    const pending = forcedToolCall("m", "system", "user", "pick", {}, { record: TEST_RECORD, signal: controller.signal });
     await opening;
     controller.abort();
     expect(await pending).toBeNull();
@@ -361,16 +365,22 @@ describe("forcedToolCall routing suffix fallback", () => {
 });
 
 describe("forcedToolCall reasoning request", () => {
-  it("omits reasoning when no effort is requested", async () => {
-    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation((async (
+  it.each([
+    ["optional", { reasoning: { mandatory: false, efforts: ["high"] } }, { enabled: false }],
+    ["mandatory", { reasoning: { mandatory: true, efforts: ["low", "high"] } }, { effort: "low", exclude: false }],
+    ["unknown", undefined, { effort: "low", exclude: false }],
+  ])("asks for the cheapest reasoning when none is requested (%s, MIN-1001)", async (_kind, info, expected) => {
+    modelInfoMock.mockReturnValue(info);
+    const sent: unknown[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation((async (
       _url: string,
       init: { body: string },
     ) => {
-      expect(JSON.parse(init.body).reasoning).toBeUndefined();
-      return okResponse("m");
+      sent.push(JSON.parse(init.body).reasoning);
+      return okResponse("z-ai/glm-5.3");
     }) as unknown as typeof fetch);
-    await call("z-ai/glm-5.3");
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(await call("z-ai/glm-5.3")).toEqual({ model: "z-ai/glm-5.3" });
+    expect(sent).toEqual([expected]);
   });
 
   it("sends the requested effort to the provider", async () => {
@@ -381,7 +391,7 @@ describe("forcedToolCall reasoning request", () => {
       expect(JSON.parse(init.body).reasoning).toEqual({ effort: "low" });
       return okResponse("z-ai/glm-5.3");
     }) as unknown as typeof fetch);
-    await forcedToolCall("z-ai/glm-5.3", "system", "user", "pick", { type: "object" }, {
+    await forcedToolCall("z-ai/glm-5.3", "system", "user", "pick", { type: "object" }, { record: TEST_RECORD,
       logPrefix: "[test]",
       reasoning: "low",
     });
@@ -399,7 +409,7 @@ describe("forcedToolCall reasoning request", () => {
       const model = JSON.parse(init.body).model as string;
       return model.includes(":") ? refusal() : okResponse(model);
     }) as unknown as typeof fetch);
-    const out = await forcedToolCall("z-ai/glm-5.3:exacto", "system", "user", "pick", { type: "object" }, {
+    const out = await forcedToolCall("z-ai/glm-5.3:exacto", "system", "user", "pick", { type: "object" }, { record: TEST_RECORD,
       logPrefix: "[test]",
       reasoning: "low",
     });

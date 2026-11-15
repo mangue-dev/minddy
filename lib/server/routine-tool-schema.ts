@@ -1,4 +1,5 @@
 import "server-only";
+import { withoutUuidPatterns } from "@/lib/server/json-schema-compact";
 
 import { z } from "zod";
 import type { RoutineCondition } from "@/lib/routine-triggers";
@@ -19,7 +20,7 @@ import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
  * combines schedules and product events. The definitions must remain consistent;
  * a client that confuses them creates the wrong thing;
  * - **each occurrence is a Numo conversation** that can use Minddy tools and
- *   pause visibly for owner input;
+ *   runs unattended, never asking questions;
  * - **only the project owner can create one**;
  * - **the time zone cannot be guessed**.
  */
@@ -40,8 +41,8 @@ export const CREATE_ROUTINE_DESCRIPTION =
   "AI costs or accounts): a routine whose instruction needs it reports that an " +
   "instance administrator must do that step in a Numo conversation or through " +
   "background Numo, so tell the user. " +
-  "If a real decision is missing, the occurrence can pause for owner input in its " +
-  "conversation. OWNER ONLY: only the project's " +
+  "An occurrence runs unattended and cannot ask questions: when a real decision " +
+  "is missing, it leaves a note for the owner instead. OWNER ONLY: only the project's " +
   "owner can create a routine, because it is their usage budget that leaves every " +
   "occurrence — a member gets a refusal, and there is no way around it. An " +
   "occurrence stops at 15% of the " +
@@ -186,10 +187,10 @@ function expandDefinition(ref: string, definition: unknown, levels: number): unk
  * MCP keeps the recursive Zod schema: its clients resolve references.
  */
 function boundedTriggerProperty(): Record<string, unknown> {
-  const { $defs: definitions, $schema: _draft, ...trigger } = z.toJSONSchema(
+  const { $defs: definitions, $schema: _draft, ...trigger } = withoutUuidPatterns(z.toJSONSchema(
     ROUTINE_TRIGGER_SCHEMA,
     { target: "draft-2020-12" },
-  ) as Record<string, unknown> & { $defs?: Record<string, unknown> };
+  )) as Record<string, unknown> & { $defs?: Record<string, unknown> };
   let property: unknown = trigger;
   for (const [name, definition] of Object.entries(definitions ?? {})) {
     property = inlineDefinition(property, `#/$defs/${name}`, definition, ROUTINE_CONDITION_GROUP_LEVELS);
@@ -211,8 +212,8 @@ export const CREATE_ROUTINE_PARAMETERS = {
       description:
         "The instruction Numo receives at every occurrence, in the user's language. It " +
         "must stand on its own: say what to look at, what counts as a finding, and " +
-        "what to do with one. Numo may use Minddy tools, or pause the conversation " +
-        "when owner input is genuinely required.",
+        "what to do with one. Numo may use Minddy tools; it cannot ask the owner " +
+        "anything, so ask for a note when a decision is theirs.",
     },
     trigger: TRIGGER_PROPERTY,
     ...ROUTINE_SCHEDULE_PROPERTIES,

@@ -500,6 +500,8 @@ export async function callDecisionModel(
       completionTokens: u.completionTokens,
       totalTokens: u.totalTokens,
       cost: u.cost,
+      cachedTokens: u.cachedTokens,
+      cacheWriteTokens: u.cacheWriteTokens,
       billTo: ctx.billTo,
       projectId: ctx.projectId ?? null,
     });

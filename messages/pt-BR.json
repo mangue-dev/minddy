@@ -491,6 +491,7 @@
     "historyFeatureIssueSearch": "Busca de tickets",
     "historyFeatureNumoWake": "Numo · análise de eventos",
     "historyFeatureNumoHomeBrief": "Numo · resumo da página inicial",
+    "historyFeatureMergeMessage": "Pull request · mensagem de mesclagem",
     "agentsGateTitle": "O trabalho com o Numo não está disponível",
     "agentsGateDescription": "O trabalho com o Numo não está ativado nesta conta.",
     "notOnPlan": "Seu plano não inclui este recurso.",
@@ -4271,7 +4272,10 @@
     "watchProposalFailed": "Não foi possível criar o lembrete. Peça ao Numo para propor de novo.",
     "compactingContext": "Compactando o contexto…",
     "contextCompacted": "Contexto compactado",
-    "contextCompactionFailed": "Não foi possível compactar o contexto"
+    "contextCompactionFailed": "Não foi possível compactar o contexto",
+    "loadingTools": "Carregando ferramentas…",
+    "toolsLoaded": "{count, plural, =0 {Nenhuma ferramenta carregada} one {# ferramenta carregada} other {# ferramentas carregadas}}",
+    "loadToolsFailed": "Não foi possível carregar as ferramentas"
   },
   "PullRequests": {
     "descriptionMoreActions": "Ações da descrição",
@@ -4922,6 +4926,7 @@
         "issue_search": "Busca de tickets",
         "numo_wake": "Análise de eventos do Numo",
         "numo_home_brief": "Resumo da página inicial do Numo",
+        "merge_message": "Mensagens de commit de mesclagem",
         "faq_ask": "Caixa de perguntas da FAQ"
       },
       "loadingCalls": "Carregando chamadas…",

@@ -113,7 +113,19 @@ export function getKnowledgeArticle(query: string, locale: Locale = "en"): Knowl
   return best?.article ?? null;
 }
 
-export function getKnowledgeTopicList(locale: Locale = "en"): string {
+/**
+ * The help articles, one line each. `summaries: false` keeps the title and
+ * topic only (MIN-1001): Numo's prompt carries the list on every round, and
+ * `get_help` returns the article itself, or this full list for an unknown topic.
+ */
+export function getKnowledgeTopicList(
+  locale: Locale = "en",
+  options: { summaries?: boolean } = {},
+): string {
+  if (options.summaries === false) {
+    return getKnowledgeArticles(locale)
+      .map(article => `- ${article.title} (topic: \`${article.id}\`)`).join("\n");
+  }
   const official = getPublishedDocumentation(locale);
   if (official.length) return getKnowledgeArticles(locale)
     .map(article => `- **${article.title}** (topic: \`${article.id}\`): ${article.summary}`).join("\n");

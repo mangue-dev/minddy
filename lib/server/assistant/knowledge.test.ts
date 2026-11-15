@@ -53,3 +53,13 @@ describe("Numo product knowledge", () => {
     expect(article?.content).toContain("apply only to that user turn");
   });
 });
+
+describe("compact topic list (MIN-1001)", () => {
+  it("keeps every title and topic without the summaries", () => {
+    const full = getKnowledgeTopicList();
+    const compact = getKnowledgeTopicList("en", { summaries: false });
+    expect(compact.split("\n")).toHaveLength(full.split("\n").length);
+    expect(compact).toContain("topic: `repository-skills`");
+    expect(compact.length).toBeLessThan(full.length / 2);
+  });
+});

@@ -179,6 +179,9 @@ ${text}
       modelKey: BRIEF_MODEL_KEY,
       maxTokens: MAX_OUTPUT_TOKENS,
       timeoutMs: TIMEOUT_MS,
+      // Cutting a brief into objectives and issues is judgment, not
+      // extraction: it keeps a low effort rather than the no-reasoning default.
+      reasoning: "low",
       record: {
         feature: "brief_split",
         billTo: { userId },

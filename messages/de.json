@@ -491,6 +491,7 @@
     "historyFeatureIssueSearch": "Ticketsuche",
     "historyFeatureNumoWake": "Numo · Ereignisprüfung",
     "historyFeatureNumoHomeBrief": "Numo · Zusammenfassung der Startseite",
+    "historyFeatureMergeMessage": "Pull Request · Merge-Nachricht",
     "agentsGateTitle": "Numo-Arbeit ist nicht verfügbar",
     "agentsGateDescription": "Numo-Arbeit ist für dieses Konto nicht aktiviert.",
     "notOnPlan": "Dein Plan enthält diese Funktion nicht.",
@@ -4271,7 +4272,10 @@
     "watchProposalFailed": "Wiedervorlage konnte nicht angelegt werden. Bitte Numo, sie erneut vorzuschlagen.",
     "compactingContext": "Kontext wird komprimiert…",
     "contextCompacted": "Kontext komprimiert",
-    "contextCompactionFailed": "Kontext konnte nicht komprimiert werden"
+    "contextCompactionFailed": "Kontext konnte nicht komprimiert werden",
+    "loadingTools": "Tools werden geladen…",
+    "toolsLoaded": "{count, plural, one {# Tool geladen} other {# Tools geladen}}",
+    "loadToolsFailed": "Tools konnten nicht geladen werden"
   },
   "PullRequests": {
     "descriptionMoreActions": "Beschreibungsaktionen",
@@ -4922,6 +4926,7 @@
         "issue_search": "Ticketsuche",
         "numo_wake": "Ereignisprüfung von Numo",
         "numo_home_brief": "Numos Zusammenfassung der Startseite",
+        "merge_message": "Merge-Commit-Nachrichten",
         "faq_ask": "FAQ-Fragefeld"
       },
       "loadingCalls": "Aufrufe werden geladen…",

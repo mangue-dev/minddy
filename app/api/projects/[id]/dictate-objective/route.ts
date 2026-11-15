@@ -454,6 +454,8 @@ export async function POST(
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
+        cachedTokens: u.cachedTokens,
+        cacheWriteTokens: u.cacheWriteTokens,
         billTo: { userId: auth.user.id },
         projectId,
       });

@@ -56,13 +56,18 @@ const LLM_PASSES: Record<DecisionSpec["useCase"], LlmPassProfile> = {
     feature: "smart_assign",
     xTitle: "Smart Assign (minddy)",
     logPrefix: "[smart-assign]",
-    maxTokens: 256,
+    // One member id, but a model that must reason counts its reasoning in
+    // this ceiling: at 256 a low effort could still cut the call and waste
+    // the request (MIN-1001). Only generated tokens are billed.
+    maxTokens: 1_024,
   },
   feedback_review: {
     modelKey: "feedback_analysis_model",
     feature: "feedback_classify",
     xTitle: "Feedback Review (minddy)",
     logPrefix: "[feedback-review]",
+    // The verdict and the post's translation share the output (MIN-1001).
+    maxTokens: 2_048,
   },
   // Smart Fill relations (MIN-717): runs after the save, nobody waits on it.
   // One enum per candidate (at most five), so the output stays small.

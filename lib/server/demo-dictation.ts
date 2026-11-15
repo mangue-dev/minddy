@@ -75,6 +75,43 @@ export function resetDailyBudget(): void {
   dailyWindow = { day: -1, count: 0 };
 }
 
+/**
+ * Tickets already written for an example sentence (MIN-1001). A sample is a
+ * fixed text: for the same locale, day and model the formatter returns the
+ * same ticket, so a second visitor gets it without a model call. In memory,
+ * per instance, and bounded: the oldest entry leaves first.
+ */
+const sampleTickets = new Map<string, DemoTicket>();
+export const DEMO_SAMPLE_CACHE_LIMIT = 64;
+
+export function demoSampleCacheKey(parts: {
+  sample: string;
+  locale: string;
+  today: string;
+  model: string;
+}): string {
+  return [parts.sample, parts.locale, parts.today, parts.model].join("|");
+}
+
+export function cachedDemoSampleTicket(key: string): DemoTicket | undefined {
+  return sampleTickets.get(key);
+}
+
+export function rememberDemoSampleTicket(key: string, ticket: DemoTicket): void {
+  sampleTickets.delete(key);
+  sampleTickets.set(key, ticket);
+  while (sampleTickets.size > DEMO_SAMPLE_CACHE_LIMIT) {
+    const oldest = sampleTickets.keys().next().value;
+    if (oldest === undefined) break;
+    sampleTickets.delete(oldest);
+  }
+}
+
+/** Start from scratch — for testing only. */
+export function resetDemoSampleCache(): void {
+  sampleTickets.clear();
+}
+
 // The MIME table → format lives with the transcription client: it is the same
 // for the demo, authenticated dictation and dictated feedback. Re-exported here because
 // that the entrance guards of the demo are read (and tested) in one piece.
