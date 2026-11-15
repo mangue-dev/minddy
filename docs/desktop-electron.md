@@ -127,6 +127,52 @@ Settings that cannot be discussed:
 - A user agent suffix (`minddy-desktop/<version>`), so that the server and
   the UI both know that we are in the app.
 
+### The bridge contract (MIN-938)
+
+The page reaches the shell only through `window.minddy`
+([lib/desktop/bridge.ts](../lib/desktop/bridge.ts)), and every member is one
+channel of [lib/desktop/ipc-contract.ts](../lib/desktop/ipc-contract.ts). Each
+entry gives the channel's kind (`invoke` answers, `send` does not, `state` is
+a value the main process holds and replays to each new subscriber, `event` is
+a plain notification), its sender policy, its argument parser, and for
+`invoke` the answer a refused call gets. The preload builds its members from
+the contract's helpers ([ipc-renderer.ts](../lib/desktop/ipc-renderer.ts)),
+and the main process registers one handler per channel through
+`registerDesktopIpc` ([ipc-main.ts](../lib/desktop/ipc-main.ts)), which
+applies the policy and the parser before the handler runs: a channel without
+a handler does not compile, and no handler sees an unchecked sender or raw
+arguments.
+
+Every policy requires the main window's top frame, then:
+
+| Policy | Documents | Channels |
+| --- | --- | --- |
+| `window` | any document there: the selected server's pages, `minddy-app://welcome/`, the shell's `data:` recovery pages | external links, the server picker, window chrome, focus, storage flush, replays of window and update state |
+| `app` | a page of the selected server | notifications, badge, native push, Linux background, updates, agent app links, window material preference, local model discovery, sign-in links |
+| `local` | the local instance this app installed, while selected | its managed session and restart |
+| `welcome` | the bundled self-hosting page | `serverChoice` |
+
+The values the bridge needs before the first render (version, caption
+controls, notification capabilities, window material) reach the preload in a
+single launch flag on the renderer command line
+([launch-state.ts](../lib/desktop/launch-state.ts)), written by the main
+process from the same `notificationCapabilities()` it uses for its own
+decisions.
+
+Pages are deployed separately from installed shells, and self-hosted servers
+run web releases from 0.10.19
+([compatibility.json](../deploy/self-hosted/compatibility.json)). The shell
+therefore keeps accepting old pages: pages of 0.10.19 to 0.10.30 call
+`setWindowButtonsVisible`, `localRepo`, `chooseLocalRepo` and
+`forgetLocalRepo` without checking they exist, so the preload keeps harmless
+stubs for them. The local folder attachment and the page's request to hide the
+window buttons are otherwise gone. In those pages `localRepo` never settles, so
+the settings card for a local folder stays hidden, but the agent composer
+still offers "My machine": choosing it answers `none` and does nothing, as it
+already did since local runs left the shell (MIN-721). On macOS those pages
+also keep the window buttons drawn over their collapsed rail and dialogs. The
+web, in turn, checks each optional member before calling it.
+
 ### Application tabs and window chrome (MIN-536)
 
 The authenticated web and desktop workspace has a 44 px application bar above
@@ -640,7 +686,8 @@ MIN-519 retired this execution path and moved Numo workers to the server
 sandbox. MIN-721 then removed Numo's code work altogether: the server sandbox,
 the self-hosted runner, the `POST /api/desktop/local-turn` compatibility
 tombstone, the desktop run log and the read-only local run diff reader are
-gone. Existing run folders on users' machines are not deleted, but nothing in
+gone. MIN-938 removed the last bridge members of that path, the local folder
+attachment and its skill reader. Existing run folders on users' machines are not deleted, but nothing in
 the app reads them any more. Code is now written by the user's own coding
 agent, connected to minddy through MCP.
 

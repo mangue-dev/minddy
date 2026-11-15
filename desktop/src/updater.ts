@@ -3,6 +3,7 @@ import type { AppUpdater } from "electron-updater";
 
 import { requireAutoUpdater } from "./updater-module";
 
+import { sendDesktopEvent } from "@/lib/desktop/ipc-main";
 import {
   updatePromptChoice,
   updatePromptCopy,
@@ -76,7 +77,6 @@ let ownerWindow: () => BrowserWindow | null = () => null;
  */
 let status: DesktopUpdateStatus = IDLE_UPDATE_STATUS;
 
-/** The current state, for the replay requested by a subscriber who has just arrived. */
 export function currentUpdateStatus(): DesktopUpdateStatus {
   return status;
 }
@@ -98,10 +98,10 @@ function publish(event: DesktopUpdateEvent): void {
 function sendStatus(target?: Electron.WebContents): void {
   const window = ownerWindow();
   const contents = target ?? (window && !window.isDestroyed() ? window.webContents : null);
-  if (contents && !contents.isDestroyed()) contents.send("minddy:update-status", status);
+  if (contents && !contents.isDestroyed()) sendDesktopEvent(contents, "minddy:update-status", status);
 }
 
-/** Replay, TARGETED at the subscriber who requests it — same reason as macOS buttons. */
+/** Answers one new subscriber only, so the other listeners hear nothing twice. */
 export function replayUpdateStatus(target: Electron.WebContents): void {
   sendStatus(target);
 }
@@ -110,9 +110,8 @@ export function replayUpdateStatus(target: Electron.WebContents): void {
  * What the sidebar line triggers.
  *
  * It does NOT restart the app: it reopens the native box, which asks for the
- * last yes. A remote page that would restart the application of one
- * `postMessage` would be a bridge member of a completely different nature than the other nine
- * — and "installing" without confirmation on a single sidebar click is not what we want anyway.
+ * last yes. A remote page must not be able to relaunch the app, and installing
+ * on a single sidebar click without confirmation is not what we want anyway.
  *
  * No effect if nothing is ready: the file is not there, there is nothing to
  * to propose.

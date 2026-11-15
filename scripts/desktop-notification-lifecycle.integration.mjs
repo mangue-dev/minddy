@@ -76,7 +76,7 @@ try {
         window = BrowserWindow.getAllWindows()[0];
         return window && !window.webContents.isLoading() && window.webContents.getURL() === firstOrigin + "/home";
       });
-      const send = (channel, value) => ipcMain.emit(channel, { sender: window.webContents }, value);
+      const send = (channel, value) => ipcMain.emit(channel, { sender: window.webContents, senderFrame: window.webContents.mainFrame }, value);
       const show = (id, target) => send("minddy:notification:show", { id, target, title: "Synthetic notification", body: "Test fixture" });
       show("reused", "/home?issue=old");
       const old = banners.at(-1);

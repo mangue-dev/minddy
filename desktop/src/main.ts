@@ -14,7 +14,8 @@ import {
   powerMonitor,
   pushNotifications,
   session,
-  type WebContents,
+  type IpcMainEvent,
+  type IpcMainInvokeEvent,
 } from "electron";
 
 import { parseDesktopAuthLink } from "@/lib/desktop/auth-link";
@@ -37,12 +38,11 @@ import {
 } from "@/lib/desktop/linux-paths";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
-import { isAgentAppLink } from "@/lib/desktop/agent-app-links";
+import { registerDesktopIpc, sendDesktopEvent } from "@/lib/desktop/ipc-main";
+import { desktopLaunchFlag } from "@/lib/desktop/launch-state";
 import {
   DesktopLocalNotificationRegistry,
   desktopLocalNotificationUrl,
-  parseDesktopLocalNotification,
-  parseDesktopLocalNotificationId,
 } from "@/lib/desktop/local-notification";
 import {
   isLinuxBackgroundLaunch,
@@ -51,7 +51,10 @@ import {
   writeLinuxBackgroundPreference,
   type LinuxBackgroundNotificationState,
 } from "@/lib/desktop/linux-background";
-import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
+import {
+  notificationCapabilitiesForPlatform,
+  type DesktopNotificationCapabilities,
+} from "@/lib/desktop/notification-capabilities";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
 import { WINDOWS_STORE_DEEP_LINK } from "@/lib/desktop/install-prompt";
 import {
@@ -68,7 +71,6 @@ import { loadLocalRecoveryDocument } from "@/lib/desktop/local-recovery-load";
 import { loadDesktopWindow } from "@/lib/desktop/window-load";
 import { createLocalStartupSelection } from "@/lib/desktop/local-startup-selection";
 import { installMessage, type InstallMessage } from "@/lib/desktop/local-installer";
-import { mayReceiveLocalSession } from "@/lib/desktop/local-account";
 import { isServerChoiceDocument, serverChoiceUrl } from "@/lib/desktop/server-choice";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { parseWnsHelperChannel } from "@/lib/desktop/wns";
@@ -76,7 +78,6 @@ import {
   OPAQUE_WINDOW_BACKGROUND,
   TRANSPARENT_WINDOW_BACKGROUND,
   desktopWindowMaterial,
-  windowMaterialFlag,
   windowMaterialForWindow,
   windowMaterialOptions,
   type DesktopWindowMaterialState,
@@ -100,17 +101,9 @@ import {
   setNativePushAllowed,
 } from "./push-installation-store";
 import { hideWindow } from "./hide-window";
-import {
-  attachLocalRepo,
-  describeLocalRepo,
-  detachLocalRepo,
-  localBranches,
-  localSkills,
-  localSkill,
-} from "./local-repo";
 import { buildAppMenu } from "./menu";
 import { installEditContextMenu } from "./edit-context-menu";
-import { registerServerChoiceIpc, registerServerChoiceScheme, serveServerChoicePage } from "./server-choice";
+import { registerServerChoiceScheme, serveServerChoicePage, serverChoiceHandlers } from "./server-choice";
 import { localAccountSession } from "./local-account";
 import {
   LOCAL_INSTALL_RELEASE,
@@ -151,13 +144,12 @@ import { grantDesktopMicrophoneAccess } from "./microphone-access";
  * Minddy's shell (MIN-291) — §2 from docs/desktop-electron.md.
  *
  * The main `BrowserWindow` loads the selected minddy origin, so the desktop app
- * and web interface stay identical. The only local screen is the small server
- * picker owned by the shell; it contains no product UI and exposes only the IPC
- * call that validates and stores an origin.
+ * and web interface stay identical. The only local screen is the bundled
+ * self-hosting page (`minddy-app://welcome/`), which holds no product UI.
  *
- * Everything decided here is decided on PURE functions of `lib/desktop/`,
- * tested after the repository: this file is just wiring, and it is
- * deliberate — it lives in users and updates twice a year.
+ * Decisions live in pure modules of `lib/desktop/`, tested with the
+ * repository: this file only wires them to Electron, because an installed
+ * shell is updated far less often than the site.
  */
 
 let pendingOpenPath: string | null = null;
@@ -166,7 +158,9 @@ let localRuntimeGeneration = 0;
 const authLinkDelivery = createDesktopAuthLinkDelivery({
   currentRenderer: () => mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()
     ? mainWindow.webContents.id : null,
-  send: (link) => mainWindow?.webContents.send("minddy:auth-link", link),
+  send: (link) => {
+    if (mainWindow) sendDesktopEvent(mainWindow.webContents, "minddy:auth-link", link);
+  },
 });
 const integratedFrames = new WeakMap<BrowserWindow, boolean>();
 const documentChrome = new Map<number, boolean>();
@@ -217,7 +211,7 @@ function applyWindowMaterial(): void {
       }
       window.setBackgroundColor(state.kind === "none" ? OPAQUE_WINDOW_BACKGROUND : TRANSPARENT_WINDOW_BACKGROUND);
     }
-    if (!window.webContents.isDestroyed()) window.webContents.send("minddy:window-material-state", state);
+    if (!window.webContents.isDestroyed()) sendDesktopEvent(window.webContents, "minddy:window-material-state", state);
   }
 }
 const localNotifications = new DesktopLocalNotificationRegistry();
@@ -239,12 +233,13 @@ const WNS_HELPER_TIMEOUT_MS = 5 * 60 * 1000;
 const STORE_UPDATE_HELPER_TIMEOUT_MS = 90 * 1000;
 const STORE_UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
+let wnsHelperAvailable: boolean | undefined;
 function isWnsHelperAvailable(): boolean {
-  return (
+  wnsHelperAvailable ??=
     process.platform === "win32" &&
     app.isPackaged &&
-    existsSync(path.join(process.resourcesPath, "wns", "minddy-wns.exe"))
-  );
+    existsSync(path.join(process.resourcesPath, "wns", "minddy-wns.exe"));
+  return wnsHelperAvailable;
 }
 
 function runWnsHelper(args: string[]): Promise<string | null> {
@@ -324,10 +319,7 @@ function startWindowsStoreUpdateChecks(): void {
     const available = await checkWindowsStoreUpdate();
     if (available === null || available === windowsStoreUpdateAvailable) return;
     windowsStoreUpdateAvailable = available;
-    mainWindow?.webContents.send(
-      "minddy:windows-store-update-status",
-      available,
-    );
+    if (mainWindow) sendDesktopEvent(mainWindow.webContents, "minddy:windows-store-update-status", available);
   };
   void check();
   setInterval(check, STORE_UPDATE_CHECK_INTERVAL_MS);
@@ -346,8 +338,21 @@ function startWindowsStoreUpdateChecks(): void {
 let origin: string = DESKTOP_ORIGIN;
 let customServerOrigin: string | null = null;
 
+/**
+ * The notification features this shell provides. Each new window's preload
+ * receives the same value in its launch state.
+ */
+function notificationCapabilities(): DesktopNotificationCapabilities {
+  return notificationCapabilitiesForPlatform(
+    process.platform,
+    app.isPackaged,
+    nativeNotificationsAvailable,
+    isWnsHelperAvailable(),
+  );
+}
+
 function currentLinuxBackgroundState(): LinuxBackgroundNotificationState | null {
-  if (process.platform !== "linux" || !app.isPackaged) return null;
+  if (notificationCapabilities().backgroundSession !== "linux") return null;
   return {
     enabled: linuxBackgroundEnabled,
     autostartInstalled: linuxAutostartInstalled,
@@ -360,7 +365,7 @@ function setNativeNotificationsAvailable(available: boolean): void {
   nativeNotificationsAvailable = available;
   const state = currentLinuxBackgroundState();
   if (state && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("minddy:linux-background:changed", state);
+    sendDesktopEvent(mainWindow.webContents, "minddy:linux-background:changed", state);
   }
 }
 
@@ -388,9 +393,8 @@ function showServerChoice(): void {
   revealWindow(mainWindow);
 }
 
-function registerServerChoice(): void {
-  registerServerChoiceIpc({
-    contents: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null),
+function serverChoiceIpcHandlers() {
+  return serverChoiceHandlers<ShellIpcEvent>({
     state: () => ({
       origin,
       cloudOrigin: DESKTOP_ORIGIN,
@@ -512,100 +516,35 @@ function applyAboutPanel(): void {
 }
 
 /**
- * The macOS buttons: what the PAGE asks for, and what they REALLY do.
- *
- * The page no longer asks to hide them — dialogs, palettes and drawers leave
- * the buttons in place, so `wantsWindowButtons` stays true for the whole
- * session. What remains is FULL SCREEN, which removes them without warning
- * anyone — it's macOS that decides. The layout cannot follow the request: it
- * follows the result, and it is this file which tells it so. Without that,
- * going full screen left a 78 px hole in place of the buttons.
+ * The macOS window buttons sit in the page's title area, except in full
+ * screen, where macOS moves them to the top of the screen without telling
+ * anyone: the page learns it from here and releases their slot.
  */
-let wantsWindowButtons = true;
 let windowButtonsVisible = true;
 
 /**
- * What was actually PLACED on the window, so as not to put it back (MIN-311).
- *
- * `setWindowButtonVisibility` and `setWindowButtonPosition` are not
- * status writes: Electron responds to each with one `RedrawTrafficLights()` —
- * the three `NSButton` placed back in their view and the title bar re-put in
- * page, of the synchronous AppKit on the UI thread of the browser process.
- *
- * ⚠ Deduplication CANNOT live on the page side: the renderer refuses
- * voluntarily to deduplicate because `useWindowButtonsSlot` needs the
- * response from the bridge. It therefore concerns NATIVE calls only — the
- * republication remains unconditional.
- *
- * Delivered to `null` on `did-start-loading`: a new document starts from scratch.
+ * The full-screen state the buttons were last placed for (MIN-311): each
+ * native call makes AppKit redraw them synchronously on the UI thread.
  */
-let appliedButtons: string | null = null;
+let buttonsPlacedForFullScreen: boolean | null = null;
 
-/** `target` is only passed on the very first call — `mainWindow` is only assigned
- * when `createWindow` returns, and the buttons light up before then. */
+/** `target` is only passed while `createWindow` runs, before `mainWindow` is assigned. */
 function applyWindowButtons(target?: BrowserWindow): void {
   const window = target ?? mainWindow;
-  // macOS only — elsewhere the buttons belong to the manager
-  // windows, and the API does not exist.
   if (process.platform !== "darwin" || !window) return;
   const fullScreen = window.isFullScreen();
-
-  const nativeVisible = fullScreen || wantsWindowButtons;
-  const applied = `${fullScreen}:${wantsWindowButtons}`;
-  trace("applyWindowButtons", {
-    fullScreen,
-    wants: wantsWindowButtons,
-    reposed: applied !== appliedButtons,
-  });
-  if (applied !== appliedButtons) {
-    appliedButtons = applied;
-    // ⚠ IN FULL SCREEN, WE NEVER HIDE THEM. macOS manages them itself: they
-    // slide off the screen with the menu bar and return when the
-    // pointer goes to top. Hiding them over is removing the ONLY
-    // way to exit full screen with the mouse — a window from which you cannot
-    // no more going out. Modal holds therefore apply only in windowed mode.
-    window.setWindowButtonVisibility(nativeVisible);
-    if (!fullScreen && nativeVisible) {
-      // Restore the position AFTER having shown them: restoring visibility
-      // recreate the standard buttons, and they return to their original corner if
-      // we do not reapply the position in the application bar.
-      window.setWindowButtonPosition(MACOS_TRAFFIC_LIGHT_POSITION);
-    }
+  if (fullScreen !== buttonsPlacedForFullScreen) {
+    buttonsPlacedForFullScreen = fullScreen;
+    // Never hidden in full screen: macOS slides them in with the menu bar, and
+    // they are the mouse's only way out of it.
+    window.setWindowButtonVisibility(true);
+    // Showing them recreates the standard buttons in their original corner.
+    if (!fullScreen) window.setWindowButtonPosition(MACOS_TRAFFIC_LIGHT_POSITION);
   }
-
-  // ALWAYS republish, even when nothing has changed on the native side: this is
-  // response that `useWindowButtonsSlot` is waiting for to unfreeze its layout.
-  //
-  // What we announce on the page is another question than what we show: in
-  // fullscreen controls are managed by macOS outside the application bar.
-  // The bar releases their slot until the native state reports them back.
-  publishWindowButtons(wantsWindowButtons && !fullScreen);
+  windowButtonsVisible = !fullScreen;
+  if (mainWindow) sendDesktopEvent(mainWindow.webContents, "minddy:window-buttons-state", windowButtonsVisible);
 }
 
-/**
- * Tells the page what it is, and remembers it for future subscribers.
- *
- * `to` targets ONE subscriber, for the status replay requested by `…-ready`: without it,
- * the arrival of a late subscriber waters all the `ipcRenderer.on` of the document —
- * including its neighbors, who have not requested anything (MIN-310).
- */
-function publishWindowButtons(
-  next = windowButtonsVisible,
-  to?: WebContents
-): void {
-  windowButtonsVisible = next;
-  trace("publishWindowButtons", { next, targeted: to != null });
-  (to ?? mainWindow?.webContents)?.send("minddy:window-buttons-state", next);
-}
-
-/**
- * The buttons are placed IN the mark line of the sidebar, in place
- * of the mark: `x` takes the gutter of the bar (`px-2.5`) plus the removal
- * of a line, `y` centers them in the 60 px of this line — the same height
- * as the header and subbar title, the horizontal line that
- * runs through the app. These two numbers and the `padding-left` of `.sidebar-brand-row`
- * (app/globals.css) read together, or not at all.
- */
 /**
  * macOS delivers the deep link by `open-url`, and it often does it BEFORE the
  * window exists: clicking on the email link LAUNCHES the app. We therefore keep it, and
@@ -775,17 +714,14 @@ function createWindow(
       webviewTag: false,
       // Keep native macOS rubber-banding disabled alongside the web scroll policy.
       scrollBounce: false,
-      // The version, by the command line rather than by a SYNCHRONOUS IPC
-      // (MIN-322): `sendSync` stops the renderer for the round trip, at
-      // start — that is, right during the first render. The preload reads
-      // `process.argv`, which is already there when it runs.
+      // What the bridge must hold before the first render (launch-state.ts).
       additionalArguments: [
-        `--minddy-integrated-chrome=${integrated || process.platform === "darwin" ? "1" : "0"}`,
-        `--minddy-version=${app.getVersion()}`,
-        `--minddy-packaged=${app.isPackaged ? "1" : "0"}`,
-        `--minddy-native-notifications=${nativeNotificationsAvailable ? "1" : "0"}`,
-        `--minddy-windows-wns=${isWnsHelperAvailable() ? "1" : "0"}`,
-        windowMaterialFlag(currentWindowMaterial()),
+        desktopLaunchFlag({
+          version: app.getVersion(),
+          integratedWindowChrome: integrated || process.platform === "darwin",
+          notificationCapabilities: notificationCapabilities(),
+          windowMaterial: currentWindowMaterial(),
+        }),
       ],
       // The spell checker goes through `NSSpellChecker` on macOS, at
       // each text modification, on the UI thread of the browser process.
@@ -849,7 +785,10 @@ function createWindow(
   });
   window.webContents.on("did-start-navigation", (details) => {
     if (details.isMainFrame) {
-      if (!details.isSameDocument) authLinkDelivery.notReady(window.webContents.id);
+      if (!details.isSameDocument) {
+        trace("did-start-navigation", { url: details.url });
+        authLinkDelivery.notReady(window.webContents.id);
+      }
       rendererRecovery.navigationStarted(details.url, details.isSameDocument);
       stallRecovery.navigationStarted(details.url, details.isSameDocument);
     }
@@ -951,44 +890,10 @@ function createWindow(
 
   applyWindowButtons(window);
 
-  // **The request belongs to the PAGE, it dies with it.** A reload,
-  // a reconnection, a full navigation: the new document never has anything
-  // requested, but the old one had been able to leave a request in progress — a box of
-  // dialog opened at the time of reload, for example. Without this discount
-  // zero, the buttons remained hidden FOREVER, with no one left to
-  // return them. The renderer reaffirms its reasons as soon as it is mounted.
-  //
-  // ⚠ **`did-start-navigation`, and NOT `did-start-loading`** (MIN-293). This one
-  // seems to say “a document is arriving”; he actually says “the spinning wheel of
-  // tab rotates", which includes SAME-DOCUMENT navigations — a
-  // `pushState`, a `replaceState`, that is to say all navigation of the SPA.
-  // Each tab change of the Agents page (`router.replace`) reset
-  // so the request to zero and made the buttons, while the sidebar
-  // was at the rail and had not released anything. They remained there, definitively:
-  // no one, on the page side, had any reason to ask for anything again.
-  //
-  // `isSameDocument` is exactly the distinction that was missing, and
-  // `isMainFrame` discards subframes, which do not replace the page.
-  window.webContents.on("did-start-navigation", (details) => {
-    if (details.isSameDocument || !details.isMainFrame) return;
-    trace("did-start-navigation", { url: details.url });
-    wantsWindowButtons = true;
-    // The native application cache focuses on the WINDOW, but its reason for being
-    // is the request of the page: a new document starts from scratch (MIN-311).
-    appliedButtons = null;
-    applyWindowButtons(window);
-  });
-
-  // Full screen removes the buttons without going through us: the layout
-  // must learn it, otherwise she keeps the 78 px she reserved for them. In
-  // take them out puts them back in — hence the application in both directions, and the position
-  // reposted by `applyWindowButtons`.
+  // Full screen takes the buttons away and leaving it brings them back.
   window.on("enter-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
   window.on("leave-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
-  // The full screen requested by the PAGE (a media, a publisher) passes the window
-  // in full screen too, but by another couple of events. Both
-  // result in the same calculation, which rereads `isFullScreen()`: plug them all in
-  // the four costs two lines and avoids discovering the missing half.
+  // A page's own full screen (a video, the editor) arrives by these two events.
   window.on("enter-html-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
   window.on("leave-html-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
   // The window hides instead of dying (see ⌘W in menu.ts): the app remains
@@ -1019,7 +924,7 @@ function createWindow(
   const onSuspend = () => trace("power:suspend");
   const onResume = () => {
     trace("power:resume");
-    window.webContents.send("minddy:notification:wake");
+    sendDesktopEvent(window.webContents, "minddy:notification:wake");
   };
   const onLock = () => trace("power:lock-screen");
   const onUnlock = () => trace("power:unlock-screen");
@@ -1038,402 +943,201 @@ function createWindow(
   return window;
 }
 
+type ShellIpcEvent = IpcMainEvent | IpcMainInvokeEvent;
+
+/**
+ * Every channel of the bridge (lib/desktop/ipc-contract.ts). The contract's
+ * sender policy and parser run before each handler below.
+ */
 function registerIpc(): void {
-  const notificationCapabilities = notificationCapabilitiesForPlatform(
-    process.platform,
-    app.isPackaged,
-    nativeNotificationsAvailable,
-    isWnsHelperAvailable(),
+  registerDesktopIpc<ShellIpcEvent>(
+    {
+      ipcMain,
+      mainContents: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null),
+      context: () => ({ origin, localOrigin: LOCAL_SELF_HOST_ORIGIN, customServerOrigin }),
+    },
+    {
+      ...serverChoiceIpcHandlers(),
+
+      "minddy:open-external": (_event, url) => {
+        // Handing a `file://` URL or another app's scheme to the system is
+        // execution: only what the navigation guard lets out leaves.
+        if (navigationDecision(url, origin) === "block") return;
+        void openDesktopExternal(url);
+      },
+      // Only the exact "new conversation" link of a known agent app (MIN-951).
+      "minddy:open-agent-app": (_event, link) => void openDesktopExternal(link),
+      "minddy:windows-store:open": () => {
+        if (process.platform !== "win32" || !process.windowsStore) return;
+        void openDesktopExternal(WINDOWS_STORE_DEEP_LINK);
+      },
+      "minddy:windows-store-update-status": {
+        ready: ({ sender }) => sendDesktopEvent(sender, "minddy:windows-store-update-status", windowsStoreUpdateAvailable),
+      },
+      "minddy:auth-link": {
+        ready: ({ sender }) => authLinkDelivery.ready(sender.id),
+        notReady: ({ sender }) => authLinkDelivery.notReady(sender.id),
+      },
+      "minddy:server-picker:open": () => showServerChoice(),
+
+      // The local instance's managed account (MIN-781): the password never
+      // leaves this process. Only while the launcher this app started is
+      // alive: whatever else answers on the local port is not that instance.
+      "minddy:local-account:session": () => {
+        const root = readLocalRuntimeRoot();
+        if (!root || !ownsLocalRuntime(root)) return null;
+        return localAccountSession(root);
+      },
+      // Applies an instance variable changed in the admin dashboard that needs
+      // a restart (MIN-847).
+      "minddy:local-runtime:restart": async () => {
+        const root = readLocalRuntimeRoot();
+        if (!root || !ownsLocalRuntime(root)) return false;
+        stopLocalRuntime();
+        await startLocalRuntime(root);
+        mainWindow?.webContents.reload();
+        return true;
+      },
+
+      "minddy:update:check": () => checkForUpdatesManually(),
+      "minddy:update-status": { ready: ({ sender }) => replayUpdateStatus(sender) },
+      // Reopens the native dialog, which asks for the last yes (updater.ts).
+      "minddy:install-update": () => requestInstall(),
+
+      "minddy:set-badge": (_event, count) => {
+        const badge = notificationCapabilities().badge;
+        if (badge === "dock") app.dock?.setBadge(count > 0 ? String(count) : "");
+        else if (badge === "windows") void runWnsHelper(["badge", String(count)]);
+      },
+      "minddy:notification:show": (_event, payload) => {
+        // Not the page's capabilities: after a failed banner they report none
+        // available, and a later banner is what notices the recovery.
+        if (!NativeNotification.isSupported()) return;
+        const notification = new NativeNotification({ id: payload.id, title: payload.title, body: payload.body });
+        if (!localNotifications.track(payload, notification)) return;
+        const notificationOrigin = origin;
+        notification.on("click", () => {
+          if (!localNotifications.dismiss(payload.id, notification)) return;
+          revealLocalNotificationTarget(notificationOrigin === origin ? payload.target : null);
+        });
+        notification.on("show", () => setNativeNotificationsAvailable(true));
+        notification.on("close", () => localNotifications.forget(payload.id, notification));
+        notification.on("failed", () => {
+          if (localNotifications.forget(payload.id, notification)) setNativeNotificationsAvailable(false);
+        });
+        notification.show();
+      },
+      "minddy:notification:dismiss": (_event, id) => {
+        localNotifications.dismiss(id);
+      },
+
+      "minddy:linux-background:get": () => currentLinuxBackgroundState(),
+      "minddy:linux-background:set": (_event, enabled) => {
+        if (notificationCapabilities().backgroundSession !== "linux") return null;
+        writeLinuxBackgroundPreference(app.getPath("userData"), enabled);
+        linuxBackgroundEnabled = enabled;
+        linuxAutostartInstalled = syncLinuxBackgroundAutostart({
+          enabled,
+          environment: process.env,
+          home: os.homedir(),
+          execPath: process.execPath,
+        });
+        return currentLinuxBackgroundState();
+      },
+      "minddy:linux-background:changed": {
+        ready: ({ sender }) => {
+          const state = currentLinuxBackgroundState();
+          if (state) sendDesktopEvent(sender, "minddy:linux-background:changed", state);
+        },
+      },
+
+      "minddy:push:register": async (_event, { activate }) => {
+        const transport = notificationCapabilities().backgroundTransport;
+        if (transport === null) return null;
+        try {
+          const userData = app.getPath("userData");
+          if (activate) await setNativePushAllowed(userData, true);
+          else if (!(await nativePushAllowed(userData))) return null;
+          const installationId = await pushInstallationId(userData);
+          if (transport === "wns") {
+            wnsRegistration ??= requestWnsChannel();
+            const channelUri = await wnsRegistration;
+            if (!channelUri) wnsRegistration = null;
+            return channelUri ? { transport, endpoint: channelUri, installationId } : null;
+          }
+          apnsRegistration ??= pushNotifications.registerForAPNSNotifications();
+          const token = await apnsRegistration;
+          return { transport, endpoint: `apns:${token}`, installationId };
+        } catch {
+          apnsRegistration = null;
+          wnsRegistration = null;
+          console.error("[push] native_registration_failed");
+          return null;
+        }
+      },
+      "minddy:push:unregister": async () => {
+        const transport = notificationCapabilities().backgroundTransport;
+        if (transport === "apns") {
+          apnsRegistration = null;
+          await disableNativePush(app.getPath("userData"), () => pushNotifications.unregisterForAPNSNotifications());
+        } else if (transport === "wns") {
+          wnsRegistration = null;
+          await disableNativePush(app.getPath("userData"), () => runWnsHelper(["unregister"]));
+        }
+      },
+      // The main process builds the system destination itself; no URL from
+      // the page travels on this channel.
+      "minddy:push:open-settings": () => {
+        const settings = notificationCapabilities().settings;
+        if (settings === "macos") void openDesktopExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
+        else if (settings === "windows") void openDesktopExternal("ms-settings:notifications");
+      },
+      "minddy:window-chrome": (_event, theme, followsSystem) => {
+        if (!mainWindow) return;
+        // The native material is tinted by the app's appearance, not the
+        // page's: it follows the page's theme, or dark text lands on a dark
+        // blur. A page that follows the system leaves the app on the system,
+        // so its own `prefers-color-scheme` keeps tracking the OS. Older pages
+        // send no second argument and keep the previous behavior.
+        if (followsSystem !== undefined) {
+          const source = followsSystem ? "system" : theme;
+          if (nativeTheme.themeSource !== source) nativeTheme.themeSource = source;
+        }
+        if (process.platform === "darwin" || !integratedFrames.get(mainWindow)) return;
+        mainWindow.setTitleBarOverlay(desktopTitleBarOverlay(process.platform, theme));
+      },
+      // The device preference (MIN-810).
+      "minddy:window-material:set": (_event, enabled) => {
+        if (enabled !== windowMaterialEnabled) {
+          windowMaterialEnabled = enabled;
+          writeWindowMaterialEnabled(enabled);
+          applyWindowMaterial();
+        }
+        return windowMaterialForWindow(currentWindowMaterial(), mainWindow?.isFullScreen() ?? false);
+      },
+      "minddy:window-material-state": {
+        ready: ({ sender }) => {
+          const window = BrowserWindow.fromWebContents(sender);
+          sendDesktopEvent(sender, "minddy:window-material-state",
+            windowMaterialForWindow(currentWindowMaterial(), window?.isFullScreen() ?? false));
+        },
+      },
+      "minddy:window-buttons-state": {
+        ready: ({ sender }) => sendDesktopEvent(sender, "minddy:window-buttons-state", windowButtonsVisible),
+      },
+      "minddy:focus": () => {
+        if (mainWindow) revealWindow(mainWindow);
+      },
+
+      // Loopback only, and nothing back but model ids (local-models.ts).
+      "minddy:local-models:discover": (_event, input) => discoverLocalModels(input),
+      // Chromium defers DOM storage commits by several seconds; a forced quit
+      // in that window loses an acknowledged local draft.
+      "minddy:storage:flush": ({ sender }) => {
+        sender.session.flushStorageData();
+      },
+    },
   );
-
-  ipcMain.on("minddy:version", (event) => {
-    event.returnValue = app.getVersion();
-  });
-
-  ipcMain.on("minddy:open-external", (_event, url: unknown) => {
-    if (typeof url !== "string") return;
-    // The renderer does NOT decide what we give to the system: `open` on a
-    // `file://` or on a diagram registered by another app, it is
-    // execution. Only what the guard agrees to let out comes out.
-    if (navigationDecision(url, origin) === "block") return;
-    void openDesktopExternal(url);
-  });
-
-  ipcMain.on("minddy:open-agent-app", (event, link: unknown) => {
-    // Sending a prompt to the user's coding agent (MIN-951). Only our own
-    // page may ask, and only for the exact "new conversation" link of a known
-    // agent app: the navigation guard keeps refusing every other scheme.
-    if (event.sender !== mainWindow?.webContents) return;
-    if (navigationDecision(event.sender.getURL(), origin) !== "allow") return;
-    if (!isAgentAppLink(link)) return;
-    void openDesktopExternal(link);
-  });
-
-  ipcMain.on("minddy:windows-store:open", () => {
-    if (process.platform !== "win32" || !process.windowsStore) return;
-    void openDesktopExternal(WINDOWS_STORE_DEEP_LINK);
-  });
-
-  ipcMain.on("minddy:windows-store-update-status-ready", (event) => {
-    event.sender.send(
-      "minddy:windows-store-update-status",
-      windowsStoreUpdateAvailable,
-    );
-  });
-
-  ipcMain.on("minddy:auth-link-ready", (event) => authLinkDelivery.ready(event.sender.id));
-  ipcMain.on("minddy:auth-link-not-ready", (event) => authLinkDelivery.notReady(event.sender.id));
-
-  ipcMain.on("minddy:server-picker:open", (event) => {
-    // A shell recovery document or the app's own pages; never a second window.
-    if (mainWindow && event.sender === mainWindow.webContents) showServerChoice();
-  });
-  registerServerChoice();
-
-  // The session of the account the app manages on the local instance it
-  // installed (MIN-781). Only that instance's top document, while it is the
-  // selected server, receives it; the password never leaves this process.
-  ipcMain.handle("minddy:local-account:session", (event) => {
-    if (
-      !mainWindow ||
-      event.sender !== mainWindow.webContents ||
-      event.senderFrame !== mainWindow.webContents.mainFrame ||
-      !mayReceiveLocalSession(event.senderFrame.url, LOCAL_SELF_HOST_ORIGIN, customServerOrigin)
-    ) {
-      return null;
-    }
-    const root = readLocalRuntimeRoot();
-    // Only while the launcher this app started is alive: whatever else might
-    // answer on the local port is not the instance the app installed.
-    if (!root || !ownsLocalRuntime(root)) return null;
-    return localAccountSession(root);
-  });
-
-  // Restarts the local instance this app runs (MIN-847), so an instance
-  // variable changed in the admin dashboard that needs a restart applies.
-  // Same sender checks as the local session: only the main frame of the
-  // window showing the local instance may ask.
-  ipcMain.handle("minddy:local-runtime:restart", async (event) => {
-    if (
-      !mainWindow ||
-      event.sender !== mainWindow.webContents ||
-      event.senderFrame !== mainWindow.webContents.mainFrame ||
-      !mayReceiveLocalSession(event.senderFrame.url, LOCAL_SELF_HOST_ORIGIN, customServerOrigin)
-    ) {
-      return false;
-    }
-    const root = readLocalRuntimeRoot();
-    if (!root || !ownsLocalRuntime(root)) return false;
-    stopLocalRuntime();
-    await startLocalRuntime(root);
-    mainWindow?.webContents.reload();
-    return true;
-  });
-
-  ipcMain.handle("minddy:update:check", () => checkForUpdatesManually());
-
-  ipcMain.on("minddy:set-badge", (_event, count: unknown) => {
-    const n = typeof count === "number" && Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
-    if (notificationCapabilities.badge === "dock") {
-      app.dock?.setBadge(n > 0 ? String(n) : "");
-    } else if (notificationCapabilities.badge === "windows") {
-      void runWnsHelper(["badge", String(n)]);
-    }
-  });
-
-  ipcMain.on("minddy:notification:show", (_event, input: unknown) => {
-    if (
-      !notificationCapabilities.localNativeBanners ||
-      !NativeNotification.isSupported()
-    ) {
-      return;
-    }
-    const payload = parseDesktopLocalNotification(input);
-    if (!payload) return;
-    const notification = new NativeNotification({
-      id: payload.id,
-      title: payload.title,
-      body: payload.body,
-    });
-    if (!localNotifications.track(payload, notification)) return;
-    const notificationOrigin = origin;
-    notification.on("click", () => {
-      if (!localNotifications.dismiss(payload.id, notification)) return;
-      revealLocalNotificationTarget(notificationOrigin === origin ? payload.target : null);
-    });
-    notification.on("show", () => setNativeNotificationsAvailable(true));
-    notification.on("close", () => localNotifications.forget(payload.id, notification));
-    notification.on("failed", () => {
-      if (localNotifications.forget(payload.id, notification)) {
-        setNativeNotificationsAvailable(false);
-      }
-    });
-    notification.show();
-  });
-
-  ipcMain.on("minddy:notification:dismiss", (_event, input: unknown) => {
-    const id = parseDesktopLocalNotificationId(input);
-    if (id) localNotifications.dismiss(id);
-  });
-
-  ipcMain.handle("minddy:linux-background:get", () =>
-    currentLinuxBackgroundState()
-  );
-
-  ipcMain.handle("minddy:linux-background:set", (_event, input: unknown) => {
-    if (process.platform !== "linux" || !app.isPackaged || typeof input !== "boolean") {
-      return null;
-    }
-    writeLinuxBackgroundPreference(app.getPath("userData"), input);
-    linuxBackgroundEnabled = input;
-    linuxAutostartInstalled = syncLinuxBackgroundAutostart({
-      enabled: input,
-      environment: process.env,
-      home: os.homedir(),
-      execPath: process.execPath,
-    });
-    return currentLinuxBackgroundState();
-  });
-
-  ipcMain.handle("minddy:push:register", async (_event, options: unknown) => {
-    if (!app.isPackaged || (process.platform !== "darwin" && process.platform !== "win32")) {
-      return null;
-    }
-    try {
-      const userData = app.getPath("userData");
-      const activate =
-        !!options &&
-        typeof options === "object" &&
-        (options as { activate?: unknown }).activate === true;
-      if (activate) await setNativePushAllowed(userData, true);
-      else if (!(await nativePushAllowed(userData))) return null;
-      const installationId = await pushInstallationId(userData);
-      if (process.platform === "win32") {
-        wnsRegistration ??= requestWnsChannel();
-        const channelUri = await wnsRegistration;
-        if (!channelUri) wnsRegistration = null;
-        return channelUri
-          ? { transport: "wns" as const, endpoint: channelUri, installationId }
-          : null;
-      }
-      apnsRegistration ??= pushNotifications.registerForAPNSNotifications();
-      const token = await apnsRegistration;
-      return {
-        transport: "apns" as const,
-        endpoint: `apns:${token}`,
-        installationId,
-      };
-    } catch {
-      apnsRegistration = null;
-      wnsRegistration = null;
-      console.error("[push] native_registration_failed");
-      return null;
-    }
-  });
-
-  ipcMain.handle("minddy:push:unregister", async () => {
-    if (process.platform === "darwin") {
-      apnsRegistration = null;
-      await disableNativePush(app.getPath("userData"), () => pushNotifications.unregisterForAPNSNotifications());
-    } else if (process.platform === "win32") {
-      wnsRegistration = null;
-      await disableNativePush(app.getPath("userData"), () => runWnsHelper(["unregister"]));
-    }
-  });
-
-  ipcMain.on("minddy:push:open-settings", () => {
-    // No URL from the remote page passes through this channel: the main
-    // process constructs the system destination itself and targets this app.
-    if (notificationCapabilities.settings === "macos") {
-      void openDesktopExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
-    } else if (notificationCapabilities.settings === "windows") {
-      void openDesktopExternal("ms-settings:notifications");
-    }
-  });
-
-  ipcMain.on("minddy:window-buttons", (_event, visible: unknown) => {
-    wantsWindowButtons = visible !== false;
-    applyWindowButtons();
-  });
-
-  ipcMain.on("minddy:window-chrome", (event, theme: unknown, followsSystem: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) return;
-    if (theme !== "light" && theme !== "dark") return;
-    // The native material is tinted by the app's appearance, not the page's:
-    // it must follow the page's theme or dark text lands on a dark blur. A
-    // page that follows the system leaves the app on the system, so its own
-    // `prefers-color-scheme` keeps tracking the OS. Older pages send no
-    // second argument and keep the previous behavior.
-    if (typeof followsSystem === "boolean") {
-      const source = followsSystem ? "system" : theme;
-      if (nativeTheme.themeSource !== source) nativeTheme.themeSource = source;
-    }
-    if (process.platform === "darwin" || !integratedFrames.get(mainWindow)) return;
-    mainWindow.setTitleBarOverlay(desktopTitleBarOverlay(process.platform, theme));
-  });
-
-  // The device preference (MIN-810). Only the app's own pages on the selected
-  // origin reach it, and only a boolean is accepted.
-  ipcMain.handle("minddy:window-material:set", (event, enabled: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || typeof enabled !== "boolean") {
-      return currentWindowMaterial();
-    }
-    if (enabled !== windowMaterialEnabled) {
-      windowMaterialEnabled = enabled;
-      writeWindowMaterialEnabled(enabled);
-      applyWindowMaterial();
-    }
-    return windowMaterialForWindow(currentWindowMaterial(), mainWindow.isFullScreen());
-  });
-  ipcMain.on("minddy:window-material-ready", (event) => {
-    const window = BrowserWindow.fromWebContents(event.sender);
-    event.sender.send("minddy:window-material-state",
-      windowMaterialForWindow(currentWindowMaterial(), window?.isFullScreen() ?? false));
-  });
-
-  // Status replay, TARGETED at the requesting subscriber (MIN-310).
-  ipcMain.on("minddy:window-buttons-ready", (event) =>
-    publishWindowButtons(undefined, event.sender)
-  );
-
-  // The update, as the sidebar shows it (MIN-353). Replay
-  // TARGETED at the subscriber who requests it, as for the macOS buttons: the page has
-  // could be mounted long after the download was completed.
-  ipcMain.on("minddy:update-status-ready", (event) =>
-    replayUpdateStatus(event.sender)
-  );
-
-  // A click on the line does NOT restart the app: it reopens the native box, which
-  // ask for the last yes (updater.ts).
-  ipcMain.on("minddy:install-update", () => requestInstall());
-
-  ipcMain.on("minddy:focus", () => {
-    if (!mainWindow) return;
-    revealWindow(mainWindow);
-  });
-
-  // THE LOCAL PROJECT FILE (MIN-359) — the first three `handle` of the
-  // file, and it is the nature of these gestures which imposes it: they MAKE something
-  // thing (the state of the folder, read back on disk), where everything else in the bridge
-  // is an unanswered command. `send` would require reinventing a correlation
-  // to match the response to its request.
-  //
-  // The renderer never names a folder: it gives a project id and it
-  // `owner/repo` to validate against, and the path can only enter through the
-  // open system panel here (`attachLocalRepo`).
-  ipcMain.handle("minddy:local-repo:read", (_event, input: unknown) => {
-    const parsed = localRepoRequest(input);
-    if (!parsed) return { status: "none" };
-    return describeLocalRepo(
-      parsed.projectId,
-      parsed.fullName ? { fullName: parsed.fullName, aliases: parsed.aliases } : null,
-    );
-  });
-
-  ipcMain.handle("minddy:local-repo:choose", async (_event, input: unknown) => {
-    const parsed = localRepoRequest(input);
-    if (!parsed) return { status: "none" };
-    return attachLocalRepo(
-      parsed.projectId,
-      parsed.fullName ? { fullName: parsed.fullName, aliases: parsed.aliases } : null,
-      mainWindow,
-    );
-  });
-
-  ipcMain.handle("minddy:local-repo:forget", (_event, input: unknown) => {
-    const projectId = readString((input as { projectId?: unknown } | null)?.projectId);
-    if (!projectId) return { status: "none" };
-    return detachLocalRepo(projectId);
-  });
-
-  ipcMain.handle("minddy:local-repo:branches", (_event, input: unknown) => {
-    const parsed = localRepoRequest(input);
-    return parsed
-      ? localBranches(
-          parsed.projectId,
-          parsed.fullName ? { fullName: parsed.fullName, aliases: parsed.aliases } : null,
-        )
-      : [];
-  });
-
-  ipcMain.handle("minddy:local-repo:skills", (_event, input: unknown) => {
-    const parsed = localRepoRequest(input);
-    return parsed
-      ? localSkills(
-          parsed.projectId,
-          parsed.fullName
-            ? { fullName: parsed.fullName, aliases: parsed.aliases }
-            : null,
-        )
-      : [];
-  });
-
-  ipcMain.handle("minddy:local-repo:skill", (_event, input: unknown) => {
-    const parsed = localRepoRequest(input);
-    const skillPath = readString(
-      (input as { path?: unknown } | null)?.path,
-    );
-    return parsed && skillPath
-      ? localSkill(
-          parsed.projectId,
-          parsed.fullName
-            ? { fullName: parsed.fullName, aliases: parsed.aliases }
-            : null,
-          skillPath,
-        )
-      : null;
-  });
-
-  // A remote page does not receive a network proxy through the Electron bridge. She
-  // can only request this bounded discovery: `local-models.ts` accepts
-  // loopback and the two fixed routes Ollama / OpenAI-compatible, then does not render
-  // only model ids.
-  ipcMain.handle("minddy:local-models:discover", (_event, input: unknown) =>
-    discoverLocalModels(input),
-  );
-
-  // Chromium defers DOM storage commits by several seconds; a forced quit in
-  // that window loses an acknowledged local draft. The flush takes no input
-  // and only touches the caller's own session.
-  ipcMain.handle("minddy:storage:flush", (event) => {
-    event.sender.session.flushStorageData();
-  });
-
-}
-
-function readString(value: unknown): string | null {
-  // Both fields are short by nature (a uuid, a `owner/repo`): beyond
-  // from the margin, the body is forged and does not deserve to go further.
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed && trimmed.length <= 256 ? trimmed : null;
-}
-
-/** What the renderer has the right to send, reduced to this or nothing.
- *
- * `fullName` is optional: a project with no linked repository has no remote
- * identity to validate against, and the attachment still makes sense — the
- * folder is then validated as a plain git repository. */
-function localRepoRequest(input: unknown): {
-  projectId: string;
-  fullName: string | null;
-  aliases: string[];
-} | null {
-  if (typeof input !== "object" || input === null) return null;
-  const { projectId, fullName, aliases } = input as {
-    projectId?: unknown;
-    fullName?: unknown;
-    aliases?: unknown;
-  };
-  const id = readString(projectId);
-  if (!id) return null;
-  const parsedAliases = Array.isArray(aliases)
-    ? aliases.slice(0, 20).flatMap((alias) => {
-        const parsed = readString(alias);
-        return parsed ? [parsed] : [];
-      })
-    : [];
-  return { projectId: id, fullName: readString(fullName), aliases: parsedAliases };
 }
 
 /**
@@ -1710,10 +1414,7 @@ if (!app.requestSingleInstanceLock()) {
     // When the app is running, macOS puts the load back on the process instead of displaying
     // the banner itself. We make it native here; when the app is exited,
     // APNs and macOS display it without any minddy process — the heart of the ticket.
-    if (
-      notificationCapabilitiesForPlatform(process.platform, app.isPackaged)
-        .backgroundTransport === "apns"
-    ) {
+    if (notificationCapabilities().backgroundTransport === "apns") {
       pushNotifications.on("received-apns-notification", (_event, payload) => {
         const content = nativePushContent(payload);
         if (!content || !NativeNotification.isSupported()) return;

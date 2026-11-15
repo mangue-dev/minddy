@@ -90,7 +90,7 @@ try {
       await waitFor(() => BrowserWindow.getAllWindows().some(window => !window.webContents.isLoading() && window.webContents.getURL().startsWith(${JSON.stringify(origin)})));
       const window = BrowserWindow.getAllWindows()[0];
       const before = window.webContents.getURL();
-      ipcMain.emit("minddy:open-external", { sender: window.webContents }, "https://minddy.example/login?token=synthetic");
+      ipcMain.emit("minddy:open-external", { sender: window.webContents, senderFrame: window.webContents.mainFrame }, "https://minddy.example/login?token=synthetic");
       await delay(30);
       const blocked = { prevented: false, preventDefault() { this.prevented = true; } };
       window.webContents.emit("will-navigate", blocked, "https://minddy.example/documentation");
@@ -114,7 +114,7 @@ try {
       }
       assert.deepEqual(issues, [], "Native failures must not leak unhandled rejections");
       rejectBrowser = false;
-      ipcMain.emit("minddy:open-external", { sender: window.webContents }, "https://minddy.example/retry");
+      ipcMain.emit("minddy:open-external", { sender: window.webContents, senderFrame: window.webContents.mainFrame }, "https://minddy.example/retry");
       await delay(30);
       assert.equal(external.at(-1), "https://minddy.example/retry");
       assert.deepEqual(issues, []);

@@ -62,7 +62,6 @@ export function RoutinePromptField({
   const mentionSupport = useDescriptionMentions(projectId || null, members);
   const repositorySkills = useRepositorySkills(
     projectId || null,
-    "cloud",
     "routine-prompt",
     baseBranch?.trim() || null,
   );

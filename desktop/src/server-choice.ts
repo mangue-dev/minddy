@@ -1,28 +1,23 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { ipcMain, protocol, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from "electron";
+import { protocol } from "electron";
 
 import {
-  LOCAL_PREREQUISITES,
   LOCAL_PREREQUISITE_INFO,
   installMessage,
   type InstallMessage,
   type LocalInstallProgress,
-  type LocalPrerequisiteId,
   type LocalPrerequisiteResult,
 } from "@/lib/desktop/local-installer";
+import { sendDesktopEvent, type DesktopIpcHandlers, type DesktopIpcTarget } from "@/lib/desktop/ipc-main";
 import {
   SERVER_CHOICE_FILES,
   SERVER_CHOICE_HOST,
   SERVER_CHOICE_SCHEME,
-  isServerChoiceDocument,
   type DesktopServerChoiceState,
 } from "@/lib/desktop/server-choice";
-import { normalizeDesktopServerOrigin } from "@/lib/desktop/server-origin";
 
 interface ServerChoiceDependencies {
-  /** The main window's contents, the only renderer allowed to ask. */
-  contents: () => WebContents | null;
   state: () => DesktopServerChoiceState;
   useCloud: () => void;
   connect: (origin: string) => void;
@@ -35,67 +30,38 @@ interface ServerChoiceDependencies {
   close: () => void;
 }
 
-/**
- * The main-process side of the server-choice page (MIN-781).
- *
- * Every channel first checks WHO asks: the main window, its top frame, on the
- * app's own `minddy-app://welcome/`. Any server's page in the window, minddy
- * Cloud's included, gets nothing.
- */
-export function registerServerChoiceIpc(deps: ServerChoiceDependencies): void {
-  const trusted = (event: IpcMainEvent | IpcMainInvokeEvent) => {
-    const contents = deps.contents();
-    const frame = event.senderFrame;
-    return (
-      contents !== null &&
-      event.sender === contents &&
-      frame !== null &&
-      frame === contents.mainFrame &&
-      isServerChoiceDocument(frame.url)
-    );
-  };
+type ServerChoiceChannel = Extract<keyof DesktopIpcHandlers<unknown>, `minddy:server-choice:${string}`>;
 
-  ipcMain.handle("minddy:server-choice:state", (event) => (trusted(event) ? deps.state() : null));
-  ipcMain.handle("minddy:server-choice:cloud", (event) => {
-    if (trusted(event)) deps.useCloud();
-  });
-  ipcMain.handle("minddy:server-choice:connect", (event, raw: unknown) => {
-    if (!trusted(event)) return { error: installMessage("localStartFailed") };
-    try {
-      deps.connect(normalizeDesktopServerOrigin(raw));
+/**
+ * The main-process side of the server-choice page (MIN-781). Its channels'
+ * `welcome` policy (ipc-contract.ts) answers only the app's own
+ * `minddy-app://welcome/` in the main window's top frame: any server's page,
+ * minddy Cloud's included, gets nothing.
+ */
+export function serverChoiceHandlers<E extends { sender: DesktopIpcTarget & { isDestroyed(): boolean } }>(
+  deps: ServerChoiceDependencies,
+): Pick<DesktopIpcHandlers<E>, ServerChoiceChannel> {
+  return {
+    "minddy:server-choice:state": () => deps.state(),
+    "minddy:server-choice:cloud": () => deps.useCloud(),
+    "minddy:server-choice:connect": (_event, origin) => {
+      if (origin === null) return { error: installMessage("serverInvalid") };
+      deps.connect(origin);
       return {};
-    } catch {
-      return { error: installMessage("serverInvalid") };
-    }
-  });
-  ipcMain.handle("minddy:server-choice:existing", (event) => {
-    if (!trusted(event)) return { error: installMessage("localStartFailed") };
+    },
     // Repeated clicks share one folder dialog and one startup
     // (`createLocalStartupSelection` behind `useExistingInstallation`).
-    return deps.useExistingInstallation();
-  });
-  ipcMain.handle("minddy:server-choice:prerequisites", (event) => (trusted(event) ? deps.prerequisites() : []));
-  ipcMain.handle("minddy:server-choice:choose-folder", (event) =>
-    trusted(event) ? deps.chooseInstallFolder() : { error: installMessage("localStartFailed") },
-  );
-  ipcMain.handle("minddy:server-choice:install", (event) => {
-    if (!trusted(event)) return { error: installMessage("localStartFailed") };
-    const sender = event.sender;
-    return deps.install((progress) => {
-      if (!sender.isDestroyed()) sender.send("minddy:server-choice:progress", progress);
-    });
-  });
-  ipcMain.on("minddy:server-choice:cancel-install", (event) => {
-    if (trusted(event)) deps.cancelInstall();
-  });
-  ipcMain.on("minddy:server-choice:tool-download", (event, tool: unknown) => {
-    // An id from a closed list, never a URL from the page.
-    if (!trusted(event) || !LOCAL_PREREQUISITES.includes(tool as LocalPrerequisiteId)) return;
-    deps.openExternal(LOCAL_PREREQUISITE_INFO[tool as LocalPrerequisiteId].url);
-  });
-  ipcMain.on("minddy:server-choice:close", (event) => {
-    if (trusted(event)) deps.close();
-  });
+    "minddy:server-choice:existing": () => deps.useExistingInstallation(),
+    "minddy:server-choice:prerequisites": () => deps.prerequisites(),
+    "minddy:server-choice:choose-folder": () => deps.chooseInstallFolder(),
+    "minddy:server-choice:install": ({ sender }) =>
+      deps.install((progress) => {
+        if (!sender.isDestroyed()) sendDesktopEvent(sender, "minddy:server-choice:progress", progress);
+      }),
+    "minddy:server-choice:cancel-install": () => deps.cancelInstall(),
+    "minddy:server-choice:tool-download": (_event, tool) => deps.openExternal(LOCAL_PREREQUISITE_INFO[tool].url),
+    "minddy:server-choice:close": () => deps.close(),
+  };
 }
 
 /**

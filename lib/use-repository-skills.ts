@@ -3,7 +3,6 @@
 import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
 import type {
   RepositorySkill,
   RepositorySkillSummary,
@@ -18,10 +17,9 @@ interface RepositorySkillResponse {
   skill?: RepositorySkill;
 }
 
-export type RepositorySkillEnvironment = "cloud" | "local" | "worktree";
 const NO_REPOSITORY_ALIASES: string[] = [];
 
-async function fetchCloudRepositorySkills(
+export async function fetchRepositorySkills(
   projectId: string,
   ref?: string | null,
 ): Promise<RepositorySkillSummary[]> {
@@ -36,7 +34,7 @@ async function fetchCloudRepositorySkills(
   return Array.isArray(data.skills) ? data.skills : [];
 }
 
-async function fetchCloudRepositorySkill(
+export async function fetchRepositorySkill(
   projectId: string,
   path: string,
   ref?: string | null,
@@ -51,99 +49,31 @@ async function fetchCloudRepositorySkill(
   return data.skill ?? null;
 }
 
-export async function fetchRepositorySkills({
-  projectId,
-  environment,
-  fullName,
-  aliases,
-  ref,
-  bridge = getDesktopBridge(),
-}: {
-  projectId: string;
-  environment: RepositorySkillEnvironment;
-  fullName: string | null;
-  aliases: string[];
-  ref?: string | null;
-  bridge?: Pick<DesktopBridge, "localRepoSkills"> | null;
-}): Promise<RepositorySkillSummary[]> {
-  if (environment === "cloud" || !bridge?.localRepoSkills) {
-    return fetchCloudRepositorySkills(projectId, ref);
-  }
-
-  try {
-    return await bridge.localRepoSkills({ projectId, fullName, aliases });
-  } catch {
-    // A deployed renderer may run inside a shell whose preload exposes the
-    // method but whose main process predates its IPC handler. Keep linked-repo
-    // skills usable until that shell is updated.
-    return fetchCloudRepositorySkills(projectId, ref);
-  }
-}
-
-export async function fetchRepositorySkill({
-  projectId,
-  environment,
-  fullName,
-  aliases,
-  path,
-  ref,
-  bridge = getDesktopBridge(),
-}: {
-  projectId: string;
-  environment: RepositorySkillEnvironment;
-  fullName: string | null;
-  aliases: string[];
-  path: string;
-  ref?: string | null;
-  bridge?: Pick<DesktopBridge, "localRepoSkill"> | null;
-}): Promise<RepositorySkill | null> {
-  if (environment === "cloud" || !bridge?.localRepoSkill) {
-    return fetchCloudRepositorySkill(projectId, path, ref);
-  }
-
-  try {
-    return await bridge.localRepoSkill({ projectId, fullName, aliases, path });
-  } catch {
-    return fetchCloudRepositorySkill(projectId, path, ref);
-  }
-}
-
 /**
- * Synchronize the inventory for the checkout that the next Numo turn will use.
- * A fresh mount and every project, conversation, or environment key re-read the
- * source instead of treating the previous conversation's inventory as durable.
+ * The skills of the project's linked repository, as the next Numo turn will
+ * see them. A fresh mount and every project, conversation or ref re-read the
+ * repository instead of treating a previous conversation's inventory as
+ * durable; so does a re-linked or renamed repository.
  */
 export function useRepositorySkills(
   projectId: string | null,
-  environment: RepositorySkillEnvironment = "cloud",
   conversationKey: string | null = null,
   ref: string | null = null,
 ) {
   const { link, loading: linkLoading } = useProjectGitLinkQuery(projectId);
   const fullName = link?.repo_full_name ?? null;
   const aliases = link?.repo_previous_names ?? NO_REPOSITORY_ALIASES;
-  const discoveryReady = !linkLoading;
   const { data, isFetching, refetch } = useQuery({
     queryKey: [
       "repository-skills",
       projectId ?? "",
-      environment,
       conversationKey ?? "new",
       ref,
       fullName ?? "",
       aliases.join("\n"),
     ],
-    queryFn: () =>
-      projectId
-        ? fetchRepositorySkills({
-            projectId,
-            environment,
-            fullName,
-            aliases,
-            ref,
-          })
-        : Promise.resolve([]),
-    enabled: !!projectId && discoveryReady,
+    queryFn: () => (projectId ? fetchRepositorySkills(projectId, ref) : Promise.resolve([])),
+    enabled: !!projectId && !linkLoading,
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
@@ -152,17 +82,10 @@ export function useRepositorySkills(
     (skill: RepositorySkillSummary) => {
       const sourceProjectId = skill.projectId ?? projectId;
       return sourceProjectId
-        ? fetchRepositorySkill({
-            projectId: sourceProjectId,
-            environment,
-            fullName: sourceProjectId === projectId ? fullName : null,
-            aliases: sourceProjectId === projectId ? aliases : [],
-            path: skill.path,
-            ref: sourceProjectId === projectId ? ref : null,
-          })
+        ? fetchRepositorySkill(sourceProjectId, skill.path, sourceProjectId === projectId ? ref : null)
         : Promise.resolve(null);
     },
-    [projectId, environment, fullName, aliases, ref],
+    [projectId, ref],
   );
   const skills = useMemo(
     () => (data ?? []).map((skill) => ({ ...skill, ...(projectId ? { projectId } : {}) })),

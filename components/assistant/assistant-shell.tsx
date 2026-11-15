@@ -521,7 +521,6 @@ export const AssistantShell = forwardRef<
   const slashCommands = useSlashCommands();
   const repositorySkills = useRepositorySkills(
     projectId,
-    "cloud",
     state.conversationId,
   );
 

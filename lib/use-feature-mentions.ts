@@ -92,7 +92,7 @@ export function useFeatureMentions(
   const { routines } = useRoutinesQuery({ enabled: armed });
   const { cyclesEnabled, currentCycle, upcomingCycles } = useMyCycleQuery();
   const { data: mcp } = useMcpConnections(armed ? user?.id : undefined);
-  const { skills } = useRepositorySkills(armed ? (projectId ?? null) : null, "cloud", "mention");
+  const { skills } = useRepositorySkills(armed ? (projectId ?? null) : null, "mention");
   // Open pull requests first; the completed ones follow once those arrived.
   const open = useQuery({
     queryKey: ["mention-pull-requests", "open"],

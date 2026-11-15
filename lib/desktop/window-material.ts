@@ -8,8 +8,8 @@
  * always had.
  *
  * Pure so that the platform decision is tested without Electron: the main
- * process feeds it `process.platform` and `os.release()`, the preload reads
- * the resulting state back from the renderer command line.
+ * process feeds it `process.platform` and `os.release()`, and hands the result
+ * to each new window in its launch state (launch-state.ts).
  */
 
 /** What the system paints behind the page; `none` is the opaque window. */
@@ -109,28 +109,7 @@ export function parseWindowMaterialPreference(raw: unknown): boolean {
   return (raw as { enabled?: unknown }).enabled !== false;
 }
 
-export const WINDOW_MATERIAL_FLAG = "--minddy-window-material=";
-
-/** The renderer command-line value: `<kind>:<supported><enabled><reduced>`. */
-export function windowMaterialFlag(state: DesktopWindowMaterialState): string {
-  const bit = (value: boolean) => (value ? "1" : "0");
-  return `${WINDOW_MATERIAL_FLAG}${state.kind}:${bit(state.supported)}${bit(state.enabled)}${bit(state.reducedTransparency)}`;
-}
-
-/** Reads the flag back in the preload; a missing or foreign value means no material. */
-export function parseWindowMaterialFlag(argv: readonly string[]): DesktopWindowMaterialState | null {
-  const flag = argv.find((arg) => arg.startsWith(WINDOW_MATERIAL_FLAG));
-  const match = flag?.slice(WINDOW_MATERIAL_FLAG.length).match(/^(vibrancy|acrylic|none):([01])([01])([01])$/);
-  if (!match) return null;
-  return {
-    kind: match[1] as DesktopWindowMaterialKind,
-    supported: match[2] === "1",
-    enabled: match[3] === "1",
-    reducedTransparency: match[4] === "1",
-  };
-}
-
-/** Validates a state received over IPC before it reaches the page. */
+/** Validates a state received over IPC or the command line before it reaches the page. */
 export function isDesktopWindowMaterialState(value: unknown): value is DesktopWindowMaterialState {
   if (typeof value !== "object" || value === null) return false;
   const state = value as Record<string, unknown>;
