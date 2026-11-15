@@ -71,7 +71,7 @@ export function SegmentedControl<T extends string>({
   return (
     <div className={cn("space-y-1.5", className)}>
       {label && (
-        <span id={labelId} className="block text-[12px] font-medium text-foreground">
+        <span id={labelId} className="block text-[0.75rem] font-medium text-foreground">
           {label}
         </span>
       )}

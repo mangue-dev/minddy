@@ -167,7 +167,7 @@ function FileStatusBadge({ status }: { status: FileStatus }) {
   return (
     <Badge
       variant="secondary"
-      className={cn("h-5 shrink-0 px-2 text-[10px]", FILE_STATUS_STYLES[status])}
+      className={cn("h-5 shrink-0 px-2 text-[0.625rem]", FILE_STATUS_STYLES[status])}
     >
       {t(FILE_STATUS_LABELS[status])}
     </Badge>
@@ -833,7 +833,7 @@ const PrDiffFile = memo(function PrDiffFile({
           ) : missing === "image" ? (
             <PrImageDiff file={file} endpoint={endpoint} locale={locale} />
           ) : (
-            <div className="px-3 py-2 text-[11px] text-muted-foreground">
+            <div className="px-3 py-2 text-[0.6875rem] text-muted-foreground">
               {missing === "binary"
                 ? t("binaryFile")
                 : missing === "unchanged"

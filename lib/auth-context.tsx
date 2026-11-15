@@ -26,6 +26,7 @@ import { oauthCallbackUrl } from "./oauth-callback-url";
 import { beginDesktopAuthTurn } from "./desktop/auth-turn";
 import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
+import { clearAccountStorage, requestSiteDataClear } from "@/lib/account-storage";
 import { clearAppTabsWindowState } from "./app-tabs-storage";
 import { leaveProtectedScreenAfterSignOut } from "./signed-out-redirect";
 import { readInterfaceLocale } from "./interface-locale";
@@ -596,6 +597,11 @@ export function AuthProvider({
     clearAppTabsWindowState();
     // The mobile app asks the next account on this phone again (MIN-907).
     clearAiConsent();
+    // Every other account key in browser storage (MIN-999): favorites, last
+    // page, active views… Device-level keys stay (lib/account-storage.ts).
+    clearAccountStorage();
+    // And the HTTP cache, through the server's Clear-Site-Data; best effort.
+    requestSiteDataClear();
     window.location.href = "/login";
   }, []);
 

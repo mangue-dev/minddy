@@ -113,8 +113,15 @@ function stripInteractiveIdentity(root: HTMLElement) {
   }
 }
 
-/** Capture the already-painted card instead of mounting its interactive tree again. */
-export function captureBoardDragPreview(activeId: string, root: ParentNode | null = document) {
+/**
+ * Capture the already-painted card instead of mounting its interactive tree
+ * again. The detached clone is appended as a node, never re-parsed from an
+ * HTML string, so the board needs no `innerHTML` sink (Trusted Types).
+ */
+export function captureBoardDragPreview(
+  activeId: string,
+  root: ParentNode | null = document,
+): HTMLElement | null {
   const source = findIssueNode(activeId, root);
   if (!source) return null;
   const preview = source.cloneNode(true) as HTMLElement;
@@ -124,7 +131,7 @@ export function captureBoardDragPreview(activeId: string, root: ParentNode | nul
   // The copy is taken at rest: it wears the held look (hover tint, light
   // shadow) through this mark, as no pointer hovers it (issue-card.tsx).
   preview.querySelector("[data-card-surface]")?.setAttribute("data-held", "");
-  return preview.outerHTML;
+  return preview;
 }
 
 export type BoardDragBounds = Pick<

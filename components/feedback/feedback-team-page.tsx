@@ -199,7 +199,7 @@ const BADGE_TRIGGER =
 /** The badge as it fits in a LINE of the column — same template as on
     the list of pull requests, hence these three values. The icon goes down to 12 px
     with him: at its detailed size it filled the entire height of the badge. */
-const LIST_BADGE = "h-5 px-2 text-[10px] [&>svg]:size-3";
+const LIST_BADGE = "h-5 px-2 text-[0.625rem] [&>svg]:size-3";
 
 // ── Column filters ────────────────────────── ──────────────────────────
 

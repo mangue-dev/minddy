@@ -36,7 +36,7 @@ export function PromptMenu() {
   ];
   return (
     <div aria-hidden className={cn("h-full w-full select-none", CARD_FADE)}>
-      <div className="w-72 rounded-xl bg-popover p-1.5 text-[15px] text-popover-foreground shadow-lg ring-1 ring-border">
+      <div className="w-72 rounded-xl bg-popover p-1.5 text-[0.9375rem] text-popover-foreground shadow-lg ring-1 ring-border">
         {entries.map((entry) => (
           <div key={entry.label} className="flex items-center gap-2.5 rounded-lg px-2.5 py-2">
             <HugeiconsIcon icon={entry.icon} className="size-4 text-muted-foreground" />
@@ -61,7 +61,7 @@ export function AgentTerminal() {
   return (
     <div aria-hidden className={cn("h-full w-full select-none", CARD_FADE)}>
       {/* Always dark, as a terminal is. */}
-      <div className="w-[30rem] rounded-tl-xl bg-[#16181d] p-4 font-mono text-[13px] leading-7 text-[#d4d7de]">
+      <div className="w-[30rem] rounded-tl-xl bg-[#16181d] p-4 font-mono text-[0.8125rem] leading-7 text-[#d4d7de]">
         <div className="mb-2 flex items-center gap-2 font-sans text-xs text-[#8b909a]">
           <McpAgentLogo agent="claude-desktop" size={14} />
           Claude Code

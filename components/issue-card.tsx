@@ -243,7 +243,7 @@ function PlanPick({
   const content = <IssueCardPlanContent progress={progress} />;
   if (!onOpen) {
     return (
-      <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+      <span className="flex items-center gap-1 text-[0.6875rem] font-medium text-muted-foreground">
         {content}
       </span>
     );
@@ -259,7 +259,7 @@ function PlanPick({
             onOpen();
           }}
           onPointerDown={stop}
-          className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted"
+          className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[0.6875rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted"
         >
           {content}
         </button>
@@ -339,7 +339,7 @@ function PrPick({
   const content = <IssueCardPullRequestContent state={pr.state} number={pr.prNumber} />;
   if (!onOpen) {
     return (
-      <span className={cn("flex items-center gap-1 text-[11px] font-medium", tone)}>
+      <span className={cn("flex items-center gap-1 text-[0.6875rem] font-medium", tone)}>
         {content}
       </span>
     );
@@ -355,7 +355,7 @@ function PrPick({
         }}
         onPointerDown={stop}
         className={cn(
-          "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium outline-none transition-colors",
+          "flex items-center gap-1 rounded-md px-1 py-0.5 text-[0.6875rem] font-medium outline-none transition-colors",
           tone,
           hover,
         )}

@@ -80,7 +80,7 @@ function Head({ figure, title, aside, style, titleClassName }: {
 /** The project a target belongs to, at the top left, as on an issue card. */
 function ProjectLine({ project }: { project: PreviewProject }) {
   return (
-    <div className="flex h-5 min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+    <div className="flex h-5 min-w-0 items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
       {/* A rounded square, as the project's pill draws it: 5px would round
           a 14px icon into a disc. */}
       <ProjectOrb seed={project.orbSeed} iconUrl={project.iconUrl} className="size-3.5 shrink-0 rounded-[3px]" />
@@ -95,7 +95,7 @@ function StateBadge({ className, icon, children }: { className: string; icon?: I
     <Badge
       variant="secondary"
       icon={icon ? <HugeiconsIcon icon={icon} /> : undefined}
-      className={cn("h-5 shrink-0 px-1.5 text-[11px] [&>svg]:size-3", className)}
+      className={cn("h-5 shrink-0 px-1.5 text-[0.6875rem] [&>svg]:size-3", className)}
     >
       {children}
     </Badge>
@@ -417,7 +417,7 @@ function ProjectPreviewCard({ preview }: { preview: Extract<MentionPreview, { ty
         <ProjectOrb seed={project.orbSeed} iconUrl={project.iconUrl} className="size-8 shrink-0 rounded-[9px]" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{project.name}</p>
-          <p className="font-mono text-[11px] text-muted-foreground">{project.key}</p>
+          <p className="font-mono text-[0.6875rem] text-muted-foreground">{project.key}</p>
         </div>
       </div>
       {/* Who works in it, and as what. */}

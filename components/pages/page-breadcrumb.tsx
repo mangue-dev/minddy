@@ -66,7 +66,7 @@ function Crumb({
         className
       )}
     >
-      <span className="flex size-3.5 shrink-0 items-center justify-center text-[11px] leading-none">
+      <span className="flex size-3.5 shrink-0 items-center justify-center text-[0.6875rem] leading-none">
         {page.icon ?? <HugeiconsIcon icon={File02Icon} className="size-3" />}
       </span>
       <span className="truncate">{page.title || t("untitled")}</span>

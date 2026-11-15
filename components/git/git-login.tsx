@@ -53,7 +53,7 @@ export function BotBadge({ className }: { className?: string }) {
       // Lighter shade than the full `secondary`: the tablet marks a type
       // ultimately, it should not weigh as much as the name it follows.
       className={cn(
-        "h-5 shrink-0 border-border/60 bg-muted/40 px-2 text-[11px] font-medium tracking-wide",
+        "h-5 shrink-0 border-border/60 bg-muted/40 px-2 text-[0.6875rem] font-medium tracking-wide",
         className,
       )}
     >

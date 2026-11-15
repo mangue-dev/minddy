@@ -95,7 +95,7 @@ function WeeklyBars({ weeks, series }: { weeks: string[]; series: BarSeries[] })
           </Tooltip>
         ))}
       </div>
-      <div className="-mt-1.5 flex gap-1 text-[11px] tabular-nums text-muted-foreground">
+      <div className="-mt-1.5 flex gap-1 text-[0.6875rem] tabular-nums text-muted-foreground">
         {weeks.map((week, index) => (
           <span key={week} className="min-w-0 flex-1 overflow-visible whitespace-nowrap">
             {index % labelEvery === 0 ? weekLabel(week) : ""}

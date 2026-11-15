@@ -228,7 +228,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         <span className="leading-snug">
           {label}
           {recommended && (
-            <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-foreground">
+            <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-px text-[0.625rem] font-medium text-foreground">
               {t("recommendedBadge")}
             </span>
           )}

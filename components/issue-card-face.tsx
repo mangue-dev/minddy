@@ -202,7 +202,7 @@ export function IssueCardDueDate({
   const parsed = parseDueDate(value);
   if (!parsed) return null;
   return (
-    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+    <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
       <HugeiconsIcon icon={recurrence ? RepeatIcon : DATE_ICON} className="size-3 shrink-0" />
       {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
     </span>
@@ -252,7 +252,7 @@ export function IssueCardCommentFollowUp({ followUp }: { followUp: CommentFollow
 }
 
 export const COMMENT_FOLLOW_UP_CLASS =
-  "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-brand";
+  "flex items-center gap-1 rounded-md px-1 py-0.5 text-[0.6875rem] font-medium text-brand";
 
 export function IssueCardCommentFollowUpContent({ count }: { count: number }) {
   return (
@@ -309,7 +309,7 @@ export function IssueCardPullRequestContent({
 function IssueCardPullRequest({ state, number }: { state: IssuePr["state"]; number: number }) {
   const t = useTranslations("Agent");
   return (
-    <span className={cn("flex items-center gap-1 text-[11px] font-medium", pullRequestChip(state, t).tone)}>
+    <span className={cn("flex items-center gap-1 text-[0.6875rem] font-medium", pullRequestChip(state, t).tone)}>
       <IssueCardPullRequestContent state={state} number={number} />
     </span>
   );
@@ -409,7 +409,7 @@ export function IssueCardFace({
     >
       {/* Cross-project boards only: the issue's origin project (orb + name). */}
       {project && (
-        <div className="-mb-0.5 flex h-6 items-center gap-1.5 text-[11px] text-muted-foreground">
+        <div className="-mb-0.5 flex h-6 items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
           <ProjectOrb
             seed={projectOrbSeed(project)}
             iconUrl={project.icon_url}
@@ -425,7 +425,7 @@ export function IssueCardFace({
       {/* One 24px line: the identifier, the plan or PR chip and the avatar
           share its center. */}
       <div className="flex h-6 items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] leading-4 text-muted-foreground">
+        <span className="flex min-w-0 items-center gap-1 font-mono text-[0.6875rem] leading-4 text-muted-foreground">
           {inCurrentCycle && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -465,7 +465,7 @@ export function IssueCardFace({
                 <IssueCardPullRequest state={pr.state} number={pr.prNumber} />
               </span>
             ) : plan.total > 0 ? (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              <span className="flex items-center gap-1 text-[0.6875rem] font-medium text-muted-foreground">
                 <IssueCardPlanContent progress={plan} />
               </span>
             ) : null)}

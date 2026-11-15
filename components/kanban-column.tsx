@@ -161,7 +161,11 @@ export const KanbanColumn = memo(function KanbanColumn({
           data-board-column-scroller
           data-board-column-status={status.value}
           onScroll={scrollProps.onScroll}
-          className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2 max-sm:px-1"
+          // Layout, style and paint containment: a card that changes or moves
+          // during a drag relays out this column only, not the whole board.
+          // The scroller already clips its content, so paint containment
+          // hides nothing more; the drag overlay renders outside the columns.
+          className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2 [contain:layout_style_paint] max-sm:px-1"
         >
           <BoardWindowedItems
             issues={issues}

@@ -56,7 +56,7 @@ describe("board drag overlay", () => {
       </div>
     `;
 
-    const html = captureBoardDragPreview("issue");
+    const html = captureBoardDragPreview("issue")?.outerHTML;
 
     expect(html).toContain("Card");
     expect(html).toContain("pointer-events-none");
@@ -87,8 +87,8 @@ describe("board drag overlay", () => {
     }
     hidden.style.display = "none";
     document.body.append(hidden, active);
-    expect(captureBoardDragPreview("issue", active)).toContain("Active card");
-    expect(captureBoardDragPreview("issue", active)).not.toContain("Hidden card");
+    expect(captureBoardDragPreview("issue", active)?.outerHTML).toContain("Active card");
+    expect(captureBoardDragPreview("issue", active)?.outerHTML).not.toContain("Hidden card");
     expect(measureBoardDropBundleHeight({ root: active, activeIds: ["issue"], status: "done" })).toBe(60);
     expect(measureBoardDropVisualTarget({ root: active, activeId: "issue", activeIds: ["issue"], status: "done", bounds: null }))
       .toEqual({ height: 60, left: 350, top: 70, width: 300 });

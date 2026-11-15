@@ -492,7 +492,7 @@
   :global(html[data-app-layout="mobile"]) .inlineTextInput,
   :global(html[data-app-layout="mobile"]) .inlineField input,
   :global(html[data-app-layout="mobile"]) .inlineField textarea {
-  font-size: 16px;
+  font-size: max(16px, 1rem);
 }
 
 @media (max-width: 480px) {
@@ -515,7 +515,7 @@
     max-width: 150px;
     min-width: 100px;
     /* Keep 16px to prevent iOS zoom on focus */
-    font-size: 16px;
+    font-size: max(16px, 1rem);
     padding: 0.4rem 0.6rem;
   }
 
@@ -524,7 +524,7 @@
     max-width: 300px;
     min-width: 100px;
     /* Keep 16px to prevent iOS zoom on focus */
-    font-size: 16px;
+    font-size: max(16px, 1rem);
     padding: 0.4rem 0.6rem;
   }
 

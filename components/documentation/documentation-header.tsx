@@ -45,7 +45,7 @@ export async function DocumentationHeader({ articles, locale, currentId, title, 
       </div>
       {/* A phone's header has no room for the trail: the article's own title
           and the contents bar below say where the reader is. */}
-      <nav aria-label={t("breadcrumb")} className="mx-6 hidden min-w-0 flex-1 items-center gap-3 text-[13px] sm:flex">
+      <nav aria-label={t("breadcrumb")} className="mx-6 hidden min-w-0 flex-1 items-center gap-3 text-[0.8125rem] sm:flex">
         <span className="shrink-0 truncate text-muted-foreground">{topic}</span><span aria-hidden className="text-muted-foreground/50">/</span>
         <span aria-current="page" className="truncate">{title}</span>
       </nav>

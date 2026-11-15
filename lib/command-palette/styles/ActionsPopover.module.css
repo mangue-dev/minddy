@@ -217,7 +217,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--cp-muted);
 }
 

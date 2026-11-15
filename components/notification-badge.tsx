@@ -39,8 +39,8 @@ export function NotificationBadge({
         className={cn(
           "inline-flex items-center justify-center rounded-full bg-red-500 font-semibold tabular-nums text-white",
           size === "sm"
-            ? "h-3.5 min-w-3.5 px-1 text-[9px] leading-none"
-            : "h-4 min-w-4 px-1 text-[10px] leading-none",
+            ? "h-3.5 min-w-3.5 px-1 text-[0.5625rem] leading-none"
+            : "h-4 min-w-4 px-1 text-[0.625rem] leading-none",
         )}
       >
         {countLabel(count)}

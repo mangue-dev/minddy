@@ -4,7 +4,8 @@
 // and detection picks the alias table from the headers alone.
 //
 // Two entries, one reading:
-// • `prepareImport` — that of the browser. Returns the table, source and
+// • `prepareImport` — that of the browser (`prepareImportInSteps` in the drop
+// handler, which yields between steps). Returns the table, source and
 // deduced plan, so that the preview recalculates the tickets each time the file is edited
 // correspondence table without rereading the file.
 // • `mapCsvToIssues` — that of the server (and tests). Takes the raw text,
@@ -36,6 +37,7 @@ import {
 } from "@/lib/import/mapping";
 import { computeStats, type TableStats } from "@/lib/import/stats";
 import { applyMapping } from "@/lib/import/apply";
+import { yieldToMain } from "@/lib/yield-to-main";
 
 export function parseCsvTable(csvText: string): CsvTable | null {
   const result = Papa.parse<string[]>(csvText.replace(/^\uFEFF/, ""), {
@@ -119,13 +121,49 @@ export function prepareImport(
   csvText: string,
   context: ImportContext = EMPTY_IMPORT_CONTEXT
 ): ImportPrepareResult {
+  const steps = prepareImportSteps(csvText, context);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
+}
+
+/**
+ * `prepareImport` for the browser's drop handler: the same result, but the
+ * main thread is handed back between parsing and column counting, the two
+ * long steps on a file near the 5 MB limit, so the page keeps answering.
+ * A Web Worker would move the work off the thread entirely, but Turbopack
+ * copies a `new Worker(new URL(...))` target as a raw asset instead of
+ * bundling its imports (see components/pull-requests/pr-diff-workers.tsx).
+ */
+export async function prepareImportInSteps(
+  csvText: string,
+  context: ImportContext = EMPTY_IMPORT_CONTEXT,
+  pause: () => Promise<void> = yieldToMain
+): Promise<ImportPrepareResult> {
+  const steps = prepareImportSteps(csvText, context);
+  let step = steps.next();
+  while (!step.done) {
+    await pause();
+    step = steps.next();
+  }
+  return step.value;
+}
+
+/** The preparation, cut where a caller may hand the thread back. */
+function* prepareImportSteps(
+  csvText: string,
+  context: ImportContext
+): Generator<void, ImportPrepareResult> {
   const table = parseCsvTable(csvText);
   if (!table) return { ok: false, error: "empty" };
   if (table.rows.length > MAX_IMPORT_ISSUES) {
     return { ok: false, error: "tooManyIssues" };
   }
+  yield;
 
   const stats = computeStats(table);
+  yield;
+
   const source = detectSource(table) ?? "csv";
   return { ok: true, table, stats, source, mapping: buildMapping(table, stats, source, context) };
 }

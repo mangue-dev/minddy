@@ -179,7 +179,7 @@ function LogoGrid({ items }: { items: { key: string; logo: ReactNode; name: stri
   return (
     <ul aria-hidden className={cn("grid h-full grid-cols-2 content-start gap-x-4 gap-y-3 pt-1 pr-2 select-none", CARD_FADE)}>
       {items.map((item) => (
-        <li key={item.key} className="flex min-w-0 items-center gap-2.5 text-[15px] font-medium tracking-tight">
+        <li key={item.key} className="flex min-w-0 items-center gap-2.5 text-[0.9375rem] font-medium tracking-tight">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background shadow-xs">
             {item.logo}
           </span>
@@ -425,7 +425,7 @@ export function ProjectSidebar() {
   const t = useTranslations("Landing");
   return (
     <div aria-hidden className={cn("h-full w-full select-none", CARD_FADE_BOTTOM)}>
-      <div className="w-full max-w-sm rounded-t-2xl bg-sidebar p-3 text-[15px] text-sidebar-foreground shadow-sm">
+      <div className="w-full max-w-sm rounded-t-2xl bg-sidebar p-3 text-[0.9375rem] text-sidebar-foreground shadow-sm">
         <ul className="flex flex-col">
           {PROJECTS.map((project) => (
             <li key={project.key} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
@@ -668,7 +668,7 @@ export function MentionBento() {
   const offsets = ["-ml-16", "-ml-28", "-ml-6", "-ml-20", "-ml-10"];
   return (
     <div aria-hidden className={cn("-ml-8 h-full w-[calc(100%+2rem)] select-none", CARD_FADE_SIDES)}>
-      <div className="h-full overflow-hidden py-1 text-[15px] [&_*]:pointer-events-none">
+      <div className="h-full overflow-hidden py-1 text-[0.9375rem] [&_*]:pointer-events-none">
         {rows.map((row, index) => (
           // Inline, as in the editor: a chip's figure is aligned on the text's baseline.
           <p key={index} className={cn("leading-10 whitespace-nowrap", offsets[index])}>
@@ -711,11 +711,11 @@ export function DatabaseRows() {
   const head = "flex h-10 items-center gap-2 border-b border-border px-3 font-normal text-muted-foreground";
   const cell = "flex h-11 items-center gap-2 border-r border-b border-border px-3 whitespace-nowrap";
   const pill = (key: keyof typeof DB_PILL, label: string) => (
-    <span className={cn("rounded-md px-1.5 py-0.5 text-[12.5px] font-medium", DB_PILL[key])}>{label}</span>
+    <span className={cn("rounded-md px-1.5 py-0.5 text-[0.78125rem] font-medium", DB_PILL[key])}>{label}</span>
   );
   return (
     <div aria-hidden className={cn("h-full w-full select-none", CARD_FADE)}>
-      <div className="w-[46rem] rounded-tl-xl bg-background p-3 text-[13.5px]">
+      <div className="w-[46rem] rounded-tl-xl bg-background p-3 text-[0.84375rem]">
         <div className="mb-2 flex items-center gap-1">
           <span className="rounded-full bg-foreground px-3 py-1 font-medium text-background">{t("cardDb_viewTeam")}</span>
           <span className="px-3 py-1 text-muted-foreground">Python</span>
@@ -745,7 +745,7 @@ export function DatabaseRows() {
             <div key={person.email} className="contents">
               <div className={cn(cell, "font-medium")}>
                 {person.emoji ? (
-                  <span className="text-[15px] leading-none">{person.emoji}</span>
+                  <span className="text-[0.9375rem] leading-none">{person.emoji}</span>
                 ) : (
                   <HugeiconsIcon icon={File01Icon} className="size-4 text-muted-foreground" />
                 )}
@@ -825,7 +825,7 @@ export function FeedbackRows() {
         {FEEDBACK.map((post) => (
           <li key={post.title} className="flex items-start gap-4 rounded-lg px-3 py-3">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <p className="text-[15px] leading-snug font-semibold">{t(post.title)}</p>
+              <p className="text-[0.9375rem] leading-snug font-semibold">{t(post.title)}</p>
               <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">{t(post.body)}</p>
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <UserAvatar seed={post.seed} className="size-7" />
@@ -896,7 +896,7 @@ export function WikiTree() {
   ] as const;
   return (
     <div aria-hidden className={cn("h-full w-full select-none", CARD_FADE_BOTTOM)}>
-      <ul className="w-[19rem] rounded-t-xl bg-background p-2 text-[15px]">
+      <ul className="w-[19rem] rounded-t-xl bg-background p-2 text-[0.9375rem]">
         {pages.map((page) => (
           <li
             key={page.key}
@@ -906,7 +906,7 @@ export function WikiTree() {
               page.open && "bg-muted font-medium",
             )}
           >
-            <span className="w-5 text-center text-[15px] leading-none">{page.emoji}</span>
+            <span className="w-5 text-center text-[0.9375rem] leading-none">{page.emoji}</span>
             {t(page.key)}
           </li>
         ))}

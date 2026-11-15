@@ -89,8 +89,25 @@ export function setDetailsLabels(next: {
 }
 
 /** The chevron of the button, in inline SVG — same layout as `ChevronRightIcon`. */
-const CHEVRON =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** The disclosure chevron, built as DOM nodes rather than parsed from markup. */
+function chevron(): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  for (const [name, value] of Object.entries({
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": "2.5",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+    "aria-hidden": "true",
+  })) svg.setAttribute(name, value);
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", "m9 18 6-6-6-6");
+  svg.append(path);
+  return svg;
+}
 
 /** Stable hook for removing the browser's native summary marker. */
 export const DETAILS_SUMMARY_CLASS = "page-details-summary";
@@ -120,7 +137,7 @@ const PageDetails = Details.extend({
     element.setAttribute("aria-expanded", String(isOpen));
     element.setAttribute("aria-label", isOpen ? labels.collapse : labels.expand);
     element.setAttribute("title", isOpen ? labels.collapse : labels.expand);
-    if (!element.firstChild) element.innerHTML = CHEVRON;
+    if (!element.firstChild) element.append(chevron());
   },
 });
 

@@ -427,7 +427,7 @@ export function FeedbackPostRow({
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Link href={href} className="flex flex-col gap-1 before:absolute before:inset-0 before:content-['']">
-            <h3 className="text-[15px] font-semibold leading-snug">{post.title}</h3>
+            <h3 className="text-[0.9375rem] font-semibold leading-snug">{post.title}</h3>
             {post.body && (
               <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                 {post.body}

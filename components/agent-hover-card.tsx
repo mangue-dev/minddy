@@ -46,7 +46,7 @@ export function AgentHoverCard({
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{name}</p>
-              <p className="font-mono text-[11px] text-muted-foreground">{t("mcpAgentKind")}</p>
+              <p className="font-mono text-[0.6875rem] text-muted-foreground">{t("mcpAgentKind")}</p>
             </div>
           </div>
           {owner && (

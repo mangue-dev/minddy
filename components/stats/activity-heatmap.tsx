@@ -269,7 +269,7 @@ export function ActivityHeatmap({
  from the grid, so that the lines match each other exactly. */}
           <div
             aria-hidden
-            className="mt-4 grid grid-rows-7 gap-1 text-[10px] leading-none text-muted-foreground"
+            className="mt-4 grid grid-rows-7 gap-1 text-[0.625rem] leading-none text-muted-foreground"
           >
             {weekdayLabels.map((label, row) => (
               <div
@@ -288,7 +288,7 @@ export function ActivityHeatmap({
             className="flex min-w-0 flex-1 flex-col items-end gap-1.5 overflow-hidden pr-3"
           >
             {/* Month labels — one 12px track per week, right overflow */}
-            <div className="grid grid-flow-col auto-cols-[12px] gap-1 text-[10px] leading-none text-muted-foreground">
+            <div className="grid grid-flow-col auto-cols-[12px] gap-1 text-[0.625rem] leading-none text-muted-foreground">
               {monthLabels.map((label, i) => (
                 <div key={i} className="overflow-visible whitespace-nowrap">
                   {label}
@@ -358,7 +358,7 @@ export function ActivityHeatmap({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-end gap-1.5 text-[0.625rem] text-muted-foreground">
         <span>{t("less")}</span>
         {LEVEL_CLASSES.map((cls, i) => (
           <span key={i} className={`${CELL} ${cls}`} />

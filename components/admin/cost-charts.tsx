@@ -84,7 +84,7 @@ export function StackedBarChart({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
-        <div className={cn("flex shrink-0 flex-col justify-between pb-0 text-right text-[11px] tabular-nums text-muted-foreground", height)}>
+        <div className={cn("flex shrink-0 flex-col justify-between pb-0 text-right text-[0.6875rem] tabular-nums text-muted-foreground", height)}>
           {ticks.map((tick) => (
             <span key={tick} className="-translate-y-1/2 first:translate-y-0 last:translate-y-0">{format(tick)}</span>
           ))}
@@ -132,7 +132,7 @@ export function StackedBarChart({
               </Tooltip>
             ))}
           </div>
-          <div className="mt-1.5 flex gap-[3px] text-[11px] tabular-nums text-muted-foreground">
+          <div className="mt-1.5 flex gap-[3px] text-[0.6875rem] tabular-nums text-muted-foreground">
             {series.days.map((day, index) => (
               <span key={day.day} className="min-w-[3px] flex-1 overflow-visible whitespace-nowrap">
                 {index % labelEvery === 0 ? dayLabel(day.day) : ""}

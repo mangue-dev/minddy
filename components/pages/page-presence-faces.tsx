@@ -62,7 +62,7 @@ export function PagePresence({
         );
       })}
       {extra > 0 && (
-        <span className="-ml-1.5 flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground ring-2 ring-background">
+        <span className="-ml-1.5 flex size-5 items-center justify-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground ring-2 ring-background">
           +{extra}
         </span>
       )}

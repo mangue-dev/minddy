@@ -268,7 +268,7 @@ export function CommentReactionChips({
                   locked && "cursor-default opacity-70",
                 )}
               >
-                <span className="text-[13px] leading-none">
+                <span className="text-[0.8125rem] leading-none">
                   {REVIEW_REACTION_EMOJI[reaction.content]}
                 </span>
                 {reaction.count}
@@ -735,7 +735,7 @@ export function LineWidget({
   return (
     <div className="flex flex-col gap-2 bg-muted/20 px-3 py-2.5">
       {/* The arrow ↳ says “this relates to the above”. */}
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
         <HugeiconsIcon icon={ArrowTurnDownIcon} className="size-3 shrink-0" />
         <span className="font-mono">{label}</span>
       </div>
@@ -776,7 +776,7 @@ export function StaleThreads({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-muted-foreground transition-colors hover:bg-muted/60"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[0.6875rem] text-muted-foreground transition-colors hover:bg-muted/60"
       >
         {open ? (
           <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0" />

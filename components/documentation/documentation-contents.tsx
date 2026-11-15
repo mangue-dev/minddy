@@ -36,7 +36,7 @@ function ContentsList({ sections, activeId, label, onNavigate }: {
     <div className="relative border-l-2 border-border">
       <span aria-hidden data-documentation-caret className="pointer-events-none absolute -left-0.5 top-0 w-0.5 rounded-full bg-foreground transition-[transform,height] duration-300 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none"
         style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height }} />
-      <ul ref={list} className="text-[13px] leading-5">
+      <ul ref={list} className="text-[0.8125rem] leading-5">
         {sections.map(section => <li key={section.id}>
           <a href={`#${section.id}`} aria-current={section.id === activeId ? "location" : undefined}
             onClick={event => onNavigate(event, section.id)}

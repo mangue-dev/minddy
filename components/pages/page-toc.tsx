@@ -283,7 +283,7 @@ neither of the two layers having to reorganize itself. */}
               <span
                 ref={trackClipped(entry.id)}
                 className={cn(
-                  "min-w-0 flex-1 truncate text-left text-[13px] font-medium",
+                  "min-w-0 flex-1 truncate text-left text-[0.8125rem] font-medium",
                   // The withdrawal says the hierarchy here, where at rest it is the
                   // length of the line that says it.
                   INDENT[level],

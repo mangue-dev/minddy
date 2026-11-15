@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useServerInsertedHTML } from "next/navigation";
+import { useCspNonce } from "@/components/csp-nonce";
 import { FIRST_RUN_PENDING_ATTRIBUTE, PROFILE_SETUP_SINCE, firstRunPendingFromCookies } from "@/lib/first-run";
 
 /**
@@ -11,13 +12,14 @@ import { FIRST_RUN_PENDING_ATTRIBUTE, PROFILE_SETUP_SINCE, firstRunPendingFromCo
  * cover once it has decided (components/first-run/first-run-gate.tsx).
  */
 export function FirstRunCoverScript() {
+  const nonce = useCspNonce();
   // The callback can fire at each flush of the stream: insert only once.
   const inserted = useRef(false);
   useServerInsertedHTML(() => {
     if (inserted.current) return null;
     inserted.current = true;
     const script = `try{if((${firstRunPendingFromCookies.toString()})(document.cookie,${PROFILE_SETUP_SINCE}))document.documentElement.setAttribute(${JSON.stringify(FIRST_RUN_PENDING_ATTRIBUTE)},"")}catch(e){}`;
-    return <script dangerouslySetInnerHTML={{ __html: script }} />;
+    return <script nonce={nonce} dangerouslySetInnerHTML={{ __html: script }} />;
   });
   return null;
 }

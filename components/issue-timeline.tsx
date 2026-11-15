@@ -672,7 +672,7 @@ export function CommentBlock({
         {isPublic && !isReply && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0.5 text-[11px] font-medium text-brand">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0.5 text-[0.6875rem] font-medium text-brand">
                 <HugeiconsIcon icon={GlobeIcon} className="size-3" />
                 {t("publicComment")}
               </span>

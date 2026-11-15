@@ -40,8 +40,10 @@ import { buildThemeScript, type ThemeScriptInput } from "@/lib/theme-script";
  * session. It watches the <html> class — what the ThemeProvider
  * toggles — rather than subscribing to a provider that lives in node_modules:
  * one observer, filtered on one attribute.
+ *
+ * `nonce` is the request's script nonce (`lib/csp.ts`), read by the root layout.
  */
-export function ThemeInitScript(props: ThemeScriptInput) {
+export function ThemeInitScript({ nonce, ...props }: ThemeScriptInput & { nonce?: string }) {
   // The callback can fire at each flush of the stream: insert only once.
   const inserted = useRef(false);
   useServerInsertedHTML(() => {
@@ -49,6 +51,7 @@ export function ThemeInitScript(props: ThemeScriptInput) {
     inserted.current = true;
     return (
       <script
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: buildThemeScript(props) }}
       />
     );

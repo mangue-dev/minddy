@@ -92,7 +92,7 @@ function SafariShareVisual({ copy }: { copy: MobileInstallGuideCopy }) {
         <div className="mx-auto mt-2 h-2 w-1/2 rounded-full bg-black/5" />
       </div>
       <div className="absolute inset-x-0 bottom-0 border-t border-black/10 bg-white/95 px-3 pt-3 pb-4 backdrop-blur">
-        <div className="mb-3 flex h-9 items-center justify-center rounded-xl bg-[#eeeeef] text-[11px] text-[#636366]">
+        <div className="mb-3 flex h-9 items-center justify-center rounded-xl bg-[#eeeeef] text-[0.6875rem] text-[#636366]">
           minddy.app
         </div>
         <div className="flex items-center justify-around text-[#007aff]">
@@ -103,7 +103,7 @@ function SafariShareVisual({ copy }: { copy: MobileInstallGuideCopy }) {
           <span className="size-5 rounded-full border-2 border-current opacity-55" />
           <HugeiconsIcon icon={MoreHorizontalIcon} className="size-5 opacity-55" />
         </div>
-        <p className="mt-2 text-center text-[10px] font-semibold text-[#007aff]">{copy.uiShare}</p>
+        <p className="mt-2 text-center text-[0.625rem] font-semibold text-[#007aff]">{copy.uiShare}</p>
       </div>
     </div>
   );
@@ -124,7 +124,7 @@ function IosShareSheetVisual({ copy }: { copy: MobileInstallGuideCopy }) {
           />
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold">minddy</p>
-            <p className="truncate text-[10px] text-[#8e8e93]">minddy.app</p>
+            <p className="truncate text-[0.625rem] text-[#8e8e93]">minddy.app</p>
           </div>
         </div>
         <div className="overflow-hidden rounded-xl bg-white shadow-sm">
@@ -160,7 +160,7 @@ function IosAddVisual({ copy }: { copy: MobileInstallGuideCopy }) {
         />
         <div>
           <p className="text-sm font-semibold">minddy</p>
-          <p className="mt-1 text-[10px] text-[#8e8e93]">https://www.minddy.app</p>
+          <p className="mt-1 text-[0.625rem] text-[#8e8e93]">https://www.minddy.app</p>
         </div>
       </div>
       <div className="mt-5 flex items-center justify-between rounded-xl bg-white px-3 py-3 text-xs shadow-sm">
@@ -169,7 +169,7 @@ function IosAddVisual({ copy }: { copy: MobileInstallGuideCopy }) {
           <span className="size-4 rounded-full bg-white shadow" />
         </span>
       </div>
-      <div className="mt-4 flex items-center gap-2 text-[10px] leading-relaxed text-[#636366]">
+      <div className="mt-4 flex items-center gap-2 text-[0.625rem] leading-relaxed text-[#636366]">
         <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0 text-[#34c759]" />
         <span>{copy.uiAdd}</span>
       </div>
@@ -208,7 +208,7 @@ function AndroidPromptVisual({ copy, locale }: { copy: MobileInstallGuideCopy; l
             <p className="text-xs text-[#5f6368]">minddy.app</p>
           </div>
         </div>
-        <p className="mt-3 text-[11px] leading-relaxed text-[#5f6368]">minddy</p>
+        <p className="mt-3 text-[0.6875rem] leading-relaxed text-[#5f6368]">minddy</p>
         <div className="mt-4 flex justify-end gap-2 text-xs font-semibold">
           <span className="rounded-full px-3 py-2 text-[#1a73e8]">{copy.uiNotNow}</span>
           <span className="rounded-full bg-[#1a73e8] px-4 py-2 text-white">{copy.uiInstall}</span>
@@ -221,7 +221,7 @@ function AndroidPromptVisual({ copy, locale }: { copy: MobileInstallGuideCopy; l
 function AndroidMenuVisual({ copy }: { copy: MobileInstallGuideCopy }) {
   return (
     <div aria-hidden className="relative h-64 bg-white p-3">
-      <div className="flex items-center gap-2 rounded-full bg-[#f1f3f4] px-3 py-2 text-[10px] text-[#5f6368]">
+      <div className="flex items-center gap-2 rounded-full bg-[#f1f3f4] px-3 py-2 text-[0.625rem] text-[#5f6368]">
         <span className="size-3 rounded-full border border-[#5f6368]" />
         <span className="flex-1">minddy.app</span>
         <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />

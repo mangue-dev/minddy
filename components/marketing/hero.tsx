@@ -33,7 +33,7 @@ export async function Hero() {
         <h1 className="text-[clamp(2.25rem,4.8vw,4rem)] leading-[1.05] font-medium tracking-[-0.05em] text-balance">
           {t("heroTitle")}
         </h1>
-        <p className="mt-4 max-w-lg text-base leading-relaxed text-pretty text-muted-foreground sm:text-[17px]">
+        <p className="mt-4 max-w-lg text-base leading-relaxed text-pretty text-muted-foreground sm:text-[1.0625rem]">
           {t("heroLede")}
         </p>
       </div>
