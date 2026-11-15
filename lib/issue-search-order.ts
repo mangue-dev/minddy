@@ -14,10 +14,12 @@
  * number IS the query comes before every tier.
  */
 
+import { NOT_OPEN_STATUSES } from "./issue-constants";
+
 export type IssueSearchTier = 0 | 1 | 2;
 
 const UNDER_WAY = new Set(["in_progress", "in_review"]);
-const NOT_OPEN = new Set(["triage", "done", "canceled", "duplicate"]);
+const NOT_OPEN = new Set<string>(NOT_OPEN_STATUSES);
 
 export function issueSearchTier(status: string | null | undefined): IssueSearchTier {
   if (status && UNDER_WAY.has(status)) return 0;

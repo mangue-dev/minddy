@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   blockedSet,
+  boardBlockingContext,
   calibrationFactor,
   computeTargetPoints,
   cycleBlockingRelations,
   cycleCompletionPercent,
   cycleFilledPoints,
+  cycleMembershipPatch,
   cyclePhase,
   cycleStartOf,
   cycleWindows,
@@ -600,5 +602,41 @@ describe("objective blocking cascade (MIN-513)", () => {
       targetPoints: 8,
     });
     expect(picked).toEqual(["i1"]);
+  });
+});
+
+describe("board blocking context", () => {
+  const rows = [
+    { id: "i1", status: "todo" as IssueStatus, objective_id: "objA" },
+    { id: "i2", status: "done" as IssueStatus, objective_id: null },
+  ];
+  const blocks = (source: string, target: string, targetType: "issue" | "objective" = "issue"): IssueRelation => ({
+    id: `${source}->${target}`,
+    source_id: source,
+    source_type: "issue",
+    target_id: target,
+    target_type: targetType,
+    type: "blocks",
+  });
+
+  it("folds objective-ended edges onto their issues and maps objective statuses", () => {
+    const context = boardBlockingContext(rows, [blocks("i2", "objA", "objective")], new Map([["objA", "in_progress"]]));
+    expect(context.relations.map((r) => [r.source_id, r.target_id])).toEqual([["i2", "i1"]]);
+    expect(context.statusById.get("objA")).toBe("in_progress");
+    expect(context.objectiveByIssue.get("i1")).toBe("objA");
+  });
+
+  it("keeps an edge with an unknown end out of the known dependencies only", () => {
+    const context = boardBlockingContext(rows, [blocks("trashed", "i1"), blocks("i2", "i1")], new Map());
+    expect(context.relations).toHaveLength(2);
+    expect(context.knownRelations.map((r) => r.source_id)).toEqual(["i2"]);
+  });
+});
+
+describe("cycle membership patch", () => {
+  it("assigns the viewer when adding, and only clears the cycle when removing", () => {
+    expect(cycleMembershipPatch("c1", "me")).toEqual({ cycle_id: "c1", assignee_id: "me" });
+    expect(cycleMembershipPatch(null, "me")).toEqual({ cycle_id: null });
+    expect(cycleMembershipPatch("c1", null)).toEqual({ cycle_id: "c1" });
   });
 });

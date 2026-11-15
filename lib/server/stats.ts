@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { decodeProjectName } from "@/lib/server/project-content";
-import { CLOSED_STATUSES } from "@/lib/server/issue-reads";
+import { CLOSED_STATUSES } from "@/lib/issue-constants";
 import { EFFORTS } from "@/lib/issue-constants";
 import type {
   HeatmapDay,

@@ -14,7 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { CLOSED_STATUSES, issueIdentifier } from "@/lib/issue-constants";
 import { isStatus } from "@/lib/issue-validation";
 import { resolveRelations } from "@/lib/relation-constants";
 import {
@@ -45,8 +45,6 @@ export interface ReadContext {
   actorId?: string;
 }
 
-/** Statuses hidden from list_issues unless include_done (or an explicit filter). */
-export const CLOSED_STATUSES = ["done", "canceled", "duplicate"];
 
 /** Compact issue row sent to the model — small enough to list dozens. */
 export function compactIssue(

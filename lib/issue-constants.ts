@@ -1,6 +1,3 @@
-import type { AppIcon } from "@/components/icon";
-import { AlertTriangle, CheckIcon, Circle, CircleDashedIcon, CircleDot, Copy, Eye, Filter, MinusSignIcon as Minus, SignalHigh, SignalLow, SignalMediumIcon, XCircle } from "@hugeicons/core-free-icons";
-
 // All three axes are fixed and not customizable per project.
 
 export type IssueStatus =
@@ -15,48 +12,41 @@ export type IssueStatus =
 export type IssuePriority = "none" | "urgent" | "high" | "medium" | "low";
 export type IssueEffort = "xs" | "s" | "m" | "l" | "xl" | "xxl";
 
-// Labels are i18n'd — resolve via useTranslations("Status")(value).
+// Labels are i18n'd — resolve via useTranslations("Status")(value). The glyph
+// is `<StatusIndicator status={…} />` (components/issue-indicators.tsx).
 export interface StatusMeta {
   value: IssueStatus;
-  /**
- * LEGACY — do NOT show status with this. The glyph for a status is
- * `<StatusIndicator status={…} />` (components/issue-indicators.tsx): the
- * rings/pie charts/disks of the Figma design, used by the cards, the
- * columns, all pickers and the palette command. These lucid icons are the
- * game before this design; they only survive because `StatusMeta` is
- * also the shape of the kanban columns (where only `value` counts).
- */
-  icon: AppIcon;
-  /** LEGACY, like `icon` — color lives in StatusIndicator. */
-  color: string;
 }
 
 // Order = kanban column order. Board columns only — triage and
 // duplicate issues are deliberately absent from the kanban.
 export const STATUSES: StatusMeta[] = [
-  { value: "backlog", icon: CircleDashedIcon, color: "text-muted-foreground" },
-  { value: "todo", icon: Circle, color: "text-muted-foreground" },
-  { value: "in_progress", icon: CircleDot, color: "text-amber-500" },
-  { value: "in_review", icon: Eye, color: "text-violet-500" },
-  { value: "done", icon: CheckIcon, color: "text-emerald-500" },
-  { value: "canceled", icon: XCircle, color: "text-muted-foreground" },
+  { value: "backlog" },
+  { value: "todo" },
+  { value: "in_progress" },
+  { value: "in_review" },
+  { value: "done" },
+  { value: "canceled" },
 ];
 
 // Full status list for pickers: triage first (arrival zone), duplicate last
 // (closed as a duplicate of another issue).
 export const ALL_STATUSES: StatusMeta[] = [
-  { value: "triage", icon: Filter, color: "text-orange-500" },
+  { value: "triage" },
   ...STATUSES,
-  { value: "duplicate", icon: Copy, color: "text-muted-foreground" },
+  { value: "duplicate" },
 ];
 
-export const STATUS_MAP: Record<IssueStatus, StatusMeta> = Object.fromEntries(
-  ALL_STATUSES.map((s) => [s.value, s])
-) as Record<IssueStatus, StatusMeta>;
+const STATUS_VALUES = new Set<string>(ALL_STATUSES.map((s) => s.value));
+
+export function isIssueStatus(value: unknown): value is IssueStatus {
+  return typeof value === "string" && STATUS_VALUES.has(value);
+}
 
 // Terminal statuses: a closed issue is finished for tracking purposes — it no
-// longer blocks the issues it gates, and drops out of "active" counts. Mirrors
-// the server-side CLOSED_STATUSES (lib/server/issue-reads.ts) and lib/cycle.ts.
+// longer blocks the issues it gates, and drops out of "active" counts. The
+// server's reads (lib/server/issue-reads.ts) and the cycle arithmetic
+// (lib/cycle.ts) use this same list.
 export const CLOSED_STATUSES: readonly IssueStatus[] = [
   "done",
   "canceled",
@@ -65,34 +55,44 @@ export const CLOSED_STATUSES: readonly IssueStatus[] = [
 export const isClosedStatus = (status: IssueStatus): boolean =>
   CLOSED_STATUSES.includes(status);
 
-// Labels are i18n'd — resolve via useTranslations("Priority")(value).
+/** The open work: started or ready to start, out of triage and not closed. */
+export const OPEN_STATUSES: readonly IssueStatus[] = [
+  "backlog",
+  "todo",
+  "in_progress",
+  "in_review",
+];
+
+/** Every other status: still in triage, or closed. */
+export const NOT_OPEN_STATUSES: readonly IssueStatus[] = ["triage", ...CLOSED_STATUSES];
+
+// Labels are i18n'd — resolve via useTranslations("Priority")(value). The
+// glyph is `<PriorityIndicator priority={…} />`.
 export interface PriorityMeta {
   value: IssuePriority;
-  /** LEGACY, like `StatusMeta.icon` — displaying priority goes through
- * `<PriorityIndicator priority={…} />` (signal bars filled from below,
- * red square “!” for urgent). */
-  icon: AppIcon;
-  /** LEGACY, like `icon` — color lives in PriorityIndicator. */
-  color: string;
 }
 
 // ASCENDING order — first option = lowest, last = highest.
-// This is the convention for ALL selectors in the app (tickets, objectives,
-// returns): `EFFORTS` goes from xs to xxl, the statuses go up from arrival to
-// terminal, the priority increases from “none” to “urgent”. The selector is a
-// scale that is read from top to bottom, and a scale that goes down from one axis to
-// the other forces the order to be reread in each field.
+// This is the convention for ALL selectors in the app (issues, objectives,
+// feedback): `EFFORTS` goes from xs to xxl, the statuses go from arrival to
+// terminal, the priority rises from "none" to "urgent". A selector is a scale
+// read from top to bottom, and a scale that runs the other way on one field
+// forces the order to be reread on each one.
 //
-// This is the DISPLAY order, not the sorting order: classify tickets BY
-// priority puts the urgent first, and these two sorts have their own tables
-// (`PRIORITY_ORDER` in lib/view-filter.ts, `PRIORITY_RANK` in lib/cycle.ts).
+// This is the DISPLAY order; sorting BY priority puts urgent first and reads
+// {@link PRIORITY_RANK}.
 export const PRIORITIES: PriorityMeta[] = [
-  { value: "none", icon: Minus, color: "text-muted-foreground" },
-  { value: "low", icon: SignalLow, color: "text-sky-500" },
-  { value: "medium", icon: SignalMediumIcon, color: "text-yellow-500" },
-  { value: "high", icon: SignalHigh, color: "text-orange-500" },
-  { value: "urgent", icon: AlertTriangle, color: "text-red-500" },
+  { value: "none" },
+  { value: "low" },
+  { value: "medium" },
+  { value: "high" },
+  { value: "urgent" },
 ];
+
+/** How pressing a priority is: none 0 … urgent 4, from {@link PRIORITIES}. */
+export const PRIORITY_RANK: Record<IssuePriority, number> = Object.fromEntries(
+  PRIORITIES.map((p, index) => [p.value, index])
+) as Record<IssuePriority, number>;
 
 export interface EffortMeta {
   value: IssueEffort;

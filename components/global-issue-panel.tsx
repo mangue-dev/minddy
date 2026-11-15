@@ -76,10 +76,8 @@ export function GlobalIssuePanel({
       allIssues={issues}
       relations={relations}
       onUpdate={updateIssue}
-      onDelete={async (id) => {
-        await deleteIssue(id);
-        onClose();
-      }}
+      // The panel closes itself after a successful delete, which calls onClose.
+      onDelete={deleteIssue}
       onSetCategories={setCategories}
       onOpenIssue={setOpenId}
       onAddRelation={handleAddRelation}

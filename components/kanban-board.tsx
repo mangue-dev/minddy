@@ -23,7 +23,6 @@ import {
 } from "@dnd-kit/core";
 import { DragCursor } from "@/components/drag-cursor";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
 import type {
   Category,
@@ -37,8 +36,8 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
-import { cycleBlockingRelations } from "@/lib/cycle";
-import { STATUS_MAP, issueIdentifier } from "@/lib/issue-constants";
+import { boardBlockingContext } from "@/lib/cycle";
+import { isIssueStatus, issueIdentifier } from "@/lib/issue-constants";
 import { useTranslations } from "next-intl";
 import { useBoardCardInstructions, useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { promptRelations } from "@/lib/issue-prompt";
@@ -133,7 +132,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   onOpenPlan: (issue: Issue) => void;
   onCreateIssue: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
-  onDeleteIssue?: (issueId: string) => Promise<void>;
+  onDeleteIssue?: (issueId: string) => Promise<boolean>;
   onAskNumo: (issues: Issue[]) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
   onAddRelation: (
@@ -144,10 +143,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   ) => void;
   /** Removes a relation from a card's relation popover. */
   onRemoveRelation?: (relationId: string) => void;
-  onMove: (
-    issueId: string,
-    patch: { status?: IssueStatus; position: number },
-  ) => Promise<void>;
+  onMove: (issueId: string, patch: { status?: IssueStatus; position: number }) => void;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
@@ -169,7 +165,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     [categories],
   );
   const objectiveMap = useMemo(
-    () => new Map((objectives ?? []).map((o) => [o.id, o])),
+    () => new Map(objectives.map((o) => [o.id, o])),
     [objectives],
   );
   const issueMap = useMemo(
@@ -186,59 +182,28 @@ export const KanbanBoard = memo(function KanbanBoard({
   candidateIssuesRef.current = allIssues;
   const getCandidateIssues = useCallback(() => candidateIssuesRef.current, []);
   const relationsByIssue = useMemo(() => resolveDisplayRelationsByIssue(
-    relations ?? [], allIssueMap, objectiveMap,
+    relations, allIssueMap, objectiveMap,
   ), [relations, allIssueMap, objectiveMap]);
 
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
-  // The smart sort's relations resolve against ALL issues (a filter may
-  // hide the other end) and fold objective-ended "blocks" edges onto the
-  // objective's open tickets — the same preparation the server reorder
-  // applies, so a ticket blocked through its objective still sinks (MIN-576
-  // review). An edge whose end is unknown here is not a dependency: the end
-  // is trashed or foreign — the rules ignore it rather than act on a
-  // guessed "open".
-  const triageContext = useMemo(() => {
-    const statusById = new Map(
-      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
-    );
-    const issuesByObjective = new Map<string, string[]>();
-    const objectiveByIssue = new Map<string, string | null>();
-    for (const issue of allIssues) {
-      objectiveByIssue.set(issue.id, issue.objective_id);
-      if (!issue.objective_id) continue;
-      const list = issuesByObjective.get(issue.objective_id);
-      if (list) list.push(issue.id);
-      else issuesByObjective.set(issue.objective_id, [issue.id]);
-    }
-    const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
+  // The smart sort reads blocking across ALL issues (a filter may hide the
+  // other end), objective-ended edges folded onto their tickets (MIN-576).
+  const makeComparator = useMemo(() => {
+    const context = boardBlockingContext(
+      allIssues,
       relations,
-      issuesByObjective,
       new Map(objectives.map((o) => [o.id, o.status])),
     );
-    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
-    return {
-      relations: folded.filter(
-        (r) =>
-          r.type !== "blocks" ||
-          (statusById.has(r.source_id) && statusById.has(r.target_id)),
-      ),
-      statusById,
-      objectiveByIssue,
-    };
-  }, [relations, allIssues, objectives, allIssueMap]);
-  const makeComparator = useMemo(
-    () =>
-      boardComparatorFactory(
-        sort,
-        {
-          relations: triageContext.relations,
-          statusById: triageContext.statusById,
-          objectiveByIssue: triageContext.objectiveByIssue,
-        },
-        sortDirection ?? "asc"
-      ),
-    [sort, sortDirection, triageContext],
-  );
+    return boardComparatorFactory(
+      sort,
+      {
+        relations: context.knownRelations,
+        statusById: context.statusById,
+        objectiveByIssue: context.objectiveByIssue,
+      },
+      sortDirection ?? "asc",
+    );
+  }, [sort, sortDirection, relations, allIssues, objectives]);
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),
     [buildColumns, issues, statuses, makeComparator],
@@ -265,9 +230,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   );
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
   const { linked } = useUndoHistory();
-  // Lasso on the bottom of the board: same selection, one gesture less than thirty
-  // ⇧-clicks. The column container serves as both a starting surface,
-  // limit and autoscroll.
+  // Lasso on the board's background: the same selection as thirty ⇧-clicks in
+  // one gesture. The column container is its start surface, bounds and
+  // autoscroll area.
   const {
     ref: marqueeRef,
     onPointerDown: onMarqueePointerDown,
@@ -276,8 +241,8 @@ export const KanbanBoard = memo(function KanbanBoard({
     selected: selectedIds,
     onChange: setSelectedIds,
   });
-  // Cycle movements on the selection: a ticket already in it can
-  // exit, a living ticket can enter — a mixed selection offers both.
+  // Cycle moves on the selection: an issue already in the cycle can leave it,
+  // an open one can join it — a mixed selection offers both.
   const bulkCycle = useMemo(() => {
     if (!currentCycleId || !onSetCycle) return undefined;
     const { addable, removable } = splitCycleSelection(
@@ -293,7 +258,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       onRemove: () => removable.forEach((issue) => onSetCycle(issue, null)),
     };
   }, [currentCycleId, onSetCycle, selectedIssues]);
-  // A relationship has exactly two ends: the action only exists on two tickets.
+  // A relation has exactly two ends: the action only exists on two issues.
   const bulkLink = useMemo(() => {
     if (selectedIssues.length !== 2) return undefined;
     const [first, second] = selectedIssues;
@@ -340,7 +305,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   const cardMenuActions = useBoardReorderActions({
     columns,
     enabled: sort === "manual",
-    move: (planned) => onMove(planned.issue.id, planned.patch),
+    move: async (planned) => onMove(planned.issue.id, planned.patch),
     extra: buildMenuActions,
   });
   const { preview, draggingIds, activeId } = drop;
@@ -364,7 +329,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   const dragAnnouncements = useDragAnnouncements((id) => {
     const issue = issueMap.get(String(id));
     if (issue) return issue.title;
-    return Object.hasOwn(STATUS_MAP, id) ? tStatus(id as IssueStatus) : null;
+    return isIssueStatus(id) ? tStatus(id) : null;
   });
   // MouseSensor (not PointerSensor) so drag-and-drop is mouse-only: on touch the
   // board is a swipeable stack of full-width columns and DnD would fight the
@@ -510,9 +475,9 @@ export const KanbanBoard = memo(function KanbanBoard({
     if (!planned) return;
 
     // Several cards dragged together undo together (MIN-795).
-    void Promise.all(
-      linked(() => planned.moves.map((m) => onMove(m.issue.id, m.patch))),
-    ).catch((err) => toast.error((err as Error).message));
+    linked(() => {
+      for (const m of planned.moves) onMove(m.issue.id, m.patch);
+    });
   };
 
   const handleDragCancel = () => {

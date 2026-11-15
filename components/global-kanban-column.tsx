@@ -42,12 +42,10 @@ const EMPTY_OBJECTIVES: Map<string, Objective> = new Map();
  * key/members/categories/objectives (looked up by `issue.project_id`) so it's a
  * fully interactive project card. The "new issue" footer opens the app-wide
  * create dialog with this column's status preset (the dialog's split button
- * picks the target project — MIN-33). No relation affordances (per-project).
- */
-/**
- * ⚠ Memoized (MIN-316). The board replayed its columns — so all their
- * cards — each time the board is rendered, including for a state that does not
- * does not concern. Its props must remain stable for it to bite.
+ * picks the target project — MIN-33).
+ *
+ * ⚠ Memoized (MIN-316): the board used to re-render every column, and so every
+ * card, on any of its renders. Its props must stay stable for that to hold.
  */
 export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   status,
@@ -75,6 +73,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   onDeleteIssue,
   buildMenuActions,
   currentCycleId,
+  canWriteIn,
 }: {
   status: StatusMeta;
   issues: Issue[];
@@ -92,33 +91,30 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   /** Opens a related issue's side panel (clicking a relation chip). */
   onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
-  onUpdateIssue: (
-    issueId: string,
-    patch: IssueUpdateInput,
-    projectId: string,
-  ) => void;
-  onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
+  onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
+  onSetCategories: (issueId: string, ids: string[]) => void;
   selectedIds: Set<string>;
-  /** Tickets boarded by current swipe — faded with the card entered. */
+  /** The issues the current drag carries — dimmed like the dragged card. */
   draggingIds?: Set<string>;
   /** The drop mark, when dragging is aimed at THIS column. */
   dropPreview?: DropPreview;
   /** The reserved destination slot while the overlay is landing. */
   landingPreview?: BoardLandingPreview;
   onSelect: (issueId: string) => void;
+  /** Whether the viewer may edit this project's issues: read-only cards are
+      never selectable (MIN-693). */
+  canWriteIn: (projectId: string) => boolean;
   /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
   onCreateIssue?: (status: IssueStatus) => void;
-  /** Adds a relation from a card; the card's project id rides along. */
   onAddRelation?: (
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
-    projectId: string,
     kinds?: RelationKinds,
   ) => void;
-  onRemoveRelation?: (relationId: string, projectId: string) => void;
-  /** Trash from right-clicking a card (the ticket project follows). */
-  onDeleteIssue?: (issueId: string, projectId: string) => Promise<void>;
+  onRemoveRelation?: (relationId: string) => void;
+  /** Trash from right-clicking a card. */
+  onDeleteIssue?: (issueId: string) => Promise<boolean>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
@@ -146,60 +142,20 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
       (landingHere ? landingPreview.activeIds.size : 0)
     : issues.length;
 
-  /**
-   * Cross-project handlers take the project as their final argument, while one
-   * column can contain several projects. Bind them once per project so cards do
-   * not receive new callback identities on every render (MIN-316).
-   */
-  const bindToProject = useMemo(() => {
-    const cache = new Map<
-      string,
-      {
-        onAddRelation?: (
-          sourceId: string,
-          type: IssueRelationType,
-          targetId: string,
-          kinds?: RelationKinds,
-        ) => void;
-        onRemoveRelation?: (relationId: string) => void;
-        onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
-        onSetCategories: (issueId: string, ids: string[]) => void;
-        onDelete?: (issueId: string) => Promise<void>;
-        getCandidateIssues?: () => Issue[] | undefined;
-      }
-    >();
+  // The relation picker lists the card's own project only; one stable reader
+  // per project keeps the cards' memoization (MIN-316).
+  const candidateReaders = useMemo(() => {
+    const cache = new Map<string, () => Issue[] | undefined>();
     return (pid: string) => {
-      let bound = cache.get(pid);
-      if (!bound) {
-        bound = {
-          onAddRelation: onAddRelation
-            ? (sourceId, type, targetId, kinds) =>
-                onAddRelation(sourceId, type, targetId, pid, kinds)
-            : undefined,
-          onRemoveRelation: onRemoveRelation
-            ? (relationId) => onRemoveRelation(relationId, pid)
-            : undefined,
-          onUpdateIssue: (id, patch) => onUpdateIssue(id, patch, pid),
-          onSetCategories: (id, ids) => onSetCategories(id, ids, pid),
-          onDelete: onDeleteIssue
-            ? (id: string) => onDeleteIssue(id, pid)
-            : undefined,
-          getCandidateIssues: getCandidateIssues
-            ? () => getCandidateIssues(pid)
-            : undefined,
-        };
-        cache.set(pid, bound);
+      if (!getCandidateIssues) return undefined;
+      let read = cache.get(pid);
+      if (!read) {
+        read = () => getCandidateIssues(pid);
+        cache.set(pid, read);
       }
-      return bound;
+      return read;
     };
-  }, [
-    getCandidateIssues,
-    onAddRelation,
-    onRemoveRelation,
-    onUpdateIssue,
-    onSetCategories,
-    onDeleteIssue,
-  ]);
+  }, [getCandidateIssues]);
 
   return (
     <div className={cn("flex flex-col", BOARD_COLUMN_CLASS)}>
@@ -211,14 +167,14 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
         </span>
       </div>
 
-      {/* The edge fade is drawn NEXT to the scroller, never on top of it: a
- `mask-image` on a scrolling container makes it re-compose to
- each image (MIN-319). Hence this parent `relative`. */}
+      {/* The edge fade is drawn NEXT to the scroller, never on it: a
+          `mask-image` on a scrolling container recomposites it every frame
+          (MIN-319). Hence this `relative` parent. */}
       <div
         className={cn(
           "relative flex min-h-0 flex-1 flex-col rounded-xl",
-          // The bottom, its roundness and the reason to keep them OUT of the scroller:
-          // cf. KanbanColumn (rounding on what scrolls crops the content).
+          // The background and its rounding stay OUT of the scroller, as in
+          // KanbanColumn (a rounded scroller clips its content).
           (dropPreview || landingHere || isOver) && "bg-muted/50",
         )}
       >
@@ -238,7 +194,6 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
             renderIssue={(issue, onInteractionChange) => {
               const project = projectMap.get(issue.project_id);
               const pid = issue.project_id;
-              const bound = bindToProject(pid);
               const parent = issue.parent_id
                 ? (issueMap.get(issue.parent_id) ?? null)
                 : null;
@@ -259,21 +214,21 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
                   }
                   parent={parent}
                   relations={relationsByIssue?.get(issue.id)}
-                  getCandidateIssues={bound.getCandidateIssues}
+                  getCandidateIssues={candidateReaders(pid)}
                   onOpenRelated={onOpenIssueById}
-                  onAddRelation={bound.onAddRelation}
-                  onRemoveRelation={bound.onRemoveRelation}
+                  onAddRelation={onAddRelation}
+                  onRemoveRelation={onRemoveRelation}
                   onOpenPlan={onOpenPlan}
                   onOpenIssue={onOpenIssue}
-                  onUpdateIssue={bound.onUpdateIssue}
-                  onSetCategories={bound.onSetCategories}
-                  onDelete={bound.onDelete}
+                  onUpdateIssue={onUpdateIssue}
+                  onSetCategories={onSetCategories}
+                  onDelete={onDeleteIssue}
                   selected={selectedIds.has(issue.id)}
                   dragging={draggingIds?.has(issue.id)}
                   landingOutOfFlow={
                     landingPreview?.activeIds.has(issue.id) ? true : undefined
                   }
-                  onSelect={onSelect}
+                  onSelect={canWriteIn(pid) ? onSelect : undefined}
                   buildMenuActions={buildMenuActions}
                   inCurrentCycle={
                     !!currentCycleId && issue.cycle_id === currentCycleId

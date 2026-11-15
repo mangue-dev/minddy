@@ -1521,9 +1521,10 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         relations={relations}
         onUpdate={updateIssue}
         onDelete={async (issueId) => {
-          await deleteIssue(issueId);
+          if (!(await deleteIssue(issueId))) return false;
           setOpenIssueId(null);
           refresh();
+          return true;
         }}
         onSetCategories={setCategories}
         onOpenIssue={setOpenIssueId}

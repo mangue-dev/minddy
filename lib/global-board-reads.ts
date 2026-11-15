@@ -1,4 +1,4 @@
-import type { IssueStatus } from "./issue-constants";
+import { NOT_OPEN_STATUSES, OPEN_STATUSES, type IssueStatus } from "./issue-constants";
 
 /**
  * The global board loads in two halves that leave together. The aggregate
@@ -9,8 +9,8 @@ import type { IssueStatus } from "./issue-constants";
  * Both paths are written here once: the browser requests them and the server
  * seeds them (lib/server/server-seed.ts) under exactly these strings.
  */
-export const BOARD_FIRST_STATUSES: readonly IssueStatus[] = ["backlog", "todo", "in_progress", "in_review"];
-export const BOARD_DEFERRED_STATUSES: readonly IssueStatus[] = ["triage", "done", "canceled", "duplicate"];
+export const BOARD_FIRST_STATUSES: readonly IssueStatus[] = OPEN_STATUSES;
+export const BOARD_DEFERRED_STATUSES: readonly IssueStatus[] = NOT_OPEN_STATUSES;
 
 const DEFERRED = new Set<string>(BOARD_DEFERRED_STATUSES);
 

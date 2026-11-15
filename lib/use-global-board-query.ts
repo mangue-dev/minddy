@@ -5,23 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { globalBoardQueryFn } from "./global-board-api";
 import { refreshGlobalIssueSnapshot } from "./global-issues-api";
-import { createIssueDeferred } from "@/lib/create-issue-deferred";
-import {
-  createIssueApi,
-  deleteIssueApi,
-  updateIssueApi,
-} from "./issues-api";
-import { setIssueCategoriesApi } from "./categories-api";
-import {
-  GLOBAL_BOARD_KEY,
-  insertIssueEverywhere,
-  issueWrites,
-  mergeServerIssue,
-  patchIssueEverywhere,
-  removeIssueEverywhere,
-  issueCachePatch,
-} from "./optimistic/issue-writes";
-import { trackEvent } from "./analytics";
+import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import {
   addIssueRelationApi,
   removeIssueRelationApi,
@@ -31,25 +15,18 @@ import {
   beginRelationRemoval,
   persistedRelationId,
 } from "./optimistic/relation-writes";
-import { buildOptimisticIssue } from "./optimistic-issue";
-import { leavesCycleOnStatus } from "./cycle";
 import type { RelationKinds } from "./use-issue-relations-query";
-import { useAuth } from "./auth-context";
-import { autoAssignOnStart } from "./auto-assign-on-start";
+import { useIssueMutations } from "./use-issue-mutations";
 import { useUndoHistory } from "./undo/undo-context";
-import { buildBeforePatch, snapshotIssue } from "./undo/undo-core";
 import type {
-  CreateIssueInput,
   GlobalBoardResponse,
   Issue,
   IssueRelation,
   IssueRelationType,
-  IssueUpdateInput,
 } from "./types";
 
-/** Cache key for the aggregate cross-project board (MIN-29). Defined in
- lib/optimistic/issue-writes.ts (which this module imports), re-exported here where
- everything else in the app will fetch it. */
+/** Cache key for the aggregate cross-project board (MIN-29), declared in
+    lib/optimistic/issue-writes.ts and re-exported where the app reads it. */
 export { GLOBAL_BOARD_KEY };
 
 const BOARD_CACHE_STALE_MS = 5 * 60_000;
@@ -61,19 +38,35 @@ const NO_CATEGORIES_BY_PROJECT: GlobalBoardResponse["categories"] = {};
 const NO_OBJECTIVES_BY_PROJECT: GlobalBoardResponse["objectives"] = {};
 const NO_INTEGRATIONS_BY_PROJECT: GlobalBoardResponse["integrations"] = {};
 
+/** The project an issue or objective belongs to, from the board's own rows
+    (relations are same-project by construction). */
+function endpointProject(board: GlobalBoardResponse | undefined, id: string): string | undefined {
+  const issue = board?.issues.find((i) => i.id === id);
+  if (issue) return issue.project_id;
+  for (const [projectId, objectives] of Object.entries(board?.objectives ?? {})) {
+    if (objectives.some((o) => o.id === id)) return projectId;
+  }
+  return undefined;
+}
+
+const relationSnapshot = ({ source_id, target_id, type, source_type, target_type }: IssueRelation) => ({
+  source_id,
+  target_id,
+  type,
+  source_type,
+  target_type,
+});
+
 /**
- * The cross-project "My/All" kanban's data + writes. Edits go through the
- * by-id issue APIs (which are project-agnostic) and patch this aggregate cache
- * AND the touched project's `["issues", projectId]` cache in place — the line
- * server is merged there when the PATCH returns rather than invalidated (MIN-156):
- * `/api/me/board` is a heavy road, and each unnecessary refetch was one more window for a late response to overwrite the current edit.
- * Mirrors useIssuesQuery, including self-assign-on-start.
+ * The cross-project "My/All" kanban's data and writes. Issue writes are the
+ * shared ones (lib/use-issue-mutations.ts): they patch this aggregate cache AND
+ * the touched project's `["issues", projectId]` cache, and merge the server row
+ * rather than invalidate (MIN-156) — `/api/me/board` is a heavy route, and each
+ * needless refetch was one more window for a late response to overwrite an edit.
  */
 export function useGlobalBoardQuery() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  // Local undo history (MIN-35) — mirrors useIssuesQuery: record after each
-  // successful user write; undo/redo replays bypass the hook entirely.
+  const mutations = useIssueMutations("global");
   const { record, currentLink } = useUndoHistory();
 
   const fastSyncOnMount = useRef<boolean | null>(null);
@@ -88,10 +81,10 @@ export function useGlobalBoardQuery() {
   const { data, isPending } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
     queryFn: globalBoardQueryFn,
-    // No short staleTime: since MIN-89 the real-time bridge invalidates this
-    // key on any ticket change of ANY of my projects (it
-    // only subscribed to the project URL, hence this clock catch-up).
-    // We therefore keep the global default of 5 min — the event carries freshness.
+    // No short staleTime: since MIN-89 the realtime bridge invalidates this key
+    // on any issue change in ANY of my projects (before, it only followed the
+    // project in the URL, hence a short refresh). The global default of 5 min
+    // stays — the event carries the freshness.
   });
 
   useEffect(() => {
@@ -102,286 +95,20 @@ export function useGlobalBoardQuery() {
     });
   }, [queryClient]);
 
-  // Self-assign on start — claim an unassigned issue moved into in_progress
-  // (Account → Preferences), unless the same patch already sets an assignee.
-  const startAssignee = useCallback(
-    (
-      current: Issue | undefined,
-      nextStatus: Issue["status"] | undefined,
-      patchHasAssignee: boolean
-    ): string | null => {
-      if (!current || patchHasAssignee) return null;
-      return autoAssignOnStart({
-        meta: user?.user_metadata,
-        currentStatus: current.status,
-        currentAssigneeId: current.assignee_id,
-        nextStatus,
-        userId: user?.id,
-      });
-    },
-    [user]
-  );
-
-  const writeIssue = useCallback(
-    async (
-      issueId: string,
-      updates: IssueUpdateInput,
-      projectId: string,
-      patchHasAssignee: boolean
-    ) => {
-      const current = queryClient
-        .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
-        ?.issues.find((i) => i.id === issueId);
-      const assignee = startAssignee(current, updates.status, patchHasAssignee);
-      // Both server side-effects are mirrored here so the card doesn't flash:
-      // starting an issue can self-assign it, and moving one to triage takes it
-      // out of the cycle (triage and cycle exclude each other — MIN-32).
-      const patch: IssueUpdateInput = {
-        ...updates,
-        ...(assignee ? { assignee_id: assignee } : {}),
-        ...(leavesCycleOnStatus(current, updates.status) ? { cycle_id: null } : {}),
-      };
-      // Registration in the registry BEFORE the patch (MIN-156): from there,
-      // no fetch response left earlier can replay the state before.
-      const handle = issueWrites.begin({
-        kind: "patch",
-        id: issueId,
-        patch: issueCachePatch(patch),
-      });
-      patchIssueEverywhere(queryClient, projectId, issueId, issueCachePatch(patch));
-      // Single record point for updateIssue/moveIssue/setIssueCycle — recorded
-      // with the optimistic patch so an instant ⌘Z works; retracted on failure.
-      const request = updateIssueApi(issueId, patch, {
-        surface: "global_board",
-        previousStatus: current?.status ?? null,
-      });
-      const before = current ? buildBeforePatch(current, patch) : null;
-      const rec = before
-        ? record(
-            { kind: "update", projectId, issueId, before, after: patch },
-            request.then(
-              () => undefined,
-              () => undefined
-            )
-          )
-        : null;
-      try {
-        // The server line enters the caches instead of invalidating them:
-        // it is THIS refetch which, multiplied by N in grouped edition, opened
-        // the race window. Realtime brings change to others
-        // customers; here the cache is already exact.
-        const issue = await request;
-        mergeServerIssue(queryClient, projectId, issue);
-        issueWrites.settle(handle, issue);
-      } catch (err) {
-        // Targeted Rollback: only the fields of THIS writing return
-        // back. Restoring the entire board also overwrote the patches
-        // optimistic of N-1 other writes in the batch.
-        issueWrites.fail(handle);
-        rec?.retract();
-        if (before) {
-          patchIssueEverywhere(
-            queryClient,
-            projectId,
-            issueId,
-            before as Partial<Issue>
-          );
-        }
-        throw err;
-      }
-    },
-    [queryClient, startAssignee, record]
-  );
-
-  // Inline card edits (status/priority/effort/assignee/due).
-  const updateIssue = useCallback(
-    (issueId: string, updates: IssueUpdateInput, projectId: string) =>
-      writeIssue(issueId, updates, projectId, "assignee_id" in updates),
-    [writeIssue]
-  );
-
-  // Drag & drop between columns (status change) or reorder (position).
-  const moveIssue = useCallback(
-    (
-      issueId: string,
-      patch: { status?: Issue["status"]; position: number },
-      projectId: string
-    ) => {
-      // A simple reordering in the same column is not a
-      // state change: only a real column passage is tracked.
-      const from = queryClient
-        .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
-        ?.issues.find((i) => i.id === issueId)?.status;
-      if (patch.status && patch.status !== from) {
-        trackEvent("issue_dragged", {
-          from: from ?? "unknown",
-          to: patch.status,
-          scope: "global",
-        });
-      }
-      return writeIssue(issueId, patch, projectId, false);
-    },
-    [writeIssue, queryClient]
-  );
-
-  const setCategories = useCallback(
-    async (issueId: string, categoryIds: string[], projectId: string) => {
-      const before =
-        queryClient
-          .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
-          ?.issues.find((i) => i.id === issueId)?.category_ids ?? [];
-      const handle = issueWrites.begin({
-        kind: "patch",
-        id: issueId,
-        patch: { category_ids: categoryIds },
-      });
-      patchIssueEverywhere(queryClient, projectId, issueId, {
-        category_ids: categoryIds,
-      });
-      // No debounce here — rapid toggles coalesce in the undo stack itself.
-      const changed =
-        before.length !== categoryIds.length ||
-        before.some((id) => !categoryIds.includes(id));
-      const request = setIssueCategoriesApi(issueId, categoryIds);
-      if (changed) trackEvent("issue_category_changed", { count: categoryIds.length });
-      const rec = changed
-        ? record(
-            { kind: "categories", projectId, issueId, before, after: categoryIds },
-            request.then(
-              () => undefined,
-              () => undefined
-            )
-          )
-        : null;
-      try {
-        await request;
-        // The PUT does not return the line: the written game IS the truth, nothing to
-        // refetcher (realtime reconciles the other clients).
-        issueWrites.settle(handle);
-      } catch (err) {
-        issueWrites.fail(handle);
-        rec?.retract();
-        patchIssueEverywhere(queryClient, projectId, issueId, {
-          category_ids: before,
-        });
-        toast.error((err as Error).message);
-      }
-    },
-    [queryClient, record]
-  );
-
-  const deleteIssue = useCallback(
-    async (issueId: string, projectId: string) => {
-      // Pre-delete snapshot for undo (see useIssuesQuery.deleteIssue) — here
-      // the aggregate cache carries both the issues and the relation rows.
-      const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
-      const target = board?.issues.find((i) => i.id === issueId);
-      // Removed from both caches up front and registered first (MIN-156): a
-      // read already in flight cannot bring the card back, and the trash
-      // broadcast is recognized as our own echo instead of refetching the
-      // whole aggregate.
-      const handle = issueWrites.begin({ kind: "remove", id: issueId });
-      removeIssueEverywhere(queryClient, projectId, issueId);
-      const request = deleteIssueApi(issueId, { surface: "global_board" });
-      const rec =
-        target && board
-          ? record(
-              {
-                kind: "delete",
-                projectId,
-                issueId,
-                snapshot: snapshotIssue(target),
-                childIds: board.issues
-                  .filter((i) => i.parent_id === issueId)
-                  .map((i) => i.id),
-                relations: board.relations
-                  .filter((r) => r.source_id === issueId || r.target_id === issueId)
-                  .map(({ source_id, target_id, type, source_type, target_type }) => ({
-                    source_id,
-                    target_id,
-                    type,
-                    source_type,
-                    target_type,
-                  })),
-              },
-              request.then(
-                () => undefined,
-                () => undefined
-              )
-            )
-          : null;
-      try {
-        await request;
-        issueWrites.settle(handle);
-      } catch (err) {
-        issueWrites.fail(handle);
-        rec?.retract();
-        if (target) insertIssueEverywhere(queryClient, projectId, target);
-        throw err;
-      }
-    },
-    [queryClient, record]
-  );
-
-  // Optimistic (MIN-40): inserts the card in the aggregate board AND in the cache
-  // from the project immediately, replace with the server line on success, remove +
-  // toast to failure. Realtime reconciles; no local refetch.
-  const createIssue = useCallback(
-    async (projectId: string, input: CreateIssueInput) => {
-      // Smart-fill (MIN-260): the server fills the ticket BEFORE inserting the
-      // line, so no optimistic map — it would be empty for the duration of
-      // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
-      if (input.smart_fill) {
-        createIssueDeferred({ queryClient, projectId, input, record });
-        return null;
-      }
-      const optimistic = buildOptimisticIssue(
-        input,
-        projectId,
-        user?.id ?? null,
-        queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.issues ?? []
-      );
-      const handle = issueWrites.begin({ kind: "insert", row: optimistic });
-      insertIssueEverywhere(queryClient, projectId, optimistic);
-      // Same contract as on a project board: the card names its line, the
-      // direct recognizes the echo of our creation and does not add it for a second
-      // times — here the duplicate was not even resolved, `/api/me/board` being
-      // too heavy to be replayed in the second (lib/optimistic-issue.ts).
-      void createIssueApi(projectId, { ...input, id: optimistic.id }).then(
-        (issue) => {
-          insertIssueEverywhere(queryClient, projectId, issue);
-          mergeServerIssue(queryClient, projectId, issue);
-          issueWrites.settle(handle, issue);
-          record({
-            kind: "create",
-            projectId,
-            issueId: issue.id,
-            snapshot: snapshotIssue(issue),
-          });
-        },
-        (err) => {
-          issueWrites.fail(handle);
-          removeIssueEverywhere(queryClient, projectId, optimistic.id);
-          toast.error((err as Error).message);
-        }
-      );
-      return optimistic;
-    },
-    [queryClient, user, record]
-  );
-
   // Relations (MIN-25) on the cross-project board: the writes go through the
-  // per-project routes; the board cache's `relations` slice is patched
-  // immediately and the project's own ["issue-relations"] cache invalidated so
-  // both boards stay in sync.
+  // per-project routes, so the project is read from a cached endpoint row. The
+  // board cache's `relations` slice is patched at once and the project's own
+  // ["issue-relations"] cache invalidated, so both boards stay in sync.
   const addRelation = useCallback(
     async (
-      projectId: string,
       sourceId: string,
       type: IssueRelationType,
       targetId: string,
       kinds?: RelationKinds
     ) => {
+      const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+      const projectId = endpointProject(board, sourceId) ?? endpointProject(board, targetId);
+      if (!projectId) return;
       const input = {
         source_id: sourceId,
         target_id: targetId,
@@ -392,34 +119,43 @@ export function useGlobalBoardQuery() {
       // Read before awaiting: the selection gesture that asked for it is over
       // by the time the server answers (MIN-795).
       const link = currentLink();
-      const created = await addRelationOptimistically(queryClient, projectId, input, () => addIssueRelationApi(projectId, input));
-      // Record the server-normalized row (blocked_by is stored as an inverted
-      // blocks), so a redo replays exactly what was persisted.
-      record({
-        kind: "relation-add",
-        projectId,
-        relationId: created.id,
-        relation: {
-          source_id: created.source_id,
-          target_id: created.target_id,
-          type: created.type,
-          source_type: created.source_type,
-          target_type: created.target_type,
-        },
-      }, undefined, link);
-      // The board's relation slice already holds the server row: refetching
-      // the whole aggregate would only confirm it.
-      void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
+      try {
+        const created = await addRelationOptimistically(queryClient, projectId, input, () =>
+          addIssueRelationApi(projectId, input)
+        );
+        // Record the server-normalized row (blocked_by is stored as an inverted
+        // blocks), so a redo replays exactly what was persisted.
+        record({
+          kind: "relation-add",
+          projectId,
+          relationId: created.id,
+          relation: relationSnapshot(created),
+        }, undefined, link);
+        // The board's relation slice already holds the server row: refetching
+        // the whole aggregate would only confirm it.
+        void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
+      } catch (err) {
+        toast.error((err as Error).message);
+      }
     },
     [queryClient, record, currentLink]
   );
 
   const removeRelation = useCallback(
-    async (projectId: string, relationId: string) => {
+    async (relationId: string) => {
       const link = currentLink();
-      relationId = await persistedRelationId(queryClient, relationId);
-      const previous = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
-      const removed = previous?.relations.find((r) => r.id === relationId);
+      try {
+        relationId = await persistedRelationId(queryClient, relationId);
+      } catch (err) {
+        toast.error((err as Error).message);
+        return;
+      }
+      const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+      const removed = board?.relations.find((r) => r.id === relationId);
+      const projectId = removed
+        ? endpointProject(board, removed.source_id) ?? endpointProject(board, removed.target_id)
+        : undefined;
+      if (!removed || !projectId) return;
       // Registered first, so a board read already in flight cannot bring the
       // row back once the DELETE is confirmed.
       const removal = beginRelationRemoval(queryClient, projectId, relationId);
@@ -431,44 +167,26 @@ export function useGlobalBoardQuery() {
       try {
         await removeIssueRelationApi(relationId);
         removal.settle();
-        if (removed) {
-          record({
-            kind: "relation-remove",
-            projectId,
-            relationId,
-            relation: {
-              source_id: removed.source_id,
-              target_id: removed.target_id,
-              type: removed.type,
-              source_type: removed.source_type,
-              target_type: removed.target_type,
-            },
-          }, undefined, link);
-        }
+        record({
+          kind: "relation-remove",
+          projectId,
+          relationId,
+          relation: relationSnapshot(removed),
+        }, undefined, link);
         void queryClient.invalidateQueries({
           queryKey: ["issue-relations", projectId],
         });
       } catch (err) {
         removal.fail();
-        if (previous) queryClient.setQueryData(GLOBAL_BOARD_KEY, previous);
-        throw err;
+        queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
+          old && !old.relations.some((r) => r.id === relationId)
+            ? { ...old, relations: [...old.relations, removed] }
+            : old
+        );
+        toast.error((err as Error).message);
       }
     },
     [queryClient, record, currentLink]
-  );
-
-  // Add to / remove from the user's cycle (MIN-32). The optimistic patch
-  // mirrors the server side-effect exactly — adding assigns the issue to me
-  // (never a status bump) — so the card doesn't flash an empty assignee.
-  const setIssueCycle = useCallback(
-    (issueId: string, cycleId: string | null, projectId: string) => {
-      const patch: IssueUpdateInput =
-        cycleId && user?.id
-          ? { cycle_id: cycleId, assignee_id: user.id }
-          : { cycle_id: cycleId };
-      return writeIssue(issueId, patch, projectId, true);
-    },
-    [writeIssue, user]
   );
 
   return {
@@ -482,12 +200,11 @@ export function useGlobalBoardQuery() {
     loading: isPending,
     /** The open columns are painted; the other statuses have not landed yet. */
     deferredPending: data?.deferred_pending === true,
-    updateIssue,
-    moveIssue,
-    setCategories,
-    deleteIssue,
-    createIssue,
-    setIssueCycle,
+    updateIssue: mutations.updateIssue,
+    moveIssue: mutations.moveIssue,
+    setCategories: mutations.setCategories,
+    deleteIssue: mutations.deleteIssue,
+    setIssueCycle: mutations.setIssueCycle,
     addRelation,
     removeRelation,
   };

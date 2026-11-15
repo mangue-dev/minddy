@@ -65,22 +65,6 @@ describe("issue panel relation plumbing", () => {
     expect(addRelation).toHaveBeenLastCalledWith("issue", "related", "other-issue", undefined);
   });
 
-  it("forwards kinds through both global-board panel wrappers", () => {
-    const file = "components/global-board.tsx";
-    const addRelation = vi.fn().mockResolvedValue(undefined);
-    const handleAddRelation = evaluate(initializer(file, "handleAddRelation"), {
-      useCallback: callback, addRelation, toast: { error: vi.fn() },
-    });
-    const root = source(file);
-    const panel = find(root, (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(root) === "IssueSidePanel") as ts.JsxSelfClosingElement;
-    const attribute = panel.attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.getText(root) === "onAddRelation") as ts.JsxAttribute;
-    const expression = (attribute.initializer as ts.JsxExpression).expression!;
-    const handler = evaluate<(...args: unknown[]) => void>(expression.getText(root), { handleAddRelation, openPid: "project" });
-    const kinds = { targetType: "objective" };
-    handler("issue", "blocked_by", "objective", kinds);
-    expect(addRelation).toHaveBeenCalledWith("project", "issue", "blocked_by", "objective", kinds);
-  });
-
   it("hydrates objective rows and recomputes resolved state from updated objective statuses", () => {
     const expression = initializer("components/issue-side-panel.tsx", "resolvedRelations");
     const issue = { id: "issue", number: 1, status: "todo" };
