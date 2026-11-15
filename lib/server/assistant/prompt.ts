@@ -13,6 +13,7 @@ import {
 import { getKnowledgeTopicList } from "./knowledge";
 import type { NumoToolName } from "./tool-policy";
 import { responseLanguageInstruction } from "@/lib/locale-language";
+import { mentionMarkdown } from "@/lib/mention-link";
 
 // ── System prompt builders ─────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ export interface PromptCategory {
 }
 
 export interface PromptRecentIssue {
+  /** Lets the snapshot print the issue as a mention (MIN-1005). */
+  id: string;
   identifier: string;
   title: string;
   status: string;
@@ -121,7 +124,8 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   A blocked issue is left out of
   cycle filling until its blocker closes, and blocking through an objective cascades to its
   issues — so read them before calling an issue ready to start.
-- Issues are referenced as "KEY-N" (project key + number), e.g. "MIND-42".
+- Issues are identified as "KEY-N" (project key + number), e.g. "MIND-42"; in what you write, cite
+  one as its mention (see Mentions).
 - Implementation plan: issues can carry a markdown plan (field \`plan\`), separate from the
   description. Trackable task lines: "- [ ]" pending, "- [~]" in progress, "- [x]" done,
   "- [-]" cancelled; prose is allowed between task blocks. Checkboxes under a "## Questions"
@@ -407,8 +411,12 @@ export function buildSharedRules(
   one. The user deletes those from the interface.
 - **Search before guessing** — when the user references an issue, member, category, objective or
   view, resolve it with the list_*/search_*/get_* tools first. Never invent ids.
-- NEVER show internal ids (uuids) to the user in plain text. Refer to issues as "KEY-N — title", to
-  everything else by name — the one place an id appears is inside a mention link (below).
+- NEVER show internal ids (uuids) to the user in plain text. Refer to an issue as its mention,
+  \`[@KEY-N](mention:issue/<id>)\`, its title after it as text when it helps; to everything else by
+  name — the one place an id appears is inside a mention link (below). Never write a bare "KEY-N"
+  you could mention, and never tag a record with brackets ("MIND-12 [blocked]", "[todo]"): brackets
+  without a "(mention:…)" link show as literal text. Say a state in words: "blocked by …",
+  "in progress".
 - **Mentions** — the app shows each typed mention as a live pill: the target's figure and current
   name, opening it in one click. They are how you SHOW what you talk about, so use one every time
   you cite one of these, in your replies and in everything you write (issue descriptions and
@@ -538,7 +546,7 @@ export function buildSystemPrompt(
       .join("\n") || "None.";
   const objectiveLines =
     project.objectives
-      .map((o) => `- "${o.name}" (id: ${o.id}) [${o.status}]`)
+      .map((o) => `- "${o.name}" (id: ${o.id}, status: ${o.status})`)
       .join("\n") || "None yet.";
   const categoryLines =
     project.categories.map((c) => `- "${c.name}" (id: ${c.id})`).join("\n") ||
@@ -593,12 +601,12 @@ export function buildProjectSnapshotBlock(
 ): string {
   const recentLines =
     project.recentIssues
-      .map((i) => `- ${i.identifier} — ${i.title} [${i.status}]`)
+      .map((i) => `- ${mentionMarkdown("issue", i.id, i.identifier)} — ${i.title} (status: ${i.status})`)
       .join("\n") || "None yet.";
   return `\n## Current project activity
 - Issues by status: ${formatStatusCounts(project.statusCounts)}
 
-## Recent issues (last 5)
+## Recent issues (last 5, cite them by these mentions)
 ${recentLines}`;
 }
 

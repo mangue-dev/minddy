@@ -17,7 +17,7 @@ const project = {
   name: "Minddy",
   key: "MIND",
   statusCounts: { todo: 1 },
-  recentIssues: [{ identifier: "MIND-1", title: "First", status: "todo" }],
+  recentIssues: [{ id: "i1", identifier: "MIND-1", title: "First", status: "todo" }],
   members: [],
   objectives: [],
   categories: [],
@@ -29,7 +29,7 @@ describe("stable project prompt", () => {
     const after = buildSystemPrompt({
       ...project,
       statusCounts: { todo: 0, done: 4 },
-      recentIssues: [{ identifier: "MIND-2", title: "Second", status: "done" }],
+      recentIssues: [{ id: "i2", identifier: "MIND-2", title: "Second", status: "done" }],
     }, "en", new Set());
     expect(after).toBe(before);
     expect(before).toContain("## Current project");
@@ -39,7 +39,21 @@ describe("stable project prompt", () => {
   it("leaves the activity to the snapshot block", () => {
     const block = buildProjectSnapshotBlock(project);
     expect(block).toContain("Issues by status");
-    expect(block).toContain("MIND-1 — First [todo]");
+    expect(block).toContain("[@MIND-1](mention:issue/i1) — First (status: todo)");
+  });
+
+  // MIN-1005: a "[status]" tag after an identifier taught Numo to write
+  // "MIN-1001 [blocked]" as literal text instead of a mention.
+  it("shows records as mentions, never with a bracketed status tag", () => {
+    const block = buildProjectSnapshotBlock(project);
+    const prompt = buildSystemPrompt({
+      ...project,
+      objectives: [{ id: "o1", name: "Launch", status: "in_progress" }],
+    }, "en", new Set());
+    expect(block).not.toMatch(/\[(todo|done|in_progress)\]/);
+    expect(prompt).toContain(`"Launch" (id: o1, status: in_progress)`);
+    expect(prompt).not.toContain("[in_progress]");
+    expect(prompt).not.toContain(`Refer to issues as "KEY-N — title"`);
   });
 });
 
