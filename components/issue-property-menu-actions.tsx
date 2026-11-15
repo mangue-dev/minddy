@@ -3,14 +3,22 @@
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Tag01Icon, Target01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
-import { ObjectiveName } from "@/components/objective-label";
-import { EffortIndicator, ObjectiveStatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
+import { PriorityIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
-import { Dot } from "@/components/ui/color-dot";
+import {
+  EFFORT_OPTION_ICON,
+  categoryFieldOptions,
+  effortFieldOptions,
+  fieldMenuChildren,
+  memberFieldOptions,
+  objectiveFieldOptions,
+  priorityFieldOptions,
+  toggleCategory,
+} from "@/components/issue-field-options";
 import { displayName } from "@/lib/display-name";
-import { EFFORTS, PRIORITIES } from "@/lib/issue-constants";
+import type { IssueEffort, IssuePriority } from "@/lib/issue-constants";
 import type { Category, Issue, IssueUpdateInput, Member, Objective } from "@/lib/types";
 
 /**
@@ -37,18 +45,15 @@ export function useIssuePropertyMenuActions() {
         id: "property-priority",
         label: tField("priority"),
         icon: <PriorityIndicator priority={issue.priority} className="size-4" />,
-        children: PRIORITIES.map((p) => ({
-          id: `property-priority-${p.value}`,
-          label: tPriority(p.value),
-          icon: <PriorityIndicator priority={p.value} className="size-4" />,
-          checked: issue.priority === p.value,
-          onSelect: () => onPatch({ priority: p.value }),
-        })),
+        children: fieldMenuChildren("property-priority", priorityFieldOptions(tPriority), {
+          isChecked: (value) => issue.priority === value,
+          onSelect: (value) => onPatch({ priority: value as IssuePriority }),
+        }),
       },
       {
         id: "property-effort",
         label: tField("effort"),
-        icon: <HugeiconsIcon icon={TriangleIcon} className="size-4" />,
+        icon: EFFORT_OPTION_ICON,
         children: [
           {
             id: "property-effort-none",
@@ -56,13 +61,10 @@ export function useIssuePropertyMenuActions() {
             checked: issue.effort === null,
             onSelect: () => onPatch({ effort: null }),
           },
-          ...EFFORTS.map((e) => ({
-            id: `property-effort-${e.value}`,
-            label: e.label,
-            icon: <EffortIndicator effort={e.value} className="size-4" />,
-            checked: issue.effort === e.value,
-            onSelect: () => onPatch({ effort: e.value }),
-          })),
+          ...fieldMenuChildren("property-effort", effortFieldOptions(), {
+            isChecked: (value) => issue.effort === value,
+            onSelect: (value) => onPatch({ effort: value as IssueEffort }),
+          }),
         ],
       },
       {
@@ -79,13 +81,10 @@ export function useIssuePropertyMenuActions() {
             checked: issue.assignee_id === null,
             onSelect: () => onPatch({ assignee_id: null }),
           },
-          ...members.map((m) => ({
-            id: `property-assignee-${m.user_id}`,
-            label: displayName(m),
-            icon: <UserAvatar seed={m.avatar_seed} className="size-4" />,
-            checked: issue.assignee_id === m.user_id,
-            onSelect: () => onPatch({ assignee_id: m.user_id }),
-          })),
+          ...fieldMenuChildren("property-assignee", memberFieldOptions(members, { avatarClassName: "size-4" }), {
+            isChecked: (id) => issue.assignee_id === id,
+            onSelect: (id) => onPatch({ assignee_id: id }),
+          }),
         ],
       },
     ];
@@ -94,18 +93,10 @@ export function useIssuePropertyMenuActions() {
         id: "property-categories",
         label: tField("categories"),
         icon: <HugeiconsIcon icon={Tag01Icon} className="size-4" />,
-        children: categories.map((c) => {
-          const on = issue.category_ids.includes(c.id);
-          return {
-            id: `property-category-${c.id}`,
-            label: c.name,
-            icon: <Dot color={c.color} />,
-            checked: on,
-            keepOpen: true,
-            onSelect: () => onSetCategories(on
-              ? issue.category_ids.filter((id) => id !== c.id)
-              : [...issue.category_ids, c.id]),
-          };
+        children: fieldMenuChildren("property-category", categoryFieldOptions(categories), {
+          isChecked: (id) => issue.category_ids.includes(id),
+          onSelect: (id) => onSetCategories(toggleCategory(issue.category_ids, id)),
+          keepOpen: true,
         }),
       });
     }
@@ -121,15 +112,10 @@ export function useIssuePropertyMenuActions() {
             checked: issue.objective_id === null,
             onSelect: () => onPatch({ objective_id: null }),
           },
-          ...objectives.map((o) => ({
-            id: `property-objective-${o.id}`,
-            label: o.name,
-            labelNode: <ObjectiveName objective={o} />,
-            keywords: [o.name],
-            icon: <ObjectiveStatusIndicator status={o.status} className="size-4" />,
-            checked: issue.objective_id === o.id,
-            onSelect: () => onPatch({ objective_id: o.id }),
-          })),
+          ...fieldMenuChildren("property-objective", objectiveFieldOptions(objectives, { presentation: "menu" }), {
+            isChecked: (id) => issue.objective_id === id,
+            onSelect: (id) => onPatch({ objective_id: id }),
+          }),
         ],
       });
     }

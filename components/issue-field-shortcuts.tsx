@@ -23,7 +23,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import { ProjectsContext } from "@/lib/projects-context-store";
-import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { RELATION_TYPES } from "@/lib/relation-constants";
@@ -40,8 +39,15 @@ import {
   useObjectiveCreateOption,
 } from "@/lib/use-picker-create";
 import { DateTimePicker } from "@/components/date-time-picker";
-import { Dot } from "@/components/issue-property-fields";
-import { ObjectivePill } from "@/components/objective-label";
+import {
+  categoryFieldOptions,
+  effortFieldOptions,
+  memberFieldOptions,
+  objectiveFieldOptions,
+  priorityFieldOptions,
+  statusFieldOptions,
+  type FieldOption,
+} from "@/components/issue-field-options";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import {
@@ -50,22 +56,9 @@ import {
   sharedValue,
   toggleCategoryAcross,
 } from "@/lib/issue-shortcut-targets";
-import {
-  StatusIndicator,
-  PriorityIndicator,
-  RelationIcon,
-} from "@/components/issue-indicators";
-import { UserAvatar } from "@/components/user-avatar";
-import { displayName } from "@/lib/display-name";
+import { RelationIcon } from "@/components/issue-indicators";
 import { eventKey } from "@/lib/keyboard/event-key";
-import {
-  ALL_STATUSES,
-  PRIORITIES,
-  EFFORTS,
-  type IssueStatus,
-  type IssuePriority,
-  type IssueEffort,
-} from "@/lib/issue-constants";
+import type { IssueStatus, IssuePriority, IssueEffort } from "@/lib/issue-constants";
 import type {
   Category,
   Issue,
@@ -215,8 +208,8 @@ export function useIssueFieldShortcuts(
     registerHoverKeys(el);
   }, [registerHoverKeys]);
 
-  // The hover is no longer recorded anywhere: these two handlers are no longer useful
-  // just remember WHERE to anchor the picker (the last point of the cursor on the area).
+  // These handlers only remember where to anchor the picker: the last pointer
+  // position over the region.
   const track = (e: React.MouseEvent) => {
     posRef.current = { x: e.clientX, y: e.clientY };
   };
@@ -230,10 +223,9 @@ export function useIssueFieldShortcuts(
   return {
     containerProps,
     menuState,
-    // Open a picker WITHOUT using its key: the right-click menu offers
-    // the fields that the card does not display (objective, deadline) and opens them
-    // at the point of click — the menu entry and shortcut then do the same
-    // thing, by the same path.
+    // Opens a picker without its key: the right-click menu offers the fields
+    // the card does not show (objective, due date) and opens them where it
+    // was clicked, so the menu entry and the shortcut take the same path.
     openField: React.useCallback(
       (field: ShortcutField, position: { x: number; y: number }) =>
         setMenuState({ field, position }),
@@ -253,25 +245,16 @@ const checked = (on: boolean) => (on ? { "data-checked": "true" as const } : {})
  */
 function ObjectiveShortcutItems({
   objectives,
-  value,
-  onSelect,
+  render,
 }: {
   objectives: Objective[];
-  value: string | null;
-  onSelect: (objectiveId: string) => void;
+  render: (options: FieldOption[]) => React.ReactNode;
 }) {
-  return useOrderedObjectives(objectives).map((o) => (
-    <CommandItem
-      key={o.id}
-      value={o.id}
-      keywords={[o.name]}
-      onSelect={() => onSelect(o.id)}
-      {...checked(value === o.id)}
-    >
-      <ObjectivePill objective={o} />
-    </CommandItem>
-  ));
+  return render(objectiveFieldOptions(useOrderedObjectives(objectives)));
 }
+
+/** Built once: the effort scale does not depend on the locale. */
+const EFFORT_OPTIONS = effortFieldOptions();
 
 export function IssueShortcutMenu({
   state,
@@ -321,8 +304,8 @@ export function IssueShortcutMenu({
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("IssueUI");
-  // Search held here (and not by cmdk): the “Add…” lines make it
-  // name of what they create.
+  // The search is held here rather than by cmdk: the “Add…” row names what
+  // it creates after it.
   const [query, setQuery] = React.useState("");
   const categoryCreate = useCategoryCreateOption({
     projectId: issue.project_id,
@@ -338,7 +321,7 @@ export function IssueShortcutMenu({
     projectId: issue.project_id,
     onCreated: (objective) => onUpdate({ objective_id: objective.id }),
   });
-  // Each opening starts with an empty search (the menu remains mounted between two).
+  // Each opening starts with an empty search: the menu stays mounted between openings.
   React.useEffect(() => {
     if (!state) setQuery("");
   }, [state]);
@@ -363,9 +346,9 @@ export function IssueShortcutMenu({
   };
 
   // Due date opens the full calendar (not a cmdk list) at the pointer.
-  // `stopPropagation`: the calendar is portalized but rendered in the tree
-  // React, inside the clickable map — without it, choose a day
-  // would open the ticket on top (same precaution as `CommandAnchor`).
+  // `stopPropagation`: the calendar is portaled but stays inside the
+  // clickable card in the React tree, so without it choosing a day would also
+  // open the ticket (the same precaution as `CommandAnchor`).
   if (field === "dueDate") {
     return (
       <DateTimePicker
@@ -383,35 +366,36 @@ export function IssueShortcutMenu({
     );
   }
 
+  /** The shared field options as rows, checked when every target shares the value. */
+  const rows = (options: readonly FieldOption[], isChecked: (value: string) => boolean, onSelect: (value: string) => void) =>
+    options.map((o) => (
+      <CommandItem
+        key={o.value}
+        value={o.value}
+        keywords={[o.label, ...(o.keywords ?? [])]}
+        onSelect={() => onSelect(o.value)}
+        {...checked(isChecked(o.value))}
+      >
+        {o.icon}
+        {o.labelNode ?? <span className="truncate">{o.label}</span>}
+      </CommandItem>
+    ));
+
   let items: React.ReactNode = null;
   switch (field) {
     case "status":
-      items = ALL_STATUSES.map((s) => (
-        <CommandItem
-          key={s.value}
-          value={s.value}
-          keywords={[tStatus(s.value)]}
-          onSelect={() => apply({ status: s.value as IssueStatus })}
-          {...all((target) => target.status, s.value)}
-        >
-          <StatusIndicator status={s.value} className="size-4" />
-          <span className="truncate">{tStatus(s.value)}</span>
-        </CommandItem>
-      ));
+      items = rows(
+        statusFieldOptions(tStatus),
+        (value) => allTargetsMatch<string>(writeTargets, (target) => target.status, value),
+        (value) => apply({ status: value as IssueStatus }),
+      );
       break;
     case "priority":
-      items = PRIORITIES.map((p) => (
-        <CommandItem
-          key={p.value}
-          value={p.value}
-          keywords={[tPriority(p.value)]}
-          onSelect={() => apply({ priority: p.value as IssuePriority })}
-          {...all((target) => target.priority, p.value)}
-        >
-          <PriorityIndicator priority={p.value} className="size-4" />
-          <span className="truncate">{tPriority(p.value)}</span>
-        </CommandItem>
-      ));
+      items = rows(
+        priorityFieldOptions(tPriority),
+        (value) => allTargetsMatch<string>(writeTargets, (target) => target.priority, value),
+        (value) => apply({ priority: value as IssuePriority }),
+      );
       break;
     case "effort":
       items = (
@@ -424,18 +408,11 @@ export function IssueShortcutMenu({
           >
             <span className="truncate">{tField("effortNone")}</span>
           </CommandItem>
-          {EFFORTS.map((eff) => (
-            <CommandItem
-              key={eff.value}
-              value={eff.value}
-              keywords={[eff.label]}
-              onSelect={() => apply({ effort: eff.value as IssueEffort })}
-              {...all((target) => target.effort, eff.value)}
-            >
-              <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
-              <span className="truncate">{eff.label}</span>
-            </CommandItem>
-          ))}
+          {rows(
+            EFFORT_OPTIONS,
+            (value) => allTargetsMatch<string | null>(writeTargets, (target) => target.effort, value),
+            (value) => apply({ effort: value as IssueEffort }),
+          )}
         </>
       );
       break;
@@ -455,25 +432,16 @@ export function IssueShortcutMenu({
               {tField(smartAssign ? "smartAssign" : "unassigned")}
             </span>
           </CommandItem>
-          {members.map((m) => (
-            <CommandItem
-              key={m.user_id}
-              value={m.user_id}
-              keywords={[displayName(m), ...(m.email ? [m.email] : [])]}
-              onSelect={() => apply({ assignee_id: m.user_id })}
-              {...all((target) => target.assignee_id, m.user_id)}
-            >
-              <UserAvatar
-                seed={m.avatar_seed}
-                className="size-5"
-              />
-              <span className="truncate">{displayName(m)}</span>
-            </CommandItem>
-          ))}
+          {rows(
+            memberFieldOptions(members),
+            (id) => allTargetsMatch<string | null>(writeTargets, (target) => target.assignee_id, id),
+            (id) => apply({ assignee_id: id }),
+          )}
         </>
       );
       break;
-    case "objective":
+    case "objective": {
+      const shared = sharedValue(writeTargets, (target) => target.objective_id);
       items = (
         <>
           <CommandItem
@@ -486,12 +454,18 @@ export function IssueShortcutMenu({
           </CommandItem>
           <ObjectiveShortcutItems
             objectives={objectives}
-            value={sharedValue(writeTargets, (target) => target.objective_id)}
-            onSelect={(objective_id) => apply({ objective_id })}
+            render={(options) =>
+              rows(
+                options,
+                (id) => shared === id,
+                (objective_id) => apply({ objective_id }),
+              )
+            }
           />
         </>
       );
       break;
+    }
     case "category": {
       const toggle = (id: string) =>
         linked(() => {
@@ -499,24 +473,17 @@ export function IssueShortcutMenu({
             onSetCategories(ids, issueId);
           }
         });
-      items = categories.map((c) => (
-        <CommandItem
-          key={c.id}
-          value={c.id}
-          keywords={[c.name]}
-          onSelect={() => toggle(c.id)}
-          {...checked(allTargetsHaveCategory(writeTargets, c.id))}
-        >
-          <Dot color={c.color} />
-          <span className="truncate">{c.name}</span>
-        </CommandItem>
-      ));
+      items = rows(
+        categoryFieldOptions(categories),
+        (id) => allTargetsHaveCategory(writeTargets, id),
+        toggle,
+      );
       break;
     }
   }
 
-  // Quick addition, on the two fields that are created from their menu — the
-  // same gesture as in the clickable pickers, here at the L/O shortcut.
+  // Quick add on the two fields created from their menu, as in the
+  // clickable pickers: here from the L/O shortcut.
   const create =
     field === "category"
       ? categoryCreate

@@ -8,26 +8,28 @@
 // a selection having no single value.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CancelCircleIcon, GlobeIcon, LockIcon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { CancelCircleIcon, GlobeIcon, LockIcon, Target01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { Dot } from "@/components/ui/color-dot";
-import { ObjectiveStatusIndicator, PriorityIndicator, StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { FEEDBACK_POST_STATUSES, FEEDBACK_TO_ISSUE_STATUS, type FeedbackPostStatus } from "@/lib/feedback/types";
 import { OBJECTIVE_STATUSES } from "@/lib/objective-constants";
-import { ObjectivePill } from "@/components/objective-label";
-import { UserAvatar } from "@/components/user-avatar";
 import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
-import { displayName } from "@/lib/display-name";
 import {
-  ALL_STATUSES,
-  EFFORTS,
-  PRIORITIES,
-  type IssueEffort,
-  type IssuePriority,
-  type IssueStatus,
-} from "@/lib/issue-constants";
+  EFFORT_OPTION_ICON,
+  categoryFieldOptions,
+  effortFieldOptions,
+  memberFieldOptions,
+  objectiveFieldOptions,
+  priorityFieldOptions,
+  statusFieldOptions,
+  type FieldOption,
+} from "@/components/issue-field-options";
+import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import type { FormSelectOption } from "@/lib/command-palette/registry/types";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 import type { Category, Member } from "@/lib/types";
+
+export { toggleCategory } from "@/components/issue-field-options";
 
 /** Value of the clear option of the nullable fields. */
 export const PALETTE_NONE = "__none__";
@@ -39,49 +41,39 @@ function mark<T>(options: Current<T>, value: T): boolean {
   return "current" in options && options.current === value;
 }
 
+/** The shared field options as palette rows, `current` checked. */
+function marked<T>(fieldOptions: readonly FieldOption[], options: Current<T>): FormSelectOption[] {
+  return fieldOptions.map(({ value, label, icon, labelNode }) => ({
+    value,
+    label,
+    icon,
+    labelNode,
+    selected: mark<unknown>(options, value),
+  }));
+}
+
 export function statusOptions(
   label: (status: IssueStatus) => string,
   options: Current<IssueStatus> = {}
 ): FormSelectOption[] {
-  return ALL_STATUSES.map((s) => ({
-    value: s.value,
-    label: label(s.value),
-    icon: <StatusIndicator status={s.value} className="size-4" />,
-    selected: mark(options, s.value),
-  }));
+  return marked(statusFieldOptions(label), options);
 }
 
-/** "none" is the first rung of the scale and reads "Not set" (`Priority.none`). */
 export function priorityOptions(
   label: (priority: IssuePriority) => string,
   options: Current<IssuePriority> = {}
 ): FormSelectOption[] {
-  return PRIORITIES.map((p) => ({
-    value: p.value,
-    label: label(p.value),
-    icon: <PriorityIndicator priority={p.value} className="size-4" />,
-    selected: mark(options, p.value),
-  }));
+  return marked(priorityFieldOptions(label), options);
 }
 
-/** The card's effort glyph: a triangle, dimmed while the effort is not set. */
+/** The pickers' effort glyph on every rung, "Not set" included. */
 export function effortOptions(
   noneLabel: string,
   options: Current<IssueEffort | null> = {}
 ): FormSelectOption[] {
   return [
-    {
-      value: PALETTE_NONE,
-      label: noneLabel,
-      icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 opacity-60" />,
-      selected: mark(options, null),
-    },
-    ...EFFORTS.map((e) => ({
-      value: e.value,
-      label: e.label,
-      icon: <HugeiconsIcon icon={TriangleIcon} className="size-4" />,
-      selected: mark<IssueEffort | null>(options, e.value),
-    })),
+    { value: PALETTE_NONE, label: noneLabel, icon: EFFORT_OPTION_ICON, selected: mark(options, null) },
+    ...marked(effortFieldOptions(), options),
   ];
 }
 
@@ -103,12 +95,7 @@ export function assigneeOptions(
       ),
       selected: mark(options, null),
     },
-    ...members.map((m) => ({
-      value: m.user_id,
-      label: displayName(m),
-      icon: <UserAvatar seed={m.avatar_seed} className="size-4" />,
-      selected: mark<string | null>(options, m.user_id),
-    })),
+    ...marked(memberFieldOptions(members, { avatarClassName: "size-4" }), options),
   ];
 }
 
@@ -133,36 +120,23 @@ export function objectiveOptions(
       icon: <HugeiconsIcon icon={Target01Icon} className="size-4 opacity-60" />,
       selected: mark(options, null),
     },
-    ...objectives.map((objective) => ({
-      value: objective.id,
-      label: objective.name,
-      labelNode: <ObjectivePill objective={objective} />,
-      selected: mark<string | null>(options, objective.id),
-    })),
+    ...marked(objectiveFieldOptions(objectives), options),
   ];
 }
 
-/** Categories with their color dot, in the project's settings order (the
-    lists are read ordered by `position`). `current` marks every category the
-    ticket already has: choosing one toggles it. */
+/** Categories in the project's settings order (the lists are read ordered by
+    `position`). `current` marks every category the ticket already has:
+    choosing one toggles it. */
 export function categoryOptions(
   categories: readonly Pick<Category, "id" | "name" | "color">[],
   current?: readonly string[]
 ): FormSelectOption[] {
-  return categories.map((category) => ({
-    value: category.id,
-    label: category.name,
-    icon: <Dot color={category.color} />,
-    selected: current?.includes(category.id) ?? false,
+  return categoryFieldOptions(categories).map(({ value, label, icon }) => ({
+    value,
+    label,
+    icon,
+    selected: current?.includes(value) ?? false,
   }));
-}
-
-/** The ticket's categories after choosing `categoryId`: added, or removed when
-    it already had it. */
-export function toggleCategory(categoryIds: readonly string[], categoryId: string): string[] {
-  return categoryIds.includes(categoryId)
-    ? categoryIds.filter((id) => id !== categoryId)
-    : [...categoryIds, categoryId];
 }
 
 /** The value every selected record shares, for the bulk selects' checkmark;

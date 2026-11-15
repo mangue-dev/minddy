@@ -3,7 +3,7 @@
 import { objectiveHref, pullRequestHref } from "@/lib/app-urls";
 import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { HierarchySquare01Icon, TriangleIcon } from "@hugeicons/core-free-icons";
+import { HierarchySquare01Icon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -24,21 +24,11 @@ import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
 import {
-  ALL_STATUSES,
-  PRIORITIES,
-  EFFORT_MAP,
-  EFFORTS,
   issueIdentifier,
   type IssueStatus,
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
-import { displayName } from "@/lib/display-name";
-import { UserAvatar } from "@/components/user-avatar";
-import {
-  StatusIndicator,
-  PriorityIndicator,
-} from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationPalettePicker } from "@/components/palette-picker-rows";
 import {
@@ -65,7 +55,6 @@ import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import { PullRequestHoverCard } from "@/components/pull-requests/pr-hover-card";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
-import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
 import {
   isPrWorthShowing,
@@ -83,12 +72,14 @@ import type {
   Objective,
   Project,
 } from "@/lib/types";
-import { DateTimePicker } from "@/components/date-time-picker";
 import {
-  SearchSelect,
-  SearchMultiSelect,
-  type PickerOption,
-} from "@/components/search-select";
+  AssigneePicker,
+  CategoriesPicker,
+  DueDatePicker,
+  EffortPicker,
+  PriorityPicker,
+  StatusPicker,
+} from "@/components/issue-field-pickers";
 import {
   IssueContextMenu,
   type ContextMenuAction,
@@ -111,7 +102,6 @@ import { useAskNumoTarget } from "@/lib/ask-numo-context";
 import type { CommentFollowUp } from "@/lib/comment-follow-up";
 import { useCommentFollowUp } from "@/lib/use-comment-follow-ups";
 import { useStableCallback } from "@/lib/use-stable-callback";
-import { useCategoryCreateOption } from "@/lib/use-picker-create";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropOverlay, useFileDrop } from "@/components/resources";
@@ -132,17 +122,12 @@ import { MentionHover } from "@/components/mention-hover";
 import {
   COMMENT_FOLLOW_UP_CLASS,
   IssueCardAssigneeAvatar,
-  IssueCardCategories,
   IssueCardCommentFollowUp,
   IssueCardCommentFollowUpContent,
-  IssueCardDueDate,
-  IssueCardEffort,
   IssueCardFace,
   IssueCardObjectiveDisplay,
   IssueCardPlanContent,
-  IssueCardPriority,
   IssueCardPullRequestContent,
-  IssueCardStatus,
   pullRequestChip,
 } from "@/components/issue-card-face";
 import { useIssueCardRichSlots } from "@/components/issue-card-rich-slots";
@@ -154,238 +139,15 @@ import {
 } from "@/components/ui/tooltip";
 
 /* ── Inline indicator pickers ────────────────────────────────────────────
-   Each indicator on the card is a dropdown trigger: clicking it edits the
-   field in place. `stop` keeps the click/drag from bubbling to the card (which
-   would open the side panel or start a drag). Without an `onChange` the picker
-   renders the plain indicator (e.g. inside the drag overlay). */
-
-const TRIGGER_CLASS =
-  "-m-0.5 flex items-center rounded-md p-0.5 outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
-
-// Roomier hit area for the smaller indicators (priority / effort / category).
-const TRIGGER_CLASS_LG =
-  "-m-1.5 flex min-w-0 items-center rounded-md p-1.5 outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+   Each editable indicator on the card is the "card" variant of its field
+   picker (issue-field-pickers.tsx). Without a write handler (the drag
+   overlay, a public board) the slot stays empty and the face shows its
+   read-only indicator. */
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-/** The look of a hovered card. The drag overlay is a copy of the card taken
- * at rest (lib/board-dnd.ts), so the same look, plus a light lift, comes from
- * the `data-held` mark the copy carries rather than from `:hover`. */
-// The tint also stays while one of the card's menus or pickers is open
-// (`data-menu-open`, or a pill whose picker is open), pointer on it or not:
-// the card reads as the one the open surface acts on.
 /** Closed menu: stable identity, so a new array is not created on every render. */
 const NO_ACTIONS: ContextMenuAction[] = [];
-
-function StatusPick({
-  value,
-  onChange,
-}: {
-  value: IssueStatus;
-  onChange?: (v: IssueStatus) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tStatus = useTranslations("Status");
-  if (!onChange) return <IssueCardStatus value={value} />;
-  const options: PickerOption[] = ALL_STATUSES.map((s) => ({
-    value: s.value,
-    label: tStatus(s.value),
-    icon: <StatusIndicator status={s.value} className="size-4" />,
-  }));
-  return (
-    <SearchSelect
-      deferTrigger
-      value={value}
-      onChange={(v) => onChange(v as IssueStatus)}
-      options={options}
-      align="start"
-      tooltip={tField("status")}
-      shortcutHint={KEY_FOR_FIELD.status}
-      stopPropagation
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", { field: tField("status"), value: tStatus(value) })}
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS}
-        >
-          <StatusIndicator status={value} />
-        </button>
-      }
-    />
-  );
-}
-
-function PriorityPick({
-  value,
-  onChange,
-}: {
-  value: IssuePriority;
-  onChange?: (v: IssuePriority) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tPriority = useTranslations("Priority");
-  if (!onChange) return <IssueCardPriority value={value} />;
-  const options: PickerOption[] = PRIORITIES.map((p) => ({
-    value: p.value,
-    label: tPriority(p.value),
-    icon: <PriorityIndicator priority={p.value} className="size-4" />,
-  }));
-  return (
-    <SearchSelect
-      deferTrigger
-      value={value}
-      onChange={(v) => onChange(v as IssuePriority)}
-      options={options}
-      align="start"
-      tooltip={tField("priority")}
-      shortcutHint={KEY_FOR_FIELD.priority}
-      stopPropagation
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", { field: tField("priority"), value: tPriority(value) })}
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS_LG}
-        >
-          <PriorityIndicator priority={value} />
-        </button>
-      }
-    />
-  );
-}
-
-function EffortPick({
-  value,
-  onChange,
-}: {
-  value: IssueEffort | null;
-  onChange?: (v: IssueEffort | null) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const display = <IssueCardEffort value={value} />;
-  if (!onChange) return display;
-  const options: PickerOption[] = EFFORTS.map((e) => ({
-    value: e.value,
-    label: e.label,
-    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
-  }));
-  return (
-    <SearchSelect
-      deferTrigger
-      value={value}
-      onChange={(v) => onChange(v as IssueEffort | null)}
-      options={options}
-      noneOption={{ label: tField("effortNone") }}
-      align="start"
-      tooltip={tField("effort")}
-      shortcutHint={KEY_FOR_FIELD.effort}
-      stopPropagation
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", { field: tField("effort"), value: value ? EFFORT_MAP[value].label : tField("effortNone") })}
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS_LG}
-        >
-          {display}
-        </button>
-      }
-    />
-  );
-}
-
-function CategoryPick({
-  categories,
-  selectedIds,
-  onChange,
-  projectId,
-}: {
-  categories: IssueCardCategory[];
-  selectedIds: string[];
-  onChange?: (ids: string[]) => void;
-  /** Card project — anything quick-add creates belongs to it. */
-  projectId?: string | null;
-}) {
-  const display = <IssueCardCategories categories={categories} selectedIds={selectedIds} />;
-  if (!onChange) return display;
-  return (
-    <CategoryPickMenu
-      categories={categories}
-      selectedIds={selectedIds}
-      onChange={onChange}
-      projectId={projectId}
-      display={display}
-    />
-  );
-}
-
-function CategoryPickMenu({
-  categories,
-  selectedIds,
-  onChange,
-  projectId,
-  display,
-}: {
-  categories: IssueCardCategory[];
-  selectedIds: string[];
-  onChange: (ids: string[]) => void;
-  projectId?: string | null;
-  display: React.ReactNode;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const createOption = useCategoryCreateOption({
-    projectId,
-    categories,
-    onCreated: (category) => onChange([...selectedIds, category.id]),
-  });
-  const options: PickerOption[] = categories.map((c) => ({
-    value: c.id,
-    label: c.name,
-    icon: (
-      <span
-        className="size-2.5 shrink-0 rounded-full"
-        style={{ backgroundColor: c.color }}
-        aria-hidden
-      />
-    ),
-  }));
-  return (
-    <SearchMultiSelect
-      deferTrigger
-      values={selectedIds}
-      onChange={onChange}
-      options={options}
-      createOption={createOption}
-      align="end"
-      tooltip={tField("categories")}
-      shortcutHint={KEY_FOR_FIELD.category}
-      stopPropagation
-      emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", {
-            field: tField("categories"),
-            value: categories.filter((c) => selectedIds.includes(c.id)).map((c) => c.name).join(", ") || tField("noCategories"),
-          })}
-          onClick={stop}
-          onPointerDown={stop}
-          className={TRIGGER_CLASS_LG}
-        >
-          {display}
-        </button>
-      }
-    />
-  );
-}
 
 function AssigneePick({
   assignee,
@@ -404,93 +166,26 @@ function AssigneePick({
   assigneeId: string | null;
   createdAt: string | undefined;
 }) {
-  const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   // The project's Smart Assign fills an empty assignee (MIN-811): the empty
   // state and the picker's clear option name it, as in the issue panel.
   const smartAssign = useSmartAssignFillsEmpty(projectId, { status, assigneeId, createdAt });
-  const emptyLabel = tField(smartAssign ? "smartAssign" : "unassigned");
-  const avatar = (
-    <IssueCardAssigneeAvatar
-      assignee={assignee}
-      smartAssign={smartAssign}
-      emptyLabel={emptyLabel}
-      // The picker's own tooltip already names the field: a second, native
-      // one with the person's name would stack on top of it.
-      named={!onChange}
-    />
-  );
-  if (!onChange) return avatar;
-  const options: PickerOption[] = members.map((m) => ({
-    value: m.user_id,
-    label: displayName(m),
-    keywords: m.email ? [m.email] : undefined,
-    icon: <UserAvatar seed={m.avatar_seed} className="size-5" />,
-  }));
+  if (!onChange) {
+    return (
+      <IssueCardAssigneeAvatar
+        assignee={assignee}
+        smartAssign={smartAssign}
+        emptyLabel={tField(smartAssign ? "smartAssign" : "unassigned")}
+      />
+    );
+  }
   return (
-    <SearchSelect
-      deferTrigger
+    <AssigneePicker
+      variant="card"
       value={assignee?.user_id ?? null}
+      members={members}
       onChange={onChange}
-      options={options}
-      noneOption={{
-        label: emptyLabel,
-        icon: smartAssign ? (
-          <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
-        ) : undefined,
-      }}
-      align="end"
-      tooltip={tField("assignee")}
-      shortcutHint={KEY_FOR_FIELD.assignee}
-      stopPropagation
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", { field: tField("assignee"), value: assignee ? displayName(assignee) : emptyLabel })}
-          onClick={stop}
-          onPointerDown={stop}
-          className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
-        >
-          {avatar}
-        </button>
-      }
-    />
-  );
-}
-
-function DueDatePick({
-  value,
-  onChange,
-  recurrence,
-  onRecurrenceChange,
-}: {
-  value: string;
-  onChange?: (v: string | null) => void;
-  recurrence: RecurrenceCadence | null;
-  onRecurrenceChange?: (next: {
-    due_date: string | null;
-    recurrence: RecurrenceCadence | null;
-  }) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const parsed = parseDueDate(value);
-  if (!parsed) return null;
-
-  // Read-only (e.g. inside the drag overlay): plain label, no picker.
-  if (!onChange) return <IssueCardDueDate value={value} recurrence={recurrence} />;
-
-  return (
-    <DateTimePicker
-      variant="chip"
-      value={value}
-      onChange={onChange}
-      recurrence={recurrence}
-      onRecurrenceChange={onRecurrenceChange}
-      ariaLabel={t("changeDueDateAria")}
-      tooltip={tField("dueDate")}
-      shortcutHint={KEY_FOR_FIELD.dueDate}
-      stopPropagation
+      smartAssign={smartAssign}
     />
   );
 }
@@ -870,26 +565,28 @@ export const IssueCardBody = memo(function IssueCardBody({
             createdAt={issue.created_at}
           />
         ),
-        status: <StatusPick value={issue.status} onChange={setStatus} />,
-        priority: <PriorityPick value={issue.priority} onChange={setPriority} />,
-        effort: <EffortPick value={issue.effort} onChange={setEffort} />,
-        categories: (
-          <CategoryPick
+        status: setStatus && <StatusPicker variant="card" value={issue.status} onChange={setStatus} />,
+        priority: setPriority && <PriorityPicker variant="card" value={issue.priority} onChange={setPriority} />,
+        effort: setEffort && <EffortPicker variant="card" value={issue.effort} onChange={setEffort} />,
+        categories: onSetCategories && (
+          <CategoriesPicker
+            variant="card"
             categories={categoryList}
-            selectedIds={issue.category_ids}
+            value={issue.category_ids}
             onChange={onSetCategories}
             projectId={issue.project_id}
           />
         ),
         objective: objective && <ObjectiveIndicator objective={objective} onEdit={onEditObjective} />,
-        dueDate: issue.due_date && (
-          <DueDatePick
+        dueDate: setDueDate && issue.due_date && parseDueDate(issue.due_date) ? (
+          <DueDatePicker
+            variant="card"
             value={issue.due_date}
             onChange={setDueDate}
             recurrence={issue.recurrence}
             onRecurrenceChange={setRecurrence}
           />
-        ),
+        ) : undefined,
       }}
     />
   );
