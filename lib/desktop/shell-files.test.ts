@@ -12,7 +12,23 @@ const REPO = path.resolve(__dirname, "../..");
  * say which ones they are.
  */
 const SHELL_FILES: Record<string, string> = {
-  "main.ts": "creates the window and answers the bridge; channels and sender policies live in @/lib/desktop/ipc-contract",
+  "main.ts":
+    "creates the window and gives the handler modules what they use; channels and sender policies live in " +
+    "@/lib/desktop/ipc-contract",
+  "navigation-handlers.ts":
+    "answers external links, agent app links, the held sign-in link and the server picker; admission lives in " +
+    "@/lib/desktop/nav-guard and @/lib/desktop/auth-link-delivery, with regressions in @/lib/desktop/main-handlers-ipc.test",
+  "local-handlers.ts":
+    "answers the local instance's session and restart and local model discovery; the trust rule lives in " +
+    "@/lib/desktop/local-account, with regressions in @/lib/desktop/main-handlers-ipc.test",
+  "update-handlers.ts":
+    "answers update checks, installs and status replays; regressions live in @/lib/desktop/main-handlers-ipc.test",
+  "notification-handlers.ts":
+    "answers banners, the badge, native push and the Linux background session; gating lives in " +
+    "@/lib/desktop/notification-capabilities, with regressions in @/lib/desktop/main-handlers-ipc.test",
+  "window-handlers.ts":
+    "answers window chrome, material, buttons, focus and storage flush; decisions live in @/lib/desktop/window-frame " +
+    "and @/lib/desktop/window-material, with regressions in @/lib/desktop/main-handlers-ipc.test",
   "preload.ts": "builds the bridge of @/lib/desktop/bridge from @/lib/desktop/ipc-renderer and @/lib/desktop/launch-state",
   "menu.ts": "composes the native menu from Electron APIs",
   "open-external.ts":
