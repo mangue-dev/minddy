@@ -43,6 +43,7 @@ import {REASONING_LEVELS, toReasoningLevel, type ReasoningLevel} from "@/lib/age
 import {DECISION_ENGINE_CONFIG_KEY, toDecisionEngine} from "@/lib/decision-engine";
 import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import type {AdminSectionId} from "@/lib/admin-sections";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 type ConfigValues = Record<string, string | null>;
 
@@ -970,7 +971,7 @@ function ModelIdRow({
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => void commit()}
             onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Enter" && !isImeComposing(e)) e.currentTarget.blur();
               if (e.key === "Escape") setDraft(saved);
             }}
           />

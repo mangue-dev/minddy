@@ -63,7 +63,7 @@ export function useBulkSelectionActions({
 }: BulkSelectionActionsOptions) {
   const tBulk = useTranslations("BulkActions");
   // The single-ticket “Copy identifier” says the same on a failed copy.
-  const tPr = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const { user } = useAuth();
 
   // Mirror refs — the listener subscribes once and always reads the current
@@ -78,8 +78,8 @@ export function useBulkSelectionActions({
   userRef.current = user;
   const tBulkRef = useRef(tBulk);
   tBulkRef.current = tBulk;
-  const tPrRef = useRef(tPr);
-  tPrRef.current = tPr;
+  const tCommonRef = useRef(tCommon);
+  tCommonRef.current = tCommon;
   const promptDelivery = usePromptDelivery();
   const promptDeliveryRef = useRef(promptDelivery);
   promptDeliveryRef.current = promptDelivery;
@@ -169,7 +169,7 @@ export function useBulkSelectionActions({
       await navigator.clipboard.writeText(list);
       toast.success(list);
     } catch {
-      toast.error(tPrRef.current("copyFailed"));
+      toast.error(tCommonRef.current("copyFailed"));
     }
   }, []);
 

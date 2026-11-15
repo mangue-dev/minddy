@@ -1,11 +1,13 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Share01Icon } from "@hugeicons/core-free-icons";
+import { Share01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { CopyStateIcon, CopyStatus } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { AppTooltip } from "@/components/ui/app-tooltip";
@@ -49,9 +51,11 @@ export function OnboardingJoinDialog({
     setCanShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
   }, []);
 
+  const emailCopy = useCopyFeedback();
   const copy = async () => {
-    await navigator.clipboard.writeText(email);
-    toast.success(tc("copied"));
+    // The confirmation is the button's icon and the dialog's own live region:
+    // the modal hides the toaster from screen readers.
+    if (!(await emailCopy.copy(email))) toast.error(tc("copyFailed"));
   };
 
   const share = async () => {
@@ -81,9 +85,10 @@ export function OnboardingJoinDialog({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" size="sm" onClick={() => void copy()} disabled={!email}>
-              <HugeiconsIcon icon={Copy01Icon} />
+              <CopyStateIcon copied={emailCopy.copied} />
               {tc("copy")}
             </Button>
+            <CopyStatus state={emailCopy.state} copiedLabel={tc("copied")} failedLabel={tc("copyFailed")} />
             {canShare && (
               <Button
                 type="button"

@@ -105,7 +105,7 @@ function CommandBlock({
       <pre tabIndex={0} role="region" aria-label={copy.copyContentLabel} className="max-h-96 w-full min-w-0 overflow-auto overscroll-contain rounded-sm font-mono text-xs leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
         <code>{command}</code>
       </pre>
-      <CopyButton text={command} label={copy.copy} copiedLabel={copy.copied} className={COPY_BUTTON} />
+      <CopyButton text={command} label={copy.copy} copiedLabel={copy.copied} failedLabel={copy.copyFailed} className={COPY_BUTTON} />
     </div>
   );
 }
@@ -232,6 +232,7 @@ function PromptCard({
           text={prompt}
           label={copy.copyPrompt}
           copiedLabel={copy.copied}
+          failedLabel={copy.copyFailed}
           disabled={disabled}
           className={COPY_BUTTON}
         />
@@ -267,11 +268,11 @@ function EmailTemplateCard({
       <CommandBlock command={template.subject} copy={copy} />
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-xs font-medium text-muted-foreground">{copy.emailBodyLabel}</p>
-        <CopyButton text={template.body} label={copy.copy} copiedLabel={copy.copied} className={COPY_BUTTON} />
+        <CopyButton text={template.body} label={copy.copy} copiedLabel={copy.copied} failedLabel={copy.copyFailed} className={COPY_BUTTON} />
       </div>
       <details className="mt-3 rounded-lg border border-border p-3">
         <summary className="text-xs font-medium text-muted-foreground">{copy.emailReviewTemplate}</summary>
-        <pre tabIndex={0} className="mt-3 max-h-80 overflow-auto overscroll-contain whitespace-pre-wrap font-mono text-xs leading-relaxed [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-ring">{template.body}</pre>
+        <pre tabIndex={0} role="region" aria-label={copy.emailReviewTemplate} className="mt-3 max-h-80 overflow-auto overscroll-contain whitespace-pre-wrap font-mono text-xs leading-relaxed [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-ring">{template.body}</pre>
       </details>
     </div>
   );

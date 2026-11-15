@@ -91,7 +91,7 @@ function ViewNameDialog({ open, onOpenChange, title, initialName, onSubmit }: {
       }}>
       <Input autoFocus={allowInputAutoFocus()} value={name} maxLength={MAX_DATABASE_VIEW_NAME}
         onChange={(event) => setName(event.target.value)}
-        placeholder={t("viewNamePlaceholder")} />
+        placeholder={t("viewNamePlaceholder")} aria-label={t("viewNamePlaceholder")} />
     </FormDialog>
   );
 }

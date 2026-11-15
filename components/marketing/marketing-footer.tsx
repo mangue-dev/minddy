@@ -249,13 +249,14 @@ export function MarketingFooter() {
               “copy” icon next to a clickable address, with nothing to say
               which one does what. Hence a tooltip on each. */}
           <span className="group inline-flex items-center gap-1">
-            <span className="inline-flex size-[22px] items-center justify-center">
+            <span className="inline-flex size-6 items-center justify-center">
               {withHint(
                 t("footerCopyEmail"),
                 <CopyButton
                   text={contactEmail}
                   label={t("footerCopyEmail")}
                   copiedLabel={t("footerEmailCopied")}
+                  failedLabel={t("footerEmailCopyFailed")}
                   iconOnly
                   className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 touch:opacity-100"
                 />,

@@ -563,8 +563,23 @@ body {
     "Noto Color Emoji";
 }
 
-html {
-  scroll-behavior: smooth;
+/* Native UI (form controls, the root scrollbar, autofill, `light-dark()`)
+   follows the theme minddy resolved, not the OS. Pinned per mode rather than
+   `light dark`, because the theme comes from the account and defaults to
+   dark. `html.` keeps a nested `.dark` (previews, captures) from flipping the
+   page's native UI. */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 /* Keyframes used by primitives (skeleton shimmer, accordion, collapsible) */

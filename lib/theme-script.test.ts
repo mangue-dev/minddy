@@ -27,6 +27,8 @@ interface RunResult {
   /** Flip the mode class / an attribute, then re-run the observer callback. */
   mutate: (change: { dark?: boolean; attribute?: [string, string] }) => string | null;
   themeColor: string | null;
+  /** Content of `<meta name="color-scheme">`. */
+  colorSchemeMeta: () => string | null;
   /** What the script mirrored back into localStorage, if anything. */
   storedAfter: string | null;
 }
@@ -37,10 +39,17 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
   let observedAttributes: string[] = [];
   let observerCallback: (() => void) | null = null;
   let themeColor: string | null = null;
-  const metaTag = {
-    setAttribute(name: string, value: string) {
-      if (name === "content") themeColor = value;
-    },
+  let colorSchemeMeta: string | null = null;
+  const metaTag = () => {
+    let metaName = "";
+    return {
+      setAttribute(name: string, value: string) {
+        if (name === "name") metaName = value;
+        if (name !== "content") return;
+        if (metaName === "theme-color") themeColor = value;
+        if (metaName === "color-scheme") colorSchemeMeta = value;
+      },
+    };
   };
   const storage = new Map<string, string>();
   if (env.storedTheme !== null) storage.set("mangue-ui-theme", env.storedTheme);
@@ -61,7 +70,7 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
         getAttribute: (name: string) => attributes[name] ?? null,
       },
       querySelector: () => null,
-      createElement: () => metaTag,
+      createElement: metaTag,
       head: { appendChild: () => {} },
     },
     matchMedia: () => ({ matches: env.osPrefersDark }),
@@ -107,6 +116,7 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
     },
     htmlHasDarkClass: classes.has("dark"),
     themeColor,
+    colorSchemeMeta: () => colorSchemeMeta,
     storedAfter: storage.get("mangue-ui-theme") ?? null,
   };
 }
@@ -152,6 +162,16 @@ describe("buildThemeScript — resolution order", () => {
       { storedTheme: "light", osPrefersDark: false },
     );
     expect(lightOs.htmlHasDarkClass).toBe(false);
+  });
+
+  it("declares the resolved mode in <meta name=\"color-scheme\"> and follows switches", () => {
+    const result = run(buildThemeScript({ defaultTheme: "dark", accountTheme: "light" }), {
+      storedTheme: null,
+      osPrefersDark: true,
+    });
+    expect(result.colorSchemeMeta()).toBe("light");
+    result.mutate({ dark: true });
+    expect(result.colorSchemeMeta()).toBe("dark");
   });
 });
 

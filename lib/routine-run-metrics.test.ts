@@ -21,6 +21,46 @@ describe("routine run metrics", () => {
     ).toBe("4m 8s");
   });
 
+  it("formats the duration in the reader's language", () => {
+    expect(
+      formatRoutineRunDuration(
+        "2026-09-02T10:00:00.000Z",
+        "2026-09-02T10:04:08.000Z",
+        "fr",
+      ),
+    ).toBe("4min 8s");
+    expect(
+      formatRoutineRunDuration(
+        "2026-09-02T10:00:00.000Z",
+        "2026-09-02T10:00:08.000Z",
+        "pt-BR",
+      ),
+    ).toBe("8 s");
+  });
+
+  it("falls back to unit pieces where Intl.DurationFormat is missing", () => {
+    const intl = Intl as unknown as { DurationFormat?: unknown };
+    const original = intl.DurationFormat;
+    intl.DurationFormat = undefined;
+    try {
+      expect(
+        formatRoutineRunDuration(
+          "2026-09-02T10:00:00.000Z",
+          "2026-09-02T11:02:03.000Z",
+        ),
+      ).toBe("1h 2m");
+      expect(
+        formatRoutineRunDuration(
+          "2026-09-02T10:00:00.000Z",
+          "2026-09-02T11:00:03.000Z",
+          "fr",
+        ),
+      ).toBe("1h");
+    } finally {
+      intl.DurationFormat = original;
+    }
+  });
+
   it("leaves incomplete or invalid durations unavailable", () => {
     expect(formatRoutineRunDuration("2026-09-02T10:00:00.000Z", null)).toBe("—");
     expect(formatRoutineRunDuration("invalid", "2026-09-02T10:00:00.000Z")).toBe(

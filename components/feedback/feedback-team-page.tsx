@@ -2776,8 +2776,8 @@ function AuthorPicker({
  * entering a return received by email almost always starts there.
  *
  * Rendered ON-SITE, in the composer, rather than in a second dialog:
- * stacking two modals for two fields costs more in attention than this
- * qu'elles demandent.
+ * stacking two modals for two fields costs more attention than the fields
+ * are worth.
  */
 function NewAuthorFields({
   email,
@@ -2801,12 +2801,14 @@ function NewAuthorFields({
         value={email}
         onChange={(e) => onEmailChange(e.target.value)}
         placeholder={t("authorEmail")}
+        aria-label={t("authorEmail")}
         className="h-8 min-w-0 flex-1"
       />
       <Input
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         placeholder={t("authorName")}
+        aria-label={t("authorName")}
         className="h-8 min-w-0 flex-1"
       />
       <Tooltip>

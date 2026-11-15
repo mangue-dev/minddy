@@ -23,7 +23,10 @@ function PasswordInput({
 }: Omit<React.ComponentProps<"input">, "type">) {
   const t = useTranslations("Common")
   const [visible, setVisible] = React.useState(false)
-  const label = visible ? t("hidePassword") : t("showPassword")
+  // The accessible name stays fixed and aria-pressed carries the state, so a
+  // screen reader hears "Show password, toggle button, pressed" instead of a
+  // name that changes under it. The tooltip still says what a click will do.
+  const tooltip = visible ? t("hidePassword") : t("showPassword")
 
   return (
     <InputGroup className={className}>
@@ -34,9 +37,10 @@ function PasswordInput({
         <InputGroupButton
           size="icon-sm"
           className="aspect-square h-full w-auto rounded-[calc(var(--radius)-3px)]"
-          aria-label={label}
+          aria-label={t("showPassword")}
+          aria-pressed={visible}
           aria-controls={props.id}
-          tooltip={label}
+          tooltip={tooltip}
           // Keep focus (and the caret) in the field while toggling.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setVisible((v) => !v)}

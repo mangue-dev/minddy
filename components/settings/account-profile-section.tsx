@@ -152,6 +152,7 @@ export function AccountProfileSection() {
           label={t("nameLabel")}
           editLabel={t("editName", { name: currentName })}
           placeholder={t("namePlaceholder")}
+          autoComplete="name"
           validate={(next) => (next ? null : t("nameEmpty"))}
           className="mt-4 flex h-10 max-w-full items-center justify-center"
           inputClassName="h-10 w-72 max-w-full text-center text-xl font-semibold"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
@@ -21,6 +22,7 @@ export function CopyButton({
   text,
   label,
   copiedLabel,
+  failedLabel,
   iconOnly = false,
   className,
   onClick,
@@ -30,6 +32,8 @@ export function CopyButton({
   text: string;
   label: string;
   copiedLabel: string;
+  /** Shown and announced when the copy fails; the button label otherwise. */
+  failedLabel?: string;
   /**
  * Icon alone, without frame: the label becomes the accessible name of the button au
  * instead of being written next to it. For places where the button lands AGAINST the
@@ -42,8 +46,14 @@ export function CopyButton({
   // wrap it in a `TooltipTrigger asChild`, which passes its headphones to it
   // and its `aria-describedby`.
 } & ComponentProps<"button">) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const copied = state === "copied";
   const timer = useRef<number | null>(null);
+  // The live confirmation must sit outside the button (a button's children are
+  // presentational) yet the component must stay ONE element, since callers wrap
+  // it in `TooltipTrigger asChild`. So it is portaled to the body, once mounted.
+  const [statusHost, setStatusHost] = useState<HTMLElement | null>(null);
+  useEffect(() => setStatusHost(document.body), []);
 
   // The component can disappear during the two seconds of display.
   useEffect(
@@ -54,6 +64,7 @@ export function CopyButton({
   );
 
   const copy = async () => {
+    let ok = true;
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -67,22 +78,23 @@ export function CopyButton({
       field.style.opacity = "0";
       document.body.append(field);
       field.select();
-      const copied = document.execCommand("copy");
+      ok = document.execCommand("copy");
       field.remove();
-      if (!copied) return;
     }
-    setCopied(true);
+    setState(ok ? "copied" : "failed");
     if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setCopied(false), 2000);
+    timer.current = window.setTimeout(() => setState("idle"), 2000);
   };
+
+  const failed = state === "failed" && failedLabel ? failedLabel : null;
+  const shown = copied ? copiedLabel : (failed ?? label);
 
   return (
     <button
       type="button"
-      // The label changes to “copied”: read next to the icon, or announced by the
-      // name accessible when there is only the icon. The return is the same in
-      // deux cas, il change juste de canal.
-      aria-label={iconOnly ? (copied ? copiedLabel : label) : undefined}
+      // The name stays the action; the outcome is announced by the live
+      // region below and shown next to the icon.
+      aria-label={iconOnly ? label : undefined}
       {...rest}
       // The caller's click first — that of a `TooltipTrigger` closes
       // the tooltip, and overwriting it would leave it open on the clicked button.
@@ -93,13 +105,20 @@ export function CopyButton({
       className={cn(
         "inline-flex shrink-0 items-center transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         iconOnly
-          ? "rounded-md p-1 text-muted-foreground"
+          ? "min-h-6 min-w-6 justify-center rounded-md p-1 text-muted-foreground"
           : "gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground",
         className,
       )}
     >
       <CopyStateIcon copied={copied} className="size-3.5" checkClassName="text-primary" />
-      {!iconOnly && (copied ? copiedLabel : label)}
+      {!iconOnly && shown}
+      {statusHost &&
+        createPortal(
+          <span role="status" className="sr-only">
+            {copied ? copiedLabel : failed ?? ""}
+          </span>,
+          statusHost,
+        )}
     </button>
   );
 }

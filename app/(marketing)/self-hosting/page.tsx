@@ -61,7 +61,7 @@ export default async function SelfHostingPage() {
           </header>
           <div className="grid gap-4 lg:grid-cols-3">
             <div className={cn("flex items-center rounded-2xl p-4 sm:p-6 lg:col-span-2", CARD_TONES.sage)}>
-              <ScreenshotSlot id="heroBoard" expandable sizes="(min-width: 1024px) 710px, 100vw" className="w-full shadow-lg shadow-black/5" />
+              <ScreenshotSlot id="heroBoard" priority expandable sizes="(min-width: 1024px) 710px, 100vw" className="w-full shadow-lg shadow-black/5" />
             </div>
             <div className={cn("rounded-2xl p-6 sm:p-8", CARD_TONES.butter)}>
               <AppIcon icon={ShieldCheck} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />

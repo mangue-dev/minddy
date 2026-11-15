@@ -2,7 +2,7 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AddToListIcon, Clock01Icon, Copy01Icon, MessageMultiple01Icon, CheckIcon, WebhookIcon } from "@hugeicons/core-free-icons";
+import { AddToListIcon, Clock01Icon, MessageMultiple01Icon, CheckIcon, WebhookIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { ObjectiveValue, PropertyRow } from "@/components/issue-property-fields";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { CopyStateIcon, CopyStatus } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
 import { type SceneIcon } from "@/components/illustrations/iso-icon";
 
 function sceneIcon(icon: IconSvgElement): SceneIcon {
@@ -109,6 +111,8 @@ export function CreateIntegrationWizard({
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // The key is shown once: a copy that silently failed would lose it.
+  const keyCopy = useCopyFeedback();
   /** One number per opening of the wizard, bumped by `reset()`. The close
       button stays live while the key is being created: a result that comes
       back after the wizard was closed must not write into the fresh one. */
@@ -389,14 +393,15 @@ export function CreateIntegrationWizard({
               variant="ghost"
               size="icon-sm"
               aria-label={t("copyKey")}
-              onClick={() => {
+              onClick={async () => {
                 if (!createdEnvLine) return;
-                void navigator.clipboard.writeText(createdEnvLine);
-                toast.success(t("keyCopied"));
+                if (!(await keyCopy.copy(createdEnvLine))) toast.error(tCommon("copyFailed"));
               }}
             >
-              <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+              <CopyStateIcon copied={keyCopy.copied} checkClassName="text-emerald-500" />
             </Button>
+            {/* Inside the dialog: the modal hides the toaster from screen readers. */}
+            <CopyStatus state={keyCopy.state} copiedLabel={t("keyCopied")} failedLabel={tCommon("copyFailed")} />
           </div>
 
           {/* The prompt: what transforms a key into written integration. He

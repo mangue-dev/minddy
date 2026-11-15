@@ -28,6 +28,8 @@
  * writes it. This is the only definition of “send to keyboard”.
  */
 
+import { isImeComposing, type ImeKeyEvent } from "./ime";
+
 /** The two modes, in the order in which the settings screen offers them. */
 export const SEND_MODES = ["mod-enter", "enter"] as const;
 
@@ -67,10 +69,14 @@ export function isSendShortcut(
     ctrlKey: boolean;
     shiftKey?: boolean;
     altKey?: boolean;
-  },
+  } & ImeKeyEvent,
   mode: SendMode = DEFAULT_SEND_MODE,
 ): boolean {
   if (e.key !== "Enter") return false;
+  // The Enter that confirms an IME candidate (Japanese, Chinese, Korean) is
+  // not a send. Safari reports it after `compositionend`, with `isComposing`
+  // already false but `keyCode` 229, hence both checks.
+  if (isImeComposing(e)) return false;
   // Shift+Enter skips the line, always — that's what makes `enter` mode
   // habitable, and it costs nothing in `mod-enter` mode.
   if (e.shiftKey) return false;

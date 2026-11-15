@@ -44,6 +44,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
 import { searchActionTree } from "@/lib/action-menu-search";
 import { Unfold } from "@/components/ui/unfold";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 export interface ContextMenuAction {
   id: string;
@@ -148,6 +149,7 @@ export function useActionMenuSearch(open: boolean, searchable = true) {
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
+      if (isImeComposing(e)) return;
       items()[0]?.click();
       return;
     }

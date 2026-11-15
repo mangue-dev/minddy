@@ -365,8 +365,14 @@ export function AuthEntry({ invite }: { invite: InvitationPreview | null }) {
             <input type="email" name="email" autoComplete="username" value={email.trim()} readOnly hidden />
             <PasswordInput
               id="password"
+              name="password"
               aria-label={t("password")}
               {...fieldError}
+              aria-describedby={
+                [error ? "auth-error" : null, creating ? "password-rules" : null]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
               className="h-12 app-desktop:h-12 bg-control text-base"
               autoComplete={creating ? "new-password" : "current-password"}
               autoFocus
@@ -375,7 +381,7 @@ export function AuthEntry({ invite }: { invite: InvitationPreview | null }) {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            {creating && <PasswordRules password={password} />}
+            {creating && <PasswordRules id="password-rules" password={password} />}
             {!creating && (
               <div className="flex justify-end">
                 <Link
@@ -466,12 +472,13 @@ export function AuthEntry({ invite }: { invite: InvitationPreview | null }) {
         >
           <Input
             id="email"
+            name="email"
             type="email"
             inputMode="email"
             aria-label={t("email")}
             {...fieldError}
             className="h-12 app-desktop:h-12 bg-control text-base"
-            autoComplete="email"
+            autoComplete="username"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}

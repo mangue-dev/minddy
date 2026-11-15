@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/components/app-link";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -112,6 +112,7 @@ export function RoutineDetail({
   const purchasesHidden = usePurchasesHidden();
   const tCommon = useTranslations("Common");
   const format = useFormatter();
+  const locale = useLocale();
   const routineSchedulingConfigured = useRoutineSchedulingConfigured();
   const actions = useRoutineActions({ schedulingConfigured: routineSchedulingConfigured });
 
@@ -439,6 +440,7 @@ export function RoutineDetail({
                                   {formatRoutineRunDuration(
                                     run.started_at,
                                     run.completed_at,
+                                    locale,
                                   )}
                                 </td>
                                 <td className="tabular-nums text-muted-foreground">

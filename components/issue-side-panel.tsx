@@ -1274,7 +1274,12 @@ export function IssueSidePanel({
                         <summary className="text-xs text-muted-foreground">
                           {t("githubRawMetadata")}
                         </summary>
-                        <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs">
+                        <pre
+                          tabIndex={0}
+                          role="region"
+                          aria-label={t("githubRawMetadata")}
+                          className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs focus-visible:outline-2 focus-visible:outline-ring"
+                        >
                           {JSON.stringify(githubMetadata, null, 2)}
                         </pre>
                       </details>

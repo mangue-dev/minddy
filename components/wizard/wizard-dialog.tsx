@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { CloseButton } from "@/components/ui/close-button";
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -130,6 +130,27 @@ export function WizardDialog<Id extends string>({
   // otherwise taken for him.
   const submitShortcut = useSubmitShortcut({ selector: "[data-wizard-cta]" });
 
+  // Moving to another step replaces the content under the focus: a screen
+  // reader would stay on "Continue" and never hear the new step. Its heading
+  // takes the focus instead, unless the step put it in one of its own fields
+  // (autoFocus). The first step of an opening keeps the dialog's own focus.
+  const shownStepId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) shownStepId.current = null;
+  }, [open]);
+  const focusNewStepHeading = useCallback((heading: HTMLHeadingElement | null) => {
+    if (!heading) return;
+    const id = heading.dataset.stepId ?? null;
+    const previous = shownStepId.current;
+    shownStepId.current = id;
+    if (previous === null || previous === id) return;
+    requestAnimationFrame(() => {
+      const content = heading.closest("[data-wizard-step]");
+      if (content?.contains(document.activeElement)) return;
+      heading.focus({ preventScroll: true });
+    });
+  }, []);
+
   // A step may disappear from the list under the index (the user changes
   // an answer in advance): we limit rather than creating emptiness.
   const index = Math.min(Math.max(stepIndex, 0), Math.max(steps.length - 1, 0));
@@ -220,6 +241,7 @@ export function WizardDialog<Id extends string>({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -18 }}
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  data-wizard-step
                   className="flex w-full flex-col gap-6"
                 >
                   {/* Title and subtitle: placed above what they
@@ -228,7 +250,12 @@ export function WizardDialog<Id extends string>({
                       travel with the content, so they change in the same
                       mouvement. */}
                   <div className="space-y-1.5 text-left">
-                    <h2 className="text-xl font-semibold tracking-tight">
+                    <h2
+                      ref={focusNewStepHeading}
+                      data-step-id={step.id}
+                      tabIndex={-1}
+                      className="text-xl font-semibold tracking-tight outline-none"
+                    >
                       {step.title}
                     </h2>
                     {step.subtitle && (

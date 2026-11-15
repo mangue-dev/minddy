@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, GlobeIcon } from "@hugeicons/core-free-icons";
+import { GlobeIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { CopyStateIcon, CopyStatus } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -153,10 +155,12 @@ export function PagePublishDialog({
   };
 
   const shareUrl = share ? `${window.location.origin}/p/${share.token}` : null;
+  const linkCopy = useCopyFeedback();
   const copyLink = async () => {
     if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
-    toast.success(t("linkCopied"));
+    // The confirmation is the button's icon and the dialog's own live region:
+    // the modal hides the toaster from screen readers.
+    if (!(await linkCopy.copy(shareUrl))) toast.error(tc("copyFailed"));
   };
 
   const hint =
@@ -239,9 +243,10 @@ export function PagePublishDialog({
                   className="shrink-0"
                   onClick={copyLink}
                 >
-                  <HugeiconsIcon icon={Copy01Icon} />
+                  <CopyStateIcon copied={linkCopy.copied} checkClassName="text-success" />
                   {t("copyLink")}
                 </Button>
+                <CopyStatus state={linkCopy.state} copiedLabel={t("linkCopied")} failedLabel={tc("copyFailed")} />
               </div>
 
               <div data-sheet-section className="flex flex-col gap-3 border-t pt-3">

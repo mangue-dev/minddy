@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { writeClipboardText } from "@/lib/clipboard";
 import { IMPORT_GUIDES, type ImportGuide } from "@/lib/import-guides";
 import { useModShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { ImportSourceLogo } from "@/components/import-source-logo";
@@ -58,7 +59,10 @@ export function ImportGuideBlock({
 
   const copyCommand = async () => {
     if (!guide.command) return;
-    await navigator.clipboard.writeText(guide.command);
+    if (!(await writeClipboardText(guide.command))) {
+      toast.error(tc("copyFailed"));
+      return;
+    }
     toast.success(tc("copied"));
   };
 

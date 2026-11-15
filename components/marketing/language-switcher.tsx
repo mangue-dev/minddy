@@ -63,12 +63,12 @@ export function LanguageSwitcher() {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="fr">Français</SelectItem>
-        <SelectItem value="en">English</SelectItem>
-        <SelectItem value="de">Deutsch</SelectItem>
-        <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-        <SelectItem value="it">Italiano</SelectItem>
-        <SelectItem value="es">Español</SelectItem>
+        <SelectItem value="fr"><span lang="fr">Français</span></SelectItem>
+        <SelectItem value="en"><span lang="en">English</span></SelectItem>
+        <SelectItem value="de"><span lang="de">Deutsch</span></SelectItem>
+        <SelectItem value="pt-BR"><span lang="pt-BR">Português (Brasil)</span></SelectItem>
+        <SelectItem value="it"><span lang="it">Italiano</span></SelectItem>
+        <SelectItem value="es"><span lang="es">Español</span></SelectItem>
       </SelectContent>
     </Select>
   );

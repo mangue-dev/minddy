@@ -147,6 +147,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CopyStateIcon } from "@/components/ui/copy-state-icon";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * PR detail panel (MIN-66 + MIN-138 + MIN-143): header (ticket +
@@ -164,6 +165,7 @@ import { CopyStateIcon } from "@/components/ui/copy-state-icon";
  */
 function CopyBranchButton({ value }: { value: string }) {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -180,7 +182,7 @@ function CopyBranchButton({ value }: { value: string }) {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setCopied(false), 2_000);
     } catch {
-      toast.error(t("copyFailed"));
+      toast.error(tCommon("copyFailed"));
     }
   };
 
@@ -2145,7 +2147,7 @@ export function PrDetail({
             autoFocus={allowInputAutoFocus()}
             className="h-9 w-full rounded-md bg-control px-3 text-sm outline-none focus-visible:bg-control-hover"
             onKeyDown={(event) => {
-              if (event.key === "Enter" && titleDraft.trim()) void saveTitle();
+              if (event.key === "Enter" && titleDraft.trim() && !isImeComposing(event)) void saveTitle();
             }}
           />
           <DialogFooter>

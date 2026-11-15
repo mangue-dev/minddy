@@ -129,7 +129,7 @@ export function usePageDocumentMenu({
         },
         // Clipboard denied (permission, insecure context): say it rather
         // than suggest the link is copied.
-        () => toast.error(t("copyFailed"))
+        () => toast.error(tCommon("copyFailed"))
       );
     },
     [projectId, t]
@@ -160,7 +160,7 @@ export function usePageDocumentMenu({
           trackEvent("page_copied", { what: "content", source: "menu" });
           toast.success(t("pageContentCopied"));
         },
-        () => toast.error(t("copyFailed"))
+        () => toast.error(tCommon("copyFailed"))
       );
     },
     [projectId, t]

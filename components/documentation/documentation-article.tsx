@@ -57,7 +57,7 @@ export async function DocumentationArticleView({ article, articles }: { article:
             pre: ({ node, children }) => {
               const block = extractCodeBlock(node);
               return block ? <ReadOnlyCodeBlock code={block.code} language={block.language || undefined} className="my-5 text-sm" />
-                : <pre className="my-5 overflow-x-auto rounded-lg bg-muted p-4 text-sm">{children}</pre>;
+                : <pre tabIndex={0} role="region" aria-label={tPages("blockCode")} className="my-5 overflow-x-auto rounded-lg bg-muted p-4 text-sm focus-visible:outline-2 focus-visible:outline-ring">{children}</pre>;
             },
             table: ({ children }) => <DocumentationTable label={chunk.title ?? article.title}>{children}</DocumentationTable>,
             img: ({ src, alt }) => {

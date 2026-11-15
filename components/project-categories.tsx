@@ -39,6 +39,7 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-colors";
 import type { Category } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /** The color of a category: a dot that opens the searchable palette. Picking
     one applies at once. */
@@ -193,6 +194,7 @@ function NewCategoryRow({
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
+      if (isImeComposing(event)) return;
       void create();
     } else if (event.key === "Escape") {
       event.preventDefault();

@@ -4,7 +4,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, ArrowUp01Icon, TextWrapIcon as WrapText } from "@hugeicons/core-free-icons";
 import {
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -20,7 +19,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CopyStateIcon } from "@/components/ui/copy-state-icon";
+import { CopyStateIcon, CopyStatus } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
+import { toast } from "sonner";
 
 const COPY_RESET_MS = 2000;
 const COLLAPSED_CODE_HEIGHT_PX = 460;
@@ -80,14 +81,14 @@ export function CodeBlockSurface({
 }) {
   const t = useTranslations("Common");
   const tAssistant = useTranslations("Assistant");
-  const [copied, setCopied] = useState(false);
+  const { state: copyState, copied, copy: copyText } = useCopyFeedback(COPY_RESET_MS);
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
+  // A read-only block whose lines scroll sideways must be reachable from the
+  // keyboard; an editable block already takes focus through its content.
+  const [scrollsInline, setScrollsInline] = useState(false);
   const [wrapped, setWrapped] = useState(true);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pre = useRef<HTMLPreElement | null>(null);
-
-  useEffect(() => () => clearTimeout(timer.current), []);
 
   useLayoutEffect(() => {
     const element = pre.current;
@@ -97,6 +98,7 @@ export function CodeBlockSurface({
       const next = element.scrollHeight > COLLAPSED_CODE_HEIGHT_PX;
       setOverflows(next);
       if (!next) setExpanded(false);
+      setScrollsInline(!element.isContentEditable && element.scrollWidth > element.clientWidth);
     };
 
     measure();
@@ -107,14 +109,7 @@ export function CodeBlockSurface({
   }, [code, wrapped]);
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopied(false), COPY_RESET_MS);
-    } catch {
-      // Clipboard access can be unavailable in a non-secure or restricted context.
-    }
+    if (!(await copyText(code))) toast.error(t("copyFailed"));
   };
 
   return (
@@ -148,7 +143,7 @@ export function CodeBlockSurface({
               <IconButton
                 size="sm"
                 className={cn("code-block-node-copy", copied && "text-primary")}
-                aria-label={copied ? t("copied") : t("copy")}
+                aria-label={t("copy")}
                 data-copied={copied ? "true" : "false"}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => void copy()}
@@ -158,9 +153,15 @@ export function CodeBlockSurface({
             </TooltipTrigger>
             <TooltipContent>{copied ? t("copied") : t("copy")}</TooltipContent>
           </Tooltip>
+          <CopyStatus state={copyState} copiedLabel={t("copied")} />
         </div>
       </div>
-      <pre ref={pre}>{children}</pre>
+      <pre
+        ref={pre}
+        {...(scrollsInline ? { tabIndex: 0, role: "region", "aria-label": t("codeRegion") } : {})}
+      >
+        {children}
+      </pre>
       {overflows && (
         <div className="code-block-node-expand" contentEditable={false}>
           <Button

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { writeClipboardText } from "@/lib/clipboard";
 import { WizardDialog, type WizardStep } from "@/components/wizard/wizard-dialog";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
@@ -39,6 +40,7 @@ export function McpConnectPanel({
   onConnected?: () => void;
 }) {
   const t = useTranslations("Account");
+  const tc = useTranslations("Common");
   const [agent, setAgent] = useState<McpAgent | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const cards = layout === "cards";
@@ -52,7 +54,10 @@ export function McpConnectPanel({
   // Any other MCP client: no setup of its own to show, only a prompt that
   // names the server and how it signs in.
   const copyGenericPrompt = async () => {
-    await navigator.clipboard.writeText(t("agentPromptGeneric", { url: `${window.location.origin}/api/mcp` }));
+    if (!(await writeClipboardText(t("agentPromptGeneric", { url: `${window.location.origin}/api/mcp` })))) {
+      toast.error(tc("copyFailed"));
+      return;
+    }
     toast.success(t("agentPromptGenericCopied"));
   };
 
@@ -171,6 +176,7 @@ function McpAgentWizard({
  config block, the server URL, or a one-click installation link. */
 function McpAgentInstall({ agent }: { agent: McpAgent }) {
   const t = useTranslations("Account");
+  const tc = useTranslations("Common");
 
   // window only exists on the client; rendered after mount to avoid any mismatch.
   const [origin, setOrigin] = useState<string | null>(null);
@@ -183,12 +189,18 @@ function McpAgentInstall({ agent }: { agent: McpAgent }) {
   // The quickest way: the agent installs minddy itself from a prompt that
   // carries the same setup as the manual instructions below.
   const copyPrompt = async () => {
-    await navigator.clipboard.writeText(t("agentPrompt", { name: agent.label, setup }));
+    if (!(await writeClipboardText(t("agentPrompt", { name: agent.label, setup })))) {
+      toast.error(tc("copyFailed"));
+      return;
+    }
     toast.success(t("agentPromptCopied", { name: agent.label }));
   };
 
   const act = async () => {
-    await navigator.clipboard.writeText(setup);
+    if (!(await writeClipboardText(setup))) {
+      toast.error(tc("copyFailed"));
+      return;
+    }
     toast.success(
       agent.kind === "config"
         ? t("configCopied")

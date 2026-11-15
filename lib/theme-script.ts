@@ -41,7 +41,12 @@ import {
  * Minddy defaults are a manual conversion of app/tokens.css's `--background`, which
  * `lib/mobile-touch.test.ts` re-reads so that a moved token is recalculated.
  * The script reads the attribute of the ACTIVE mode, so the bar follows both
- * a mode switch and a palette switch. */
+ * a mode switch and a palette switch.
+ *
+ * The same observer keeps `<meta name="color-scheme">` on the resolved mode, so
+ * the browser's first canvas and native UI match before the stylesheet loads.
+ * It is never the static `light dark`: dark is the default, so a light OS
+ * would flash white first. */
 const CHROME_COLORS: Record<string, string> = Object.fromEntries(
   Object.entries(THEME_PRESETS).map(([id, preset]) => {
     // Only catalog-shaped values may reach executable script text.
@@ -132,7 +137,7 @@ export function buildThemeScript({
   // The mobile app (MIN-907) is marked the same way, from the object Capacitor
   // injects before any page script; the platform is allowlisted.
   const mobile = `try{var c=window.Capacitor;if(c&&c.isNativePlatform&&c.isNativePlatform()){var k=c.getPlatform&&c.getPlatform();if(k==="ios"||k==="android")r.setAttribute("data-native-mobile",k);}}catch(e){}`;
-  return `(function(){var r=document.documentElement;${desktop}${mobile}var C=${scriptLiteral(CHROME_COLORS)};function p(){var d=r.classList.contains("dark");var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.setAttribute("name","theme-color");document.head.appendChild(m);}m.setAttribute("content",C[r.getAttribute(d?"${THEME_PRESET_ATTRIBUTES.dark}":"${THEME_PRESET_ATTRIBUTES.light}")]||(d?"${DEFAULT_CHROME.dark}":"${DEFAULT_CHROME.light}"));}${appearanceStatements(appearance)}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
+  return `(function(){var r=document.documentElement;${desktop}${mobile}var C=${scriptLiteral(CHROME_COLORS)};function u(n,v){var m=document.querySelector('meta[name="'+n+'"]');if(!m){m=document.createElement("meta");m.setAttribute("name",n);document.head.appendChild(m);}m.setAttribute("content",v);}function p(){var d=r.classList.contains("dark");u("theme-color",C[r.getAttribute(d?"${THEME_PRESET_ATTRIBUTES.dark}":"${THEME_PRESET_ATTRIBUTES.light}")]||(d?"${DEFAULT_CHROME.dark}":"${DEFAULT_CHROME.light}"));u("color-scheme",d?"dark":"light");}${appearanceStatements(appearance)}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
     fallbackExpression(defaultTheme)
   });}p();try{new MutationObserver(p).observe(r,{attributes:true,attributeFilter:["class","${THEME_PRESET_ATTRIBUTES.light}","${THEME_PRESET_ATTRIBUTES.dark}"]});}catch(e){}})();`;
 }

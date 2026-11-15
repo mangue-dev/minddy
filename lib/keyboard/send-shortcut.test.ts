@@ -18,6 +18,20 @@ const ev = (over: Partial<Ev> = {}): Ev => ({
 });
 
 describe("isSendShortcut", () => {
+  describe("IME composition", () => {
+    it("never sends on the Enter that confirms a candidate", () => {
+      expect(isSendShortcut(ev({ isComposing: true }), "enter")).toBe(false);
+      expect(isSendShortcut(ev({ nativeEvent: { isComposing: true } }), "enter")).toBe(false);
+      // Safari: composition already over, but the key is still the IME's.
+      expect(isSendShortcut(ev({ keyCode: 229 }), "enter")).toBe(false);
+      expect(isSendShortcut(ev({ nativeEvent: { keyCode: 229 }, metaKey: true }))).toBe(false);
+    });
+
+    it("sends again once the composition is done", () => {
+      expect(isSendShortcut(ev({ isComposing: false, keyCode: 13 }), "enter")).toBe(true);
+    });
+  });
+
   describe("mode ⌘/Ctrl + Entrée (le défaut)", () => {
     it("envoie sur ⌘Entrée comme sur Ctrl+Entrée", () => {
       expect(isSendShortcut(ev({ metaKey: true }))).toBe(true);

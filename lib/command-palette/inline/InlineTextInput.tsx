@@ -45,8 +45,11 @@ export const InlineTextInput = forwardRef<HTMLTextAreaElement, InlineTextInputPr
       }
     }, [ref, autoFocus]);
 
-    // Auto-resize based on content
+    // Auto-resize based on content. Browsers with `field-sizing: content`
+    // size the field from CSS alone (see .inlineTextInput); the mirror and
+    // scrollHeight measurement below are the fallback for the others.
     const adjustSize = useCallback(() => {
+      if (typeof CSS !== "undefined" && CSS.supports?.("field-sizing", "content")) return;
       const textarea = internalRef.current;
       const mirror = mirrorRef.current;
       if (!textarea || !mirror) return;

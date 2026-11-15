@@ -129,9 +129,21 @@ it("lets explicit palette intent fetch immediately while automatic indexing wait
     expect(fetch).not.toHaveBeenCalled();
     await act(async () => { index.armNow(); await vi.advanceTimersByTimeAsync(1); });
     expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledWith("/api/me/search-index", { priority: "auto" });
     await act(async () => { await vi.advanceTimersByTimeAsync(10); });
     expect(index.index).not.toBeNull();
     priority.release(); await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
     expect(fetch).toHaveBeenCalledOnce();
   } finally { priority.release(); }
+});
+
+it("fetches the idle-armed index at low priority", async () => {
+  vi.useFakeTimers(); vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }); clients.push(client);
+  const fetch = vi.fn(async () => Response.json({ issues: [], objectives: [], pages: [] })); vi.stubGlobal("fetch", fetch);
+  function Palette() { useSearchIndex(); return null; }
+  root = createRoot(document.createElement("div"));
+  await act(() => root!.render(createElement(QueryClientProvider, { client }, createElement(Palette))));
+  await act(async () => { await vi.advanceTimersByTimeAsync(SEARCH_INDEX_ARM_DELAY_MS + SEARCH_INDEX_IDLE_TIMEOUT_MS + 10); });
+  expect(fetch).toHaveBeenCalledWith("/api/me/search-index", { priority: "low" });
 });

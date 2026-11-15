@@ -84,6 +84,7 @@ import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo, Collaborator } from "@/lib/types";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { PROJECTS_KEY, membersKey } from "@/lib/query-keys";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * Project creation wizard (MIN-62, MIN-171, MIN-689): Where do we start? →
@@ -1059,6 +1060,7 @@ export function CreateProjectWizard({
                   // would move on before the next address is typed.
                   if (e.key === "Enter" && inviteeInput.trim()) {
                     e.preventDefault();
+                    if (isImeComposing(e)) return;
                     addInvitee();
                   }
                 }}

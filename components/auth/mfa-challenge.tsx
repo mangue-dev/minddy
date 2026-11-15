@@ -158,7 +158,14 @@ export function MfaChallenge({
             <Input
               id="mfa-recovery-code"
               className="h-12 app-desktop:h-12 bg-control font-mono uppercase tracking-widest"
+              // Recovery codes are single-use and unlike the one-time codes that
+              // autofill offers, so keep both form history and OTP suggestions off.
               autoComplete="off"
+              spellCheck={false}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "mfa-recovery-error" : undefined}
               autoFocus
               maxLength={14}
               placeholder={t("mfaRecoveryPlaceholder")}
@@ -167,7 +174,7 @@ export function MfaChallenge({
             />
           </div>
 
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p id="mfa-recovery-error" role="alert" className="text-sm text-destructive">{error}</p>}
 
           <Button
             type="submit"

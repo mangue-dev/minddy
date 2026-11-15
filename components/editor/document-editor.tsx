@@ -28,6 +28,7 @@ import { documentForEditor } from "@/lib/pages-markdown";
 import type { BodyCollaboration } from "@/components/pages/page-collaboration";
 import { useAttachmentImageUploads } from "@/components/editor/document-uploads";
 import { onEditorDom } from "@/components/editor/editor-dom";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * What a document can quote. Absent = surface without mentions (the public
@@ -289,7 +290,7 @@ export function DocumentEditor({
     if (!editor || editor.isDestroyed) return;
     return onEditorDom(editor, (dom) => {
       const onSend = (event: KeyboardEvent) => {
-        if (event.key !== "Enter" || event.shiftKey || event.isComposing || !submitRef.current) return;
+        if (event.key !== "Enter" || event.shiftKey || isImeComposing(event) || !submitRef.current) return;
         if (!isSend(event) || suggestionMenuOpen(editor)) return;
         // The key lands on this very element, where ProseMirror listens too:
         // only an immediate stop keeps its Enter from running after the send.

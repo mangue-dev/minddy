@@ -420,7 +420,7 @@ export function PageCommentBubble({
       const { from, to } = editor.state.selection;
       void navigator.clipboard
         .writeText(editor.state.doc.textBetween(from, to, "\n"))
-        .then(() => toast.success(tCommon("copied")), () => toast.error(t("copyFailed")));
+        .then(() => toast.success(tCommon("copied")), () => toast.error(tCommon("copyFailed")));
     }
   };
 

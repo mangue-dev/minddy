@@ -33,6 +33,7 @@ import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
 import { aiRoutesQueryKey } from "@/lib/use-ai-routes-query";
 import { MINDDY_CLOUD_PROVIDER } from "@/lib/ai-surfaces";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 
 /** Multi-provider BYOK credential list shared by account settings and onboarding. */
@@ -312,7 +313,7 @@ export function ByokConnectPanel({
                 spellCheck={false}
                 className="font-mono text-[13px]"
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") void saveKey();
+                  if (event.key === "Enter" && !isImeComposing(event)) void saveKey();
                 }}
               />
             </label>

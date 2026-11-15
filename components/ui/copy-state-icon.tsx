@@ -39,3 +39,28 @@ export function CopyStateIcon({
     </span>
   )
 }
+
+/**
+ * Live confirmation of a copy control, read by screen readers. It sits next
+ * to the button, never inside it (a button's children are presentational, so
+ * a live region there is not reliably announced), and stays mounted and empty
+ * between copies so the message is announced when it appears. Inside a modal
+ * dialog it must render inside the dialog content: the dialog hides everything
+ * else, the toaster included, from assistive technology. Leave `failedLabel`
+ * out where a failure toast is shown, so the failure is not announced twice.
+ */
+export function CopyStatus({
+  state,
+  copiedLabel,
+  failedLabel,
+}: {
+  state: "idle" | "copied" | "failed"
+  copiedLabel: string
+  failedLabel?: string
+}) {
+  return (
+    <span role="status" className="sr-only">
+      {state === "copied" ? copiedLabel : state === "failed" ? (failedLabel ?? "") : ""}
+    </span>
+  )
+}

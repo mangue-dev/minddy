@@ -17,6 +17,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
 import { SearchIcon } from "../icons";
 import styles from "../styles/SearchBar.module.css";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 // =============================================================================
 // TYPES
@@ -115,6 +116,7 @@ export function SearchBar({
           break;
         case "Enter":
           e.preventDefault();
+          if (isImeComposing(e)) break;
           onEnter?.();
           break;
         case "ArrowDown":

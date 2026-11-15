@@ -92,7 +92,7 @@ export function ProfileSetupScreen({ onDone }: {
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "profile-error" : undefined}
             className="h-12 app-desktop:h-12 bg-control text-base"
-            autoComplete="nickname"
+            autoComplete="name"
             enterKeyHint="done"
             placeholder={t("fullNamePlaceholder")}
             value={name}

@@ -433,6 +433,7 @@ export function RichEditor({
   setCodeBlockLabels({
     copy: tCommon("copy"),
     copied: tCommon("copied"),
+    copyFailed: tCommon("copyFailed"),
     language: tCommon("codeLanguage"),
   });
   // Same for an empty equation's placeholder (blocks/math.ts).

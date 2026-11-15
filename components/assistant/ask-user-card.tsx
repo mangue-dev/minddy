@@ -4,7 +4,7 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CheckIcon, SquareIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -22,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * `ask_user` question card (MIN-86) — shared between Numo chat and feed
@@ -70,6 +71,8 @@ function draftAnswer(d: Draft | undefined): string {
 
 export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   const t = useTranslations("ToolCall");
+  // The free-answer field is named by the question it answers.
+  const questionId = useId();
   const isSend = useIsSendShortcut();
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [current, setCurrent] = useState(0);
@@ -262,6 +265,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         value={draft?.otherValue ?? ""}
         disabled={!live}
         placeholder={t("freeAnswerPlaceholder")}
+        aria-labelledby={questionId}
         onChange={(e) =>
           setDraft(page, {
             ...(drafts[page] ?? EMPTY_DRAFT),
@@ -272,6 +276,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
           e.preventDefault();
+          if (isImeComposing(e)) return;
           // Enter: advance to the next set, or send from the last one.
           if (!isLast) goTo(page + 1);
           else if (allAnswered) submit();
@@ -355,6 +360,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
       {/* Set courant : question + options en liste verticale. */}
       <div className="flex flex-col gap-1.5">
         <p
+          id={questionId}
           className={cn(
             "leading-relaxed",
             sets === 1 && showSkip && "pr-7"
