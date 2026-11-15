@@ -114,20 +114,19 @@ describe("board drag architecture", () => {
       join(process.cwd(), "components/issue-card.tsx"),
       "utf8",
     );
-    const columns = ["kanban-column.tsx", "global-kanban-column.tsx"].map(
-      (file) => readFileSync(join(process.cwd(), "components", file), "utf8"),
+    const column = readFileSync(
+      join(process.cwd(), "components/kanban-column.tsx"),
+      "utf8",
     );
-    const boards = ["kanban-board.tsx", "global-kanban-board.tsx"].map((file) =>
-      readFileSync(join(process.cwd(), "components", file), "utf8"),
+    const board = readFileSync(
+      join(process.cwd(), "components/kanban-board.tsx"),
+      "utf8",
     );
 
     expect(issueCard).toContain("useDraggable");
     expect(issueCard).not.toContain("useSortable");
-    for (const source of columns)
-      expect(source).not.toContain("SortableContext");
-    for (const source of boards) {
-      expect(source).toContain("captureBoardDragPreview");
-      expect(source).not.toContain("<IssueCardBody");
-    }
+    expect(column).not.toContain("SortableContext");
+    expect(board).toContain("captureBoardDragPreview");
+    expect(board).not.toContain("<IssueCardBody");
   });
 });

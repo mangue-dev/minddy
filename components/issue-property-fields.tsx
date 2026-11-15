@@ -1,56 +1,25 @@
 "use client";
 
-import { memo } from "react";
-import { MentionHover } from "@/components/mention-hover";
-import { Dot } from "@/components/ui/color-dot";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { TriangleIcon } from "@hugeicons/core-free-icons";
-
-import { useTranslations } from "next-intl";
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
-import { DateTimePicker } from "@/components/date-time-picker";
 import {
-  SearchSelect,
-  SearchMultiSelect,
-  type PickerOption,
-} from "@/components/search-select";
-import {
-  ALL_STATUSES,
-  PRIORITIES,
-  EFFORT_MAP,
-  EFFORTS,
-  type IssueStatus,
-  type IssuePriority,
-  type IssueEffort,
-} from "@/lib/issue-constants";
-import {
-  StatusIndicator,
-  PriorityIndicator,
-  EffortIndicator,
-} from "@/components/issue-indicators";
-import { displayName } from "@/lib/display-name";
-import { UserAvatar } from "@/components/user-avatar";
-import { KEY_FOR_FIELD } from "@/components/issue-field-shortcuts";
-import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
-import {
-  useCategoryCreateOption,
-  useObjectiveCreateOption,
-} from "@/lib/use-picker-create";
-import type { RecurrenceCadence } from "@/lib/recurrence";
-import { OBJECTIVE_PILL_TRIGGER, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
-import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
-import type { Category, Member, Objective } from "@/lib/types";
+  AssigneePicker,
+  CategoriesPicker,
+  DueDatePicker,
+  EffortPicker,
+  FIELD_TRIGGER,
+  ObjectivePicker,
+  PriorityPicker,
+  StatusPicker,
+} from "@/components/issue-field-pickers";
 
-/* Borderless key/value fields for the issue panel — the value control has no
-   button chrome (matches the inline pickers on the issue cards). Right-aligned;
-   opens a searchable dropdown on click. */
+/* Borderless key/value fields for the issue panel: the value control has no
+   button chrome and opens a searchable dropdown, right-aligned. The pickers
+   themselves live in issue-field-pickers.tsx (the "row" variant). */
 
-/* Exported so the rows that aren't a plain field picker — relations, agent —
-   hang their own trigger off the same chrome. */
-export { Dot } from "@/components/ui/color-dot";
-
-export const TRIGGER =
-  "-mr-1.5 flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted disabled:cursor-default disabled:hover:bg-transparent";
+/** The row trigger chrome, for the rows that are not a plain field picker
+ *  (relations, agent, pull request…). */
+export const TRIGGER = FIELD_TRIGGER.row;
 
 export function PropertyRow({
   label,
@@ -69,343 +38,32 @@ export function PropertyRow({
   );
 }
 
-// Memoized (MIN-875): the detail panels re-render for each query they read.
-export const StatusValue = memo(function StatusValue({
-  value,
-  onChange,
-}: {
-  value: IssueStatus;
-  onChange: (v: IssueStatus) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tStatus = useTranslations("Status");
-  const options: PickerOption[] = ALL_STATUSES.map((s) => ({
-    value: s.value,
-    label: tStatus(s.value),
-    icon: <StatusIndicator status={s.value} className="size-4" />,
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={(v) => onChange(v as IssueStatus)}
-      options={options}
-      align="end"
-      tooltip={tField("status")}
-      shortcutHint={KEY_FOR_FIELD.status}
-      trigger={
-        <button type="button" aria-label={t("fieldValueAria", { field: tField("status"), value: tStatus(value) })} className={TRIGGER}>
-          <StatusIndicator status={value} />
-        </button>
-      }
-    />
-  );
-});
+type RowProps<P> = Omit<P, "variant" | "showValue">;
 
-export const PriorityValue = memo(function PriorityValue({
-  value,
-  onChange,
-}: {
-  value: IssuePriority;
-  onChange: (v: IssuePriority) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tPriority = useTranslations("Priority");
-  const options: PickerOption[] = PRIORITIES.map((p) => ({
-    value: p.value,
-    label: tPriority(p.value),
-    icon: <PriorityIndicator priority={p.value} className="size-4" />,
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={(v) => onChange(v as IssuePriority)}
-      options={options}
-      align="end"
-      tooltip={tField("priority")}
-      shortcutHint={KEY_FOR_FIELD.priority}
-      trigger={
-        <button type="button" aria-label={t("fieldValueAria", { field: tField("priority"), value: tPriority(value) })} className={TRIGGER}>
-          <PriorityIndicator priority={value} />
-        </button>
-      }
-    />
-  );
-});
+export function StatusValue(props: RowProps<ComponentProps<typeof StatusPicker>>) {
+  return <StatusPicker variant="row" {...props} />;
+}
 
-export const EffortValue = memo(function EffortValue({
-  value,
-  onChange,
-}: {
-  value: IssueEffort | null;
-  onChange: (v: IssueEffort | null) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const options: PickerOption[] = EFFORTS.map((e) => ({
-    value: e.value,
-    label: e.label,
-    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={(v) => onChange(v as IssueEffort | null)}
-      options={options}
-      noneOption={{ label: tField("effortNone") }}
-      align="end"
-      tooltip={tField("effort")}
-      shortcutHint={KEY_FOR_FIELD.effort}
-      trigger={
-        <button type="button" aria-label={t("fieldValueAria", { field: tField("effort"), value: value ? EFFORT_MAP[value].label : tField("effortNone") })} className={TRIGGER}>
-          {value ? (
-            <EffortIndicator effort={value} className="text-foreground" />
-          ) : (
-            <span className="text-muted-foreground">{tField("effortNone")}</span>
-          )}
-        </button>
-      }
-    />
-  );
-});
+export function PriorityValue(props: RowProps<ComponentProps<typeof PriorityPicker>>) {
+  return <PriorityPicker variant="row" {...props} />;
+}
 
-export const AssigneeValue = memo(function AssigneeValue({
-  value,
-  members,
-  onChange,
-  open,
-  onOpenChange,
-  shortcutHint = KEY_FOR_FIELD.assignee,
-  smartAssign = false,
-}: {
-  value: string | null;
-  members: Member[];
-  onChange: (v: string | null) => void;
-  /** Controlled open state, for a surface that opens it from its own shortcut. */
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  shortcutHint?: string;
-  /** The project's Smart Assign fills an empty assignee (MIN-811): the
-      "clear" option reads "Smart Assign" and choosing it lets it choose. */
-  smartAssign?: boolean;
-}) {
-  const tField = useTranslations("Field");
-  const t = useTranslations("IssueUI");
-  const current = members.find((m) => m.user_id === value) ?? null;
-  const smartAssignIcon = (
-    <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
-  );
-  const options: PickerOption[] = members.map((m) => ({
-    value: m.user_id,
-    label: displayName(m),
-    keywords: m.email ? [m.email] : undefined,
-    icon: (
-      <UserAvatar
-        seed={m.avatar_seed}
-        className="size-5"
-      />
-    ),
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={onChange}
-      options={options}
-      noneOption={
-        smartAssign
-          ? { label: tField("smartAssign"), icon: smartAssignIcon }
-          : { label: tField("unassigned") }
-      }
-      align="end"
-      tooltip={tField("assignee")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", {
-            field: tField("assignee"),
-            value: current ? displayName(current) : tField(smartAssign ? "smartAssign" : "unassigned"),
-          })}
-          className={TRIGGER}
-        >
-          {current ? (
-            <>
-              <UserAvatar
-                seed={current.avatar_seed}
-                className="size-5"
-              />
-              <span className="truncate">{displayName(current)}</span>
-            </>
-          ) : smartAssign ? (
-            <>
-              {smartAssignIcon}
-              <span className="truncate text-muted-foreground">{tField("smartAssign")}</span>
-            </>
-          ) : (
-            <span className="text-muted-foreground">{tField("unassigned")}</span>
-          )}
-        </button>
-      }
-    />
-  );
-});
+export function EffortValue(props: RowProps<ComponentProps<typeof EffortPicker>>) {
+  return <EffortPicker variant="row" {...props} />;
+}
 
-export const CategoryValue = memo(function CategoryValue({
-  categories,
-  value,
-  onChange,
-  projectId,
-}: {
-  categories: Category[];
-  value: string[];
-  onChange: (ids: string[]) => void;
-  /** Project where quick add creates the label (absent: no “Add” line). */
-  projectId?: string | null;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const selected = categories.filter((c) => value.includes(c.id));
-  const first = selected[0];
-  const extra = selected.length - 1;
-  const options: PickerOption[] = categories.map((c) => ({
-    value: c.id,
-    label: c.name,
-    icon: <Dot color={c.color} />,
-  }));
-  const createOption = useCategoryCreateOption({
-    projectId,
-    categories,
-    onCreated: (category) => onChange([...value, category.id]),
-  });
-  return (
-    <SearchMultiSelect
-      values={value}
-      onChange={onChange}
-      options={options}
-      createOption={createOption}
-      align="end"
-      tooltip={tField("categories")}
-      shortcutHint={KEY_FOR_FIELD.category}
-      emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", {
-            field: tField("categories"),
-            value: selected.length ? selected.map((c) => c.name).join(", ") : tField("noCategories"),
-          })}
-          className={TRIGGER}>
-          {first ? (
-            <>
-              <Dot color={first.color} />
-              <span className="truncate">{first.name}</span>
-              {extra > 0 && (
-                <span className="shrink-0 text-muted-foreground">+{extra}</span>
-              )}
-            </>
-          ) : (
-            <span className="text-muted-foreground">{t("noneFem")}</span>
-          )}
-        </button>
-      }
-    />
-  );
-});
+export function AssigneeValue(props: RowProps<ComponentProps<typeof AssigneePicker>>) {
+  return <AssigneePicker variant="row" {...props} />;
+}
 
-export const DueDateValue = memo(function DueDateValue({
-  value,
-  onChange,
-  recurrence,
-  onRecurrenceChange,
-  open,
-  onOpenChange,
-  shortcutHint = KEY_FOR_FIELD.dueDate,
-}: {
-  value: string | null;
-  onChange: (v: string | null) => void;
-  /** Controlled open state, for a surface that opens it from its own shortcut. */
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  shortcutHint?: string;
-  /** Skipping these two opens recurring mode (MIN-136) — tickets have it,
- the target date of an objective no. */
-  recurrence?: RecurrenceCadence | null;
-  onRecurrenceChange?: (next: {
-    due_date: string | null;
-    recurrence: RecurrenceCadence | null;
-  }) => void;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  return (
-    <DateTimePicker
-      variant="value"
-      value={value}
-      onChange={onChange}
-      recurrence={recurrence}
-      onRecurrenceChange={onRecurrenceChange}
-      placeholder={t("noneFem")}
-      ariaLabel={t("changeDueDateAria")}
-      tooltip={tField("dueDate")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-    />
-  );
-});
+export function CategoryValue(props: RowProps<ComponentProps<typeof CategoriesPicker>>) {
+  return <CategoriesPicker variant="row" {...props} />;
+}
 
-export const ObjectiveValue = memo(function ObjectiveValue({
-  value,
-  objectives,
-  onChange,
-  projectId,
-}: {
-  value: string | null;
-  objectives: Objective[];
-  onChange: (v: string | null) => void;
-  /** Project where quick add creates the objective (missing: no “Add” line). */
-  projectId?: string | null;
-}) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tCommon = useTranslations("Common");
-  const current = objectives.find((o) => o.id === value) ?? null;
-  const options: PickerOption[] = useOrderedObjectives(objectives).map(objectivePickerOption);
-  const createOption = useObjectiveCreateOption({
-    projectId,
-    onCreated: (objective) => onChange(objective.id),
-  });
-  return (
-    <SearchSelect
-      value={value}
-      onChange={onChange}
-      options={options}
-      noneOption={{ label: tCommon("none") }}
-      createOption={createOption}
-      align="end"
-      tooltip={tField("objective")}
-      shortcutHint={KEY_FOR_FIELD.objective}
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", { field: tField("objective"), value: current ? current.name : tCommon("none") })}
-          className={current ? OBJECTIVE_PILL_TRIGGER : TRIGGER}
-        >
-          {current ? (
-            // Its card on hover, like a mention of it (MIN-879).
-            <MentionHover type="objective" id={current.id} project={current.project_id}>
-              <span className="flex min-w-0">
-                <ObjectivePill objective={current} />
-              </span>
-            </MentionHover>
-          ) : (
-            <span className="text-muted-foreground">{tCommon("none")}</span>
-          )}
-        </button>
-      }
-    />
-  );
-});
+export function DueDateValue(props: RowProps<ComponentProps<typeof DueDatePicker>>) {
+  return <DueDatePicker variant="row" {...props} />;
+}
+
+export function ObjectiveValue(props: RowProps<ComponentProps<typeof ObjectivePicker>>) {
+  return <ObjectivePicker variant="row" {...props} />;
+}

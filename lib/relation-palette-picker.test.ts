@@ -7,8 +7,6 @@ import { relationPickerRequest, type RelationPickerLabels, type RelationPickerOp
 import type { IssueCard } from "@/components/issue-card";
 import type { KanbanBoard } from "@/components/kanban-board";
 import type { KanbanColumn } from "@/components/kanban-column";
-import type { GlobalKanbanBoard } from "@/components/global-kanban-board";
-import type { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { Issue, IssueRelationType, Objective } from "./types";
 import type { RelationMenuKind } from "./issue-hierarchy";
@@ -31,10 +29,8 @@ type PickObjective = RelationPickerOptions["onPickObjective"];
 /** A choice in the card's relation picker: an issue or an objective row. */
 type CardSelect = (targetId: string, kind: "issue" | "objective") => void;
 type CardAdd = NonNullable<React.ComponentProps<typeof IssueCard>["onAddRelation"]>;
-type ProjectAdd = React.ComponentProps<typeof KanbanBoard>["onAddRelation"];
-type ProjectColumnAdd = React.ComponentProps<typeof KanbanColumn>["onAddRelation"];
-type GlobalAdd = NonNullable<React.ComponentProps<typeof GlobalKanbanBoard>["onAddRelation"]>;
-type GlobalColumnAdd = NonNullable<React.ComponentProps<typeof GlobalKanbanColumn>["onAddRelation"]>;
+type BoardAdd = NonNullable<React.ComponentProps<typeof KanbanBoard>["onAddRelation"]>;
+type ColumnAdd = NonNullable<React.ComponentProps<typeof KanbanColumn>["onAddRelation"]>;
 
 function source(file: string) {
   return ts.createSourceFile(file, readFileSync(resolve(import.meta.dirname, "..", "components", file), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -148,23 +144,16 @@ function cardSelection(
   return { onSelect, closeRelationPicker };
 }
 
-function projectHandler(onAddRelation: ProjectAdd): CardAdd {
-  const column = evaluate<ProjectColumnAdd>(prop("kanban-board.tsx", "KanbanColumn", "onAddRelation"), { onAddRelation });
+function boardHandler(onAddRelation: BoardAdd): CardAdd {
+  const column = evaluate<ColumnAdd>(prop("kanban-board.tsx", "KanbanColumn", "onAddRelation"), { onAddRelation });
   return evaluate<CardAdd>(prop("kanban-column.tsx", "IssueCard", "onAddRelation"), { onAddRelation: column });
-}
-
-function globalHandler(onAddRelation: GlobalAdd): CardAdd {
-  const column = evaluate<GlobalColumnAdd>(prop("global-kanban-board.tsx", "GlobalKanbanColumn", "onAddRelation"), { onAddRelation });
-  return evaluate<CardAdd>(prop("global-kanban-column.tsx", "IssueCard", "onAddRelation"), { onAddRelation: column });
 }
 
 describe("card relation picker (MIN-844)", () => {
   it("preserves endpoint kinds in every callback contract", () => {
     expectTypeOf<Parameters<CardAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
-    expectTypeOf<Parameters<ProjectAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
-    expectTypeOf<Parameters<ProjectColumnAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
-    expectTypeOf<Parameters<GlobalAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
-    expectTypeOf<Parameters<GlobalColumnAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
+    expectTypeOf<Parameters<BoardAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
+    expectTypeOf<Parameters<ColumnAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
   });
 
   it.each(types)("filters project-only candidates, closed issues and objectives included, for %s without excluding other relation types", (type) => {
@@ -181,28 +170,26 @@ describe("card relation picker (MIN-844)", () => {
     }
   });
 
-  it.each(types)("sends actual issue and objective palette rows through both boards for %s", (relation) => {
-    for (const board of ["project", "global"] as const) {
-      const add = vi.fn();
-      const handler = board === "project" ? projectHandler(add) : globalHandler(add);
-      const { onSelect, closeRelationPicker } = cardSelection(relation, handler);
-      const request = cardRequest(relation, onSelect);
-      // The placeholder asks the question; the rows are grouped by kind.
-      expect(request.placeholder).toBe(en.Relations[`pick_${relation}`]);
-      expect(request.categories.map((category) => category.label)).toEqual([en.Issue.entityPlural, en.Relations.objectives]);
-      expect(request.semanticProjectId).toBe(issue.project_id);
-      for (const [rowId, target, kind] of [[`issue-${other.id}`, other.id, "issue"], [`objective-${objective.id}`, objective.id, "objective"]] as const) {
-        const row = request.items.find((item) => item.id === rowId)!;
-        if (kind === "issue") {
-          expect(row).toMatchObject({ title: other.title, contextLabel: "MIN-2", exactKeywords: ["MIN-2", "2"], entityType: "issue" });
-        } else {
-          expect(row).toMatchObject({ title: objective.name, entityType: "objective" });
-        }
-        expect(row.execute?.()).not.toBe(false);
-        expect(add).toHaveBeenLastCalledWith(issue.id, relation, target, { targetType: kind });
+  it.each(types)("sends actual issue and objective palette rows through the board for %s", (relation) => {
+    const add = vi.fn();
+    const handler = boardHandler(add);
+    const { onSelect, closeRelationPicker } = cardSelection(relation, handler);
+    const request = cardRequest(relation, onSelect);
+    // The placeholder asks the question; the rows are grouped by kind.
+    expect(request.placeholder).toBe(en.Relations[`pick_${relation}`]);
+    expect(request.categories.map((category) => category.label)).toEqual([en.Issue.entityPlural, en.Relations.objectives]);
+    expect(request.semanticProjectId).toBe(issue.project_id);
+    for (const [rowId, target, kind] of [[`issue-${other.id}`, other.id, "issue"], [`objective-${objective.id}`, objective.id, "objective"]] as const) {
+      const row = request.items.find((item) => item.id === rowId)!;
+      if (kind === "issue") {
+        expect(row).toMatchObject({ title: other.title, contextLabel: "MIN-2", exactKeywords: ["MIN-2", "2"], entityType: "issue" });
+      } else {
+        expect(row).toMatchObject({ title: objective.name, entityType: "objective" });
       }
-      expect(closeRelationPicker).toHaveBeenCalledTimes(2);
+      expect(row.execute?.()).not.toBe(false);
+      expect(add).toHaveBeenLastCalledWith(issue.id, relation, target, { targetType: kind });
     }
+    expect(closeRelationPicker).toHaveBeenCalledTimes(2);
   });
 
   it("names the relation in each step's key, so a new type clears the query", () => {

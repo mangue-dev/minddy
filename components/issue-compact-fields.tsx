@@ -1,57 +1,52 @@
 "use client";
 
-// Compact pickers for the create-issue dialog — the options read as one inline
-// row (Figma: assets/figma/New issue minddy.png). Icon-representable fields
-// show just their indicator (status/priority, effort triangle, category dot,
-// avatar). Same value/onChange contracts as the side-panel fields in
-// issue-property-fields.tsx.
+// The create-issue dialog's inline row of pickers (Figma: assets/figma/New
+// issue minddy.png), and its Smart Fill badge. The pickers are the "compact"
+// variant of issue-field-pickers.tsx: icon-representable fields show their
+// indicator alone (status/priority, effort triangle, category dot, avatar).
 
-import { MentionHover } from "@/components/mention-hover";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon, Link02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, UserCircleIcon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ComponentProps } from "react";
 import { Kbd } from "@/components/ui/kbd";
 import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { captureWritingSpot, restoreWritingSpot, type WritingSpot } from "@/lib/keyboard/writing-spot";
-import { DateTimePicker } from "@/components/date-time-picker";
 import { DATE_ICON, SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
-import {
-  SearchSelect,
-  SearchMultiSelect,
-  type PickerOption,
-} from "@/components/search-select";
-import {
-  ALL_STATUSES,
-  PRIORITIES,
-  EFFORT_MAP,
-  EFFORTS,
-  type IssueStatus,
-  type IssuePriority,
-  type IssueEffort,
-} from "@/lib/issue-constants";
+import type { IssueStatus, IssuePriority, IssueEffort } from "@/lib/issue-constants";
 import {
   StatusIndicator,
   PriorityIndicator,
-  EffortIndicator,
-  ObjectiveStatusIndicator,
   RelationIcon,
 } from "@/components/issue-indicators";
 import type { RelationMenuKind } from "@/lib/issue-hierarchy";
 import { IssueActionsMenu, type ContextMenuAction } from "@/components/issue-context-menu";
-import { Dot } from "@/components/issue-property-fields";
-import { OBJECTIVE_PILL_TRIGGER, ObjectiveName, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
-import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import {
-  useCategoryCreateOption,
-  useObjectiveCreateOption,
-} from "@/lib/use-picker-create";
-import { displayName } from "@/lib/display-name";
+  AssigneePicker,
+  CategoriesPicker,
+  DueDatePicker,
+  EffortPicker,
+  FIELD_TRIGGER,
+  ObjectivePicker,
+  PriorityPicker,
+  StatusPicker,
+} from "@/components/issue-field-pickers";
+import {
+  EFFORT_OPTION_ICON,
+  categoryFieldOptions,
+  effortFieldOptions,
+  fieldMenuChildren,
+  memberFieldOptions,
+  objectiveFieldOptions,
+  priorityFieldOptions,
+  statusFieldOptions,
+  toggleCategory,
+} from "@/components/issue-field-options";
+import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { UserAvatar } from "@/components/user-avatar";
-import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { Category, Member, Objective } from "@/lib/types";
 import {
   Tooltip,
@@ -59,379 +54,37 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-
-// On the finger, the row of options is made of targets of 30 px, below the threshold of the
-// comfortable: under `sm` each trigger gains a few guard pixels.
-const BARE =
-  "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2";
 const SMART_FILL_PILL =
   "flex h-8 items-center gap-1.5 rounded-full bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 aria-expanded:bg-muted/40 max-sm:h-9";
 
-// Lets the create-issue dialog drive each picker's open state from a keyboard
-// shortcut and surface the key in the trigger's tooltip. All optional — the
-// pickers stay uncontrolled (click to open) when these aren't passed.
-type ShortcutControl = {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  shortcutHint?: string;
-  /** Show the selected value in mobile creation property tiles. */
-  showValue?: boolean;
-};
+type CompactProps<P> = Omit<P, "variant">;
 
-export function StatusCompact({
-  value,
-  onChange,
-  open,
-  onOpenChange,
-  shortcutHint,
-  showValue = false,
-}: {
-  value: IssueStatus;
-  onChange: (v: IssueStatus) => void;
-} & ShortcutControl) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tStatus = useTranslations("Status");
-  const options: PickerOption[] = ALL_STATUSES.map((s) => ({
-    value: s.value,
-    label: tStatus(s.value),
-    icon: <StatusIndicator status={s.value} className="size-4" />,
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={(v) => onChange(v as IssueStatus)}
-      options={options}
-      tooltip={tField("status")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-      trigger={
-        <button type="button" aria-label={t("fieldValueAria", { field: tField("status"), value: tStatus(value) })} className={BARE}>
-          <StatusIndicator status={value} />
-          {showValue && <span>{tStatus(value)}</span>}
-        </button>
-      }
-    />
-  );
+export function StatusCompact(props: CompactProps<ComponentProps<typeof StatusPicker>>) {
+  return <StatusPicker variant="compact" {...props} />;
 }
 
-export function PriorityCompact({
-  value,
-  onChange,
-  open,
-  onOpenChange,
-  shortcutHint,
-  showValue = false,
-}: {
-  value: IssuePriority;
-  onChange: (v: IssuePriority) => void;
-} & ShortcutControl) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tPriority = useTranslations("Priority");
-  const options: PickerOption[] = PRIORITIES.map((p) => ({
-    value: p.value,
-    label: tPriority(p.value),
-    icon: <PriorityIndicator priority={p.value} className="size-4" />,
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={(v) => onChange(v as IssuePriority)}
-      options={options}
-      tooltip={tField("priority")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-      trigger={
-        <button type="button" aria-label={t("fieldValueAria", { field: tField("priority"), value: tPriority(value) })} className={BARE}>
-          <PriorityIndicator priority={value} />
-          {showValue && <span>{tPriority(value)}</span>}
-        </button>
-      }
-    />
-  );
+export function PriorityCompact(props: CompactProps<ComponentProps<typeof PriorityPicker>>) {
+  return <PriorityPicker variant="compact" {...props} />;
 }
 
-export function EffortCompact({
-  value,
-  onChange,
-  open,
-  onOpenChange,
-  shortcutHint,
-  showValue = false,
-}: {
-  value: IssueEffort | null;
-  onChange: (v: IssueEffort | null) => void;
-} & ShortcutControl) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const options: PickerOption[] = EFFORTS.map((e) => ({
-    value: e.value,
-    label: e.label,
-    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={(v) => onChange(v as IssueEffort | null)}
-      options={options}
-      noneOption={{ label: tField("effortNone") }}
-      tooltip={tField("effort")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-      trigger={
-        <button type="button" aria-label={t("fieldValueAria", { field: tField("effort"), value: value ? EFFORT_MAP[value].label : tField("effortNone") })} className={BARE}>
-          {value ? (
-            <EffortIndicator effort={value} className="text-foreground" />
-          ) : (
-            <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0 text-muted-foreground" />
-          )}
-          {showValue && !value && <span>{tField("effortNone")}</span>}
-        </button>
-      }
-    />
-  );
+export function EffortCompact(props: CompactProps<ComponentProps<typeof EffortPicker>>) {
+  return <EffortPicker variant="compact" {...props} />;
 }
 
-export function CategoriesCompact({
-  categories,
-  value,
-  onChange,
-  projectId,
-  open,
-  onOpenChange,
-  shortcutHint,
-  showValue = false,
-}: {
-  categories: Category[];
-  value: string[];
-  onChange: (ids: string[]) => void;
-  /** Project where quick add creates the label. */
-  projectId?: string | null;
-} & ShortcutControl) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const selected = categories.filter((c) => value.includes(c.id));
-  const first = selected[0];
-  const extra = selected.length - 1;
-  const options: PickerOption[] = categories.map((c) => ({
-    value: c.id,
-    label: c.name,
-    icon: <Dot color={c.color} />,
-  }));
-  const createOption = useCategoryCreateOption({
-    projectId,
-    categories,
-    onCreated: (category) => onChange([...value, category.id]),
-  });
-  return (
-    <SearchMultiSelect
-      values={value}
-      onChange={onChange}
-      options={options}
-      createOption={createOption}
-      tooltip={tField("categories")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-      emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", {
-            field: tField("categories"),
-            value: selected.length ? selected.map((c) => c.name).join(", ") : tField("noCategories"),
-          })}
-          className={BARE}>
-          {first ? (
-            <>
-              <Dot color={first.color} />
-              <span className="max-w-36 truncate">{first.name}</span>
-              {extra > 0 && (
-                <span className="shrink-0 text-muted-foreground">+{extra}</span>
-              )}
-            </>
-          ) : (
-            <HugeiconsIcon icon={Tag01Icon} className="size-[17px] shrink-0 text-muted-foreground" />
-          )}
-          {showValue && !first && <span>{tField("noCategories")}</span>}
-        </button>
-      }
-    />
-  );
+export function CategoriesCompact(props: CompactProps<ComponentProps<typeof CategoriesPicker>>) {
+  return <CategoriesPicker variant="compact" {...props} />;
 }
 
-export function AssigneeCompact({
-  value,
-  members,
-  onChange,
-  open,
-  onOpenChange,
-  shortcutHint,
-  showValue = false,
-  noneLabel,
-  smartAssign = false,
-}: {
-  value: string | null;
-  members: Member[];
-  onChange: (v: string | null) => void;
-  /** Overrides the "clear" option's label (e.g. "No lead" for objectives). */
-  noneLabel?: string;
-  /** The project's Smart Assign fills an empty assignee (MIN-811): the
-      "clear" option reads "Smart Assign" instead of "Unassigned". */
-  smartAssign?: boolean;
-} & ShortcutControl) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const current = members.find((m) => m.user_id === value) ?? null;
-  const emptyLabel = smartAssign ? tField("smartAssign") : noneLabel ?? tField("unassigned");
-  const emptyIcon = smartAssign ? SMART_ASSIGN_ICON : UserCircleIcon;
-  const options: PickerOption[] = members.map((m) => ({
-    value: m.user_id,
-    label: displayName(m),
-    keywords: m.email ? [m.email] : undefined,
-    icon: (
-      <UserAvatar
-        seed={m.avatar_seed}
-        className="size-5"
-      />
-    ),
-  }));
-  return (
-    <SearchSelect
-      value={value}
-      onChange={onChange}
-      options={options}
-      noneOption={{
-        label: emptyLabel,
-        icon: smartAssign ? (
-          <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
-        ) : undefined,
-      }}
-      tooltip={tField("assignee")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", { field: tField("assignee"), value: current ? displayName(current) : emptyLabel })}
-          className={BARE}
-        >
-          {current ? (
-            <UserAvatar
-              seed={current.avatar_seed}
-              className="size-5"
-            />
-          ) : (
-            <HugeiconsIcon icon={emptyIcon} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
-          )}
-          {showValue && <span>{current ? displayName(current) : emptyLabel}</span>}
-        </button>
-      }
-    />
-  );
+export function AssigneeCompact(props: CompactProps<ComponentProps<typeof AssigneePicker>>) {
+  return <AssigneePicker variant="compact" {...props} />;
 }
 
-export function DueDateCompact({
-  value,
-  onChange,
-  recurrence,
-  onRecurrenceChange,
-  open,
-  onOpenChange,
-  shortcutHint,
-}: {
-  value: string | null;
-  onChange: (v: string | null) => void;
-  /** Opens recurring popover mode (MIN-136). */
-  recurrence?: RecurrenceCadence | null;
-  onRecurrenceChange?: (next: {
-    due_date: string | null;
-    recurrence: RecurrenceCadence | null;
-  }) => void;
-} & ShortcutControl) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  return (
-    <DateTimePicker
-      variant="ghost"
-      value={value}
-      onChange={onChange}
-      recurrence={recurrence}
-      onRecurrenceChange={onRecurrenceChange}
-      placeholder={tField("dueDate")}
-      ariaLabel={t("changeDueDateAria")}
-      open={open}
-      onOpenChange={onOpenChange}
-      tooltip={shortcutHint ? tField("dueDate") : undefined}
-      shortcutHint={shortcutHint}
-    />
-  );
+export function DueDateCompact(props: CompactProps<ComponentProps<typeof DueDatePicker>>) {
+  return <DueDatePicker variant="compact" {...props} />;
 }
 
-export function ObjectiveCompact({
-  value,
-  objectives,
-  onChange,
-  projectId,
-  open,
-  onOpenChange,
-  shortcutHint,
-  showValue = false,
-}: {
-  value: string | null;
-  objectives: Objective[];
-  onChange: (v: string | null) => void;
-  /** Project where quick adding creates the goal. */
-  projectId?: string | null;
-} & ShortcutControl) {
-  const t = useTranslations("IssueUI");
-  const tField = useTranslations("Field");
-  const tCommon = useTranslations("Common");
-  const current = objectives.find((o) => o.id === value) ?? null;
-  const options: PickerOption[] = useOrderedObjectives(objectives).map(objectivePickerOption);
-  const createOption = useObjectiveCreateOption({
-    projectId,
-    onCreated: (objective) => onChange(objective.id),
-  });
-  return (
-    <SearchSelect
-      value={value}
-      onChange={onChange}
-      options={options}
-      noneOption={{ label: tCommon("none") }}
-      createOption={createOption}
-      tooltip={tField("objective")}
-      open={open}
-      onOpenChange={onOpenChange}
-      shortcutHint={shortcutHint}
-      trigger={
-        <button
-          type="button"
-          aria-label={t("fieldValueAria", { field: tField("objective"), value: current ? current.name : tCommon("none") })}
-          className={current ? cn(OBJECTIVE_PILL_TRIGGER, "max-w-48") : BARE}
-        >
-          {current ? (
-            // Its card on hover, like a mention of it (MIN-879).
-            <MentionHover type="objective" id={current.id} project={current.project_id} disabled={open}>
-              <span className="flex min-w-0">
-                <ObjectivePill objective={current} />
-              </span>
-            </MentionHover>
-          ) : (
-            <>
-              <HugeiconsIcon icon={Target01Icon} className="size-4 shrink-0 text-muted-foreground" />
-              <span className="text-muted-foreground">{tField(showValue ? "noObjective" : "objective")}</span>
-            </>
-          )}
-        </button>
-      }
-    />
-  );
+export function ObjectiveCompact(props: CompactProps<ComponentProps<typeof ObjectivePicker>>) {
+  return <ObjectivePicker variant="compact" {...props} />;
 }
 
 /**
@@ -515,13 +168,10 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
       id: "smart-fill-status",
       label: tField("status"),
       icon: <StatusIndicator status={manual.status ?? "todo"} className="size-4" />,
-      children: ALL_STATUSES.map((s) => ({
-        id: `smart-fill-status-${s.value}`,
-        label: tStatus(s.value),
-        icon: <StatusIndicator status={s.value} className="size-4" />,
-        checked: manual.status === s.value,
-        onSelect: () => onStatusChange(s.value),
-      })),
+      children: fieldMenuChildren("smart-fill-status", statusFieldOptions(tStatus), {
+        isChecked: (value) => manual.status === value,
+        onSelect: (value) => onStatusChange(value as IssueStatus),
+      }),
     });
   }
   actions.push(
@@ -529,25 +179,23 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
       id: "smart-fill-priority",
       label: tField("priority"),
       icon: <PriorityIndicator priority={manual.priority} className="size-4" />,
-      children: PRIORITIES.filter((p) => p.value !== "none").map((p) => ({
-        id: `smart-fill-priority-${p.value}`,
-        label: tPriority(p.value),
-        icon: <PriorityIndicator priority={p.value} className="size-4" />,
-        checked: manual.priority === p.value,
-        onSelect: () => manual.onPriorityChange(p.value),
-      })),
+      children: fieldMenuChildren(
+        "smart-fill-priority",
+        priorityFieldOptions(tPriority).filter((p) => p.value !== "none"),
+        {
+          isChecked: (value) => manual.priority === value,
+          onSelect: (value) => manual.onPriorityChange(value as IssuePriority),
+        },
+      ),
     },
     {
       id: "smart-fill-effort",
       label: tField("effort"),
-      icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
-      children: EFFORTS.map((e) => ({
-        id: `smart-fill-effort-${e.value}`,
-        label: e.label,
-        icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
-        checked: manual.effort === e.value,
-        onSelect: () => manual.onEffortChange(e.value),
-      })),
+      icon: EFFORT_OPTION_ICON,
+      children: fieldMenuChildren("smart-fill-effort", effortFieldOptions(), {
+        isChecked: (value) => manual.effort === value,
+        onSelect: (value) => manual.onEffortChange(value as IssueEffort),
+      }),
     },
     {
       id: "smart-fill-categories",
@@ -555,19 +203,10 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
       icon: <HugeiconsIcon icon={Tag01Icon} className="size-4 text-muted-foreground" />,
       children: manual.categories.length === 0
         ? [{ id: "smart-fill-no-categories", label: t("noCategoriesHint"), disabled: true }]
-        : manual.categories.map((c) => {
-            const on = manual.categoryIds.includes(c.id);
-            return {
-              id: `smart-fill-category-${c.id}`,
-              label: c.name,
-              icon: <Dot color={c.color} />,
-              checked: on,
-              // Several categories can apply: the menu stays open.
-              keepOpen: true,
-              onSelect: () => manual.onCategoryIdsChange(on
-                ? manual.categoryIds.filter((id) => id !== c.id)
-                : [...manual.categoryIds, c.id]),
-            };
+        : fieldMenuChildren("smart-fill-category", categoryFieldOptions(manual.categories), {
+            isChecked: (id) => manual.categoryIds.includes(id),
+            onSelect: (id) => manual.onCategoryIdsChange(toggleCategory(manual.categoryIds, id)),
+            keepOpen: true,
           }),
     },
   );
@@ -594,15 +233,11 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
           checked: !current,
           onSelect: () => onAssigneeChange(null),
         },
-        ...manual.members.map((m, index) => ({
-          id: `smart-fill-assignee-${m.user_id}`,
-          label: displayName(m),
-          keywords: m.email ? [m.email] : undefined,
-          icon: <UserAvatar seed={m.avatar_seed} className="size-4" />,
-          separatorBefore: index === 0,
-          checked: current?.user_id === m.user_id,
-          onSelect: () => onAssigneeChange(m.user_id),
-        })),
+        ...fieldMenuChildren(
+          "smart-fill-assignee",
+          memberFieldOptions(manual.members, { avatarClassName: "size-4" }),
+          { isChecked: (id) => current?.user_id === id, onSelect: onAssigneeChange },
+        ).map((action, index) => ({ ...action, separatorBefore: index === 0 })),
       ],
     });
   }
@@ -638,14 +273,11 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
       id: "smart-fill-objective",
       label: tField("objective"),
       icon: <HugeiconsIcon icon={Target01Icon} className="size-4 text-muted-foreground" />,
-      children: orderedObjectives.map((o) => ({
-        id: `smart-fill-objective-${o.id}`,
-        label: o.name,
-        labelNode: <ObjectiveName objective={o} />,
-        icon: <ObjectiveStatusIndicator status={o.status} className="size-4" />,
-        checked: manual.objectiveId === o.id,
-        onSelect: () => manual.onObjectiveChange(o.id),
-      })),
+      children: fieldMenuChildren(
+        "smart-fill-objective",
+        objectiveFieldOptions(orderedObjectives, { presentation: "menu" }),
+        { isChecked: (id) => manual.objectiveId === id, onSelect: manual.onObjectiveChange },
+      ),
     });
   }
   return actions;
@@ -735,7 +367,7 @@ export function SmartFillCompact({
       <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />{t("smartFillChip")}
     </label>
     {hasMenu && menu(
-      <button type="button" aria-label={t("smartFillManualAria")} className={BARE}>
+      <button type="button" aria-label={t("smartFillManualAria")} className={FIELD_TRIGGER.compact}>
         <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
       </button>,
     )}

@@ -15,17 +15,17 @@ import {
   priorityOptions,
   toggleCategory,
 } from "./command-palette-options";
+import { EFFORT_OPTION_ICON } from "./issue-field-options";
 import type { Member } from "@/lib/types";
 
 const html = (node: ReactNode) => renderToStaticMarkup(<>{node}</>);
 
 describe("palette field options (MIN-820)", () => {
-  it("opens the effort scale on a dimmed Not set, every rung with the triangle", () => {
+  it("opens the effort scale on Not set, every rung with the pickers' triangle", () => {
     const options = effortOptions("Not set", { current: "m" });
     expect(options.map((o) => o.value)).toEqual([PALETTE_NONE, "xs", "s", "m", "l", "xl", "xxl"]);
     expect(options[0].label).toBe("Not set");
-    expect(options.every((o) => html(o.icon).includes("<svg"))).toBe(true);
-    expect(html(options[0].icon)).toContain("opacity-60");
+    expect(options.every((o) => o.icon === EFFORT_OPTION_ICON)).toBe(true);
     expect(options.filter((o) => o.selected).map((o) => o.value)).toEqual(["m"]);
   });
 
