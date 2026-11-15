@@ -21,6 +21,7 @@ import {
   withPrOperation,
 } from "@/lib/server/agent/pr-operation-lock";
 import { resolveLinkedRepository } from "@/lib/server/agent/repo-access";
+import { resolveProjectPullRequest } from "@/lib/server/agent/pr-link";
 
 /**
  * Direct PR-management gestures for Numo (MIN-550): merge, rename /
@@ -78,11 +79,13 @@ type Resolved = {
 };
 
 /**
- * Resolves the PR a gesture targets: exactly one of issue_id /
- * pull_request_id (same contract as `read_pull_request`), the row from
- * `pull_requests` — source of truth since MIN-143 — then the project's repo target,
- * refusing a PR that does not belong to it. `read_pull_request` reuses it so
- * the two surfaces never drift apart.
+ * Resolves the PR a gesture targets: exactly one of issue_id, pull_request_id
+ * (same contract as `read_pull_request`) or pull_request — the number or forge
+ * URL the user said, which reaches a PR attached to no issue from any page
+ * (MIN-1004). The row comes from `pull_requests` — source of truth since
+ * MIN-143 — then the project's repo target, refusing a PR that does not
+ * belong to it. `read_pull_request` reuses it so the two surfaces never drift
+ * apart.
  */
 export async function resolvePullRequest(
   ctx: PullRequestWriteContext,
@@ -91,8 +94,17 @@ export async function resolvePullRequest(
   const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
   const pullRequestId =
     typeof args.pull_request_id === "string" ? args.pull_request_id : "";
-  if ((!issueId && !pullRequestId) || (issueId && pullRequestId)) {
-    return { error: "Pass exactly one of issue_id or pull_request_id." };
+  const ref =
+    typeof args.pull_request === "number" ||
+    (typeof args.pull_request === "string" && args.pull_request.trim())
+      ? args.pull_request
+      : null;
+  if ([issueId, pullRequestId, ref].filter(Boolean).length !== 1) {
+    return {
+      error:
+        "Pass exactly one of issue_id, pull_request_id or pull_request (its number or URL). " +
+        "list_pull_requests lists the repository's pull requests.",
+    };
   }
   if (issueId) {
     const scoped = await assertIssueInProject(
@@ -103,9 +115,29 @@ export async function resolvePullRequest(
     if (!scoped.ok) return { error: scoped.error };
   }
 
-  const row = pullRequestId
-    ? await findPullRequest(pullRequestId)
-    : await findPullRequestForIssue(issueId);
+  let row: PullRequestRow | null;
+  if (ref !== null) {
+    const found = await resolveProjectPullRequest({
+      projectId: ctx.projectId,
+      ref: ref as string | number,
+      userId: ctx.userId,
+    });
+    if ("error" in found) {
+      return {
+        error:
+          found.error === "invalid_ref"
+            ? "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge."
+            : found.error === "no_repository"
+              ? "This project has no linked repository."
+              : "No pull request with that number in the repository linked to this project. list_pull_requests lists them.",
+      };
+    }
+    row = found.pr;
+  } else {
+    row = pullRequestId
+      ? await findPullRequest(pullRequestId)
+      : await findPullRequestForIssue(issueId);
+  }
   const target = await resolveLinkedRepository(ctx.projectId);
   if (!target) {
     return { error: "This project has no linked repository." };
@@ -122,7 +154,7 @@ export async function resolvePullRequest(
     return {
       error: pullRequestId
         ? "The selected pull request is unavailable."
-        : "This issue has no pull request attached yet.",
+        : "This issue has no pull request attached yet. If the user means a pull request attached to no issue, find it with list_pull_requests.",
     };
   }
   return { forge: forgeFor(target.provider), target, number, row };

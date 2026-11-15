@@ -245,6 +245,7 @@ import {
   resolvePullRequest,
   type PullRequestWriteToolName,
 } from "@/lib/server/assistant/pull-request-writes";
+import { listProjectPullRequests } from "@/lib/server/assistant/pull-request-list";
 import {
   pullRequestFileView,
   pullRequestState,
@@ -2640,6 +2641,14 @@ async function executeProjectTool(
         },
         success: true,
       };
+    }
+
+    case "list_pull_requests": {
+      // MIN-1004: finds a PR the user names from any page, attached or not.
+      return await listProjectPullRequests(
+        { projectId, userId: ctx.userId, supabase: ctx.supabase },
+        args,
+      );
     }
 
     case "read_pull_request": {

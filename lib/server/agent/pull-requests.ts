@@ -1014,7 +1014,7 @@ export async function pullRequestIssueIds(prId: string): Promise<string[]> {
  */
 export async function listPullRequestsForUser(
   supabase: SupabaseClient,
-  repos: VisibleRepo[],
+  repos: Array<Pick<VisibleRepo, "provider" | "repoFullName">>,
   opts?: { limit?: number; offset?: number; states?: PullRequestState[] },
 ): Promise<PullRequestWithIssue[]> {
   if (repos.length === 0) return [];

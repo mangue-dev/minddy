@@ -234,6 +234,24 @@ describe("Numo tool contracts", () => {
     }
   });
 
+  it("reaches a pull request attached to no issue from any page (MIN-1004)", () => {
+    const list = tool("list_pull_requests");
+    expect(list).toBeDefined();
+    expect(list?.function.parameters.required ?? []).toEqual([]);
+
+    // Every PR tool also takes the number or URL the user names.
+    for (const name of [
+      "read_pull_request",
+      "merge_pull_request",
+      "update_pull_request",
+      "post_pull_request_comment",
+      "edit_own_pull_request_comment",
+      "resolve_pull_request_threads",
+    ]) {
+      expect(tool(name)?.function.parameters.properties, name).toHaveProperty("pull_request");
+    }
+  });
+
   it("lets Numo close review conversations itself, keyed on the read threads", () => {
     const resolve = tool("resolve_pull_request_threads");
 

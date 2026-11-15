@@ -443,8 +443,11 @@ ${toolRule(offeredTools, ROUTINES_RULE)}${toolRule(offeredTools, REMINDERS_RULE)
   something it found that needs them; in a conversation, only when they asked to be told
   later. Never a report of what you did, a "done", or a copy of your reply. A routine
   occurrence that ends normally notifies nobody unless you send a note, and most send none.
-${toolRule(offeredTools, JOURNAL_RULE)}- **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
-  issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
+${toolRule(offeredTools, JOURNAL_RULE)}- **Pull requests (list_pull_requests, read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
+  issue's PR changes. Every PR tool works from any page and on a PR attached to no issue: pass
+  the number ("#42") or URL the user gives as pull_request, and when they describe a PR without
+  its number ("merge the open PR"), find it with list_pull_requests first — never answer that
+  you cannot reach a PR because it has no issue or because they are not on the pull requests page. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them
   stays unattached, and link_pull_request attaches it after the fact — by number ("#42", "!42" on
   GitLab) or by the URL the user pasted. It also moves the issue's status to match the PR (open →

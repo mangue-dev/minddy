@@ -816,6 +816,14 @@ const TOOL_META: Record<NumoToolName, ToolMeta> & Record<string, ToolMeta | unde
       return success ? t("routineOccurrenceLoaded") : t("routineOccurrenceNotFound");
     },
   },
+  list_pull_requests: {
+    icon: GitPullRequestIcon,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("loadingPullRequests");
+      if (!success) return t("listPullRequestsFailed");
+      return t("foundPullRequests", { count: resultCount(result, "pull_requests") });
+    },
+  },
   read_pull_request: {
     icon: GitPullRequestIcon,
     getLabel: (_args, result, success, status, t) => {
