@@ -213,6 +213,7 @@ import {
 import { withoutMentionLabels } from "@/lib/mention-link";
 import { MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
 import { registerPageTools } from "@/lib/server/mcp/page-tools";
+import { registerTrashTools } from "@/lib/server/mcp/trash-tools";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
 import { isKnownTimezone } from "@/lib/routine-schedule";
@@ -1167,6 +1168,7 @@ export function registerMinddyTools(
   // it is this call which gives them the analytics of the tools and their place in the
   // catalogue public (lib/server/mcp/catalog.ts).
   registerPageTools(server);
+  registerTrashTools(server);
 
   // ── Lectures ──────────────────────────────────────────────────────────
 

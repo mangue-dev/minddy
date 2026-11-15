@@ -97,3 +97,36 @@ export function computePageMove(
     position: positionBetween(before?.position, after?.position),
   };
 }
+
+/**
+ * What a drop between the two sidebar sections does to the favorite flag.
+ *
+ * The favorites section sits above the regular tree. Dropping a page that is
+ * not a favorite just before or after a favorite ROOT row pins it: the row
+ * order up there follows the tree, so the page is pinned without moving.
+ * Dropping it inside a row keeps meaning "make it a subpage". Dropping a
+ * favorite anywhere in the regular tree unpins it and moves it there, so it
+ * lands where it was dropped instead of jumping back to the top.
+ */
+export type FavoriteDropEffect = "pin" | "unpin-and-move" | "move";
+
+export function favoriteDropEffect({
+  draggedFavorite,
+  targetId,
+  mode,
+  favoriteRootIds,
+  favoriteSectionIds,
+}: {
+  draggedFavorite: boolean;
+  targetId: string;
+  mode: PageDropMode;
+  /** Rows at depth 0 of the favorites section. */
+  favoriteRootIds: ReadonlySet<string>;
+  /** Every row of the favorites section, roots and their subtrees. */
+  favoriteSectionIds: ReadonlySet<string>;
+}): FavoriteDropEffect {
+  if (!draggedFavorite) {
+    return mode !== "inside" && favoriteRootIds.has(targetId) ? "pin" : "move";
+  }
+  return favoriteSectionIds.has(targetId) ? "move" : "unpin-and-move";
+}

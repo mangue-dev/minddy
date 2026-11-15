@@ -16,7 +16,8 @@ import { cn } from "@/lib/utils";
 type ScrollbarGeometry = {
   left: number;
   width: number;
-  /** Distance from the window's bottom edge: the panel's bottom in a panel. */
+  /** Distance from the window's bottom edge to the content area's (the
+      panel's in a panel). */
   bottom: number;
   contentWidth: number;
   visible: boolean;
@@ -29,7 +30,8 @@ export function DatabaseTableScroll({
   children: ReactNode;
   /** In a side panel the panel plays the page's part: horizontal gestures
       anywhere in it scroll the table, and the floating scrollbar keeps to
-      the panel's bottom edge, not the window's (whose page lies beneath). */
+      the panel's bottom edge, not the content area's (whose page lies
+      beneath). */
   panel?: boolean;
 }) {
   const t = useTranslations("PageDatabase");
@@ -43,10 +45,14 @@ export function DatabaseTableScroll({
     if (!container) return;
     const scope = panel ? container.closest<HTMLElement>('[data-slot="side-panel-content"]') : null;
     const unbindPageScroll = bindDatabasePageScroll(container, scope);
+    // The floating scrollbar sits at the bottom of the area that shows the
+    // table: the panel, or else the content area (the shell's <main>, the
+    // rounded pane on a computer), never the window's bottom edge below it.
+    const area = scope ?? container.closest<HTMLElement>("main");
     let frame = 0;
     const measure = () => {
       const box = container.getBoundingClientRect();
-      const bounds = scope?.getBoundingClientRect() ??
+      const bounds = area?.getBoundingClientRect() ??
         { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
       const left = Math.max(bounds.left, box.left);
       const width = Math.max(0, Math.min(bounds.right, box.right) - left);
@@ -89,6 +95,7 @@ export function DatabaseTableScroll({
     observer.observe(container);
     const table = container.querySelector("table");
     if (table) observer.observe(table);
+    if (area) observer.observe(area);
     window.addEventListener("resize", schedule);
     window.addEventListener("scroll", schedule, true);
     // A side panel slides in with a transform, which no resize reports: the
@@ -147,8 +154,12 @@ export function DatabaseTableScroll({
             aria-valuenow={viewport.current?.scrollLeft ?? 0}
             tabIndex={0}
             data-database-scrollbar
+            // The app's scrollbar (app/globals.css): the sync above scrolls
+            // this bar with the table, so it shows while the table moves and
+            // fades once it stops, and hovering its thumb shows it again. Its
+            // track stops short of the pane's rounded corners.
             className={cn(
-              "scrollbar-quiet fixed z-30 h-3 overflow-x-auto overflow-y-hidden overscroll-x-none bg-transparent outline-none pointer-coarse:hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              "scrollbar-pane-inset fixed z-30 h-3 overflow-x-auto overflow-y-hidden overscroll-x-none bg-transparent outline-none pointer-coarse:hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
               // Above the panel, and taking the pointer back under its overlay.
               panel && "pointer-events-auto z-[60]",
             )}

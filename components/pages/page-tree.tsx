@@ -32,7 +32,7 @@ import { MIN_HIT_AREA } from "@/components/ui/touch-target";
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
 import { revealedAncestorsOf, splitFavoritePageTree } from "@/lib/pages";
-import type { PageDropMode } from "@/lib/pages-move";
+import { favoriteDropEffect, type PageDropMode } from "@/lib/pages-move";
 import { usePageTreeDrag } from "@/components/pages/page-tree-drag";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
@@ -87,7 +87,9 @@ export interface PageTreeProps {
   onOpen: (pageId: string) => void;
   /** Fetch the body while pointer or keyboard intent precedes navigation. */
   onPrefetch: (pageId: string) => void;
-  onMove: (dragId: string, targetId: string, mode: PageDropMode) => void;
+  /** `unpin` also takes the page out of the favorites (a favorite dropped
+   *  in the regular tree). */
+  onMove: (dragId: string, targetId: string, mode: PageDropMode, options?: { unpin?: boolean }) => boolean;
   onTrash: (page: PageMenuTarget) => void;
   /** Pin/unpin. The favorite is SHARED by the project (lib/pages.ts). */
   onToggleFavorite: (page: PageMenuTarget) => void;
@@ -198,8 +200,41 @@ export function PageTree({
     [tree]
   );
 
-  /* ── The deposit ────────────────────────────── ────────────────────────────── */
-  const { dragId, drop, onPointerDown: dragFrom } = usePageTreeDrag({ enabled: canWrite, onMove });
+  /* ── The drop ───────────────────────────────────────────────────────────
+     A drop that crosses the separator pins or unpins the page
+     (`favoriteDropEffect`); any other drop moves it in the tree. */
+  const favoriteSection = useMemo(() => {
+    const roots = new Set(favorites.map((node) => node.id));
+    const all = new Set<string>();
+    const walk = (nodes: PageTreeNode<PageSummary>[]) => {
+      for (const node of nodes) {
+        all.add(node.id);
+        walk(node.children);
+      }
+    };
+    walk(favorites);
+    return { roots, all };
+  }, [favorites]);
+  const dropPage = useCallback(
+    (dragId: string, targetId: string, mode: PageDropMode) => {
+      const dragged = pages.find((page) => page.id === dragId);
+      if (!dragged) return false;
+      const effect = favoriteDropEffect({
+        draggedFavorite: dragged.favorite,
+        targetId,
+        mode,
+        favoriteRootIds: favoriteSection.roots,
+        favoriteSectionIds: favoriteSection.all,
+      });
+      if (effect === "pin") {
+        onToggleFavorite(dragged);
+        return true;
+      }
+      return onMove(dragId, targetId, mode, effect === "unpin-and-move" ? { unpin: true } : undefined);
+    },
+    [pages, favoriteSection, onMove, onToggleFavorite]
+  );
+  const { dragId, drop, onPointerDown: dragFrom } = usePageTreeDrag({ enabled: canWrite, onMove: dropPage });
 
   const createChild = useCallback(
     (parentId: string) => {
@@ -371,7 +406,9 @@ function PageRow({
     <>
     <div data-sidebar-page-row data-sidebar-row
       className={cn(
-        "group/page relative flex items-center rounded-md pr-1 transition-colors",
+        // Opacity and the "inside" ring ease too: the dragged row fades back
+        // as its ghost lands, and the ring does not flash on each row passed.
+        "group/page relative flex items-center rounded-md pr-1 transition-[color,background-color,opacity,box-shadow] duration-150",
         // Taken in the selection, the triage's shade alone says it.
         picked ? "bg-primary/10" : active ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_COMPOSITE_ROW_HOVER_CLASS,
         dragging && "opacity-40",
@@ -409,7 +446,10 @@ function PageRow({
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-x-1 h-0.5 rounded-full bg-primary",
-            drop === "before" ? "top-0" : "bottom-0"
+            // Both lines sit in the 2px gap between rows, so "after this row"
+            // and "before the next one" draw the same line instead of two
+            // lines 2px apart that jitter as the pointer crosses the gap.
+            drop === "before" ? "-top-0.5" : "-bottom-0.5"
           )}
         />
       ) : null}

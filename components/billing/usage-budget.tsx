@@ -129,7 +129,9 @@ export function UsageBudgetSummary({ compact = false }: { compact?: boolean }) {
           <span className="text-sm text-muted-foreground">
             {t("budgetRemaining")}
           </span>
-          {compact && <span className="ml-auto self-center">{planBadge}</span>}
+          {/* At the top of the row, 12px from the popover's top and right
+              edges: concentric with its corner (usage-indicator.tsx). */}
+          {compact && <span className="ml-auto self-start">{planBadge}</span>}
         </div>
         {usageLoading ? (
           <Skeleton className="h-2 w-full" />

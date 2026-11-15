@@ -184,6 +184,8 @@ Gib für eine Konvertierung `operation=convert`, `propertyId`, `targetType`, `re
 
 Mit den Routinenwerkzeugen, die nur Eigentümern zur Verfügung stehen, erstellst, änderst, pausierst und entfernst du Routinen, die ein Zeitplan, ein Ereignis oder ein neuer Datenbankeintrag auslöst. Lies vorhandene Routinen, bevor du eine neue erstellst, um doppelte Aufträge zu vermeiden. `minddy_add_resource` begrenzt Dateien auf 10 MB; Seitenwerkzeuge erfinden keine URLs.
 
+`minddy_trash_page` verschiebt eine Seite mit ihren Unterseiten in den Papierkorb; frag vorher beim Nutzer nach. `minddy_list_trash` listet, was aus deinen Projekten gelöscht wurde, und `minddy_restore_from_trash` stellt ein Element so wieder her, wie es war, mit dem `type` und der `id` aus der Liste. Nur der Eigentümer des Projekts kann ein Projekt oder eine Routine wiederherstellen.
+
 ### Mit einem Beispiel überprüfen {#example}
 
 Das bereinigte Beispiel ändert die erste Aufgabe eines zuvor gelesenen Plans. Ersetze Projekt-UUID und Ticket durch entdeckte Werte; `task_index` muss aus der letzten Lektüre stammen. Prüfe zurückgegebene `plan_tasks` und `plan_progress`. Bei Zugriffsfehlern prüfe Konto/Projekt, bei veraltetem Konflikt lies erneut und ändere nur das Gewünschte. Wiederhole unklare externe Mutationen nicht vor Ergebniskontrolle.

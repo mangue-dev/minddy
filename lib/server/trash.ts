@@ -335,13 +335,59 @@ export async function listTrash(
   userId: string,
   userSupabase: SupabaseClient
 ): Promise<TrashItem[]> {
-  const service = getServiceClient();
-
   const { data: liveProjects, error: liveProjectsError } = await userSupabase
     .from("projects")
-    .select("id, name, key, color, icon_url, orb_seed, owner_id, encrypted_content, encryption_version")
+    .select(LIVE_PROJECT_COLUMNS)
     .is("deleted_at", null);
   if (liveProjectsError) throw new Error("Unable to list accessible trash projects");
+  return listTrashInProjects(userId, (liveProjects ?? []) as LiveProjectRow[]);
+}
+
+/**
+ * The same list for a caller without a session client, the MCP surface: the
+ * live projects come from the caller's ownership and memberships, read with
+ * the service role, which is what the session's RLS grants.
+ */
+export async function listTrashForUser(userId: string): Promise<TrashItem[]> {
+  const service = getServiceClient();
+  const { data: memberships, error: memberError } = await service
+    .from("project_members")
+    .select("project_id")
+    .eq("user_id", userId);
+  if (memberError) throw new Error("Unable to list accessible trash projects");
+  const memberIds = (memberships ?? []).map((m) => m.project_id as string);
+  let query = service
+    .from("projects")
+    .select(LIVE_PROJECT_COLUMNS)
+    .is("deleted_at", null);
+  query = memberIds.length
+    ? query.or(`owner_id.eq.${userId},id.in.(${memberIds.join(",")})`)
+    : query.eq("owner_id", userId);
+  const { data, error } = await query;
+  if (error) throw new Error("Unable to list accessible trash projects");
+  return listTrashInProjects(userId, (data ?? []) as LiveProjectRow[]);
+}
+
+const LIVE_PROJECT_COLUMNS =
+  "id, name, key, color, icon_url, orb_seed, owner_id, encrypted_content, encryption_version";
+
+type LiveProjectRow = {
+  id: string;
+  name: string | null;
+  key: string;
+  color: string | null;
+  icon_url: string | null;
+  orb_seed: string | null;
+  owner_id: string;
+  encrypted_content: unknown;
+  encryption_version: unknown;
+};
+
+async function listTrashInProjects(
+  userId: string,
+  liveProjects: LiveProjectRow[]
+): Promise<TrashItem[]> {
+  const service = getServiceClient();
 
   const ownedProjectIds = (liveProjects ?? [])
     .filter((p) => p.owner_id === userId)

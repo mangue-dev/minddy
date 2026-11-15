@@ -184,6 +184,8 @@ Para convertir una propiedad, indica `operation=convert`, `propertyId`, `targetT
 
 Las herramientas de rutinas, reservadas al propietario, crean, modifican, pausan o eliminan rutinas cuyo desencadenante es una programación, un evento o una nueva entrada de base de datos. Lee las rutinas existentes antes de crear una nueva para evitar duplicados. `minddy_add_resource` limita los archivos a 10 MB; las herramientas de páginas no inventan URL.
 
+`minddy_trash_page` mueve una página y sus subpáginas a la papelera; confírmalo antes con el usuario. `minddy_list_trash` lista lo que se eliminó de tus proyectos y `minddy_restore_from_trash` recupera un elemento tal como estaba, con el `type` y el `id` que devuelve la lista. Solo el propietario del proyecto puede restaurar un proyecto o una rutina.
+
 ### Comprobar con un ejemplo {#example}
 
 El ejemplo cambia la primera tarea de un plan ya leído. Sustituye el UUID del proyecto y la incidencia por los valores obtenidos mediante descubrimiento; `task_index` debe proceder de la última lectura. Comprueba los `plan_tasks` y `plan_progress` devueltos. Ante un error de acceso, revisa la cuenta y la autorización del proyecto; ante un conflicto de versión, vuelve a leer y aplica solo el cambio previsto. No repitas una modificación externa de resultado incierto antes de comprobarlo.

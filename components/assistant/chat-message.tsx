@@ -117,7 +117,7 @@ function CopyButton({ text, pinned }: { text: string; pinned: boolean }) {
           pinned ? "opacity-100" : "opacity-0 group-hover:opacity-100 touch:opacity-100",
         )}
       >
-        <CopyStateIcon copied={copied} checkClassName="text-brand" />
+        <CopyStateIcon copied={copied} checkClassName="text-primary" />
       </IconButton>
     </AppTooltip>
   );

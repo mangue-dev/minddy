@@ -37,6 +37,11 @@ export const MCP_TOOL_CAPABILITIES = {
   // still write, so the personal cycle tools stay open to everyone.
   minddy_get_cycle: "user",
   minddy_fill_cycle: "user",
+  // The trash core (lib/server/trash.ts) checks each item: a member restores
+  // what is in the projects they write in, the owner alone a project or a
+  // routine. Restoring a project cannot go through its own project_id.
+  minddy_list_trash: "user",
+  minddy_restore_from_trash: "user",
 
   // Reads.
   minddy_get_project: "read",
@@ -98,6 +103,7 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_update_page: "write",
   minddy_append_to_page: "write",
   minddy_edit_page_text: "write",
+  minddy_trash_page: "write",
 
   // Owner-only administration.
   minddy_update_integration_objective: "admin",
