@@ -19,7 +19,7 @@ import {
 } from "./use-agent-runs";
 import { pullRequestAccountRetryAt, pullRequestQueryOptions } from "./pull-request-query";
 import { globalBoardQueryFn } from "./global-board-api";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { GLOBAL_BOARD_KEY, GLOBAL_VIEWS_KEY, issuesKey, objectivesKey, statsKey } from "./query-keys";
 import { fetchViewsApi } from "./views-api";
 import { fetchStatsApi } from "./stats-api";
 import { mfaStatusQueryOptions } from "./use-mfa-status";
@@ -146,9 +146,9 @@ export function prefetchAppTabDestination(
       if (queryClient.getQueryData(GLOBAL_BOARD_KEY) === undefined) {
         void queryClient.prefetchQuery({ queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn });
       }
-      if (queryClient.getQueryData(["views", "global"]) === undefined) {
+      if (queryClient.getQueryData(GLOBAL_VIEWS_KEY) === undefined) {
         void queryClient.prefetchQuery({
-          queryKey: ["views", "global"],
+          queryKey: GLOBAL_VIEWS_KEY,
           queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal),
         });
       }
@@ -157,7 +157,7 @@ export function prefetchAppTabDestination(
     // The profile, the default settings tab, shows the personal statistics.
     case "settings": {
       const tz = statsTimeZone();
-      void queryClient.prefetchQuery({ queryKey: ["stats", tz], queryFn: () => fetchStatsApi(tz) });
+      void queryClient.prefetchQuery({ queryKey: statsKey(tz), queryFn: () => fetchStatsApi(tz) });
       // The account settings page badges its Security tab from this status.
       void queryClient.prefetchQuery(mfaStatusQueryOptions);
       return;
@@ -179,7 +179,7 @@ export function appTabPreparationQuery(client: QueryClient, href: string) {
     return { queryKey: pagesKey(route.projectId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPagesApi(route.projectId!, signal) };
   }
   if (route.projectId && route.section === "feedback") return feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(client, route.projectId, href));
-  if (route.projectId && ["tickets", "triage"].includes(route.section)) return { queryKey: ["issues", route.projectId] as const, queryFn: issuesQueryFn(route.projectId) };
+  if (route.projectId && ["tickets", "triage"].includes(route.section)) return { queryKey: issuesKey(route.projectId), queryFn: issuesQueryFn(route.projectId) };
   if (route.section === "all") return { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn };
   return null;
 }
@@ -208,8 +208,8 @@ function preparationRead<T, Key extends QueryKey>(options: {
 export function appTabSelectionSources(href: string): (readonly unknown[])[] {
   const route = appTabRoute(href);
   if (!route.projectId) return [];
-  if (route.section === "triage") return [["issues", route.projectId]];
-  if (route.section === "objectives") return [["objectives", route.projectId]];
+  if (route.section === "triage") return [issuesKey(route.projectId)];
+  if (route.section === "objectives") return [objectivesKey(route.projectId)];
   if (route.section === "feedback") return feedbackDestinationSourceKeys(route.projectId, href);
   return [];
 }
@@ -217,7 +217,7 @@ export function appTabSelectionSources(href: string): (readonly unknown[])[] {
 function selectedTriageIssue(client: QueryClient, href: string): string | null {
   const route = appTabRoute(href);
   if (!route.projectId || route.section !== "triage") return null;
-  const rows = triageSelectionItems(selectionRows<Issue>(client, ["issues", route.projectId], route.projectId));
+  const rows = triageSelectionItems(selectionRows<Issue>(client, issuesKey(route.projectId), route.projectId));
   return secondarySelectionId(rows, issueParamId(rows, new URL(href, "https://minddy.invalid").searchParams.get("issue")));
 }
 
@@ -281,7 +281,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
   }
   if (route.projectId && route.section === "objectives") {
     const queries = [...projectPreparationQueries(client, route.projectId).filter((option) => ["objectives", "issues", "members", "issue-relations"].includes(String(option.queryKey[0]))), tree!];
-    const rows = selectionRows<Objective>(client, ["objectives", route.projectId], route.projectId);
+    const rows = selectionRows<Objective>(client, objectivesKey(route.projectId), route.projectId);
     const id = secondarySelectionId(rows.filter((row) => matchesObjectiveState(row, "active")), expandParam(params.get("open")), null, rows);
     if (id) queries.push(preparationRead(objectiveCommentsOptions(id)), preparationRead(objectiveEventsOptions(id)),
       preparationRead(objectiveResourcesOptions(id)), preparationRead(objectiveFeedbackCountOptions(route.projectId, id)));
@@ -314,7 +314,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
       ...projectPreparationQueries(client, route.projectId).filter((option) => ["issues", "members", "objectives"].includes(String(option.queryKey[0]))));
   }
   if (route.section === "all") {
-    options.push({ queryKey: ["views", "global"], queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal) });
+    options.push({ queryKey: GLOBAL_VIEWS_KEY, queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal) });
   }
   return options;
 }

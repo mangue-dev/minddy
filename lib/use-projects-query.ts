@@ -10,8 +10,8 @@ import {
   updateProjectApi,
 } from "./projects-api";
 import type { CreateProjectInput, Project, ProjectUpdateInput } from "./types";
+import { PROJECTS_KEY } from "./query-keys";
 
-const PROJECTS_KEY = ["projects"] as const;
 
 export interface UseProjectsResult {
   projects: Project[];

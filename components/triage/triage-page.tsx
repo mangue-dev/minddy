@@ -227,9 +227,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     if (bulkIssues.length !== 2) return undefined;
     const [first, second] = bulkIssues;
     return () => {
-      void addRelation(first.id, "related", second.id).catch((err) =>
-        toast.error((err as Error).message)
-      );
+      void addRelation(first.id, "related", second.id);
       clearBulk();
     };
   }, [bulkIssues, addRelation, clearBulk]);

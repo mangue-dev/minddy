@@ -6,6 +6,7 @@ import { useLiveNow } from "./use-live-now";
 import { issuesQueryFn } from "./issues-api";
 import { orderObjectives } from "./objective-order";
 import type { Issue, Objective } from "./types";
+import { issuesKey } from "./query-keys";
 
 const NO_ISSUES: Issue[] = [];
 
@@ -30,7 +31,7 @@ export function useOrderedObjectives<T extends Objective>(objectives: readonly T
   );
   const issues = useQueries({
     queries: projectIds.map((projectId) => ({
-      queryKey: ["issues", projectId],
+      queryKey: issuesKey(projectId),
       queryFn: issuesQueryFn(projectId),
       staleTime: Infinity,
     })),

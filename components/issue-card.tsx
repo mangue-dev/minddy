@@ -41,7 +41,7 @@ import {
 } from "@/lib/issue-hierarchy";
 import { LinkablePullRequestsProbe, PullRequestPalettePicker } from "@/components/pull-requests/pr-link-target-picker";
 import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
-import type { RelationKinds } from "@/lib/use-issue-relations-query";
+import type { RelationKinds } from "@/lib/use-relation-mutations";
 import { useIssueSelection } from "@/lib/issue-selection-context";
 import { closedObjectivesLast } from "@/lib/relation-constants";
 import { useUndoHistory } from "@/lib/undo/undo-context";

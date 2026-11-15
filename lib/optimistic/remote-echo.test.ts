@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import {
-  GLOBAL_BOARD_KEY,
   applyPendingBoard,
   applyPendingIssues,
   applyPendingObjectives,
@@ -9,13 +8,14 @@ import {
   objectiveWrites,
 } from "./issue-writes";
 import { adoptRemoteRow, remoteEchoOf, type RemoteChange } from "./remote-echo";
-import { SEARCH_INDEX_KEY } from "../use-search-index";
+
 import type {
   GlobalBoardResponse,
   Issue,
   Objective,
   SearchIndexResponse,
 } from "../types";
+import { GLOBAL_BOARD_KEY, SEARCH_INDEX_KEY } from "../query-keys";
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 const ISSUE = "22222222-2222-4222-8222-222222222222";

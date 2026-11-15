@@ -31,11 +31,11 @@ beforeEach(() => {
 describe("reads a page load carries (MIN-880)", () => {
   it("names each project page's reads before its first content", async () => {
     expect(await pageReads("/projects/aur-9e3d0c35/objectives")).toEqual([
-      `${api}/feedback/counts`, `${api}/objectives`, `${api}/issues`, `${api}/members`, `${api}/issue-relations`, `${api}/pages`,
+      `${api}/objectives`, `${api}/issues`, `${api}/members`, `${api}/issue-relations`, `${api}/pages`,
     ]);
-    expect(await pageReads("/projects/aur-9e3d0c35/pages")).toEqual([`${api}/feedback/counts`, `${api}/pages`]);
+    expect(await pageReads("/projects/aur-9e3d0c35/pages")).toEqual([`${api}/pages`]);
     expect(await pageReads("/projects/aur-9e3d0c35/pages/82a6b365")).toEqual([
-      `${api}/feedback/counts`, `${api}/pages`, `${api}/pages/${PAGE}`,
+      `${api}/pages`, `${api}/pages/${PAGE}`,
     ]);
     expect(await pageReads("/projects/aur-9e3d0c35/triage")).toContain(`${api}/integrations`);
   });
@@ -49,12 +49,12 @@ describe("reads a page load carries (MIN-880)", () => {
   it("carries the statistics only on the general tab of project settings", async () => {
     expect(await pageReads("/projects/aur-9e3d0c35/settings")).toContain(`${api}/pull-request-stats`);
     expect(await pageReads("/projects/aur-9e3d0c35/settings?tab=general")).toContain(`${api}/pull-request-stats`);
-    expect(await pageReads("/projects/aur-9e3d0c35/settings?tab=members")).toEqual([`${api}/feedback/counts`]);
+    expect(await pageReads("/projects/aur-9e3d0c35/settings?tab=members")).toEqual([]);
   });
 
   it("reads nothing for a project or page this account cannot resolve, or an unknown section", async () => {
     expect(await pageReads("/projects/xyz-00000000/objectives")).toEqual([]);
-    expect(await pageReads("/projects/aur-9e3d0c35/pages/ffffffff")).toEqual([`${api}/feedback/counts`, `${api}/pages`]);
+    expect(await pageReads("/projects/aur-9e3d0c35/pages/ffffffff")).toEqual([`${api}/pages`]);
     expect(await pageReads("/projects/aur-9e3d0c35/pages-print")).toEqual([]);
     expect(await pageReads("/projects/aur-9e3d0c35/triage/82a6b365")).toEqual([]);
   });

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { buildOptimisticIssue } from "./optimistic-issue";
 import {
-  GLOBAL_BOARD_KEY,
   insertIssueEverywhere,
   issueWrites,
   mergeServerIssue,
@@ -14,6 +13,7 @@ import type {
   Issue,
   ResourceInput,
 } from "./types";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 const OTHER_PROJECT = "44444444-4444-4444-8444-444444444444";

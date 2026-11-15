@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -452,7 +452,9 @@ describe("other touch pitfalls", () => {
     const files = execSync(
       "git ls-files 'app/*.tsx' 'components/*.tsx'",
       { cwd: REPO, encoding: "utf8" },
-    ).split("\n").filter((file) => file && !file.endsWith(".test.tsx") && !decorative.has(file));
+    ).split("\n").filter((file) => file && !file.endsWith(".test.tsx") && !decorative.has(file)
+      // The index still lists a file deleted in the working tree.
+      && existsSync(join(REPO, file)));
     const offenders: string[] = [];
     for (const file of files) {
       const lines = read(join(REPO, file)).split("\n");

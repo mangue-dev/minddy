@@ -67,7 +67,6 @@ const ROUTES: { pattern: RegExp; load: () => Promise<RouteModule> }[] = [
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/integrations$/, load: () => import("@/app/api/projects/[id]/integrations/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/views$/, load: () => import("@/app/api/projects/[id]/views/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/feedback$/, load: () => import("@/app/api/projects/[id]/feedback/route") },
-  { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/feedback\/counts$/, load: () => import("@/app/api/projects/[id]/feedback/counts/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/pull-request-stats$/, load: () => import("@/app/api/projects/[id]/pull-request-stats/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/pages$/, load: () => import("@/app/api/projects/[id]/pages/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/pages\/(?<pageId>[0-9a-f-]{36})$/, load: () => import("@/app/api/projects/[id]/pages/[pageId]/route") },
@@ -129,13 +128,12 @@ async function projectReads(projectId: string, section: string, pageRef: string 
   const readers = PROJECT_SECTION_READS[section];
   if (!readers || (pageRef && section !== "pages")) return [];
   const api = `/api/projects/${projectId}`;
-  // Every project page shows the feedback counter in the sidebar.
-  const paths = [`${api}/feedback/counts`, ...readers.map((reader) => `${api}/${reader}`)];
+  const paths = readers.map((reader) => `${api}/${reader}`);
   // A bare team page reads its default list; links and filters change that read.
   if (section === "feedback" && params.size === 0) paths.push(defaultFeedbackListReadPath(projectId));
   // Other tabs do not show the statistics.
   if (section === "settings" && (params.get("tab") ?? PROJECT_SETTINGS_DEFAULT_TAB) !== PROJECT_SETTINGS_DEFAULT_TAB) {
-    return paths.slice(0, 1);
+    return [];
   }
   if (pageRef) {
     const pageId = await resolveRouteRef("pages", pageRef).catch(() => null);

@@ -5,10 +5,10 @@ import { fetchClientRead } from "./client-read";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   applyPendingIssues,
-  GLOBAL_BOARD_KEY,
   issueWrites,
 } from "./optimistic/issue-writes";
 import type { GlobalBoardResponse, Issue } from "./types";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 
 /** Short-lived, non-persisted snapshot used to close missed-broadcast gaps. */
 export const GLOBAL_ISSUES_KEY = ["me", "board-issues"] as const;

@@ -626,14 +626,14 @@
     "file": "app/api/me/triage-counts/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 31,
+    "line": 30,
     "storage": false
   },
   {
     "file": "app/api/me/triage-counts/route.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 61,
+    "line": 60,
     "storage": false
   },
   {
@@ -767,13 +767,6 @@
     "operation": "from",
     "resource": "projects",
     "line": 352,
-    "storage": false
-  },
-  {
-    "file": "app/api/projects/[id]/feedback/counts/route.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 15,
     "storage": false
   },
   {
@@ -1536,7 +1529,7 @@
     "file": "lib/realtime-provider.tsx",
     "operation": "rpc",
     "resource": "realtime_topics_changed_since",
-    "line": 107,
+    "line": 108,
     "storage": false
   },
   {

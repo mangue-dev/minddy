@@ -32,6 +32,7 @@ import { IssueGraphCard } from "@/components/stats/issue-graph";
 import { STATUS_TINT } from "@/components/stats/status-tint";
 import type { IssueStatus } from "@/lib/issue-constants";
 import { Metric, StatsCard, StatsSection } from "@/components/stats/stats-chrome";
+import { issuesKey } from "@/lib/query-keys";
 
 /**
  * The statistics of one project (MIN-878), under its identity in the General
@@ -179,7 +180,7 @@ export function ProjectStatistics({ project }: { project: Project }) {
 
   // The board's own cache entries, as in the identity header above.
   const { data: issues } = useQuery({
-    queryKey: ["issues", project.id],
+    queryKey: issuesKey(project.id),
     queryFn: issuesQueryFn(project.id),
   });
   const { relations } = useIssueRelationsQuery(project.id);

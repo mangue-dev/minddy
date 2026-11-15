@@ -39,10 +39,8 @@ import {
   feedbackSettingsKey,
   useFeedbackBoardSettings,
 } from "@/components/feedback/feedback-settings-shared";
-import {
-  integrationsQueryKey,
-  useIntegrationsQuery,
-} from "@/lib/use-integrations-query";
+import { useIntegrationsQuery } from "@/lib/use-integrations-query";
+import { integrationsKey } from "@/lib/query-keys";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 import { CopyStateIcon } from "@/components/ui/copy-state-icon";
@@ -301,7 +299,7 @@ export function FeedbackSetupWizard({
         queryKey: feedbackSettingsKey(projectId),
       });
       void queryClient.invalidateQueries({
-        queryKey: integrationsQueryKey(projectId),
+        queryKey: integrationsKey(projectId),
       });
       if (stale()) return;
       setPrompt(data.prompt);

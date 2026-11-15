@@ -11,7 +11,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { displayName } from "@/lib/display-name";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { contentMentionScanner, type MentionScan } from "@/lib/mention-scan";
 import {

@@ -3,6 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ProjectTriageCount, TriageCountsResponse } from "./types";
 import { fetchSeeded } from "./server-seed";
+import { TRIAGE_COUNTS_KEY } from "./query-keys";
+
+/** Stable identity: without it, each rendering would render a new table and
+ would restart the sidebar memos that depend on it. */
+const NO_COUNTS: Record<string, ProjectTriageCount> = {};
 
 /**
  * What is waiting to be sorted in each of my projects (tickets in sorting +
@@ -14,15 +19,10 @@ import { fetchSeeded } from "./server-seed";
  * sidebar is mounted on all pages, the dashboard summary should
  * not be. See lib/use-smart-assign-warnings-query.ts.
  *
- * Freshness: the real-time bridge invalidates this key on any ticket, return and opt-in event (lib/realtime-provider.tsx) — i.e.
- * all that who can move it, perimeter included. No staleTime, therefore.
+ * Freshness: the realtime bridge invalidates this key on every ticket,
+ * feedback, project and membership event (lib/realtime-keys.ts), which covers
+ * everything that can move it, scope included. No staleTime, therefore.
  */
-export const TRIAGE_COUNTS_KEY = ["me", "triage-counts"] as const;
-
-/** Stable identity: without it, each rendering would render a new table and
- would restart the sidebar memos that depend on it. */
-const NO_COUNTS: Record<string, ProjectTriageCount> = {};
-
 export function useTriageCountsQuery() {
   const { data } = useQuery({
     queryKey: TRIAGE_COUNTS_KEY,

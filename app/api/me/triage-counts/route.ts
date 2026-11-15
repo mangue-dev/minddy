@@ -15,10 +15,9 @@ import type { ProjectTriageCount, TriageCountsResponse } from "@/lib/types";
  * is far too expensive to be mounted everywhere. Here, two `select` of ONE column,
  * on the only lines that expect something.
  *
- * The two halves are counted EXACTLY as the two mode tabs
- * project — the sidebar sorting counter and GET …/feedback/counts — for
- * that the number of a project line is the sum of the two badges that will be read
- * when entering it. A discrepancy here would be seen immediately.
+ * The two halves are also the Triage and Feedback badges of the project's
+ * own navigation (components/project-nav-model.tsx), so a project row's number
+ * is exactly the sum of the two badges read on entering it.
  */
 export async function GET(request: NextRequest) {
   // Both RLS reads start together and overlap the live session check, which

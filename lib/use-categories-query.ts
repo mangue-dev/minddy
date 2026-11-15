@@ -10,11 +10,11 @@ import {
   updateCategoryApi,
 } from "./categories-api";
 import type { Category, CategoryUpdateInput, CreateCategoryInput } from "./types";
+import { categoriesKey, issuesKey } from "./query-keys";
 
 /** Stable while loading, like `NO_OBJECTIVES`: memoized consumers keep their render. */
 const NO_CATEGORIES: Category[] = [];
 
-const categoriesKey = (projectId: string) => ["categories", projectId] as const;
 
 export function useCategoriesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
@@ -89,7 +89,7 @@ export function useCategoriesQuery(projectId: string | null) {
       invalidate();
       // A deleted category also disappears from issue cards.
       if (projectId) {
-        void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
+        void queryClient.invalidateQueries({ queryKey: issuesKey(projectId) });
       }
     },
     [invalidate, projectId, queryClient]

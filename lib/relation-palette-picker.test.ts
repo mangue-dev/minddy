@@ -10,7 +10,7 @@ import type { KanbanColumn } from "@/components/kanban-column";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { Issue, IssueRelationType, Objective } from "./types";
 import type { RelationMenuKind } from "./issue-hierarchy";
-import type { RelationKinds } from "./use-issue-relations-query";
+import type { RelationKinds } from "./use-relation-mutations";
 import { isClosedStatus } from "./issue-constants";
 import { hasDirectRelation } from "./issue-shortcut-targets";
 import { hierarchyCandidates, hierarchyPatches, isHierarchyRelation } from "./issue-hierarchy";

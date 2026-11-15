@@ -16,6 +16,7 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { createPendingWrites } from "./pending-writes";
+import { ALL_ISSUES_KEY, GLOBAL_BOARD_KEY, categoriesKey, issueRelationsKey, issuesKey, objectivesKey } from "../query-keys";
 import { patchSearchIndexIssue } from "../use-search-index";
 import type {
   Category,
@@ -27,14 +28,6 @@ import type {
   SearchIndexIssue,
 } from "../types";
 
-/** Cache key for the aggregate cross-project board (MIN-29). Declared here
-    rather than in use-global-board-query.ts (which re-exports it) so that hook
-    can import this module without an import cycle. */
-export const GLOBAL_BOARD_KEY = ["me", "board"] as const;
-
-const issuesKey = (projectId: string) => ["issues", projectId] as const;
-const objectivesKey = (projectId: string) => ["objectives", projectId] as const;
-const categoriesKey = (projectId: string) => ["categories", projectId] as const;
 
 export const issueWrites = createPendingWrites<Issue>();
 export const objectiveWrites = createPendingWrites<Objective>();
@@ -147,7 +140,7 @@ function cachedRowsByFreshness(queryClient: QueryClient, projectId?: string): Ca
   const cache = queryClient.getQueryCache();
   const lists = projectId
     ? [cache.find({ queryKey: issuesKey(projectId), exact: true })]
-    : cache.findAll({ queryKey: ["issues"] });
+    : cache.findAll({ queryKey: ALL_ISSUES_KEY });
   const sources: CachedRows[] = [];
   for (const query of lists) {
     if (!query || !Array.isArray(query.state.data)) continue;
@@ -214,7 +207,7 @@ export function cachedIssueRelations(
 ): IssueRelation[] {
   const rows = new Map<string, IssueRelation>();
   const sources = [
-    queryClient.getQueryData<IssueRelation[]>(["issue-relations", projectId]) ?? [],
+    queryClient.getQueryData<IssueRelation[]>(issueRelationsKey(projectId)) ?? [],
     queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.relations ?? [],
   ];
   for (const list of sources) {

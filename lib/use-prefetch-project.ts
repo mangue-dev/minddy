@@ -9,29 +9,30 @@ import { objectivesQueryFn } from "./objectives-api";
 import { fetchIssueRelationsApi } from "./issue-relations-api";
 import { fetchIntegrationsApi } from "./integrations-api";
 import { fetchViewsApi } from "./views-api";
+import { categoriesKey, integrationsKey, issueRelationsKey, issuesKey, membersKey, objectivesKey, viewsKey } from "./query-keys";
 
 /** The retained board boundary needs all seven reads, including saved filters. */
 export function projectPreparationQueries(queryClient: QueryClient, projectId: string): FetchQueryOptions<unknown>[] {
   return [{
-    queryKey: ["issues", projectId],
+    queryKey: issuesKey(projectId),
     queryFn: issuesQueryFn(projectId),
   }, {
-    queryKey: ["categories", projectId],
+    queryKey: categoriesKey(projectId),
     queryFn: ({ signal }) => fetchCategoriesApi(projectId, signal),
   }, {
-    queryKey: ["members", projectId],
+    queryKey: membersKey(projectId),
     queryFn: ({ signal }) => fetchMembersApi(projectId, signal),
   }, {
-    queryKey: ["objectives", projectId],
+    queryKey: objectivesKey(projectId),
     queryFn: objectivesQueryFn(projectId),
   }, {
-    queryKey: ["issue-relations", projectId],
+    queryKey: issueRelationsKey(projectId),
     queryFn: ({ signal }) => fetchIssueRelationsApi(projectId, queryClient, signal),
   }, {
-    queryKey: ["integrations", projectId],
+    queryKey: integrationsKey(projectId),
     queryFn: ({ signal }) => fetchIntegrationsApi(projectId, signal),
   }, {
-    queryKey: ["views", projectId],
+    queryKey: viewsKey(projectId),
     queryFn: ({ signal }) => fetchViewsApi({ kind: "project", projectId }, signal),
   }];
 }

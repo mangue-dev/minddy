@@ -10,7 +10,7 @@ import { realtimeCoverageLive } from "./realtime-coverage";
 import { recordAcceptedPageWrite } from "./optimistic-page-writes";
 import { globalBoardQueryFn } from "./global-board-api";
 import { DEFERRED_BOARD_ISSUES_PATH } from "./global-board-reads";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 import type { GlobalBoardResponse, Issue } from "./types";
 
 const realtime = vi.hoisted(() => ({

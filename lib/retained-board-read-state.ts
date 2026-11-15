@@ -2,10 +2,15 @@ import { expandProjectSegment, subscribeRefRegistry } from "./ref-registry";
 import { notifyManager, type QueryClient, type QueryObserverOptions } from "@tanstack/react-query";
 import { isDefinitiveReadError } from "./backend-availability";
 import type { RetainedAppView } from "./retained-app-views";
+import { GLOBAL_BOARD_PREREQUISITE_KEYS, projectBoardKeys, sameQueryKey } from "./query-keys";
 
 export function retainedBoardKeys(view: RetainedAppView): readonly (readonly unknown[])[] {
-  if (view.kind === "global-board") return [["me", "board"], ["views", "global"], ["projects"]];
-  return ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"].map((prefix) => [prefix, expandProjectSegment(view.route.projectSegment)]);
+  if (view.kind === "global-board") return GLOBAL_BOARD_PREREQUISITE_KEYS;
+  const projectId = expandProjectSegment(view.route.projectSegment);
+  if (projectId) return projectBoardKeys(projectId);
+  // Keys naming no project match no query: the board reads as loading until
+  // the short code's id is learned (MIN-880).
+  return projectBoardKeys("").map(([family]) => [family, null]);
 }
 
 /**
@@ -24,7 +29,7 @@ export function subscribeRetainedBoardReadState(client: QueryClient, view: Retai
   });
   const unsubscribe = client.getQueryCache().subscribe((event) => {
     const keys = retainedBoardKeys(view);
-    if (keys.some((key) => key.length === event.query.queryKey.length && key.every((part, index) => part === event.query.queryKey[index]))) scheduledNotify();
+    if (keys.some((key) => sameQueryKey(key, event.query.queryKey))) scheduledNotify();
   });
   const stopRegistry = view.kind === "project-board" ? subscribeRefRegistry(scheduledNotify) : () => {};
   return () => {

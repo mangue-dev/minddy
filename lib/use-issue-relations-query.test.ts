@@ -5,12 +5,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useIssueRelationsQuery } from "./use-issue-relations-query";
 import type { GlobalBoardResponse, IssueRelation } from "./types";
 
-const mocks = vi.hoisted(() => ({ add: vi.fn(), record: vi.fn() }));
+const mocks = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), record: vi.fn(), toastError: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { error: (...args: unknown[]) => mocks.toastError(...args) } }));
 vi.mock("./undo/undo-context", () => ({ useUndoHistory: () => ({ record: mocks.record, currentLink: () => undefined }) }));
 vi.mock("./issue-relations-api", () => ({
   addIssueRelationApi: (...args: unknown[]) => mocks.add(...args),
   fetchIssueRelationsApi: vi.fn(),
-  removeIssueRelationApi: vi.fn(),
+  removeIssueRelationApi: (...args: unknown[]) => mocks.remove(...args),
 }));
 
 let client: QueryClient;
@@ -49,10 +50,34 @@ it("updates both caches before the POST returns and records only the persisted r
   }, undefined, undefined);
 });
 
-it("removes a failed addition from both caches without recording undo", async () => {
+it("removes a failed addition from both caches, shows the error and records no undo", async () => {
   mocks.add.mockRejectedValue(new Error("Failed"));
-  await expect(hook.addRelation("issue", "related", "objective", { targetType: "objective" })).rejects.toThrow("Failed");
+  await expect(hook.addRelation("issue", "related", "objective", { targetType: "objective" })).resolves.toBeNull();
+  expect(mocks.toastError).toHaveBeenCalledWith("Failed");
   expect(client.getQueryData(key)).toEqual([]);
   expect(client.getQueryData<GlobalBoardResponse>(["me", "board"])?.relations).toEqual([]);
+  expect(mocks.record).not.toHaveBeenCalled();
+});
+
+const existing: IssueRelation = {
+  id: "existing", source_id: "a", source_type: "issue", target_id: "b", target_type: "issue", type: "blocks",
+};
+
+it("removes a relation from the cross-project board too, and puts it back in both when the DELETE fails", async () => {
+  client.setQueryData(key, [existing]);
+  client.setQueryData(["me", "board"], { relations: [existing] });
+  mocks.remove.mockResolvedValueOnce(undefined);
+  await expect(hook.removeRelation(existing.id)).resolves.toBe(true);
+  expect(client.getQueryData(key)).toEqual([]);
+  expect(client.getQueryData<GlobalBoardResponse>(["me", "board"])?.relations).toEqual([]);
+
+  client.setQueryData(key, [existing]);
+  client.setQueryData(["me", "board"], { relations: [existing] });
+  mocks.record.mockClear();
+  mocks.remove.mockRejectedValueOnce(new Error("Gone wrong"));
+  await expect(hook.removeRelation(existing.id)).resolves.toBe(false);
+  expect(mocks.toastError).toHaveBeenCalledWith("Gone wrong");
+  expect(client.getQueryData(key)).toEqual([existing]);
+  expect(client.getQueryData<GlobalBoardResponse>(["me", "board"])?.relations).toEqual([existing]);
   expect(mocks.record).not.toHaveBeenCalled();
 });

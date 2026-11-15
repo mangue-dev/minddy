@@ -53,7 +53,6 @@ import {
   removeIssueRelationApi,
 } from "@/lib/issue-relations-api";
 import {
-  GLOBAL_BOARD_KEY,
   issueWrites,
   mergeServerIssue,
   patchIssueEverywhere,
@@ -80,6 +79,7 @@ import type {
 } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { trackEvent } from "@/lib/analytics";
+import { GLOBAL_BOARD_KEY, issueRelationsKey, issuesKey } from "../query-keys";
 
 /** Handle returned by record(): the canonical stack entry (rapid category
     toggles coalesce into one) and its retraction (write failed → drop it). */
@@ -88,7 +88,7 @@ export interface UndoRecord {
   retract: () => void;
 }
 
-interface UndoHistory {
+export interface UndoHistory {
   /** Record a user mutation the moment it's applied optimistically. `settled`
       is the write's own promise (never-throwing) — replays order after it.
       `link` defaults to the gesture running in `linked()`, if any. */
@@ -235,7 +235,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           : old
       );
       queryClient.setQueryData(
-        ["issue-relations", projectId],
+        issueRelationsKey(projectId),
         (old: { id: string }[] | undefined) =>
           old?.filter((r) => r.id !== relationId)
       );
@@ -331,12 +331,12 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         return;
       }
       void queryClient.invalidateQueries({
-        queryKey: ["issues", entry.projectId],
+        queryKey: issuesKey(entry.projectId),
       });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       if (entry.kind !== "update" && entry.kind !== "categories") {
         void queryClient.invalidateQueries({
-          queryKey: ["issue-relations", entry.projectId],
+          queryKey: issueRelationsKey(entry.projectId),
         });
       }
     },

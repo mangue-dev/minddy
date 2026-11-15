@@ -1,7 +1,6 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  GLOBAL_BOARD_KEY,
   applyPendingBoard,
   applyPendingIssues,
   findIssueAnywhere,
@@ -9,6 +8,7 @@ import {
   objectiveWrites,
 } from "./issue-writes";
 import type { GlobalBoardResponse, Issue, Objective } from "../types";
+import { GLOBAL_BOARD_KEY } from "../query-keys";
 
 // Registers are singletons shared by the entire application: one
 // entry left open would distort the following test.

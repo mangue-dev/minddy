@@ -49,7 +49,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useBoardCardInstructions, useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
-import type { RelationKinds } from "@/lib/use-issue-relations-query";
+import type { RelationKinds } from "@/lib/use-relation-mutations";
 import { boardComparatorFactory } from "@/lib/smart-triage";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {

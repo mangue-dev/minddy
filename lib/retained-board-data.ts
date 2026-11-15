@@ -1,8 +1,8 @@
 import { expandProjectSegment } from "./ref-registry";
 import { QueryObserver, type Query, type QueryClient } from "@tanstack/react-query";
 import type { RetainedAppView } from "./retained-app-views";
+import { GLOBAL_BOARD_PREREQUISITE_KEYS, projectBoardKeys, sameQueryKey } from "./query-keys";
 
-const PROJECT_PREFIXES = ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"];
 
 function retainedScope(views: readonly RetainedAppView[]) {
   const ids = (kinds: readonly RetainedAppView["kind"][]) =>
@@ -15,10 +15,11 @@ function retainedScope(views: readonly RetainedAppView[]) {
     signature: JSON.stringify([global, projects, pageProjects, feedbackProjects]),
     matches: (key: readonly unknown[]) => {
       if (key.length !== 2) return false;
-      if (global && ((key[0] === "me" && key[1] === "board") || (key[0] === "views" && key[1] === "global"))) return true;
+      if (global && GLOBAL_BOARD_PREREQUISITE_KEYS.some((prerequisite) => sameQueryKey(prerequisite, key))) return true;
       if ((key[0] === "pages" && pageProjects.includes(key[1] as string)) ||
         (key[0] === "feedback" && feedbackProjects.includes(key[1] as string))) return true;
-      return projects.includes(key[1] as string) && PROJECT_PREFIXES.includes(key[0] as string);
+      return projects.includes(key[1] as string) &&
+        projectBoardKeys(key[1] as string).some((prerequisite) => sameQueryKey(prerequisite, key));
     },
   };
 }

@@ -245,7 +245,7 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
   // The draft the drafts tray asks the dialog to restore (MIN-753).
   let initialDraftId: string | null = null;
   const render = () => root.render(withPalette(kind === "issue"
-    ? React.createElement(CreateIssueDialog, { open, onOpenChange, projectId: project.id, projects, members: [], categories: [], objectives: [], onCreate: create, onCreateInProject: createOther, initialDraftId })
+    ? React.createElement(CreateIssueDialog, { open, onOpenChange, projectId: project.id, projects, members: [], categories: [], objectives: [], onCreate: (target: string, input: unknown) => target === project.id ? create(input) : createOther(target, input), initialDraftId })
     : React.createElement(ObjectiveDialog, { open, onOpenChange, projectId: project.id, projectKey: project.key, projects: withProjectMenu ? [project, otherProject] : [], members: [], onCreate: create, onCreateInProject: createOther, onUpdate: vi.fn(), initialDraftId })));
   const onOpenChange = (next: boolean) => { open = next; render(); };
   await act(render);

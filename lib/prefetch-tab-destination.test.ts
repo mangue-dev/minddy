@@ -2,7 +2,7 @@ import { feedbackQueryOptions } from "./feedback-query";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prefetchAppTabDestination, appTabPreparationQueries, isPreparedAppTabDestination } from "./prefetch-tab-destination";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 import { ApiError } from "./agent-api";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));

@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addRelationOptimistically, applyPendingRelations, forgetRelationWrite, persistedRelationId, relationsKey } from "./relation-writes";
+import { addRelationOptimistically, applyPendingRelations, forgetRelationWrite, persistedRelationId } from "./relation-writes";
+import { issueRelationsKey } from "../query-keys";
 import type { GlobalBoardResponse, IssueRelation, IssueRelationType } from "../types";
 import { normalizeRelation } from "../relation-constants";
 
@@ -14,12 +15,12 @@ function deferred<T>() {
 let client: QueryClient;
 const boardKey = ["me", "board"];
 const existing: IssueRelation = { id: "existing", source_id: "a", target_id: "b", type: "related" };
-const projectRows = () => client.getQueryData<IssueRelation[]>(relationsKey("project"))!;
+const projectRows = () => client.getQueryData<IssueRelation[]>(issueRelationsKey("project"))!;
 const boardRows = () => client.getQueryData<GlobalBoardResponse>(boardKey)!.relations;
 
 beforeEach(() => {
   client = new QueryClient();
-  client.setQueryData(relationsKey("project"), [existing]);
+  client.setQueryData(issueRelationsKey("project"), [existing]);
   client.setQueryData(boardKey, { relations: [existing] });
 });
 afterEach(() => client.clear());
@@ -40,7 +41,7 @@ describe("optimistic relation additions", () => {
   });
 
   it.each(["success", "failure"] as const)("leaves an unfetched project cache absent after %s so opening it reads all relations", async (outcome) => {
-    const key = relationsKey("project");
+    const key = issueRelationsKey("project");
     client.removeQueries({ queryKey: key, exact: true });
     client.setDefaultOptions({ queries: { staleTime: 5 * 60_000 } });
     const request = deferred<IssueRelation>();
@@ -78,7 +79,7 @@ describe("optimistic relation additions", () => {
     successful.resolve(created);
     await second;
     const remote = { ...existing, id: "remote", target_id: "e" };
-    client.setQueryData(relationsKey("project"), [...projectRows(), remote]);
+    client.setQueryData(issueRelationsKey("project"), [...projectRows(), remote]);
     const rejected = expect(first).rejects.toThrow("Failed");
     failed.reject(new Error("Failed"));
     await rejected;

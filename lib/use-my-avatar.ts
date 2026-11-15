@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { GLOBAL_BOARD_KEY, ALL_MEMBERS_KEY } from "./query-keys";
 import { fetchSeeded } from "./server-seed";
 import { refreshResolvedMention } from "./mention-resolution";
 
@@ -45,7 +45,7 @@ function useAvatarMutation(
       queryClient.setQueryData(avatarKey(user?.id), data);
       // Member-bearing queries contain the same account source and must update
       // immediately wherever the user is assigned, mentioned, or shown as actor.
-      void queryClient.invalidateQueries({ queryKey: ["members"] });
+      void queryClient.invalidateQueries({ queryKey: ALL_MEMBERS_KEY });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
@@ -86,7 +86,7 @@ export function useUploadAvatar() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(avatarKey(user?.id), data);
-      void queryClient.invalidateQueries({ queryKey: ["members"] });
+      void queryClient.invalidateQueries({ queryKey: ALL_MEMBERS_KEY });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["my-invitations"] });

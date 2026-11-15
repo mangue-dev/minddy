@@ -10,6 +10,7 @@ import {
   type ViewScope,
 } from "./views-api";
 import type { CreateViewInput, View, ViewUpdateInput } from "./types";
+import { viewsKey } from "./query-keys";
 
 export function useViewsQuery(scope: ViewScope) {
   const queryClient = useQueryClient();
@@ -17,12 +18,12 @@ export function useViewsQuery(scope: ViewScope) {
   const scopeId = scope.kind === "project" ? scope.projectId : "global";
 
   const { data, isPending } = useQuery({
-    queryKey: ["views", scopeId],
+    queryKey: viewsKey(scopeId),
     queryFn: ({ signal }) => fetchViewsApi(scope, signal),
   });
 
   const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["views", scopeId] });
+    void queryClient.invalidateQueries({ queryKey: viewsKey(scopeId) });
   }, [queryClient, scopeId]);
 
   const createView = useCallback(
@@ -42,7 +43,7 @@ export function useViewsQuery(scope: ViewScope) {
     mutationFn: ({ viewId, updates }: { viewId: string; updates: ViewUpdateInput }) =>
       updateViewApi(viewId, updates),
     onMutate: async ({ viewId, updates }) => {
-      const queryKey = ["views", scopeId];
+      const queryKey = viewsKey(scopeId);
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<View[]>(queryKey)?.find((view) => view.id === viewId);
       const optimistic = previous ? { ...previous, ...updates } : undefined;
@@ -55,14 +56,14 @@ export function useViewsQuery(scope: ViewScope) {
       return { previous, optimistic: queryClient.getQueryData<View[]>(queryKey)?.find((view) => view.id === viewId) };
     },
     onSuccess: (confirmed, _variables, context) => {
-      queryClient.setQueryData<View[]>(["views", scopeId], (views) =>
+      queryClient.setQueryData<View[]>(viewsKey(scopeId), (views) =>
         views?.map((view) => view === context?.optimistic ? confirmed : view),
       );
     },
     onError: (_error, _variables, context) => {
       if (!context?.previous) return;
       const previous = context.previous;
-      queryClient.setQueryData<View[]>(["views", scopeId], (views) =>
+      queryClient.setQueryData<View[]>(viewsKey(scopeId), (views) =>
         views?.map((view) => view === context.optimistic ? previous : view),
       );
     },

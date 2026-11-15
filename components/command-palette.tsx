@@ -138,6 +138,7 @@ import type { MentionLinkType } from "@/lib/mention-link";
 import { withPageContentHits } from "@/lib/palette-page-hits";
 import { orderObjectives } from "@/lib/objective-order";
 import "./command-palette.css";
+import { issuesKey } from "@/lib/query-keys";
 
 /** Search boosts by group — same philosophy as minddy v1:
  * the commands remain on top of the data with equal relevance. */
@@ -727,7 +728,7 @@ export function CommandPalette({
           (searchIndex?.objectives ?? []).filter(
             (objective) => objective.project_id === issue.project_id
           ),
-          queryClient.getQueryData<Issue[]>(["issues", issue.project_id]) ?? []
+          queryClient.getQueryData<Issue[]>(issuesKey(issue.project_id)) ?? []
         );
         actions.push({
           id: "issue.objective",
@@ -765,7 +766,7 @@ export function CommandPalette({
         const knownCategoryIds = isFullIssue(issue)
           ? issue.category_ids
           : queryClient
-              .getQueryData<Issue[]>(["issues", issue.project_id])
+              .getQueryData<Issue[]>(issuesKey(issue.project_id))
               ?.find((row) => row.id === issue.id)?.category_ids;
         if (projectCategoryList.length > 0) {
           actions.push({
@@ -1384,7 +1385,9 @@ export function CommandPalette({
                   objectiveOptions(
                     orderObjectives(
                       req.objectives ?? [],
-                      queryClient.getQueryData<Issue[]>(["issues", req.objectives?.[0]?.project_id]) ?? []
+                      (req.objectives?.[0]?.project_id
+                        ? queryClient.getQueryData<Issue[]>(issuesKey(req.objectives[0].project_id))
+                        : undefined) ?? []
                     ),
                     tField("noObjective")
                   )

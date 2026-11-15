@@ -1,6 +1,6 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GLOBAL_BOARD_KEY, insertIssueEverywhere, issueWrites, patchIssueEverywhere, removeIssueEverywhere } from "./optimistic/issue-writes";
+import { insertIssueEverywhere, issueWrites, patchIssueEverywhere, removeIssueEverywhere } from "./optimistic/issue-writes";
 import {
   mergeIssueSnapshot,
   reconcileGlobalIssueSnapshot,
@@ -14,6 +14,7 @@ import { globalBoardQueryFn, mergeDeferredBoardIssues } from "./global-board-api
 import { DEFERRED_BOARD_ISSUES_PATH } from "./global-board-reads";
 import { objectiveProgress } from "./use-objectives-query";
 import type { GlobalBoardResponse, Issue } from "./types";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),

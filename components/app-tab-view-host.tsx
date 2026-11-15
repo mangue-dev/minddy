@@ -27,6 +27,7 @@ import { isDraftPage } from "@/lib/pages-draft";
 import { usePendingNavigation } from "@/lib/pending-navigation";
 import { RouteLoadingSkeleton } from "./route-loading-skeleton";
 import { holdReadsInFlight } from "@/lib/hold-reads-in-flight";
+import { GLOBAL_BOARD_KEY, issuesKey } from "@/lib/query-keys";
 
 const GlobalBoard = dynamic(() => appTabSurfaceLoaders["global-board"]().then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
 const ProjectBoard = dynamic(appTabSurfaceLoaders["project-board"], { loading: () => <BoardLoadingSkeleton /> });
@@ -264,9 +265,10 @@ function DesktopTabViews({ homeWeight, route: { pathname, search }, ahead }: {
             // Charge only mounted card work; interaction pins still count.
             return Math.max(1, Math.ceil(root.querySelectorAll("[data-issue-id]").length / 200));
           }
+          const projectId = expandProjectSegment(view.route.projectSegment);
           const data = view.kind === "global-board"
-            ? client.getQueryData<{ issues: unknown[] }>(["me", "board"])?.issues
-            : client.getQueryData<unknown[]>(["issues", expandProjectSegment(view.route.projectSegment)]);
+            ? client.getQueryData<{ issues: unknown[] }>(GLOBAL_BOARD_KEY)?.issues
+            : projectId ? client.getQueryData<unknown[]>(issuesKey(projectId)) : undefined;
           return Math.max(1, Math.ceil((data?.length ?? (view.kind === "global-board" ? 600 : 200)) / 200));
         },
       });

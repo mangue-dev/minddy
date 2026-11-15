@@ -2,12 +2,13 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useGlobalBoardQuery, GLOBAL_BOARD_KEY } from "./use-global-board-query";
+import { useGlobalBoardQuery } from "./use-global-board-query";
 import { normalizeRelation } from "./relation-constants";
 import { applyPendingIssues, issueWrites } from "./optimistic/issue-writes";
 import { applyPendingRelations, isOwnRelationEcho } from "./optimistic/relation-writes";
 import type { GlobalBoardResponse, Issue, IssueRelation, IssueRelationType, Objective } from "./types";
-import type { RelationKinds } from "./use-issue-relations-query";
+import type { RelationKinds } from "./use-relation-mutations";
+import { GLOBAL_BOARD_KEY } from "./query-keys";
 
 const mocks = vi.hoisted(() => ({
   record: vi.fn(),

@@ -17,10 +17,8 @@ import {
   revokeIntegrationApi,
   updateIntegrationWebhookApi,
 } from "@/lib/integrations-api";
-import {
-  integrationsQueryKey,
-  useIntegrationsQuery,
-} from "@/lib/use-integrations-query";
+import { useIntegrationsQuery } from "@/lib/use-integrations-query";
+import { integrationsKey } from "@/lib/query-keys";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -233,7 +231,7 @@ export function ProjectIntegrations({
 
   const invalidate = () =>
     void queryClient.invalidateQueries({
-      queryKey: integrationsQueryKey(projectId),
+      queryKey: integrationsKey(projectId),
     });
 
   const handleRevoke = async () => {

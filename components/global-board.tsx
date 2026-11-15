@@ -4,16 +4,17 @@ import { expandParam } from "@/lib/ref-registry";
 import { resolveIssueRef } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FolderAddIcon } from "@hugeicons/core-free-icons";
-import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
-import { afterFirstContentIdle } from "@/lib/first-content";
-import { loadIssueSidePanel, preloadSurface } from "@/lib/lazy-app-surfaces";
+import { loadIssueSidePanel } from "@/lib/lazy-app-surfaces";
+import { useBoardScreen } from "@/lib/use-board-screen";
+import { useCycleMode } from "@/lib/use-cycle-mode";
+import type { IssuePanelBoardData } from "@/lib/use-issue-panel-data";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -23,9 +24,7 @@ import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
 import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useAppTabLocalState } from "@/lib/app-tab-local-state";
-import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useGeneratingViews } from "@/lib/use-generating-views";
-import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, statusColumns, visibleStatuses } from "@/lib/view-filter";
@@ -65,11 +64,6 @@ import { PageScroll } from "@/components/page-scroll";
 // the first content or on the first opened issue, not with the board (MIN-880).
 const IssueSidePanel = dynamic(() => loadIssueSidePanel().then((m) => m.IssueSidePanel), { ssr: false });
 
-/** Remembered "the Cycle tab is selected" flag — deliberately OUTSIDE the view
-    system's storage: useBoardViews self-heals unknown view ids by rewriting
-    its slot, so a "cycle" sentinel in there would be destroyed on reload. */
-const CYCLE_MODE_KEY = "minddy:cycle-mode";
-
 /**
  * The cross-project “All tickets” board (MIN-29). A real kanban: issues
  * from every project are grouped by status, each card is a fully interactive
@@ -89,7 +83,7 @@ function GlobalBoardInner() {
   const myUserId = user?.id ?? null;
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { openCreateIssue } = useCreate();
-  const { open: openAssistant, openIntent } = useAssistantPanelActions();
+  const { openIntent } = useAssistantPanelActions();
   const router = useRouter();
   const { pathname, searchParams } = useAppTabRoute();
   const rawViewParam = expandParam(searchParams.get("view"));
@@ -97,9 +91,6 @@ function GlobalBoardInner() {
   // here with it) — never let useBoardViews consume it, or the remembered
   // view restore would be skipped.
   const viewParam = rawViewParam === "cycle" ? null : rawViewParam;
-  // Deep-link (e.g. the home cycle preview, MIN-67): /all?issue=<id> opens
-  // that issue's side panel once the board's data has loaded.
-  const issueParam = searchParams.get("issue");
   const boardScrollPosition = useRef(0);
   const {
     issues,
@@ -127,30 +118,14 @@ function GlobalBoardInner() {
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   }, [searchParams, pathname, router]);
 
-  // Cycle mode (MIN-32) — a MODE of this board, not a saved view. Restored
-  // from its own localStorage slot after mount (SSR renders view mode).
-  const appTabs = useOptionalAppTabSession();
-  const [cycleMode, setCycleMode] = useAppTabLocalState("global-cycle-mode", false);
+  // Cycle mode (MIN-32) is a mode of this board, not a saved view.
+  const [cycleMode, setCycleMode] = useCycleMode();
   // null = the current cycle; a past/upcoming id when browsing the selector.
   const [selectedCycleId, setSelectedCycleId] = useAppTabLocalState<string | null>("global-selected-cycle", null);
   const switchCycleMode = useCallback((next: boolean) => {
     setCycleMode(next);
     setSelectedCycleId(null);
-    try {
-      if (next) window.localStorage.setItem(CYCLE_MODE_KEY, "1");
-      else window.localStorage.removeItem(CYCLE_MODE_KEY);
-    } catch {
-      /* localStorage unavailable — mode just won't be remembered. */
-    }
   }, [setCycleMode, setSelectedCycleId]);
-  useEffect(() => {
-    if (appTabs) return;
-    try {
-      if (window.localStorage.getItem(CYCLE_MODE_KEY)) setCycleMode(true);
-    } catch {
-      /* ignore */
-    }
-  }, []);
   useEffect(() => {
     if (rawViewParam === "cycle") {
       if (!cycleMode) switchCycleMode(true);
@@ -188,61 +163,12 @@ function GlobalBoardInner() {
   // updated_at (realtime) or the safety timeout fires.
   const { generatingViewIds, beginGenerating } = useGeneratingViews(views);
 
-  const handleCreateView = async (name: string, description?: string) => {
-    const view = await createViewAndSelect(name);
-    const wish = description?.trim();
-    if (wish) {
-      // Hand the fresh GLOBAL view to the AI (global mode, projectId null): its
-      // id rides along in pageContext so the agent edits this exact view; the
-      // board adopts the new filters live once realtime brings the row back.
-      beginGenerating(view);
-      openAssistant({
-        projectId: null,
-        prompt: tBoard("aiBuildViewPrompt", { name, description: wish }),
-        pageContext: { viewId: view.id, viewName: name },
-      });
-    } else {
-      toast.success(tBoard("viewCreated", { name }));
-    }
-  };
-
-  // The filters menu's “Create with Numo”: hand the typed wish to the Numo
-  // conversation (MIN-592, review — the classifier pass proved unreliable for
-  // filter selection, the agent with its hardened view tools is the reliable
-  // path), carrying the active view as context so "this view" resolves.
-  // Nothing typed opens the composer on that same context.
-  const handleAskAI = (wish: string) => {
-    openAssistant({
-      projectId: null,
-      ...(wish ? { prompt: tBoard("aiFilterPrompt", { wish }) } : { focusComposer: true }),
-      pageContext: activeView
-        ? { viewId: activeView.id, viewName: activeView.name }
-        : undefined,
-    });
-  };
-
-  const [openIssueId, setOpenIssueId] = useState<string | null>(null);
-  const [sidePanelMounted, setSidePanelMounted] = useState(false);
-  if (openIssueId && !sidePanelMounted) setSidePanelMounted(true);
-  // Mount the closed panel after the first content, so its hook tree and
-  // editor preload do not land on the first card click.
-  useEffect(() => sidePanelMounted ? undefined : afterFirstContentIdle(() => {
-    preloadSurface(loadIssueSidePanel);
-    startTransition(() => setSidePanelMounted(true));
-  }, 4_000, 2_000), [sidePanelMounted]);
-  useAppTabChange(() => setOpenIssueId(null));
-  const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
-    "description"
-  );
-
-  // Deep-link from the home cycle preview: /all?issue=<id> (with ?view=cycle
-  // consumed above into cycleMode) opens that issue's side panel.
-  useEffect(() => {
-    if (issueParam) {
-      setOpenIssueId(issueParam);
-      setOpenIssueTab("description");
-    }
-  }, [issueParam]);
+  const { panel, handleCreateView, handleAskAI } = useBoardScreen({
+    projectId: null,
+    activeView,
+    createViewAndSelect,
+    beginGenerating,
+  });
 
   // A project I hid is not on this board at all (MIN-751): neither its issues
   // nor its members, categories, objectives and integrations in the filters.
@@ -416,27 +342,29 @@ function GlobalBoardInner() {
   }, [scopedIssues]);
 
   // A deep link names the issue `MIN-42` or by short code; panels set its id.
-  const openIssue = openIssueId
-    ? resolveIssueRef(openIssueId, scopedIssues) ?? null
+  const openIssue = panel.openIssueRef
+    ? resolveIssueRef(panel.openIssueRef, scopedIssues) ?? null
     : null;
-  const openPid = openIssue?.project_id ?? "";
-  const openProject = openIssue ? projectMap.get(openPid) : undefined;
+
+  // The panel shows the board's own rows of the issue's project rather than
+  // reading that project again.
+  const panelBoardData = useMemo<IssuePanelBoardData>(() => ({
+    scope: "global",
+    forProject: (projectId) => projectMap.has(projectId) ? {
+      members: membersByProject[projectId] ?? [],
+      categories: categoriesByProject[projectId] ?? [],
+      objectives: objectivesByProject[projectId] ?? [],
+      issues: issuesByProject.get(projectId) ?? [],
+      relations,
+    } : undefined,
+  }), [projectMap, membersByProject, categoriesByProject, objectivesByProject, issuesByProject, relations]);
 
   // Panel state is local to this component. Keep board actions stable so opening
   // or closing a panel does not replay every card and its inline controls.
   const boardHandlers = useMemo(() => ({
-    onOpenIssue: (issue: Issue) => {
-      setOpenIssueId(issue.id);
-      setOpenIssueTab("description");
-    },
-    onOpenIssueById: (id: string) => {
-      setOpenIssueId(id);
-      setOpenIssueTab("description");
-    },
-    onOpenPlan: (issue: Issue) => {
-      setOpenIssueId(issue.id);
-      setOpenIssueTab("plan");
-    },
+    onOpenIssue: panel.openIssue,
+    onOpenIssueById: panel.openIssueById,
+    onOpenPlan: panel.openPlan,
     onUpdateIssue: updateIssue,
     onSetCategories: setCategories,
     onDeleteIssue: deleteIssue,
@@ -450,7 +378,7 @@ function GlobalBoardInner() {
       }),
     }),
     onMove: moveIssue,
-  }), [updateIssue, setCategories, deleteIssue, openIntent, projectMap, moveIssue]);
+  }), [panel.openIssue, panel.openIssueById, panel.openPlan, updateIssue, setCategories, deleteIssue, openIntent, projectMap, moveIssue]);
   const handleCreateIssue = useCallback(
     (status: IssueStatus) => openCreateIssue({ status }),
     [openCreateIssue],
@@ -483,7 +411,7 @@ function GlobalBoardInner() {
   return (
     // A pointer over the board precedes the first card click: the panel's
     // code starts loading then, if the idle warm-up has not yet.
-    <div className="flex h-full flex-col" onPointerEnter={sidePanelMounted ? undefined : () => preloadSurface(loadIssueSidePanel)}>
+    <div className="flex h-full flex-col" onPointerEnter={panel.onPointerEnter}>
       {/* The view's name for headings navigation (WCAG 1.3.1, 2.4.6). */}
       <h1 className="sr-only">{tMeta("all")}</h1>
       {/* Nothing anywhere: no toolbar above a screen with one thing to offer. */}
@@ -653,29 +581,13 @@ function GlobalBoardInner() {
         </div>
       )}
 
-      {sidePanelMounted && <IssueSidePanel
+      {panel.mounted && <IssueSidePanel
         issue={openIssue}
         open={!!openIssue}
-        onOpenChange={(next) => {
-          if (!next) {
-            setOpenIssueId(null);
-            // Strip the deep-link param so re-opening the same issue works.
-            if (issueParam) router.replace(pathname);
-          }
-        }}
-        projectKey={openProject?.key ?? ""}
-        members={openIssue ? membersByProject[openPid] ?? [] : []}
-        categories={openIssue ? categoriesByProject[openPid] ?? [] : []}
-        objectives={openIssue ? objectivesByProject[openPid] ?? [] : []}
-        allIssues={openIssue ? issuesByProject.get(openPid) ?? [] : []}
-        relations={relations}
-        onUpdate={updateIssue}
-        onDelete={deleteIssue}
-        onSetCategories={setCategories}
-        onOpenIssue={boardHandlers.onOpenIssueById}
-        onAddRelation={addRelation}
-        onRemoveRelation={removeRelation}
-        initialTab={openIssueTab}
+        onOpenChange={panel.onOpenChange}
+        onOpenIssue={panel.openIssueById}
+        boardData={panelBoardData}
+        initialTab={panel.tab}
       />}
     </div>
   );
