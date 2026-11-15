@@ -216,15 +216,13 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const updateBulk = useCallback(
     (updates: IssueUpdateInput) => {
       bulkIssues.forEach((issue) => {
-        void updateIssue(issue.id, updates).catch((err) =>
-          toast.error((err as Error).message)
-        );
+        void updateIssue(issue.id, updates);
       });
     },
     [bulkIssues, updateIssue]
   );
-  // A relationship has exactly two ends: action only exists at two ends
-  // (same rule as the board, and the sorting is single-project by construction).
+  // A relation has exactly two ends, so the action needs exactly two issues
+  // (same rule as the board; triage is single-project by construction).
   const bulkLink = useMemo(() => {
     if (bulkIssues.length !== 2) return undefined;
     const [first, second] = bulkIssues;
@@ -274,9 +272,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
       }),
     }),
     onUpdateIssue: (issue, patch) => {
-      void updateIssue(issue.id, patch).catch((err) =>
-        toast.error((err as Error).message)
-      );
+      void updateIssue(issue.id, patch);
     },
   });
 
@@ -408,13 +404,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     return <ProjectUnavailable lookup={projectLookup} />;
   }
 
-  const patch = async (issue: Issue, updates: IssueUpdateInput) => {
-    try {
-      await updateIssue(issue.id, updates);
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
+  // The writer shows its own error and resolves `null` on failure.
+  const patch = (issue: Issue, updates: IssueUpdateInput) => updateIssue(issue.id, updates);
 
   const openConfirm = (action: "accept" | "decline", issue: Issue) => {
     if (confirmRunRef.current.busy) return;
@@ -439,9 +430,10 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         // is mistaken for the text already sent.
         setMessage("");
       }
-      await updateIssue(issue.id, {
+      const updated = await updateIssue(issue.id, {
         status: action === "accept" ? "backlog" : "canceled",
       });
+      if (!updated) return;
       toast.success(action === "accept" ? t("acceptedToast") : t("declinedToast"));
       setConfirming(null);
       setMessage("");
@@ -455,7 +447,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
   const markDuplicate = async (issue: Issue, canonicalId: string) => {
     const canonical = issues.find((i) => i.id === canonicalId);
-    await patch(issue, { status: "duplicate", duplicate_of_id: canonicalId });
+    if (!(await patch(issue, { status: "duplicate", duplicate_of_id: canonicalId }))) return;
     toast.success(
       t("duplicateToast", {
         id: canonical ? issueIdentifier(project.key, canonical.number) : "?",
@@ -778,9 +770,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                       projectId={selected.project_id}
                       value={selected.category_ids}
                       onChange={(ids) => {
-                        void setCategories(selected.id, ids).catch((err) =>
-                          toast.error((err as Error).message)
-                        );
+                        void setCategories(selected.id, ids);
                       }}
                     />
                   </PropertyRow>
@@ -885,8 +875,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           if (!trashTarget) return;
-          await deleteIssue(trashTarget.id);
-          toast.success(tIssueUI("issueDeletedToast"));
+          if (await deleteIssue(trashTarget.id)) toast.success(tIssueUI("issueDeletedToast"));
         }}
       />
 

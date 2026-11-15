@@ -14,6 +14,7 @@ import { WatchProposalCard, watchProposalOf } from "./watch-proposal-card";
 import { liveSecretOf, SecretCallout } from "./secret-callout";
 import { useGroupedActions } from "./grouped-actions-context";
 import type { MessageKey } from "@/lib/i18n-keys";
+import type { NumoToolName } from "@/lib/server/assistant/tool-policy";
 import type { SeedProposal } from "@/lib/seed/types";
 import { ROUTINE_ICON } from "@/components/feature-icons";
 import { issueHref, objectiveHref, pagePath } from "@/lib/app-urls";
@@ -108,34 +109,7 @@ function resultCount(
   return rows?.length ?? 0;
 }
 
-/**
- * Checking off tasks from the notebook. Served under TWO names: `update_scratchpad_tasks`
- * (Numo chat) and `update_scratchpad_task` (code agent, MIN-84/MIN-125) — the
- * renaming would break resuming current runs, so the thread knows both.
- * The account comes from the result, if not from the raw arguments of the model, otherwise from the
- * flat summary that `toolArgSummary` persists for an agent run (`count`).
- */
-const SCRATCHPAD_TASKS_META: ToolMeta = {
-  icon: TaskDone01Icon,
-  getLabel: (args, result, success, status, t) => {
-    if (status === "running") return t("updatingScratchpadTasks");
-    if (!success) return t("updateScratchpadTasksFailed");
-    const updated =
-      typeof result?.updated === "number"
-        ? result.updated
-        : Array.isArray(args.tasks)
-          ? args.tasks.length
-          : typeof args.count === "number"
-            ? args.count
-            : 0;
-    return t("scratchpadTasksUpdated", { count: updated });
-  },
-};
-
-/**
- * Reading a wiki page. Served under TWO names: `get_page` (Numo) and
- * `read_page` (code agent) — same gesture, same line in the thread.
- */
+/** Reading a wiki page, or a database page's views. */
 const PAGE_READ_META: ToolMeta = {
   icon: Book02Icon,
   getLabel: (_args, result, success, status, t) => {
@@ -146,16 +120,11 @@ const PAGE_READ_META: ToolMeta = {
   },
 };
 
-/** Reading feedback from the board. `get_feedback` (Numo) and `read_feedback` (agent). */
-const FEEDBACK_READ_META: ToolMeta = {
-  icon: MessageMultiple01Icon,
-  getLabel: (_args, _result, success, status, t) => {
-    if (status === "running") return t("loadingFeedbackPost");
-    return success ? t("feedbackPostLoaded") : t("feedbackPostNotFound");
-  },
-};
-
-const TOOL_META: Record<string, ToolMeta> = {
+/**
+ * Each tool's line in the thread. Every Numo tool has one (a missing entry
+ * does not compile); the instance administration tools are listed too.
+ */
+const TOOL_META: Record<NumoToolName, ToolMeta> & Record<string, ToolMeta | undefined> = {
   get_help: {
     icon: MessageCircleQuestion,
     getLabel: (_args, _result, success, status, t) => {
@@ -734,7 +703,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("foundFeedback", { count: resultCount(result, "feedback") });
     },
   },
-  get_feedback: FEEDBACK_READ_META,
+  get_feedback: {
+    icon: MessageMultiple01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingFeedbackPost");
+      return success ? t("feedbackPostLoaded") : t("feedbackPostNotFound");
+    },
+  },
   promote_feedback_to_issue: {
     icon: FilePlus2,
     getLabel: (_args, result, success, status, t) => {
@@ -1086,14 +1061,24 @@ const TOOL_META: Record<string, ToolMeta> = {
           ? result.added
           : Array.isArray(args.tasks)
             ? args.tasks.length
-            : typeof args.count === "number"
-              ? args.count
-              : 0;
+            : 0;
       return t("scratchpadTasksAdded", { count: added });
     },
   },
-  update_scratchpad_tasks: SCRATCHPAD_TASKS_META,
-  update_scratchpad_task: SCRATCHPAD_TASKS_META,
+  update_scratchpad_tasks: {
+    icon: TaskDone01Icon,
+    getLabel: (args, result, success, status, t) => {
+      if (status === "running") return t("updatingScratchpadTasks");
+      if (!success) return t("updateScratchpadTasksFailed");
+      const updated =
+        typeof result?.updated === "number"
+          ? result.updated
+          : Array.isArray(args.tasks)
+            ? args.tasks.length
+            : 0;
+      return t("scratchpadTasksUpdated", { count: updated });
+    },
+  },
   set_scratchpad: {
     icon: Notebook01Icon,
     getLabel: (_args, _result, success, status, t) => {
@@ -1227,18 +1212,18 @@ function getToolView(item: ToolCallItem, t: TranslateFn) {
   return { Icon: toolCallIcon(item.name), label: toolCallLabel(item, t) };
 }
 
-const ISSUE_TOOLS = new Set(["create_issue", "get_issue"]);
-const PAGE_TOOLS = new Set([
+const toolSet = (...names: NumoToolName[]): ReadonlySet<string> => new Set(names);
+const ISSUE_TOOLS = toolSet("create_issue", "get_issue");
+const PAGE_TOOLS = toolSet(
   "create_page",
   "create_page_database",
   "get_page",
-  "read_page",
   "update_page",
   "update_page_database",
   "append_to_page",
   "edit_page_text",
-]);
-const OBJECTIVE_TOOLS = new Set(["create_objective", "get_objective", "update_objective"]);
+);
+const OBJECTIVE_TOOLS = toolSet("create_objective", "get_objective", "update_objective");
 
 const stringField = (record: Record<string, unknown> | undefined, key: string) =>
   typeof record?.[key] === "string" && record[key] ? (record[key] as string) : null;
@@ -1314,8 +1299,8 @@ function actionKind(name: string): ActionKind {
   const known = ACTION_KIND[name];
   if (known) return known;
   if (/^(list|get|read|search)_/.test(name)) return "lookup";
-  // An UNKNOWN tool in the thread (old run, tool since removed) is not left
-  // put away: we count him without pretending to know what he has done.
+  // A tool the thread does not know (since removed) is counted without
+  // claiming what it did.
   return name in TOOL_META ? "update" : "other";
 }
 

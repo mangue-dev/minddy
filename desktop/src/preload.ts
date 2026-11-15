@@ -1,354 +1,97 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
-import type { DesktopBridge, DesktopServerChoiceBridge } from "@/lib/desktop/bridge";
-import type { LocalInstallProgress } from "@/lib/desktop/local-installer";
-import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
-import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
-import {
-  isDesktopWindowMaterialState,
-  parseWindowMaterialFlag,
-  type DesktopWindowMaterialState,
-} from "@/lib/desktop/window-material";
+import type { DesktopBridge } from "@/lib/desktop/bridge";
+import { desktopIpcRenderer } from "@/lib/desktop/ipc-renderer";
+import { parseDesktopLaunchState } from "@/lib/desktop/launch-state";
 
 /**
- * THE SURFACE, in full (MIN-291, APNs added in MIN-356).
- *
- * The renderer loads REMOTE code. This file is the only thing he can
- * reach beyond the web, and it must be read in thirty seconds: ten
- * named members, none that render a Node object, none that take a file path,
- * none that execute anything. Everything goes through a message to the main process,
- * which remains free to refuse — `openExternal` in particular does nothing while
- * that the URL did not pass navigation guard.
- *
- * The type is the one that the page compiles against (`lib/desktop/bridge.ts`):
- * the annotation below is what prevents this object from deriving from the contract.
+ * The `DesktopBridge` (lib/desktop/bridge.ts) the remote page receives. Each
+ * member is a message on a channel of lib/desktop/ipc-contract.ts, which the
+ * main process checks and may refuse.
  */
 
-/**
- * The version, read on the renderer command line (MIN-322).
- *
- * It MUST be there before the first render — the bridge is a fixed object, not a
- * promise —, and a preload in `sandbox: true` has no environment to read.
- * It therefore went through a `ipcRenderer.sendSync`, which stops the renderer on
- * round trip time, at startup. `additionalArguments` puts it in
- * `process.argv` (cf. `webPreferences` in main.ts): it is already there when this
- * file executes, without a single round trip.
- *
- * The `sendSync` remains as backup, and it alone: ​​if the flag is missing, a
- * empty version would be displayed in the settings without anything saying so.
- */
-const VERSION_FLAG = "--minddy-version=";
-const PACKAGED_FLAG = "--minddy-packaged=";
-const NATIVE_NOTIFICATIONS_FLAG = "--minddy-native-notifications=";
-const WINDOWS_WNS_FLAG = "--minddy-windows-wns=";
-
-function readVersion(): string {
-  const flag = process.argv.find((arg) => arg.startsWith(VERSION_FLAG));
-  if (flag) return flag.slice(VERSION_FLAG.length);
-  return ipcRenderer.sendSync("minddy:version") as string;
-}
-
-const packaged = process.argv.some((arg) => arg === `${PACKAGED_FLAG}1`);
-const nativeNotificationsAvailable = process.argv.some(
-  (arg) => arg === `${NATIVE_NOTIFICATIONS_FLAG}1`
-);
-const windowsWnsAvailable = process.argv.some(
-  (arg) => arg === `${WINDOWS_WNS_FLAG}1`
-);
-const notificationCapabilities = notificationCapabilitiesForPlatform(
-  process.platform,
-  packaged,
-  nativeNotificationsAvailable,
-  windowsWnsAvailable,
-);
+const ipc = desktopIpcRenderer(ipcRenderer);
+const launch = parseDesktopLaunchState(process.argv);
+const capabilities = launch.notificationCapabilities;
 
 const nativePushBridge: Partial<DesktopBridge> =
-  notificationCapabilities.backgroundTransport !== null
+  capabilities.backgroundTransport !== null
     ? {
-        registerForPushNotifications(options) {
-          return ipcRenderer.invoke("minddy:push:register", options) as ReturnType<
-            NonNullable<DesktopBridge["registerForPushNotifications"]>
-          >;
-        },
-        unregisterForPushNotifications() {
-          return ipcRenderer.invoke("minddy:push:unregister") as Promise<void>;
-        },
+        registerForPushNotifications: (options) =>
+          ipc.invoke("minddy:push:register", { activate: options?.activate === true }),
+        unregisterForPushNotifications: () => ipc.invoke("minddy:push:unregister"),
       }
     : {};
 
 const notificationSettingsBridge: Partial<DesktopBridge> =
-  notificationCapabilities.settings !== null
-    ? {
-        openNotificationSettings() {
-          ipcRenderer.send("minddy:push:open-settings");
-        },
-      }
+  capabilities.settings !== null
+    ? { openNotificationSettings: () => ipc.send("minddy:push:open-settings") }
     : {};
 
 const bridge: DesktopBridge = {
-  version: readVersion(),
+  version: launch.version,
   platform: process.platform,
-  integratedWindowChrome: process.argv.includes("--minddy-integrated-chrome=1"),
-  setWindowChrome(theme: "light" | "dark", followsSystem?: boolean) {
-    ipcRenderer.send("minddy:window-chrome", theme, followsSystem);
-  },
-  // The material in force when this window was created (MIN-810): the theme
-  // script marks the document with it before the first paint.
-  windowMaterial: parseWindowMaterialFlag(process.argv) ?? undefined,
-  setWindowMaterialEnabled(enabled: boolean) {
-    return ipcRenderer.invoke("minddy:window-material:set", enabled === true) as Promise<DesktopWindowMaterialState>;
-  },
-  onWindowMaterialChange(handler: (state: DesktopWindowMaterialState) => void) {
-    const listener = (_event: unknown, state: unknown) => {
-      if (isDesktopWindowMaterialState(state)) handler(state);
-    };
-    ipcRenderer.on("minddy:window-material-state", listener);
-    // The command line is fixed for the window's life: after a toggle and a
-    // reload it is stale, so the main process replays the current state.
-    ipcRenderer.send("minddy:window-material-ready");
-    return () => {
-      ipcRenderer.removeListener("minddy:window-material-state", listener);
-    };
-  },
-  notificationCapabilities,
+  integratedWindowChrome: launch.integratedWindowChrome,
+  setWindowChrome: (theme, followsSystem) => ipc.send("minddy:window-chrome", theme, followsSystem),
+  // The theme script marks the document with it before the first paint.
+  windowMaterial: launch.windowMaterial ?? undefined,
+  setWindowMaterialEnabled: (enabled) => ipc.invoke("minddy:window-material:set", enabled === true),
+  onWindowMaterialChange: (handler) => ipc.subscribe("minddy:window-material-state", handler),
+  notificationCapabilities: capabilities,
   ...nativePushBridge,
   ...notificationSettingsBridge,
 
-  openServerPicker() {
-    ipcRenderer.send("minddy:server-picker:open");
-  },
-
-  localSession() {
-    return ipcRenderer.invoke("minddy:local-account:session") as ReturnType<NonNullable<DesktopBridge["localSession"]>>;
-  },
-
+  openServerPicker: () => ipc.send("minddy:server-picker:open"),
+  localSession: () => ipc.invoke("minddy:local-account:session"),
   serverChoice: {
-    state() {
-      return ipcRenderer.invoke("minddy:server-choice:state") as ReturnType<DesktopServerChoiceBridge["state"]>;
-    },
-    useCloud() {
-      return ipcRenderer.invoke("minddy:server-choice:cloud") as Promise<void>;
-    },
-    connect(origin: string) {
-      return ipcRenderer.invoke("minddy:server-choice:connect", origin) as ReturnType<DesktopServerChoiceBridge["connect"]>;
-    },
-    useExistingInstallation() {
-      return ipcRenderer.invoke("minddy:server-choice:existing") as ReturnType<
-        DesktopServerChoiceBridge["useExistingInstallation"]
-      >;
-    },
-    prerequisites() {
-      return ipcRenderer.invoke("minddy:server-choice:prerequisites") as ReturnType<DesktopServerChoiceBridge["prerequisites"]>;
-    },
-    chooseInstallFolder() {
-      return ipcRenderer.invoke("minddy:server-choice:choose-folder") as ReturnType<
-        DesktopServerChoiceBridge["chooseInstallFolder"]
-      >;
-    },
-    install() {
-      return ipcRenderer.invoke("minddy:server-choice:install") as ReturnType<DesktopServerChoiceBridge["install"]>;
-    },
-    cancelInstall() {
-      ipcRenderer.send("minddy:server-choice:cancel-install");
-    },
-    onInstallProgress(handler) {
-      const listener = (_event: unknown, progress: LocalInstallProgress) => handler(progress);
-      ipcRenderer.on("minddy:server-choice:progress", listener);
-      return () => {
-        ipcRenderer.removeListener("minddy:server-choice:progress", listener);
-      };
-    },
-    openToolDownload(tool) {
-      ipcRenderer.send("minddy:server-choice:tool-download", tool);
-    },
-    close() {
-      ipcRenderer.send("minddy:server-choice:close");
-    },
+    state: () => ipc.invoke("minddy:server-choice:state"),
+    useCloud: () => ipc.invoke("minddy:server-choice:cloud"),
+    connect: (origin) => ipc.invoke("minddy:server-choice:connect", origin),
+    useExistingInstallation: () => ipc.invoke("minddy:server-choice:existing"),
+    prerequisites: () => ipc.invoke("minddy:server-choice:prerequisites"),
+    chooseInstallFolder: () => ipc.invoke("minddy:server-choice:choose-folder"),
+    install: () => ipc.invoke("minddy:server-choice:install"),
+    cancelInstall: () => ipc.send("minddy:server-choice:cancel-install"),
+    onInstallProgress: (handler) => ipc.subscribe("minddy:server-choice:progress", handler),
+    openToolDownload: (tool) => ipc.send("minddy:server-choice:tool-download", tool),
+    close: () => ipc.send("minddy:server-choice:close"),
   },
 
-  checkForUpdates() {
-    return ipcRenderer.invoke("minddy:update:check") as Promise<void>;
-  },
-
-  openExternal(url: string) {
-    ipcRenderer.send("minddy:open-external", url);
-  },
-
-  openAgentApp(link: string) {
-    ipcRenderer.send("minddy:open-agent-app", link);
-  },
-
-  openWindowsStoreUpdate() {
-    ipcRenderer.send("minddy:windows-store:open");
-  },
-
-  onWindowsStoreUpdateStatus(handler) {
-    const listener = (_event: unknown, available: boolean) =>
-      handler(available);
-    ipcRenderer.on("minddy:windows-store-update-status", listener);
-    ipcRenderer.send("minddy:windows-store-update-status-ready");
-    return () => {
-      ipcRenderer.removeListener(
-        "minddy:windows-store-update-status",
-        listener,
-      );
-    };
-  },
-
-  onAuthLink(handler: (link: DesktopAuthLink) => void) {
-    const listener = (_event: unknown, link: DesktopAuthLink) => handler(link);
-    ipcRenderer.on("minddy:auth-link", listener);
-    // The link may have arrived BEFORE React is mounted: macOS launches
-    // often the app with its `open-url` in your pocket. The main process keeps it and
-    // plays this call again — otherwise the very first connection, the one that
-    // opens the app, would be the only one not to work.
-    ipcRenderer.send("minddy:auth-link-ready");
-    return () => {
-      ipcRenderer.removeListener("minddy:auth-link", listener);
-      ipcRenderer.send("minddy:auth-link-not-ready");
-    };
-  },
-
-  setBadgeCount(count: number) {
-    ipcRenderer.send("minddy:set-badge", count);
-  },
-
-  showLocalNotification(payload) {
-    ipcRenderer.send("minddy:notification:show", payload);
-  },
-
-  dismissLocalNotification(id) {
-    ipcRenderer.send("minddy:notification:dismiss", id);
-  },
-
-  getLinuxBackgroundNotifications() {
-    return ipcRenderer.invoke("minddy:linux-background:get") as ReturnType<
-      NonNullable<DesktopBridge["getLinuxBackgroundNotifications"]>
-    >;
-  },
-
-  setLinuxBackgroundNotifications(enabled) {
-    return ipcRenderer.invoke(
-      "minddy:linux-background:set",
-      enabled
-    ) as ReturnType<
-      NonNullable<DesktopBridge["setLinuxBackgroundNotifications"]>
-    >;
-  },
-
-  onLinuxBackgroundNotificationsChanged(handler) {
-    const listener = (
-      _event: unknown,
-      state: Parameters<typeof handler>[0]
-    ) => handler(state);
-    ipcRenderer.on("minddy:linux-background:changed", listener);
-    return () => {
-      ipcRenderer.removeListener("minddy:linux-background:changed", listener);
-    };
-  },
-
-  onNotificationTransportWake(handler) {
-    const listener = () => handler();
-    ipcRenderer.on("minddy:notification:wake", listener);
-    return () => {
-      ipcRenderer.removeListener("minddy:notification:wake", listener);
-    };
-  },
-
-  setWindowButtonsVisible(visible: boolean) {
-    ipcRenderer.send("minddy:window-buttons", visible);
-  },
-
-  onWindowButtons(handler: (visible: boolean) => void) {
-    const listener = (_event: unknown, visible: boolean) => handler(visible);
-    ipcRenderer.on("minddy:window-buttons-state", listener);
-    // Same reason as for the deep link: the state exists before the subscription (the
-    // window may be full screen upon loading). The main process
-    // play again rather than letting the page go on a guess.
-    ipcRenderer.send("minddy:window-buttons-ready");
-    return () => {
-      ipcRenderer.removeListener("minddy:window-buttons-state", listener);
-    };
-  },
-
-  focus() {
-    ipcRenderer.send("minddy:focus");
-  },
-
-  onUpdateStatus(handler: (status: DesktopUpdateStatus) => void) {
-    const listener = (_event: unknown, status: DesktopUpdateStatus) =>
-      handler(status);
-    ipcRenderer.on("minddy:update-status", listener);
-    // Same reason as for the macOS buttons: the download was able to complete
-    // finish before this page exists — it reloads whenever the server
-    // changes, and the shell lives for weeks. The main process replays.
-    ipcRenderer.send("minddy:update-status-ready");
-    return () => {
-      ipcRenderer.removeListener("minddy:update-status", listener);
-    };
-  },
-
-  installUpdate() {
-    ipcRenderer.send("minddy:install-update");
-  },
-
-  // THE LOCAL FILE (MIN-359). The only three members who WAIT for a
-  // response, hence `invoke` where all the rest `send`: read an attachment,
-  // it's rereading the disc, and the page can't display anything before.
-  //
-  // None take a path: `chooseLocalRepo` opens the system panel, and
-  // This is the only place where a path enters the app.
-  localRepo(input) {
-    return ipcRenderer.invoke("minddy:local-repo:read", input) as Promise<
-      Awaited<ReturnType<DesktopBridge["localRepo"]>>
-    >;
-  },
-
-  chooseLocalRepo(input) {
-    return ipcRenderer.invoke("minddy:local-repo:choose", input) as Promise<
-      Awaited<ReturnType<DesktopBridge["chooseLocalRepo"]>>
-    >;
-  },
-
-  forgetLocalRepo(input) {
-    return ipcRenderer.invoke("minddy:local-repo:forget", input) as Promise<
-      Awaited<ReturnType<DesktopBridge["forgetLocalRepo"]>>
-    >;
-  },
-
-  localRepoBranches(input) {
-    return ipcRenderer.invoke("minddy:local-repo:branches", input) as Promise<
-      Awaited<ReturnType<NonNullable<DesktopBridge["localRepoBranches"]>>>
-    >;
-  },
-
-  localRepoSkills(input) {
-    return ipcRenderer.invoke("minddy:local-repo:skills", input) as Promise<
-      Awaited<ReturnType<NonNullable<DesktopBridge["localRepoSkills"]>>>
-    >;
-  },
-
-  localRepoSkill(input) {
-    return ipcRenderer.invoke("minddy:local-repo:skill", input) as Promise<
-      Awaited<ReturnType<NonNullable<DesktopBridge["localRepoSkill"]>>>
-    >;
-  },
-
-  discoverLocalModels(input) {
-    return ipcRenderer.invoke("minddy:local-models:discover", input) as Promise<
-      Awaited<ReturnType<DesktopBridge["discoverLocalModels"]>>
-    >;
-  },
-
-  restartLocalInstance() {
-    return ipcRenderer.invoke("minddy:local-runtime:restart") as Promise<boolean>;
-  },
-
-  flushStorage() {
-    return ipcRenderer.invoke("minddy:storage:flush") as Promise<void>;
-  },
-
+  checkForUpdates: () => ipc.invoke("minddy:update:check"),
+  openExternal: (url) => ipc.send("minddy:open-external", url),
+  openAgentApp: (link) => ipc.send("minddy:open-agent-app", link),
+  openWindowsStoreUpdate: () => ipc.send("minddy:windows-store:open"),
+  onWindowsStoreUpdateStatus: (handler) => ipc.subscribe("minddy:windows-store-update-status", handler),
+  onAuthLink: (handler) => ipc.subscribe("minddy:auth-link", handler),
+  setBadgeCount: (count) => ipc.send("minddy:set-badge", count),
+  showLocalNotification: (payload) => ipc.send("minddy:notification:show", payload),
+  dismissLocalNotification: (id) => ipc.send("minddy:notification:dismiss", id),
+  getLinuxBackgroundNotifications: () => ipc.invoke("minddy:linux-background:get"),
+  setLinuxBackgroundNotifications: (enabled) => ipc.invoke("minddy:linux-background:set", enabled),
+  onLinuxBackgroundNotificationsChanged: (handler) => ipc.subscribe("minddy:linux-background:changed", handler),
+  onNotificationTransportWake: (handler) => ipc.subscribe("minddy:notification:wake", handler),
+  onWindowButtons: (handler) => ipc.subscribe("minddy:window-buttons-state", handler),
+  focus: () => ipc.send("minddy:focus"),
+  onUpdateStatus: (handler) => ipc.subscribe("minddy:update-status", handler),
+  installUpdate: () => ipc.send("minddy:install-update"),
+  discoverLocalModels: (input) => ipc.invoke("minddy:local-models:discover", input),
+  restartLocalInstance: () => ipc.invoke("minddy:local-runtime:restart"),
+  flushStorage: () => ipc.invoke("minddy:storage:flush"),
 };
 
-contextBridge.exposeInMainWorld("minddy", bridge);
+/**
+ * Members of retired features that pages of minddy 0.10.19 to 0.10.30 call
+ * without checking they exist (self-hosted servers may still run those
+ * releases: deploy/self-hosted/compatibility.json). Without them those pages
+ * would throw a TypeError. `localRepo` never settles, so their local folder
+ * card, shown once it answers, stays hidden; their composer's "My machine"
+ * gets `none` and does nothing, as since local runs left the shell (MIN-721).
+ */
+const retiredMembers = {
+  setWindowButtonsVisible: () => {},
+  localRepo: () => new Promise<never>(() => {}),
+  chooseLocalRepo: async () => ({ status: "none" as const }),
+  forgetLocalRepo: async () => ({ status: "none" as const }),
+};
+
+contextBridge.exposeInMainWorld("minddy", { ...retiredMembers, ...bridge });

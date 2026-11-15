@@ -7,6 +7,7 @@ import {
 } from "@/lib/server/database-view-tools";
 
 import { MCP_CLIENT_TOOLS, MCP_SETUP_TOOLS } from "@/lib/mcp-client-tools";
+import { NUMO_TOOL_POLICY, type NumoToolName } from "./tool-policy";
 
 import {
   ISSUE_STATUSES,
@@ -52,11 +53,10 @@ const VIEW_DESCRIPTIONS = databaseViewsToolDescriptions(NUMO_DATABASE_VIEW_TOOL_
 // trash (MIN-133) — deleting is a reversible move to the trash, never the
 // hard delete the nightly sweep does thirty days later.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AssistantToolDef = {
+export type AssistantToolDef<Name extends string = string> = {
   type: "function";
   function: {
-    name: string;
+    name: Name;
     description: string;
     parameters: {
       type: "object";
@@ -249,7 +249,7 @@ const CREATE_ISSUE_FIELD_PROPERTIES = {
 // The saved-view filter schema, shared by create_view and update_view so both
 // advertise exactly what sanitizeViewConfig accepts. `project` is absent here
 // on purpose: it only means something on the cross-project global view (a
-// project board is single-project), so buildGlobalTools adds it there.
+// project board is single-project), so `withProjectFilter` adds it.
 const VIEW_FILTER_PROPERTIES = {
   status: {
     type: "array",
@@ -295,8 +295,6 @@ const VIEW_FILTER_PROPERTIES = {
   },
 } as const;
 
-// The one filter the global board has on top of a project board — same facet
-// the user gets in the toolbar there. Added to the view tools in global mode.
 const VIEW_PROJECT_FILTER_PROPERTY = {
   type: "array",
   items: { type: "string" },
@@ -304,9 +302,33 @@ const VIEW_PROJECT_FILTER_PROPERTY = {
     "project ids (from list_projects) — keep only the issues of those projects. Global (cross-project) view only.",
 } as const;
 
-export const ASSISTANT_TOOLS: AssistantToolDef[] = [
-  ...MCP_CLIENT_TOOLS,
-  ...MCP_SETUP_TOOLS,
+/** The shared MCP client tools, under the names the policy gives them. */
+const MCP_TOOLS = [...MCP_CLIENT_TOOLS, ...MCP_SETUP_TOOLS] as AssistantToolDef<
+  "list_mcp_tools" | "call_mcp_tool" | "list_mcp_presets" | "configure_mcp_connection"
+>[];
+
+export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
+  {
+    type: "function",
+    function: {
+      name: "list_projects",
+      description:
+        "List all projects the user has access to, with their id, name, key, and role (owner, member, or reader; a reader's project is read-only for them). Use this to resolve a project named by the user when its ID is not already attached to the message.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  // The cross-project view's category, objective and integration filters:
+  // the same names collapsed across projects, each with all of its ids.
+  {
+    type: "function",
+    function: {
+      name: "list_global_filter_options",
+      description:
+        "List the category, objective and integration filter options across ALL the user's projects, grouped by name. Each entry gives { name, ids } — the ids to drop into a GLOBAL view's filters.category / filters.objective / filters.integration. Use this before filtering the cross-project global view by category, objective or integration. For filters.project, take the ids from list_projects.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  ...MCP_TOOLS,
   // ── Read tools ────────────────────────────────────────────────────────
   {
     type: "function",
@@ -2906,10 +2928,9 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_routine",
       description: CREATE_ROUTINE_DESCRIPTION,
-      // `project_id` is not declared here: in global mode, `buildGlobalTools`
-      // inject it and make it REQUIRED for all project tools; in fashion
-      // project, it comes from the conversation. Declaring it duplicate would
-      // appear twice the same key in `required`.
+      // `project_id` is not declared here: every project tool gets it from
+      // its scope (`conversationTool`), and declaring it too would list the
+      // key twice in `required`.
       parameters: CREATE_ROUTINE_PARAMETERS,
     },
   },
@@ -3195,116 +3216,22 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   },
 ];
 
-// Tools that operate on the requesting user's own account, not on a project —
-// they must NOT receive a project_id (neither in global mode nor otherwise).
-// The cycle (MIN-32), the task notebook and the trash (MIN-133) are personal &
-// cross-project, so their tools live here too — the trash spans every project
-// the user can reach, and lib/server/trash.ts does its own access control.
-export const ACCOUNT_TOOLS = new Set([
-  "list_inbox",
-  "get_account_settings",
-  "update_account_settings",
-  "get_user_stats",
-  "get_plan_usage",
-  "list_trash",
-  "move_to_trash",
-  "restore_from_trash",
-  "get_cycle",
-  "fill_cycle",
-  "add_issues_to_cycle",
-  "move_issues",
-  "remove_issues_from_cycle",
-  "get_scratchpad",
-  "add_scratchpad_tasks",
-  "update_scratchpad_tasks",
-  "edit_scratchpad_text",
-  "set_scratchpad",
-  "remember",
-  "forget",
-  // The search in the user's earlier conversations (MIN-956) spans them all.
-  "search_conversations",
-  "read_conversation",
-  // Numo's journal (MIN-927) is the user's own; an entry names its project.
-  "journal_write",
-  "journal_close",
-  // Numo's reminders (MIN-923): each names its project, or none for a
-  // personal one (MIN-982); listing, changing and cancelling span all of them.
-  "list_watches",
-  "cancel_watch",
-  "update_watch",
-]);
-
-/** Tools that wait for the user (a question, a proposal to review), never
- * offered to a routine run: it runs unattended, nobody would answer. */
-export const ROUTINE_UNATTENDED_EXCLUDED_TOOLS: ReadonlySet<string> = new Set([
-  "ask_user",
-  "propose_backlog",
-]);
-
-// Tools that never take a project (ask_user, the web, and the account-level
-// tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
-const NON_PROJECT_TOOLS = new Set([
-  ...MCP_CLIENT_TOOLS.map((tool) => tool.function.name),
-  ...MCP_SETUP_TOOLS.map((tool) => tool.function.name),
-  "ask_user",
-  "web_search",
-  "get_help",
-  "list_conversation_attachments",
-  "read_conversation_attachment",
-  // Written to the user's own chat storage, whatever the project.
-  "create_file",
-  // Access is read from the image's own address (its project, or the
-  // notebook's owner), not from a project argument.
-  "view_image",
-  ...ACCOUNT_TOOLS,
-]);
-
-// Every tool that operates on a project. In global mode these get a required
-// `project_id` parameter injected (see buildGlobalTools).
-export const PROJECT_SCOPED_TOOLS = new Set(
-  ASSISTANT_TOOLS.map((t) => t.function.name).filter(
-    (name) => !NON_PROJECT_TOOLS.has(name),
-  ),
-);
-
-// Tools that act on a project, or on the user alone when project_id is null
-// (MIN-982): a personal reminder and a personal note. The executor takes
-// that path before resolving any project.
-export const PERSONAL_TARGET_TOOLS: ReadonlySet<string> = new Set([
-  "create_watch",
-  "notify_me",
-]);
-
 const PERSONAL_PROJECT_ID_DESCRIPTION: Record<string, string> = {
   create_watch: "The project the reminder belongs to (use list_projects to resolve one the user names), or null for a personal reminder that belongs to no project, such as a habit of the user's own (\"every day at 9:00, check the web for a concert by X\"). Only a date reminder can be personal: one on an issue or an objective names its project.",
   notify_me: "The project the note is about (use list_projects to resolve one the user names), or null for a personal note about no project, which takes no link. In a personal reminder's turn, pass null.",
 };
 
-// View tools that, in global mode, operate on the user's CROSS-PROJECT global
-// views (project_id null, personal) rather than a project's — so they take NO
-// injected project_id there. In project mode they stay project-scoped as usual.
-// list_views is in here so the three view tools share one scope rule: without
-// it Numo could edit the global view but never read it back.
-export const GLOBAL_VIEW_TOOLS = new Set([
-  "list_views",
-  "create_view",
-  "update_view",
-]);
+const PROJECT_ID_DESCRIPTION =
+  "The project ID to operate on. Use list_projects to discover available projects — when the user names one (key like 'MIN' or display name), resolve it to its id there first; a key or exact name is also matched as a fallback.";
 
-const LIST_PROJECTS_TOOL: AssistantToolDef = {
-  type: "function",
-  function: {
-    name: "list_projects",
-    description:
-      "List all projects the user has access to, with their id, name, key, and role (owner, member, or reader; a reader's project is read-only for them). Use this to resolve a project named by the user when its ID is not already attached to the message.",
-    parameters: { type: "object", properties: {} },
-  },
-};
+const VIEW_PROJECT_ID_DESCRIPTION =
+  "Explicit project ID, or null for the user's personal cross-project views.";
 
-function withProjectId(
-  tool: AssistantToolDef,
-  options: { required: boolean },
-): AssistantToolDef {
+/** A required `project_id`, first among the tool's parameters. */
+function withProjectId<Name extends string>(
+  tool: AssistantToolDef<Name>,
+  projectId: { type: string | string[]; description: string },
+): AssistantToolDef<Name> {
   const params = tool.function.parameters;
   return {
     ...tool,
@@ -3312,37 +3239,15 @@ function withProjectId(
       ...tool.function,
       parameters: {
         ...params,
-        properties: {
-          project_id: {
-            type: "string",
-            description: options.required
-              ? "The project ID to operate on. Use list_projects to discover available projects — when the user names one (key like 'MIN' or display name), resolve it to its id there first; a key or exact name is also matched as a fallback."
-              : "The project ID to operate on. Omit it for the current project. Set it only when the user explicitly names another project, after resolving that project with list_projects (a key or exact name is also matched as a fallback).",
-          },
-          ...params.properties,
-        },
-        required: options.required
-          ? ["project_id", ...(params.required || [])]
-          : params.required,
+        properties: { project_id: projectId, ...params.properties },
+        required: ["project_id", ...(params.required || [])],
       },
     },
   };
 }
 
-/** A tool of PERSONAL_TARGET_TOOLS: its project_id also takes null, for the user alone. */
-function withPersonalProjectId(tool: AssistantToolDef, options: { required: boolean }): AssistantToolDef {
-  const targeted = withProjectId(tool, options);
-  targeted.function.parameters.properties.project_id = {
-    type: ["string", "null"],
-    description: PERSONAL_PROJECT_ID_DESCRIPTION[tool.function.name],
-  };
-  return targeted;
-}
-
-/** Global mode adds the project facet to a view's filters — the same one the
-    user gets in the toolbar on the global board, and the only filter the
-    cross-project view has that a project view doesn't. */
-function withProjectFilter(tool: AssistantToolDef): AssistantToolDef {
+/** The project facet of a view's filters: the one filter the cross-project view has that a project view doesn't. */
+function withProjectFilter<Name extends string>(tool: AssistantToolDef<Name>): AssistantToolDef<Name> {
   const params = tool.function.parameters;
   const filters = params.properties.filters as {
     properties: Record<string, unknown>;
@@ -3369,64 +3274,24 @@ function withProjectFilter(tool: AssistantToolDef): AssistantToolDef {
   };
 }
 
-export function buildGlobalTools(): AssistantToolDef[] {
-  // Global-mode discovery for the cross-project view's category/objective/
-  // integration filters: same names collapsed across projects, each carrying
-  // the full set of ids to put in filters.category/objective/integration.
-  const listGlobalFilterOptionsTool: AssistantToolDef = {
-    type: "function",
-    function: {
-      name: "list_global_filter_options",
-      description:
-        "List the category, objective and integration filter options across ALL the user's projects, grouped by name. Each entry gives { name, ids } — the ids to drop into a GLOBAL view's filters.category / filters.objective / filters.integration. Use this before filtering the cross-project global view by category, objective or integration. For filters.project, take the ids from list_projects.",
-      parameters: { type: "object", properties: {} },
-    },
-  };
-
-  const augmented = ASSISTANT_TOOLS.map((tool) => {
-    // View tools act on the global view in global mode → no project_id
-    // injected, and the ones taking filters gain the project facet.
-    if (GLOBAL_VIEW_TOOLS.has(tool.function.name)) {
-      return tool.function.parameters.properties.filters
-        ? withProjectFilter(tool)
-        : tool;
-    }
-    if (!PROJECT_SCOPED_TOOLS.has(tool.function.name)) {
+/** A tool as a conversation offers it: its `project_id` follows its scope. */
+function conversationTool(tool: AssistantToolDef<NumoToolName>): AssistantToolDef<NumoToolName> {
+  const name = tool.function.name;
+  switch (NUMO_TOOL_POLICY[name].scope) {
+    case "personal":
+    case "per_item":
       return tool;
-    }
-    if (PERSONAL_TARGET_TOOLS.has(tool.function.name)) {
-      return withPersonalProjectId(tool, { required: true });
-    }
-
-    return withProjectId(tool, { required: true });
-  });
-
-  return [LIST_PROJECTS_TOOL, listGlobalFilterOptionsTool, ...augmented];
+    case "project":
+      return withProjectId(tool, { type: "string", description: PROJECT_ID_DESCRIPTION });
+    case "project_or_personal":
+      return withProjectId(tool, { type: ["string", "null"], description: PERSONAL_PROJECT_ID_DESCRIPTION[name] });
+    case "view":
+      return withProjectId(
+        tool.function.parameters.properties.filters ? withProjectFilter(tool) : tool,
+        { type: ["string", "null"], description: VIEW_PROJECT_ID_DESCRIPTION },
+      );
+  }
 }
-
-export function buildProjectTools(): AssistantToolDef[] {
-  return [
-    LIST_PROJECTS_TOOL,
-    ...ASSISTANT_TOOLS.map((tool) =>
-      PERSONAL_TARGET_TOOLS.has(tool.function.name)
-        ? withPersonalProjectId(tool, { required: false })
-        : PROJECT_SCOPED_TOOLS.has(tool.function.name)
-          ? withProjectId(tool, { required: false })
-          : tool,
-    ),
-  ];
-}
-
-export const PROJECT_ASSISTANT_TOOLS = buildProjectTools();
-export const GLOBAL_ASSISTANT_TOOLS = buildGlobalTools();
 
 /** Every conversation uses the same tools; each project action names its target. */
-export const CONVERSATION_ASSISTANT_TOOLS = buildGlobalTools().map((tool) => {
-  if (!GLOBAL_VIEW_TOOLS.has(tool.function.name)) return tool;
-  const targeted = withProjectId(tool, { required: true });
-  targeted.function.parameters.properties.project_id = {
-    type: ["string", "null"],
-    description: "Explicit project ID, or null for the user's personal cross-project views.",
-  };
-  return targeted;
-});
+export const CONVERSATION_ASSISTANT_TOOLS = ASSISTANT_TOOLS.map(conversationTool);

@@ -152,13 +152,9 @@ const broadcast = vi.fn();
 vi.mock("./pr-live", () => ({ broadcastPrChanged: (...a: unknown[]) => broadcast(...a) }));
 
 const syncStatus = vi.fn();
-vi.mock("./issue-status-sync", async () => {
-  const { issueStatusForPrState } = await import("@/lib/pr-issue-status");
-  return {
-    issueStatusForPrState,
-    syncIssueStatusFromPr: (...a: unknown[]) => syncStatus(...a),
-  };
-});
+vi.mock("./issue-status-sync", () => ({
+  syncIssueStatusFromPr: (...a: unknown[]) => syncStatus(...a),
+}));
 
 const cloneTarget = vi.fn(async () => null as { token: string } | null);
 vi.mock("./repo-access", () => ({

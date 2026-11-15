@@ -3,9 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   desktopWindowMaterial,
   isDesktopWindowMaterialState,
-  parseWindowMaterialFlag,
   parseWindowMaterialPreference,
-  windowMaterialFlag,
   windowMaterialForWindow,
   windowMaterialOptions,
 } from "./window-material";
@@ -45,19 +43,12 @@ describe("windowMaterialOptions", () => {
   });
 });
 
-describe("window material preference and flag", () => {
+describe("window material preference and IPC state", () => {
   it("keeps the effect unless the file explicitly turns it off", () => {
     expect(parseWindowMaterialPreference({ enabled: false })).toBe(false);
     expect(parseWindowMaterialPreference({ enabled: true })).toBe(true);
     expect(parseWindowMaterialPreference({ enabled: "no" })).toBe(true);
     expect(parseWindowMaterialPreference(null)).toBe(true);
-  });
-
-  it("round-trips the state through the renderer command line", () => {
-    const state = desktopWindowMaterial("win32", "10.0.22631", { enabled: true, reducedTransparency: true });
-    expect(parseWindowMaterialFlag(["--other", windowMaterialFlag(state)])).toEqual(state);
-    expect(parseWindowMaterialFlag(["--minddy-window-material=blur:111"])).toBeNull();
-    expect(parseWindowMaterialFlag([])).toBeNull();
   });
 
   it("rejects a malformed state from IPC", () => {

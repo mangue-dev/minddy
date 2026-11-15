@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const asset = request.nextUrl.searchParams.get("asset");
   if (!asset) return NextResponse.json({ error: "asset required" }, { status: 400 });
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
   return prCommentImageResponse(auth.scope, asset);
 }

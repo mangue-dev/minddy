@@ -34,12 +34,8 @@ vi.mock("@/lib/server/feedback/board-config", async (original) => ({
 }));
 
 const { executeTool } = await import("./execute-tool");
-const {
-  CONVERSATION_ASSISTANT_TOOLS,
-  GLOBAL_ASSISTANT_TOOLS,
-  PROJECT_ASSISTANT_TOOLS,
-} = await import("./tools");
-const { NUMO_TOOL_CAPABILITIES, readerToolSet } = await import("./tool-capabilities");
+const { CONVERSATION_ASSISTANT_TOOLS } = await import("./tools");
+const { readerToolSet } = await import("./tool-capabilities");
 
 const USER = "69300000-0000-4000-8000-000000000001";
 const PROJECT = "69300000-0000-4000-8000-000000000002";
@@ -68,7 +64,6 @@ const service = {
 
 const ctx = {
   projectId: null,
-  requireExplicitProjectTarget: true,
   userId: USER,
   supabase: service,
   service,
@@ -83,15 +78,6 @@ beforeEach(() => {
 });
 
 describe("Numo tool capabilities", () => {
-  it("classifies every tool Numo can be offered, and nothing else", () => {
-    const offered = new Set(
-      [...CONVERSATION_ASSISTANT_TOOLS, ...GLOBAL_ASSISTANT_TOOLS, ...PROJECT_ASSISTANT_TOOLS]
-        .map((tool) => tool.function.name),
-    );
-    expect([...offered].filter((name) => !(name in NUMO_TOOL_CAPABILITIES))).toEqual([]);
-    expect(Object.keys(NUMO_TOOL_CAPABILITIES).filter((name) => !offered.has(name))).toEqual([]);
-  });
-
   it("offers a reader's mention turn read tools only, plus comments when allowed", () => {
     const names = (canComment: boolean) =>
       readerToolSet(CONVERSATION_ASSISTANT_TOOLS, canComment).map((tool) => tool.function.name);

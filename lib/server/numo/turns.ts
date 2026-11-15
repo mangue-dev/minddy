@@ -52,10 +52,16 @@ import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize
 import { replayedToolResult, toolCallArgumentsById } from "@/lib/server/assistant/tool-result-serialization";
 import {
   CONVERSATION_ASSISTANT_TOOLS,
-  ROUTINE_UNATTENDED_EXCLUDED_TOOLS,
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import { readerToolSet } from "@/lib/server/assistant/tool-capabilities";
+import {
+  JOURNAL_TOOLS,
+  MEMORY_TOOLS,
+  REMINDER_TOOLS,
+  REMINDER_WRITE_TOOLS,
+  WAITS_FOR_USER_TOOLS,
+} from "@/lib/server/assistant/tool-policy";
 import {
   AmbiguousToolExecutionError,
   NumoCompletionError,
@@ -789,19 +795,23 @@ async function buildExecutionInput(input: {
     ? [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS]
     : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
-  if (!memoryWritable) tools = tools.filter((tool) => !MEMORY_TOOL_NAMES.has(tool.function.name));
-  if (!journalSource) tools = tools.filter((tool) => !JOURNAL_TOOL_NAMES.has(tool.function.name));
+  // The search in earlier conversations (MIN-956) goes with the memory:
+  // offered where the user talks to Numo directly, never on a shared surface
+  // (a mention) or in an unattended turn, whose instructions may come from
+  // someone else.
+  if (!memoryWritable) tools = tools.filter((tool) => !MEMORY_TOOLS.has(tool.function.name));
+  if (!journalSource) tools = tools.filter((tool) => !JOURNAL_TOOLS.has(tool.function.name));
   // A routine runs unattended: nobody is there to answer a question or review
   // a proposal, so the tools that wait for the user are not offered.
   if (intent.routineId || intent.reminder) {
-    tools = tools.filter((tool) => !ROUTINE_UNATTENDED_EXCLUDED_TOOLS.has(tool.function.name));
+    tools = tools.filter((tool) => !WAITS_FOR_USER_TOOLS.has(tool.function.name));
   }
   // Reminders (MIN-923) are set and cancelled only in a conversation the
   // user holds with Numo: not by a routine or a mention, whose instructions
   // come from other people, nor by a reminder's own turn. A routine and a
   // mention do not list them either: a mention replies on a shared thread.
   if (intent.routineId || intent.reminder || intent.triggerSource === "mention") {
-    const hidden = intent.reminder ? WATCH_WRITE_TOOL_NAMES : WATCH_TOOL_NAMES;
+    const hidden = intent.reminder ? REMINDER_WRITE_TOOLS : REMINDER_TOOLS;
     tools = tools.filter((tool) => !hidden.has(tool.function.name));
   }
   // A background turn is unattended too, and its guarded tools take the
@@ -822,14 +832,6 @@ async function buildExecutionInput(input: {
     tools, adminGrant, memoryWritable, journalSource, journalScope,
   };
 }
-
-// The search in earlier conversations (MIN-956) goes with the memory: offered
-// where the user talks to Numo directly, never on a shared surface (a mention)
-// or in an unattended turn, whose instructions may come from someone else.
-const MEMORY_TOOL_NAMES = new Set(["remember", "forget", "search_conversations", "read_conversation"]);
-const WATCH_WRITE_TOOL_NAMES = new Set(["create_watch", "update_watch", "cancel_watch"]);
-const WATCH_TOOL_NAMES = new Set([...WATCH_WRITE_TOOL_NAMES, "list_watches"]);
-const JOURNAL_TOOL_NAMES = new Set(["journal_write", "journal_close"]);
 
 function createToolLedger(
   service: SupabaseClient,
@@ -1239,7 +1241,6 @@ async function executeClaimedNumoTurn(input: {
     const result = await withEventActor({ kind: "numo", userId: claimed.user_id }, () => withRoutineCause(claimed.intent.routineId ?? null, () => processChat(execution.messages, execution.tools, emitter, {
       projectId: claimed.intent.projectId,
       documentationHelp: !!claimed.intent.documentation,
-      requireExplicitProjectTarget: true,
       userId: claimed.user_id,
       supabase: readClient,
       service,

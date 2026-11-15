@@ -3,7 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isUuid } from "@/lib/app-urls";
-import { type RepoProviderId } from "@/lib/repo-providers";
 import {
   findPullRequest,
   findPullRequestsByShortCode,
@@ -15,10 +14,10 @@ import {
   repoSyncKey,
   rowProvider,
   type PullRequestRow,
-  type PullRequestState,
   type PullRequestWithIssue,
   type VisibleRepo,
 } from "@/lib/server/agent/pull-requests";
+import type { PullRequestListItem, PullRequestState } from "@/lib/pull-request-contract";
 import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
 import { listUserIdentities } from "@/lib/server/git/user-identities";
 import { readReviewQueue } from "@/lib/server/agent/pull-request-review-queue";
@@ -42,33 +41,6 @@ export const maxDuration = 120;
 /** How many PRs at most per answer. An active repository has hundreds. */
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
-
-export interface PullRequestListItem {
-  /** Item identity — the PR (MIN-143). */
-  prId: string;
-  createdByMe: boolean;
-  reviewRequestedForMe: boolean;
-  pr_number: number;
-  pr_url: string | null;
-  pr_state: PullRequestState;
-  /** Repository Provider — controls PR/MR vocabulary and links (MIN-69). */
-  provider: RepoProviderId;
-  title: string | null;
-  /** Who opened the PR at the forge. */
-  author: { login: string; avatar_url: string | null } | null;
-  head_branch: string | null;
-  created_at: string;
-  updated_at: string;
-  issue: { id: string; number: number; title: string } | null;
-  issues: PullRequestWithIssue["issues"];
-  project: {
-    id: string;
-    key: string;
-    name: string;
-    icon_url: string | null;
-    orb_seed: string | null;
-  } | null;
-}
 
 /** States served by the filter. `open` includes drafts (they are). */
 const STATE_FILTERS: Record<string, PullRequestState[]> = {

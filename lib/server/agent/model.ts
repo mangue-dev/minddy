@@ -14,7 +14,6 @@ import {
 } from "./byok-credentials";
 import { decodeUserAiKeyRow, type UserAiKeyRow } from
   "@/lib/server/user-ai-key-content";
-import { getOpenRouterModelInfo } from "./openrouter-index";
 import {
   roleUsageKey,
   usageKeyFor,
@@ -47,21 +46,12 @@ export interface UserByok {
   featureModels: ByokFeatureModels;
 }
 
-/** A private endpoint is never a valid fallback for a cloud microVM. */
+/** A local endpoint cannot serve a call the server makes. */
 export class LocalEndpointRequiresLocalRunError extends Error {
   code = "localEndpointRequiresLocalRun" as const;
   constructor() {
     super("This BYOK endpoint is local and can only be used by a local run");
     this.name = "LocalEndpointRequiresLocalRunError";
-  }
-}
-
-/** A frozen BYOK run never changes payer if its key is removed. */
-export class ByokCredentialUnavailableError extends Error {
-  code = "byokCredentialUnavailable" as const;
-  constructor() {
-    super("The BYOK credential used by this run is no longer available");
-    this.name = "ByokCredentialUnavailableError";
   }
 }
 
@@ -75,16 +65,11 @@ export class ByokCredentialUnavailableError extends Error {
  * platform and its ceiling, which is exactly the desired behavior.
  *
  * The NEGATIVE result is stored for a few minutes: without that, an account with a dead key
- * would pay a network round trip for each endpoint reading — and it y en
- * has several per run.
+ * would pay a network round trip for each endpoint reading, and a request
+ * reads it several times.
  */
 const UNVALIDATED_TTL_MS = 5 * 60 * 1000;
 const unvalidatedProbes = new Map<string, number>();
-
-/** Test purge — process cache, not shared state. */
-export function resetByokProbeCache(): void {
-  unvalidatedProbes.clear();
-}
 
 async function confirmsUnvalidatedKey(params: {
   userId: string;
@@ -136,7 +121,7 @@ async function resolveUserByok(
   const supabase = getServiceClient();
   let aiKeyId: string | null = null;
   if (!target.provider) {
-    // The retired code agent and surface-less reads follow the Numo route.
+    // Surface-less reads follow the Numo route.
     // A call type follows its role's route (MIN-954): one provider for the
     // LLM, one for embeddings, one for speech to text.
     const usageKey = roleUsageKey(target.usageKey ?? usageKeyFor(surface, target.capability));
@@ -259,65 +244,6 @@ export async function userHasByokKey(
   return (await getUserByok(userId, surface)) != null;
 }
 
-// ── Capacities per model, read from the OpenRouter index ──────────────────────
-// The index itself lives in `openrouter-index.ts`: a single read of
-// /models for the picker catalog, these two capacities and the prices (so the
-// plan multiplier). The two functions below remain here because
-// this is where the agent loop will look for them.
-
-/**
- * Context window (tokens) of a model, to size the threshold of
- * compaction (~75%). Only in OpenRouter provider (index /models which carries
- * `context_length`); null otherwise → the caller falls back to the default threshold.
- * Best-effort, hidden at the process level.
- */
-export async function getModelContextWindow(
-  model: string,
-  provider: AgentProviderId,
-  apiKey: string,
-): Promise<number | null> {
-  if (provider !== "openrouter") return null;
-  return (await getOpenRouterModelInfo(model, apiKey))?.contextLength ?? null;
-}
-
-/**
- * INPUT price of the model (USD per million tokens), to size the threshold
- * of compaction: what the threshold limits is the cost of returning the history to
- * each round, and this cost only makes sense at the price of the model
- * (`agentCompactThreshold`). Same source and same limits as window —
- * OpenRouter only; `null` out of there, and the caller falls back on the calibrated
- * value rather than extrapolating on an ignorance.
- */
-export async function getModelInputPrice(
-  model: string,
-  provider: AgentProviderId,
-  apiKey: string,
-): Promise<number | null> {
-  if (provider !== "openrouter") return null;
-  return (
-    (await getOpenRouterModelInfo(model, apiKey))?.pricing?.inputUsdPerMTok ??
-    null
-  );
-}
-
-/**
- * Does the run model accept an image as input? Decides whether `read_resource`
- * RETURNS the mock instead of describing its metadata (MIN-111), and whether the
- * prompt announces the capability. Same source as the context window: the index
- * OpenRouter. Excluding OpenRouter (direct BYOK openai/anthropic/google/generic), on
- * does not have a reliable capability index → ​​`false`, i.e. the behavior before
- * MIN-111 to the nearest byte. Sending an image to a model who doesn't want it breaks the
- * turn on 400: the conservative default is the right one.
- */
-export async function supportsImageInput(
-  model: string,
-  provider: AgentProviderId,
-  apiKey: string,
-): Promise<boolean> {
-  if (provider !== "openrouter") return false;
-  return (await getOpenRouterModelInfo(model, apiKey))?.imageInput ?? false;
-}
-
 export type AgentKeyMode = "platform" | "byok" | "subscription";
 
 export class ManagedAgentServiceUnavailableError extends Error {
@@ -363,7 +289,6 @@ export async function resolveAgentApiKey(
   surface: Extract<AiSurface, "agent" | "assistant" | "automations"> = "agent",
   options: {
     allowLocal?: boolean;
-    requireByok?: boolean;
     /** This request's `getUserByok(userId, surface)`, when the caller already started it. */
     byok?: Promise<UserByok | null>;
   } = {},
@@ -381,6 +306,5 @@ export async function resolveAgentApiKey(
       baseUrl: byok.baseUrl,
     };
   }
-  if (options.requireByok) throw new ByokCredentialUnavailableError();
   return resolvePlatformAgentEndpoint();
 }

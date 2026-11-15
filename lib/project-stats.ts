@@ -1,6 +1,7 @@
 import { ALL_STATUSES, isClosedStatus, type IssueStatus } from "./issue-constants";
 import { addDays, isoDow, todayISO } from "./cycle";
 import { isDueDateOverdue, parseDueDate } from "./due-date";
+import type { PullRequestState } from "./pull-request-contract";
 import type { Issue } from "./types";
 
 // Project statistics (MIN-878): pure derivations of what a project's board
@@ -29,7 +30,7 @@ export type StatsIssue = Pick<
 /** One linked pull request, as `GET /api/projects/[id]/pull-request-stats` returns it. */
 export interface PullRequestTimelineEntry {
   id: string;
-  state: "draft" | "open" | "merged" | "closed";
+  state: PullRequestState;
   openedAt: string | null;
   mergedAt: string | null;
   /** The project's tickets this pull request is linked to. */

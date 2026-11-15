@@ -79,7 +79,6 @@ function database(): SupabaseClient {
 function context(): ToolContext {
   return {
     projectId: null,
-    requireExplicitProjectTarget: true,
     userId: "user-1",
     supabase: database(),
     service: database(),

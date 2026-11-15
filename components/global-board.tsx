@@ -31,17 +31,13 @@ import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, statusColumns, visibleStatuses } from "@/lib/view-filter";
 import { isDeferredBoardStatus } from "@/lib/global-board-reads";
 import { StatusFilterMenu } from "@/components/status-filter-menu";
-import type { IssueStatus } from "@/lib/issue-constants";
+import { isClosedStatus, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
 import {
-} from "@/lib/optimistic/issue-writes";
-import {
-  cycleBlockingRelations,
+  boardBlockingContext,
   cycleCompletionPercent,
   cycleFilledPoints,
   recoComparator,
 } from "@/lib/cycle";
-import type { ObjectiveStatus } from "@/lib/objective-constants";
-import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAssistantContext,
   useAssistantPanelActions,
@@ -63,7 +59,6 @@ import { BOARD_ICON } from "@/components/feature-icons";
 import type {
   Category,
   Issue,
-  IssueRelationType,
   Member,
   Objective,
   Project,
@@ -91,18 +86,14 @@ function toIdMaps<T extends { id: string }>(
   return out;
 }
 
-/** How long a view keeps its "Numo is filling me in" spinner before the safety
-    timeout clears it (mirrors the project board). */
-const NUMO_GENERATION_TIMEOUT_MS = 120_000;
-
 /**
  * The cross-project “All tickets” board (MIN-29). A real kanban: issues
  * from every project are grouped by status, each card is a fully interactive
  * project card (drag to change status, inline pickers, origin project chip),
  * and clicking one opens the full side panel in place — using that issue's own
  * project context (members/categories/objectives). Views are DB-backed like a
- * project board's, but global (project_id NULL) and always personal — incl.
- * the "Mes tickets" system view.
+ * project board's, but global (project_id NULL) and always personal — including
+ * the "My issues" system view.
  */
 function GlobalBoardInner() {
   const t = useTranslations("GlobalBoard");
@@ -182,12 +173,11 @@ function GlobalBoardInner() {
       consumeViewParam();
       return;
     }
-    // `?view=<id>` designates a VIEW, therefore not the cycle — and the cycle mode, itself,
-    // is stored (localStorage). Without this output, a `?view=` link
-    // opened while the cycle was in memory correctly selected the view
-    // below, but displayed the cycle above: the shortcut did not take
-    // where he said. It's the same gesture as clicking on a view pad
-    // in the toolbar, which exits the cycle before selecting.
+    // `?view=<id>` names a VIEW, so not the cycle — and cycle mode is stored
+    // on its own. Without leaving it here, a `?view=` link opened while cycle
+    // mode was remembered selected the view underneath but kept showing the
+    // cycle. The same gesture as clicking a view tab in the toolbar, which
+    // leaves the cycle before selecting.
     if (rawViewParam) switchCycleMode(false);
   }, [rawViewParam, switchCycleMode, consumeViewParam, cycleMode]);
 
@@ -212,7 +202,7 @@ function GlobalBoardInner() {
   // Views Numo is currently filling in (id → the updated_at at hand-off). Same
   // mechanism as the project board: the pill spins until Numo bumps the view's
   // updated_at (realtime) or the safety timeout fires.
-  const { generatingViewIds, beginGenerating } = useGeneratingViews(views, NUMO_GENERATION_TIMEOUT_MS);
+  const { generatingViewIds, beginGenerating } = useGeneratingViews(views);
 
   const handleCreateView = async (name: string, description?: string) => {
     const view = await createViewAndSelect(name);
@@ -388,34 +378,21 @@ function GlobalBoardInner() {
     );
   }, [cycles?.current?.id, scopedIssues]);
   // Reco ordering: blockers may live outside the cycle, so the status map
-  // covers the whole board. Relations can also block through an OBJECTIVE
-  // (MIN-513): objective-ended edges are folded down onto their issues before
-  // scoring, and an objective blocker's open/closed state rides its mapped
-  // issue status.
+  // covers the whole board, and objective-ended edges block through their
+  // issues (MIN-513).
   const cycleComparator = useMemo(() => {
-    const statusById = new Map(scopedIssues.map((i) => [i.id, i.status]));
-    const issuesByObjective = new Map<string, string[]>();
-    for (const i of scopedIssues) {
-      if (!i.objective_id) continue;
-      const list = issuesByObjective.get(i.objective_id);
-      if (list) list.push(i.id);
-      else issuesByObjective.set(i.objective_id, [i.id]);
-    }
-    const objectiveStatusById = new Map<string, ObjectiveStatus>();
-    for (const o of allObjectives) objectiveStatusById.set(o.id, o.status);
-    const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
+    const { relations: expanded, statusById } = boardBlockingContext(
+      scopedIssues,
       relations,
-      issuesByObjective,
-      objectiveStatusById
+      new Map(allObjectives.map((o) => [o.id, o.status])),
     );
-    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
     return recoComparator(expanded, statusById);
   }, [scopedIssues, relations, allObjectives]);
   const cycleLabel = selectedCycle ? formatCycleRange(format, selectedCycle) : null;
   // Every issue of the cycle closed → the "completed" banner offers a refill.
   const cycleFullyCompleted =
     cycleIssues.length > 0 &&
-    cycleIssues.every((i) => ["done", "canceled", "duplicate"].includes(i.status));
+    cycleIssues.every((i) => isClosedStatus(i.status));
 
   // Cycle mode and the active view are two states kept outside the address
   // (localStorage), and `?view=` restores both for the app tab — "cycle" is the instruction this page consumes
@@ -438,10 +415,7 @@ function GlobalBoardInner() {
 
   // Right-click cycle actions, on every card of this board (both modes).
   const onSetIssueCycle = useCallback(
-    (issue: Issue, cycleId: string | null) =>
-      void setIssueCycle(issue.id, cycleId, issue.project_id).catch((err) =>
-        toast.error((err as Error).message)
-      ),
+    (issue: Issue, cycleId: string | null) => void setIssueCycle(issue.id, cycleId),
     [setIssueCycle]
   );
   const buildCycleMenuActions = useCycleMenuActions(
@@ -459,29 +433,6 @@ function GlobalBoardInner() {
     }
     return map;
   }, [scopedIssues]);
-
-  // Relations (MIN-25) from any card of this board — the write goes through
-  // the card's own project route (relations are same-project by construction).
-  const handleAddRelation = useCallback(
-    (
-      sourceId: string,
-      type: IssueRelationType,
-      targetId: string,
-      projectId: string,
-      kinds?: RelationKinds
-    ) =>
-      void addRelation(projectId, sourceId, type, targetId, kinds).catch((err) =>
-        toast.error((err as Error).message)
-      ),
-    [addRelation]
-  );
-  const handleRemoveRelation = useCallback(
-    (relationId: string, projectId: string) =>
-      void removeRelation(projectId, relationId).catch((err) =>
-        toast.error((err as Error).message)
-      ),
-    [removeRelation]
-  );
 
   // A deep link names the issue `MIN-42` or by short code; panels set its id.
   const openIssue = openIssueId
@@ -505,19 +456,16 @@ function GlobalBoardInner() {
       setOpenIssueId(issue.id);
       setOpenIssueTab("plan");
     },
-    onUpdateIssue: (id: string, patch: Parameters<typeof updateIssue>[1], pid: string) =>
-      void updateIssue(id, patch, pid).catch((err) =>
-        toast.error((err as Error).message)
-      ),
+    onUpdateIssue: updateIssue,
     onSetCategories: setCategories,
-    onDeleteIssue: (id: string, pid: string) => deleteIssue(id, pid),
+    onDeleteIssue: deleteIssue,
     onAskNumo: (selectedIssues: Issue[]) => openIntent({
       source: selectedIssues.length > 1 ? "bulk" : "issue",
       action: "discuss",
       projectId: null,
       pageContext: issuesPageContext(selectedIssues, (issue) => {
         const project = projectMap.get(issue.project_id);
-        return project ? `${project.key}-${issue.number}` : String(issue.number);
+        return project ? issueIdentifier(project.key, issue.number) : String(issue.number);
       }),
     }),
     onMove: moveIssue,
@@ -543,12 +491,11 @@ function GlobalBoardInner() {
     );
   }
 
-
   /**
-   * Nothing to show ANYWHERE — not “nothing in this view.” No project, or
-   * no tickets in any of them: the toolbar (views, filters, sorting) has no
-   * then nothing to bite on, and the screen is reduced to what there is to do.
-   * Excluding cycle mode, which already has its own waiting screens.
+   * Nothing to show ANYWHERE — not "nothing in this view". No project, or no
+   * issue in any of them: the toolbar (views, filters, sort) has nothing to
+   * act on, and the screen comes down to what there is to do. Cycle mode has
+   * its own empty screens.
    */
   const nothingAnywhere = !cycleMode && (projects.length === 0 || scopedIssues.length === 0);
 
@@ -558,8 +505,7 @@ function GlobalBoardInner() {
     <div className="flex h-full flex-col" onPointerEnter={sidePanelMounted ? undefined : () => preloadSurface(loadIssueSidePanel)}>
       {/* The view's name for headings navigation (WCAG 1.3.1, 2.4.6). */}
       <h1 className="sr-only">{tMeta("all")}</h1>
-      {/* Nothing anywhere: no toolbar above a screen that
- has only one thing to offer. */}
+      {/* Nothing anywhere: no toolbar above a screen with one thing to offer. */}
       {!nothingAnywhere && (
         <BoardToolbar
           tabOrderScope="global"
@@ -648,14 +594,14 @@ function GlobalBoardInner() {
                   selectedPhase === "current" ? buildCycleMenuActions : undefined
                 }
                 onAddRelation={
-                  selectedPhase === "current" ? handleAddRelation : undefined
+                  selectedPhase === "current" ? addRelation : undefined
                 }
                 onRemoveRelation={
-                  selectedPhase === "current" ? handleRemoveRelation : undefined
+                  selectedPhase === "current" ? removeRelation : undefined
                 }
-                // Cycle view: no tablet (everything is there), but a selection
-                // must be able to exit the cycle suddenly — only on the
-                // current cycle, exiting a past cycle makes no sense.
+                // Cycle view: no cycle badge (every card is in it), but a
+                // selection can leave the cycle at once — only the current
+                // cycle, since leaving a past one makes no sense.
                 bulkCycleId={
                   selectedPhase === "current" ? (selectedCycle?.id ?? null) : null
                 }
@@ -675,11 +621,10 @@ function GlobalBoardInner() {
           </div>
         )
       ) : nothingAnywhere ? (
-        /* Empty FOR GOOD, not “empty in this view”: either there is no
- project — and then the only thing to do is to create one — or there
- is but not a single ticket, and it is the same screen as on the
- board of a project. The ticket is created from the shared dialog, which
- asks WHICH project: here, none is in front of you. */
+        /* Empty FOR GOOD, not "empty in this view": either no project — the
+           only thing to do is create one — or projects without a single
+           issue, the same screen as on a project board. The issue is created
+           from the shared dialog, which asks WHICH project. */
         <PageScroll className="px-6 py-8">
           <div className="mx-auto max-w-content">
             {projects.length === 0 ? (
@@ -706,10 +651,9 @@ function GlobalBoardInner() {
           </div>
         </PageScroll>
       ) : (
-        /* No ticket passes the filters: the board remains standing, columns
- empty. “Empty in this view” is not a dead end — it's a
- filter setting, and the screen that shows it is the board itself.
- Same gesture as on a project board. */
+        /* No issue passes the filters: the board stays up with empty
+           columns. "Empty in this view" is a filter setting, not a dead end,
+           as on a project board. */
         <div className="min-h-0 flex-1 pt-3">
           <GlobalKanbanBoard
             issues={filtered}
@@ -725,8 +669,8 @@ function GlobalBoardInner() {
             currentCycleId={cycles?.enabled ? (cycles.current?.id ?? null) : null}
             onSetCycle={onSetIssueCycle}
             onCreateIssue={handleCreateIssue}
-            onAddRelation={handleAddRelation}
-            onRemoveRelation={handleRemoveRelation}
+            onAddRelation={addRelation}
+            onRemoveRelation={removeRelation}
             allIssues={scopedIssues}
             relations={relations}
             {...boardHandlers}
@@ -751,21 +695,12 @@ function GlobalBoardInner() {
         objectives={openIssue ? objectivesByProject[openPid] ?? [] : []}
         allIssues={openIssue ? issuesByProject.get(openPid) ?? [] : []}
         relations={relations}
-        onUpdate={(id, patch) => updateIssue(id, patch, openPid)}
-        onDelete={(id) => deleteIssue(id, openPid)}
-        onSetCategories={(id, ids) => setCategories(id, ids, openPid)}
-        onOpenIssue={(id) => {
-          setOpenIssueId(id);
-          setOpenIssueTab("description");
-        }}
-        onAddRelation={(sourceId, type, targetId, kinds) =>
-          handleAddRelation(sourceId, type, targetId, openPid, kinds)
-        }
-        onRemoveRelation={(relationId) =>
-          void removeRelation(openPid, relationId).catch((err) =>
-            toast.error((err as Error).message)
-          )
-        }
+        onUpdate={updateIssue}
+        onDelete={deleteIssue}
+        onSetCategories={setCategories}
+        onOpenIssue={boardHandlers.onOpenIssueById}
+        onAddRelation={addRelation}
+        onRemoveRelation={removeRelation}
         initialTab={openIssueTab}
       />}
     </div>

@@ -155,13 +155,7 @@ function projectHandler(onAddRelation: ProjectAdd): CardAdd {
 
 function globalHandler(onAddRelation: GlobalAdd): CardAdd {
   const column = evaluate<GlobalColumnAdd>(prop("global-kanban-board.tsx", "GlobalKanbanColumn", "onAddRelation"), { onAddRelation });
-  const bind = evaluate<(projectId: string) => { onAddRelation: CardAdd }>(initializer("global-kanban-column.tsx", "bindToProject"), {
-    useMemo, onAddRelation: column, onRemoveRelation: undefined, getCandidateIssues: undefined,
-    onUpdateIssue: vi.fn(), onSetCategories: vi.fn(), onDeleteIssue: undefined,
-  });
-  const bound = bind(issue.project_id);
-  expect(bind(issue.project_id)).toBe(bound);
-  return evaluate<CardAdd>(prop("global-kanban-column.tsx", "IssueCard", "onAddRelation"), { bound });
+  return evaluate<CardAdd>(prop("global-kanban-column.tsx", "IssueCard", "onAddRelation"), { onAddRelation: column });
 }
 
 describe("card relation picker (MIN-844)", () => {
@@ -169,8 +163,8 @@ describe("card relation picker (MIN-844)", () => {
     expectTypeOf<Parameters<CardAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
     expectTypeOf<Parameters<ProjectAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
     expectTypeOf<Parameters<ProjectColumnAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
-    expectTypeOf<Parameters<GlobalAdd>[4]>().toEqualTypeOf<RelationKinds | undefined>();
-    expectTypeOf<Parameters<GlobalColumnAdd>[4]>().toEqualTypeOf<RelationKinds | undefined>();
+    expectTypeOf<Parameters<GlobalAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
+    expectTypeOf<Parameters<GlobalColumnAdd>[3]>().toEqualTypeOf<RelationKinds | undefined>();
   });
 
   it.each(types)("filters project-only candidates, closed issues and objectives included, for %s without excluding other relation types", (type) => {
@@ -205,8 +199,7 @@ describe("card relation picker (MIN-844)", () => {
           expect(row).toMatchObject({ title: objective.name, entityType: "objective" });
         }
         expect(row.execute?.()).not.toBe(false);
-        const expected = [issue.id, relation, target, ...(board === "global" ? [issue.project_id] : []), { targetType: kind }];
-        expect(add).toHaveBeenLastCalledWith(...expected);
+        expect(add).toHaveBeenLastCalledWith(issue.id, relation, target, { targetType: kind });
       }
       expect(closeRelationPicker).toHaveBeenCalledTimes(2);
     }

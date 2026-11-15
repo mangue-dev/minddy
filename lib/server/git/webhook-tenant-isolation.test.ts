@@ -122,7 +122,6 @@ vi.mock("@/lib/server/git/gitlab-app", () => ({
 const {
   ensureRepoWebhookSecret,
   loadWebhookSecrets,
-  rotateRepoWebhookSecret,
   verifyWebhookToken,
   webhookSecretMatches,
 } = await import("@/lib/server/git/webhook-secret");
@@ -198,12 +197,6 @@ describe("webhook secret per repository", () => {
       const candidates = await loadWebhookSecrets({ provider: "gitlab",
         externalRepoId: "1001" });
       expect(verifyWebhookToken(first,candidates)).toBe("own");
-      const second = await rotateRepoWebhookSecret({ provider: "gitlab",
-        externalRepoId: "1001" });
-      const rotated = await loadWebhookSecrets({ provider: "gitlab",
-        externalRepoId: "1001" });
-      expect(verifyWebhookToken(first,rotated)).toBe("rejected");
-      expect(verifyWebhookToken(second,rotated)).toBe("own");
     } finally { vi.unstubAllEnvs(); }
   });
   it("mints a repository-specific secret and stores it encrypted", async () => {
@@ -345,28 +338,6 @@ describe("webhook secret per repository", () => {
     expect(candidates.legacy).toBeNull();
     expect(verifyWebhookToken("", candidates)).toBe("rejected");
     expect(verifyWebhookToken(null, candidates)).toBe("rejected");
-  });
-
-  it("rotation replaces the secret for ALL repository links", async () => {
-    linkRows = [
-      link({ id: "link-a", project_id: "project-a" }),
-      link({ id: "link-b", project_id: "project-b" }),
-    ];
-    const before = await ensureRepoWebhookSecret({
-      provider: "gitlab",
-      externalRepoId: "1001",
-    });
-    const after = await rotateRepoWebhookSecret({
-      provider: "gitlab",
-      externalRepoId: "1001",
-    });
-    expect(after).not.toBe(before);
-    const candidates = await loadWebhookSecrets({
-      provider: "gitlab",
-      externalRepoId: "1001",
-    });
-    expect(candidates.own).toEqual([after]);
-    expect(verifyWebhookToken(before, candidates)).toBe("rejected");
   });
 
   it("compares in constant time and rejects a prefix", () => {

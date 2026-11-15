@@ -1,15 +1,12 @@
 import "server-only";
 
-import type { SyncableIssueStatus } from "@/lib/pr-issue-status";
+import { issueStatusForPrState, type SyncableIssueStatus } from "@/lib/pr-issue-status";
 import { resolveRepoCloneTargetForRepo } from "./repo-access";
 import { parsePullRequestRef } from "./pr-ingest-core";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { broadcastPrChanged } from "./pr-live";
 import { backfillPendingPrComments } from "./pr-comment-sync";
-import {
-  issueStatusForPrState,
-  syncIssueStatusFromPr,
-} from "./issue-status-sync";
+import { syncIssueStatusFromPr } from "./issue-status-sync";
 import {
   findPullRequestByNumber,
   projectsForRepo,

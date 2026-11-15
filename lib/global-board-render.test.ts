@@ -31,7 +31,7 @@ const data = {
   issues, membersByProject: empty, categoriesByProject: empty,
   objectivesByProject: empty, integrationsByProject: empty, relations: rows,
   cycles: null, loading: false, updateIssue: state.update, moveIssue: state.update,
-  setCategories: state.update, deleteIssue: state.update, createIssue: state.update,
+  setCategories: state.update, deleteIssue: state.update,
   setIssueCycle: state.update, addRelation: state.update, removeRelation: state.update,
 };
 const config = { ...DEFAULT_CONFIG, display: { ...DEFAULT_CONFIG.display, hideDone: true } };
@@ -107,8 +107,8 @@ describe("global board panel isolation", () => {
       await act(() => state.panel!.onOpenChange(false));
       expect(state.panel?.open).toBe(false);
       expect(state.cardRender).toHaveBeenCalledTimes(600);
-      board.onUpdateIssue(issues[2].id, { title: "Changed title" }, project.id);
-      expect(state.update).toHaveBeenCalledWith(issues[2].id, { title: "Changed title" }, project.id);
+      board.onUpdateIssue(issues[2].id, { title: "Changed title" });
+      expect(state.update).toHaveBeenCalledWith(issues[2].id, { title: "Changed title" });
       board.onCreateIssue!("todo");
       expect(state.openCreateIssue).toHaveBeenCalledWith({ status: "todo" });
     } finally { await act(() => root.unmount()); }

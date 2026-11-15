@@ -961,7 +961,7 @@ const IssueCardContent = memo(function IssueCardContent({
   onSetCategories: (issueId: string, ids: string[]) => void;
   /** Trash: when wired by the board, right-click gains “Move to trash”
       (with confirmation first, as in the issue panel). */
-  onDelete?: (issueId: string) => Promise<void>;
+  onDelete?: (issueId: string) => Promise<boolean>;
   /** Right-click actions supplied by the board (add/remove from cycle —
       MIN-32). **A factory, not an array**: it is called only when the menu
       OPENS (MIN-316). */
@@ -1313,13 +1313,7 @@ const IssueCardContent = memo(function IssueCardContent({
   };
 
   const handleDelete = async () => {
-    if (!onDelete) return;
-    try {
-      await onDelete(issue.id);
-      toast.success(t("issueDeletedToast"));
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    if (onDelete && (await onDelete(issue.id))) toast.success(t("issueDeletedToast"));
   };
 
   // “@” (MIN-105): the card registers with the board, which listens to the key

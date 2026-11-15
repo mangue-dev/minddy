@@ -33,7 +33,7 @@ vi.mock("@/lib/server/page-database-views", () => ({
   deletePageDatabaseView: h.remove,
 }));
 import { executeTool } from "./execute-tool";
-import { PROJECT_ASSISTANT_TOOLS } from "./tools";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 
 const ctx = { projectId: "project", userId: "actor", locale: "en" } as ToolContext;
 const view = (id: string, name: string, position: number,
@@ -69,19 +69,18 @@ beforeEach(() => {
 });
 
 const write = (args: Record<string, unknown>, context: ToolContext = ctx) =>
-  executeTool("update_page_database_views", { page_id: DB, ...args }, context);
+  executeTool("update_page_database_views", { project_id: "project", page_id: DB, ...args }, context);
 
 describe("Numo database view tools", () => {
   it("advertises a read tool and a write tool on the database page", () => {
-    const names = PROJECT_ASSISTANT_TOOLS.map((tool) => tool.function.name);
+    const names = CONVERSATION_ASSISTANT_TOOLS.map((tool) => tool.function.name);
     expect(names).toEqual(expect.arrayContaining(["list_page_database_views", "update_page_database_views"]));
-    const writeTool = PROJECT_ASSISTANT_TOOLS.find((tool) => tool.function.name === "update_page_database_views");
-    expect(writeTool?.function.parameters.required).toEqual(["page_id", "operation"]);
-    expect(writeTool?.function.parameters.properties).toHaveProperty("project_id");
+    const writeTool = CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "update_page_database_views");
+    expect(writeTool?.function.parameters.required).toEqual(["project_id", "page_id", "operation"]);
   });
 
   it("lists the views flat, in strip order, with a former single filter as a condition", async () => {
-    const result = await executeTool("list_page_database_views", { page_id: DB }, ctx);
+    const result = await executeTool("list_page_database_views", { project_id: "project", page_id: DB }, ctx);
     expect(result).toMatchObject({ success: true, result: { page_id: DB, views: [
       { view_id: V1, name: "All", filters: NO_FILTER },
       { view_id: V2, filters: { match: "and", conditions: [
@@ -92,7 +91,7 @@ describe("Numo database view tools", () => {
 
   it("says when a database still shows its default view", async () => {
     stored = [];
-    const result = await executeTool("list_page_database_views", { page_id: DB }, ctx);
+    const result = await executeTool("list_page_database_views", { project_id: "project", page_id: DB }, ctx);
     expect(result).toMatchObject({ success: true, result: { views: [], note: expect.stringContaining("default view") } });
   });
 
@@ -200,7 +199,7 @@ describe("Numo database view tools", () => {
       .toMatchObject({ success: false });
     expect(h.getPage).not.toHaveBeenCalled();
     expect(h.update).not.toHaveBeenCalled();
-    expect(await executeTool("list_page_database_views", { page_id: DB }, ctx))
+    expect(await executeTool("list_page_database_views", { project_id: "project", page_id: DB }, ctx))
       .toMatchObject({ success: true });
   });
 });

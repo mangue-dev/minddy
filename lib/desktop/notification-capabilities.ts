@@ -12,7 +12,7 @@ export interface DesktopNotificationCapabilities {
   readonly badge: DesktopNotificationBadge;
 }
 
-const UNSUPPORTED: DesktopNotificationCapabilities = Object.freeze({
+export const UNSUPPORTED_NOTIFICATION_CAPABILITIES: DesktopNotificationCapabilities = Object.freeze({
   localNativeBanners: false,
   backgroundTransport: null,
   backgroundSession: null,
@@ -58,5 +58,16 @@ export function notificationCapabilitiesForPlatform(
       badge: null,
     };
   }
-  return UNSUPPORTED;
+  return UNSUPPORTED_NOTIFICATION_CAPABILITIES;
+}
+
+/** Validates capabilities read back from the renderer command line. */
+export function isDesktopNotificationCapabilities(value: unknown): value is DesktopNotificationCapabilities {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.localNativeBanners === "boolean"
+    && (v.backgroundTransport === "apns" || v.backgroundTransport === "wns" || v.backgroundTransport === null)
+    && (v.backgroundSession === "linux" || v.backgroundSession === null)
+    && (v.settings === "macos" || v.settings === "windows" || v.settings === null)
+    && (v.badge === "dock" || v.badge === "windows" || v.badge === null);
 }

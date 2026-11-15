@@ -1,87 +1,22 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
-import { ASSISTANT_TOOLS, GLOBAL_ASSISTANT_TOOLS } from "./tools";
+import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { ADMIN_ASSISTANT_TOOLS } from "./admin-tools";
-import en from "@/messages/en.json";
-import fr from "@/messages/fr.json";
-import de from "@/messages/de.json";
-import es from "@/messages/es.json";
-import itMessages from "@/messages/it.json";
-import ptBr from "@/messages/pt-BR.json";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 
 /**
- * The contract between a Numo TOOL and its LINE in the thread.
- *
- * Each tool call is displayed in the conversation by a line — an icon
- * and a phrase ("Code Agent started", "3 returns found"). This sentence
- * comes from `TOOL_META`, indexed by the NAME of the tool, and the absence of an entry does not break
- *: the component falls back to “Processing…” then “Done”.
- *
- * This is exactly what makes the omission invisible. Twelve tools had derived
- * so — launching the code broker, reading a pull request, promoting a return
- * were all showing "Processing...", while create category
- * was showing by name. Adding a tool and forgetting its line does not raise anything,
- * does not log anything, and is only seen on the screen.
- *
- * The test reads the SOURCE of the component rather than importing it: it is a module
- * client (JSX, lucid), and what we want to pin is a table of names, not a
- * rendered. Same gesture as lib/i18n-contract.test.ts, for the same reason — the
- * fault only exists BETWEEN two files.
+ * Each tool call shows in the conversation as a line, an icon and a phrase.
+ * A tool without its line falls back to "Processing…" then "Done", which
+ * raises nothing and is only seen on screen: twelve tools once shipped that
+ * way. The Numo tools' lines are typed by the tool policy; the instance
+ * administration tools are a separate registry, so this checks them all.
  */
+const EVERY_TOOL = [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS].map((tool) => tool.function.name);
 
-const DISPLAY = join(
-  import.meta.dirname,
-  "..",
-  "..",
-  "..",
-  "components",
-  "assistant",
-  "tool-call-display.tsx"
-);
-
-const source = readFileSync(DISPLAY, "utf8");
-const metaBlock = source.slice(source.indexOf("const TOOL_META"));
-
-/** The first level keys of TOOL_META (2 indentation spaces). */
-const labelled = new Set(
-  [...metaBlock.matchAll(/^ {2}([a-z_0-9]+):/gm)].map((m) => m[1])
-);
-
-/** The ToolCall namespace keys that these labels request from the catalog. */
-const usedKeys = new Set(
-  [...metaBlock.matchAll(/\bt\("([a-zA-Z0-9_]+)"/g)].map((m) => m[1])
-);
-
-/** The two modes: project mode and global mode, which adds its own
- tools (list_projects, list_global_filter_options). A missing line in
- either shows the same on the screen. */
-const EVERY_TOOL = [
-  ...new Set(
-    [...ASSISTANT_TOOLS, ...GLOBAL_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS].map((t) => t.function.name)
-  ),
-];
+const keyOnly = ((key: string) => key) as Parameters<typeof toolRunningLabel>[1];
 
 describe("each Numo tool has its line in the thread", () => {
-  it.each(EVERY_TOOL)("%s has an entry in TOOL_META", (name) => {
-    expect(labelled).toContain(name);
-  });
-});
-
-describe("tool labels exist in all six catalogs", () => {
-  const catalogs: [string, Record<string, unknown>][] = [
-    ["en", en.ToolCall as Record<string, unknown>],
-    ["fr", fr.ToolCall as Record<string, unknown>],
-    ["de", de.ToolCall as Record<string, unknown>],
-    ["es", es.ToolCall as Record<string, unknown>],
-    ["it", itMessages.ToolCall as Record<string, unknown>],
-    ["pt-BR", ptBr.ToolCall as Record<string, unknown>],
-  ];
-
-  it.each(catalogs)("%s contains every requested label key", (_locale, catalog) => {
-    const missing = [...usedKeys].filter((k) => !(k in catalog));
-    expect(missing).toEqual([]);
+  it.each(EVERY_TOOL)("%s has its own label", (name) => {
+    expect(toolRunningLabel(name, keyOnly)).not.toBe(toolRunningLabel("no_such_tool", keyOnly));
   });
 });

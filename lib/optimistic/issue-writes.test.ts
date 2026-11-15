@@ -1,7 +1,10 @@
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  GLOBAL_BOARD_KEY,
   applyPendingBoard,
   applyPendingIssues,
+  findIssueAnywhere,
   issueWrites,
   objectiveWrites,
 } from "./issue-writes";
@@ -29,7 +32,7 @@ describe("applyPendingIssues", () => {
   // The register does not know the project of the list presented to it: without
   // rescoping, a creation still in flight in a project was added to the
   // response from another (preloading on hover, real-time refetch, etc.).
-  it("n'ajoute pas la création en vol d'un autre projet", () => {
+  it("leaves another project's in-flight creation out", () => {
     const startedAt = Date.now();
     issueWrites.begin({ kind: "insert", row: issue("new", "A") });
 
@@ -74,5 +77,32 @@ describe("applyPendingBoard", () => {
   it("rend la charge d'origine quand rien n'est en attente", () => {
     const payload = board([issue("a1", "A")], { A: [objective("o1", "A", "Avant")] });
     expect(applyPendingBoard(payload, Date.now())).toBe(payload);
+  });
+});
+
+describe("findIssueAnywhere", () => {
+  it("reads the board on screen rather than a project list left behind", async () => {
+    const queryClient = new QueryClient();
+    // The project board was visited earlier: its list stays cached, and a
+    // teammate's assignment since then only invalidated it.
+    queryClient.setQueryData(["issues", "p1"], [{ ...issue("x", "p1"), assignee_id: null }]);
+    await queryClient.invalidateQueries({ queryKey: ["issues", "p1"], refetchType: "none" });
+    queryClient.setQueryData(GLOBAL_BOARD_KEY, board([{ ...issue("x", "p1"), assignee_id: "teammate" }], {}));
+    const unsubscribe = new QueryObserver(queryClient, {
+      queryKey: GLOBAL_BOARD_KEY,
+      enabled: false,
+    }).subscribe(() => {});
+
+    expect(findIssueAnywhere(queryClient, "x")?.assignee_id).toBe("teammate");
+    unsubscribe();
+  });
+
+  it("falls back to any cache that has the row", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(GLOBAL_BOARD_KEY, board([], {}));
+    queryClient.setQueryData(["issues", "p2"], [issue("y", "p2")]);
+
+    expect(findIssueAnywhere(queryClient, "y")?.project_id).toBe("p2");
+    expect(findIssueAnywhere(queryClient, "missing")).toBeUndefined();
   });
 });

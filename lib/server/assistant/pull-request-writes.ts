@@ -3,24 +3,23 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { assertIssueInProject } from "@/lib/server/issue-reads";
-import {
-  forgeFor,
-  isForgeApiError,
-  type Forge,
-  type MergeMethod,
-} from "@/lib/server/agent/forge";
+import { forgeFor, isForgeApiError, type Forge } from "@/lib/server/agent/forge";
+import type { MergeMethod } from "@/lib/pr-readiness";
 import { signReviewBody } from "@/lib/server/agent/review-signature";
 import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import { broadcastPrChanged } from "@/lib/server/agent/pr-live";
 import {
   findPullRequest,
   findPullRequestForIssue,
-  pullRequestIssueIds,
   rowProvider,
   upsertPullRequest,
   type PullRequestRow,
 } from "@/lib/server/agent/pull-requests";
-import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
+import { applyPrStateChange } from "@/lib/server/agent/pr-state-change";
+import {
+  PrOperationInProgressError,
+  withPrOperation,
+} from "@/lib/server/agent/pr-operation-lock";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 
 /**
@@ -160,6 +159,12 @@ async function forgeCall(
         success: false,
       };
     }
+    if (err instanceof PrOperationInProgressError) {
+      return {
+        result: { error: "This pull request is already being merged. Re-read it in a moment." },
+        success: false,
+      };
+    }
     throw err;
   }
 }
@@ -234,8 +239,11 @@ async function mergePullRequest(
     // The forge is the authority on required checks. The aggregate checks
     // summary also contains optional jobs, so treating any red or running job
     // as a local blocker would reject merges that branch protection permits.
-    await forge.mergePullRequest({ ...call, ...(method ? { method } : {}) });
-    const issueStatus = await settleState(ctx, target, number, row, "merged");
+    // The same lock as the PR page's merge: a click and a Numo merge never race.
+    await withPrOperation({ ...target, number }, "merge", () =>
+      forge.mergePullRequest({ ...call, ...(method ? { method } : {}) }),
+    );
+    const issueStatus = await settleState(ctx, target, number, row);
     return {
       result: {
         number,
@@ -559,38 +567,24 @@ async function resolvePullRequestThreads(
 // ── Post-write state sync ───────────────────────────────────────────────────
 
 /**
- * The after-merge bookkeeping, mirroring the app's own merge path
- * (`propagatePrState`): the row, the runs, then all linked issue statuses through the
- * shared sync core. Best-effort — a missed row write must never fail the
- * gesture, the webhook or the next scan would catch the state up anyway.
+ * The after-merge bookkeeping shared with the PR page (`applyPrStateChange`).
+ * Best-effort: a missed row write must never fail the gesture, the webhook or
+ * the next scan catches the state up anyway.
  */
 async function settleState(
   ctx: PullRequestWriteContext,
   target: { provider: RepoProviderId; repoFullName: string },
   number: number,
   row: PullRequestRow | null,
-  state: "merged",
 ): Promise<string | null> {
   try {
-    if (row) broadcastPrChanged(row.id, ["pr", "conversation"]);
-    const updated = await upsertPullRequest({
-      provider: target.provider,
-      repoFullName: target.repoFullName,
-      number,
-      state,
-      mergedAt: new Date().toISOString(),
-      issueId: row?.issue_id ?? undefined,
+    const issueIds = await applyPrStateChange({
+      target: { ...target, number },
+      row,
+      state: "merged",
+      actorId: ctx.userId,
+      forgeSync: target.provider,
     });
-    const prId = updated?.id ?? row?.id;
-    const issueIds = prId ? await pullRequestIssueIds(prId) : [];
-    for (const issueId of issueIds) {
-      await syncIssueStatusFromPr({
-        issueId,
-        actorId: ctx.userId,
-        prState: state,
-        forgeSync: target.provider,
-      });
-    }
     return issueIds.length > 0 ? "done" : null;
   } catch {
     console.error("[assistant] pr_state_sync_failed");

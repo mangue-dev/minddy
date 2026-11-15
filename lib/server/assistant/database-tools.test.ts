@@ -26,7 +26,7 @@ vi.mock("@/lib/server/page-tools", () => ({
 }));
 import { executeTool } from "./execute-tool";
 import { buildPageContextBlock } from "./prompt";
-import { CONVERSATION_ASSISTANT_TOOLS, PROJECT_ASSISTANT_TOOLS } from "./tools";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 const ctx = {
   projectId: "project",
   userId: "actor",
@@ -78,17 +78,18 @@ describe("Numo database tool dispatch", () => {
     expect(h.access).not.toHaveBeenCalled();
   });
   it("exposes a project-scoped database tool and returns schema read results", async () => {
-    const tool = PROJECT_ASSISTANT_TOOLS.find(
+    const tool = CONVERSATION_ASSISTANT_TOOLS.find(
       (t) => t.function.name === "update_page_database",
     );
     expect(tool?.function.parameters.properties).toHaveProperty("project_id");
     expect(tool?.function.description).toContain("created_at, updated_at, created_by and updated_by are read-only metadata");
     expect(
-      await executeTool("get_page", { page_id: "database" }, ctx),
+      await executeTool("get_page", { project_id: "project", page_id: "database" }, ctx),
     ).toMatchObject({ success: true, result: { database_revision: 3 } });
   });
   it("forwards exact value preconditions and surfaces conflicts", async () => {
     const args = {
+      project_id: "project",
       page_id: "entry",
       operation: "value",
       propertyId: "amount",
@@ -119,7 +120,7 @@ describe("Numo database tool dispatch", () => {
     expect(
       await executeTool(
         "update_page_database",
-        { page_id: "entry", operation: "value" },
+        { project_id: "project", page_id: "entry", operation: "value" },
         ctx,
       ),
     ).toMatchObject({ success: false });
@@ -128,7 +129,7 @@ describe("Numo database tool dispatch", () => {
   it("creates databases and document entries through the existing page creator", async () => {
     await executeTool(
       "create_page",
-      { title: "Journal", markdown: "", database: true },
+      { project_id: "project", title: "Journal", markdown: "", database: true },
       ctx,
     );
     expect(h.create).toHaveBeenLastCalledWith(
@@ -140,7 +141,7 @@ describe("Numo database tool dispatch", () => {
     );
     await executeTool(
       "create_page",
-      { title: "Entry", markdown: "", parent_page_id: "database" },
+      { project_id: "project", title: "Entry", markdown: "", parent_page_id: "database" },
       ctx,
     );
     expect(h.create).toHaveBeenLastCalledWith(
@@ -148,7 +149,7 @@ describe("Numo database tool dispatch", () => {
     );
     await executeTool(
       "create_page",
-      { title: "Alice", markdown: "", parent_page_id: "database", values: { email: "alice@example.com", age: 32 } },
+      { project_id: "project", title: "Alice", markdown: "", parent_page_id: "database", values: { email: "alice@example.com", age: 32 } },
       ctx,
     );
     expect(h.create).toHaveBeenLastCalledWith(
@@ -165,6 +166,7 @@ describe("create_page_database (MIN-917)", () => {
     h.update.mockResolvedValueOnce({ ok: true, data: { page_id: "db", database_revision: 1 } });
 
     const result = await executeTool("create_page_database", {
+      project_id: "project",
       title: "Candidatures",
       icon: null,
       parent_page_id: null,
@@ -206,6 +208,7 @@ describe("create_page_database (MIN-917)", () => {
 
   it("refuses a database without columns before creating anything", async () => {
     const result = await executeTool("create_page_database", {
+      project_id: "project",
       title: "Empty", icon: null, parent_page_id: null, title_column: null, properties: [], rows: null,
     }, ctx);
     expect(result).toMatchObject({ success: false });
@@ -216,6 +219,7 @@ describe("create_page_database (MIN-917)", () => {
     h.create.mockResolvedValueOnce({ ok: true, data: { page_id: "db", database_revision: 0 } });
     h.update.mockResolvedValueOnce({ ok: false, message: "The schema is invalid." });
     const result = await executeTool("create_page_database", {
+      project_id: "project",
       title: "Stock", icon: null, parent_page_id: null, title_column: null,
       properties: [{ name: "Qty", type: "number", options: null }], rows: null,
     }, ctx);
@@ -229,13 +233,12 @@ describe("an open empty database (MIN-738)", () => {
     const block = buildPageContextBlock({ projectId: "project", pageId: "database" });
     expect(block).toContain("If is_database is true");
     expect(block).toContain("update_page_database and create no other page");
-    const getPage = PROJECT_ASSISTANT_TOOLS.find((t) => t.function.name === "get_page");
+    const getPage = CONVERSATION_ASSISTANT_TOOLS.find((t) => t.function.name === "get_page");
     expect(getPage?.function.description).toContain("true even when database_schema is an empty array");
   });
 });
 
 describe("conversation action targets", () => {
-  const conversation = { ...ctx, requireExplicitProjectTarget: true };
   it("keeps routine conversations able to ask for owner input without code tools", () => {
     const names = CONVERSATION_ASSISTANT_TOOLS.map((tool) => tool.function.name);
     expect(names).not.toContain("launch_code_agent");
@@ -244,32 +247,32 @@ describe("conversation action targets", () => {
   });
   it("never substitutes ambient context for an omitted action target", async () => {
     for (const name of ["update_page_database", "update_view"]) {
-      expect(await executeTool(name, {}, conversation)).toMatchObject({ success: false });
+      expect(await executeTool(name, {}, ctx)).toMatchObject({ success: false });
     }
     expect(h.access).not.toHaveBeenCalled();
     expect(h.update).not.toHaveBeenCalled();
   });
   it("keeps a named target stable when ambient context changes", async () => {
     const args = { project_id: "a", page_id: "entry", operation: "value", propertyId: "amount", value: 3 };
-    await executeTool("update_page_database", args, { ...conversation, projectId: "b" });
+    await executeTool("update_page_database", args, { ...ctx, projectId: "b" });
     expect(h.access).toHaveBeenCalledWith("actor", "a");
     expect(h.update).toHaveBeenCalledWith(expect.objectContaining({ projectId: "a" }));
   });
   it("refuses the retired automation outcome tool", async () => {
-    expect(await executeTool("report_automation_outcome", { outcome: "ok", summary: "Done" }, conversation))
+    expect(await executeTool("report_automation_outcome", { outcome: "ok", summary: "Done" }, ctx))
       .toMatchObject({ success: false });
   });
   it("rechecks access before the next message's action", async () => {
     const args = { project_id: "a", page_id: "entry", operation: "value" };
-    await executeTool("update_page_database", args, conversation);
+    await executeTool("update_page_database", args, ctx);
     h.access.mockResolvedValue(null);
-    expect(await executeTool("update_page_database", args, conversation)).toMatchObject({ success: false });
+    expect(await executeTool("update_page_database", args, ctx)).toMatchObject({ success: false });
     expect(h.access).toHaveBeenCalledTimes(2);
     expect(h.update).toHaveBeenCalledTimes(1);
   });
   it("keeps owner-only operations gated for an explicitly targeted member project", async () => {
     h.access.mockResolvedValue({ project: { id: "a" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
-    expect(await executeTool("propose_backlog", { project_id: "a" }, conversation))
+    expect(await executeTool("propose_backlog", { project_id: "a" }, ctx))
       .toMatchObject({ success: false, result: { error: "Only the project owner can seed the backlog of this project." } });
   });
 });

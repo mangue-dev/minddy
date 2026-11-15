@@ -22,7 +22,7 @@ export const maxDuration = 60;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
   return prCommentsResponse(auth.scope);
 }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const body = typeof payload?.body === "string" ? payload.body.trim() : "";
   if (!body) return NextResponse.json({ error: "Comment required" }, { status: 400 });
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "write");
   if (!auth.ok) return auth.response;
 
   if (payload?.commentId != null) {

@@ -1,4 +1,4 @@
-import type { AgentRunPrResponse, PullRequestListItem } from "@/lib/agent-api";
+import type { PullRequestDetailResponse, PullRequestListItem } from "@/lib/agent-api";
 import type { PullRequestReadiness } from "@/lib/pr-readiness";
 import type { EditablePrState } from "@/lib/pr-state-transition";
 
@@ -31,7 +31,7 @@ export function prMenuCanMerge(
 
 /** Whether something stands between the pull request and its merge. */
 export function prMenuNeedsFix(
-  data: Pick<AgentRunPrResponse, "checks" | "readiness"> | undefined,
+  data: Pick<PullRequestDetailResponse, "checks" | "readiness"> | undefined,
   unresolvedThreadCount: number,
 ): boolean {
   return (

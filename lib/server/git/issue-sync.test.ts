@@ -12,11 +12,11 @@ import {
 } from "./issue-sync-core";
 import { forgeIssueResource } from "./forge-resource";
 
-// The PURES functions of the output sync (MIN-97) — the part that writes in
-// base lives in issue-sync.ts and is not testable in node (server-only).
+// The PURE functions of the issue sync (MIN-97). The part that writes to the
+// database lives in issue-sync.ts and cannot be tested in Node (server-only).
 
 describe("statusForRemoteAction", () => {
-  it("mappe la fermeture des deux vocabulaires vers done", () => {
+  it("maps closing in both vocabularies to done", () => {
     expect(statusForRemoteAction("closed")).toBe("done"); // GitHub
     expect(statusForRemoteAction("close")).toBe("done"); // GitLab
   });
@@ -56,29 +56,29 @@ describe("statusForRemoteReconcile", () => {
   const closed = { ...base, state: "closed" as const };
   const open = { ...base, state: "open" as const };
 
-  it("lit l'état porté par le payload, même sur une action muette", () => {
-    // This is what catches a closure whose webhook is lost: a
-    // `edited` which arrives after it still carries `state: closed`.
+  it("reads the state carried by the payload, even on a silent action", () => {
+    // This is what catches a close whose webhook was lost: an `edited`
+    // arriving afterward still carries `state: closed`.
     expect(statusForRemoteReconcile(closed, "in_progress")).toBe("done");
   });
 
-  it("does NOT RECLASSIFY an otherwise closed ticket — the canceled trap", () => {
-    // All three are worth “closed” on the forge side: as long as it says closed, it does not
-    // says nothing more than what minddy already knows.
+  it("does NOT RECLASSIFY an issue closed another way: the canceled trap", () => {
+    // All three mean “closed” on the forge: as long as it says closed, it
+    // says nothing minddy does not already know.
     expect(statusForRemoteReconcile(closed, "canceled")).toBeNull();
     expect(statusForRemoteReconcile(closed, "duplicate")).toBeNull();
     expect(statusForRemoteReconcile(closed, "done")).toBeNull();
   });
 
-  it("changes nothing when both sides agree on « open »", () => {
-    // Otherwise any edition of an open issue would return a ticket to the backlog
-    // that we had just switched to in_progress in minddy.
+  it("changes nothing when both sides agree on \"open\"", () => {
+    // Otherwise any edit of an open forge issue would send back to the backlog
+    // an issue just moved to in_progress in minddy.
     for (const status of ["triage", "backlog", "todo", "in_progress", "in_review"] as const) {
       expect(statusForRemoteReconcile(open, status), status).toBeNull();
     }
   });
 
-  it("rouvre en backlog un ticket clos que la forge a rouvert", () => {
+  it("reopens into backlog a closed issue the forge reopened", () => {
     expect(statusForRemoteReconcile(open, "done")).toBe("backlog");
     expect(statusForRemoteReconcile(open, "canceled")).toBe("backlog");
   });
@@ -90,10 +90,11 @@ describe("statusForRemoteReconcile", () => {
     expect(statusForRemoteReconcile({ ...base, action: "reopen" }, "done")).toBe("backlog");
   });
 
-  it("boucle d'écho : l'aller-retour d'une fermeture s'arrête au premier retour", () => {
-    // minddy passes the ticket as done → issue-push closes the issue → GitHub returns
-    // `issues.closed`. The ticket is already done: nothing more to write, therefore no more
-    // nothing to push back. The same goes for a cancellation, which also closes on the forge side.
+  it("echo loop: a close round trip stops at the first return", () => {
+    // minddy moves the issue to done → issue-push closes the forge issue →
+    // GitHub sends back `issues.closed`. The issue is already done: nothing to
+    // write, so nothing to push back. The same holds for a cancellation, which
+    // also closes on the forge.
     expect(remoteStateForStatus("done").open).toBe(false);
     expect(statusForRemoteReconcile({ ...closed, action: "closed" }, "done")).toBeNull();
     expect(
@@ -103,7 +104,7 @@ describe("statusForRemoteReconcile", () => {
 });
 
 describe("remoteStateForStatus", () => {
-  it("laisse ouvert tout ce qui n'est pas clos", () => {
+  it("keeps open everything that is not closed", () => {
     for (const status of ["triage", "backlog", "todo", "in_progress", "in_review"] as const) {
       expect(remoteStateForStatus(status), status).toEqual({
         open: true,
@@ -112,7 +113,7 @@ describe("remoteStateForStatus", () => {
     }
   });
 
-  it("distingue « fait » de « n'aura pas lieu » à la fermeture", () => {
+  it("tells \"done\" apart from \"will not happen\" when closing", () => {
     expect(remoteStateForStatus("done")).toEqual({ open: false, notPlanned: false });
     expect(remoteStateForStatus("canceled")).toEqual({ open: false, notPlanned: true });
     expect(remoteStateForStatus("duplicate")).toEqual({ open: false, notPlanned: true });
@@ -120,7 +121,7 @@ describe("remoteStateForStatus", () => {
 });
 
 describe("forgeIssueResource", () => {
-  it("names the resource « repository#number » and includes the forge brand", () => {
+  it("names the resource \"repository#number\" and includes the forge brand", () => {
     const resource = forgeIssueResource({
       provider: "github",
       repoFullName: "acme/app",
@@ -130,7 +131,7 @@ describe("forgeIssueResource", () => {
     expect(resource?.kind).toBe("link");
     expect(resource?.file_name).toBe("acme/app#42");
     expect(resource?.url).toBe("https://github.com/acme/app/issues/42");
-    // Embedded, therefore no network round trip per imported ticket.
+    // Embedded, so no network round trip per imported issue.
     expect(resource?.icon_data_url).toMatch(/^data:image\/webp;base64,/);
   });
 
@@ -376,13 +377,13 @@ describe("normalizeGitlabIssueEvent", () => {
       action: "close",
       state: "closed",
     },
-    // GitLab takes both to the ROOT of the hook, and names its labels `title`
+    // GitLab puts both at the ROOT of the hook, and names its labels `title`
     // where GitHub writes `name`.
     labels: [{ id: 1, title: "bug" }, { id: 2, title: "severity::2" }],
     assignees: [{ username: "tanuki" }],
   };
 
-  it("lit l'iid — pas l'id — et ramène à la forme neutre", () => {
+  it("reads the iid (not the id) and reduces to the neutral form", () => {
     expect(normalizeGitlabIssueEvent(closed)).toEqual({
       provider: "gitlab",
       repoFullName: "acme/group/app",
@@ -393,7 +394,7 @@ describe("normalizeGitlabIssueEvent", () => {
       url: "https://gitlab.com/acme/group/app/-/issues/12",
       action: "close",
       actorLogin: "tanuki",
-      // `opened` of GitLab becomes the `open` of the neutral form.
+      // GitLab's `opened` becomes the neutral form's `open`.
       state: "closed",
       labels: ["bug", "severity::2"],
       assigneeLogins: ["tanuki"],
@@ -401,7 +402,7 @@ describe("normalizeGitlabIssueEvent", () => {
     });
   });
 
-  it("normalise « opened » en « open » — un seul vocabulaire en aval", () => {
+  it("normalizes \"opened\" to \"open\": a single vocabulary downstream", () => {
     expect(
       normalizeGitlabIssueEvent({
         ...closed,
@@ -429,7 +430,7 @@ describe("normalizeGitlabIssueEvent", () => {
     ).toBeNull();
   });
 
-  it("rejette un autre object_kind ou un payload incomplet", () => {
+  it("rejects another object_kind or an incomplete payload", () => {
     expect(normalizeGitlabIssueEvent({ ...closed, object_kind: "merge_request" })).toBeNull();
     expect(
       normalizeGitlabIssueEvent({ ...closed, object_attributes: { action: "close" } }),

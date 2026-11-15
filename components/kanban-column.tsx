@@ -32,8 +32,8 @@ import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 /**
- * ⚠ Memorized (MIN-316). The board replayed its columns — therefore all their
- * cards — each time the board was rendered, including for a state that did not concern them. Its props must remain stable for it to bite.
+ * ⚠ Memoized (MIN-316): the board used to re-render every column, and so every
+ * card, on any of its renders. Its props must stay stable for that to hold.
  */
 export const KanbanColumn = memo(function KanbanColumn({
   status,
@@ -91,14 +91,14 @@ export const KanbanColumn = memo(function KanbanColumn({
   ) => void;
   onRemoveRelation?: (relationId: string) => void;
   /** Trash from right-clicking a card (absent → entry disappears). */
-  onDeleteIssue?: (issueId: string) => Promise<void>;
+  onDeleteIssue?: (issueId: string) => Promise<boolean>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
   currentCycleId?: string | null;
   selectedIds: Set<string>;
-  /** Tickets loaded by the current drag — dimmed like the card
- entered, so we can see what the packet contains. */
+  /** The issues the current drag carries — dimmed like the dragged card, so
+      the bundle's content shows. */
   draggingIds?: Set<string>;
   /** The drop mark, when dragging is aimed at THIS column. */
   dropPreview?: DropPreview;

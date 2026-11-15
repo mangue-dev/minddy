@@ -4,7 +4,6 @@ import {
   activeFilterCount,
   configsEqual,
   filterIssues,
-  isDefaultConfig,
   issueComparator,
   storedStatusFilter,
   toggleStatusFilter,
@@ -66,7 +65,6 @@ describe("smart sort — the priority arrangement as the baseline", () => {
 
   it("is the default sort of every board", () => {
     expect(DEFAULT_CONFIG.sort).toBe("smart");
-    expect(isDefaultConfig({ ...DEFAULT_CONFIG })).toBe(true);
   });
 });
 
@@ -226,11 +224,9 @@ describe("default status columns (MIN-736)", () => {
 
   it("treats the open selection as the default, not as a change", () => {
     const explicit = withStatus(["in_review", "backlog", "todo", "in_progress"]);
-    expect(isDefaultConfig(DEFAULT_CONFIG)).toBe(true);
-    expect(isDefaultConfig(explicit)).toBe(true);
     expect(configsEqual(explicit, DEFAULT_CONFIG)).toBe(true);
     expect(activeFilterCount(explicit)).toBe(0);
-    expect(isDefaultConfig(withStatus(["todo"]))).toBe(false);
+    expect(configsEqual(withStatus(["todo"]), DEFAULT_CONFIG)).toBe(false);
     expect(activeFilterCount(withStatus(["todo", "done"]))).toBe(1);
   });
 

@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import type {
-  AgentRunPrResponse,
+  PullRequestDetailResponse,
   PullRequestListItem,
   PullRequestListResponse,
 } from "./agent-api";
@@ -132,7 +132,7 @@ describe("updateCachedPullRequestState", () => {
 
   it("patches the detail's own cache so the panel does not flash two states", () => {
     const client = newClient();
-    client.setQueryData<AgentRunPrResponse>(DETAIL_KEY, {
+    client.setQueryData<PullRequestDetailResponse>(DETAIL_KEY, {
       pr: { number: 12, url: "", state: "open", draft: false, merged: false },
       files: [],
     });
@@ -140,7 +140,7 @@ describe("updateCachedPullRequestState", () => {
     updateCachedPullRequestState(client, "pr-1", "merged");
 
     expect(
-      client.getQueryData<AgentRunPrResponse>(DETAIL_KEY)?.pr,
+      client.getQueryData<PullRequestDetailResponse>(DETAIL_KEY)?.pr,
     ).toMatchObject({ state: "merged", merged: true, draft: false });
   });
 

@@ -68,14 +68,11 @@ interface AgentModelsResult {
   /** Account plan, to name it in the explanation of the limit. */
   planId: string | null;
   /**
- * The RECOMMENDED ids, in order, and already restricted by the server to those
- * that `models` contains. Empty = no advice applicable (BYOK to native ids
- *, admin catalog, list emptied by admin): the picker then reopens
- * on the entire catalog, as before.
- */
+   * The recommended ids, in order, restricted by the server to `models`.
+   * Empty when no advice applies (BYOK with native ids, admin catalog, list
+   * emptied by an admin): the picker then shows the whole catalog.
+   */
   recommended: string[];
-  /** Scheduled task routes are protected and can be scheduled. */
-  routineEventProcessingConfigured?: boolean;
   routineSchedulingConfigured: boolean;
   /** Instance default used by Numo when a conversation has no override. */
   defaultReasoning?: ReasoningLevel;
@@ -124,7 +121,6 @@ export async function fetchAgentModels(
     maxMultiplier?: number | null;
     planId?: string | null;
     recommended?: string[];
-    routineEventProcessingConfigured?: boolean;
     routineSchedulingConfigured?: boolean;
     defaultReasoning?: ReasoningLevel;
     localEndpoint?: {
@@ -150,9 +146,8 @@ export async function fetchAgentModels(
     maxMultiplier: data.maxMultiplier ?? null,
     planId: data.planId ?? null,
     recommended: data.recommended ?? [],
-    // An unknown ability remains unavailable: activate it during a failure or
-    // a loading would offer an action which the server will then refuse in 503.
-    routineEventProcessingConfigured: data.routineEventProcessingConfigured ?? false,
+    // Unknown while loading or after a failure: offering scheduling then
+    // would only lead to the server's 503.
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     defaultReasoning: data.defaultReasoning,
     providerChoice: data.providerChoice ?? null,
@@ -197,7 +192,6 @@ export function useAgentModelsQuery(
     maxMultiplier: data?.maxMultiplier ?? null,
     planId: data?.planId ?? null,
     recommended: data?.recommended ?? [],
-    routineEventProcessingConfigured: data?.routineEventProcessingConfigured ?? false,
     routineSchedulingConfigured: data?.routineSchedulingConfigured ?? false,
     defaultReasoning: data?.defaultReasoning,
     providerChoice: data?.providerChoice ?? null,

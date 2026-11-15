@@ -6,7 +6,7 @@ import { useGlobalBoardQuery, GLOBAL_BOARD_KEY } from "./use-global-board-query"
 import { normalizeRelation } from "./relation-constants";
 import { applyPendingIssues, issueWrites } from "./optimistic/issue-writes";
 import { applyPendingRelations, isOwnRelationEcho } from "./optimistic/relation-writes";
-import type { GlobalBoardResponse, Issue, IssueRelation, IssueRelationType } from "./types";
+import type { GlobalBoardResponse, Issue, IssueRelation, IssueRelationType, Objective } from "./types";
 import type { RelationKinds } from "./use-issue-relations-query";
 
 const mocks = vi.hoisted(() => ({
@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   add: vi.fn(),
   remove: vi.fn(),
   deleteIssue: vi.fn(),
+  toastError: vi.fn(),
 }));
 
 vi.mock("./auth-context", () => ({ useAuth: () => ({ user: { id: "user" } }) }));
@@ -29,7 +30,7 @@ vi.mock("./issues-api", () => ({
 }));
 vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  toast: { error: vi.fn() },
+  toast: { error: (...args: unknown[]) => mocks.toastError(...args) },
 }));
 
 let client: QueryClient;
@@ -56,7 +57,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, {
-    issues: [issue], members: {}, categories: {}, objectives: {}, integrations: {},
+    issues: [issue], members: {}, categories: {}, integrations: {},
+    // Relation endpoints the writers resolve the project from.
+    objectives: { project: ["objective", "objective-a", "objective-b", "other-issue", "a"].map(
+      (id) => ({ id, project_id: "project" }) as unknown as Objective,
+    ) },
     relations: [existing], cycles: { enabled: false, current: null, upcoming: [], past: [] },
   });
   invalidate = vi.spyOn(client, "invalidateQueries").mockResolvedValue(undefined);
@@ -73,15 +78,15 @@ describe("global relation mutations", () => {
     client.setQueryData(["issue-relations", "project"], []);
     let reject!: (error: Error) => void;
     mocks.add.mockReturnValue(new Promise<IssueRelation>((_resolve, rej) => { reject = rej; }));
-    const result = hook.addRelation("project", "other-issue", "related", "objective", { targetType: "objective" });
+    const result = hook.addRelation("other-issue", "related", "objective", { targetType: "objective" });
     const rows = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.relations;
     expect(rows).toHaveLength(2);
     expect(rows[1]).toMatchObject({ source_id: "objective", source_type: "objective", target_id: "other-issue", target_type: "issue", type: "related" });
     expect(client.getQueryData(["issue-relations", "project"])).toEqual([rows[1]]);
     expect(mocks.record).not.toHaveBeenCalled();
-    const rejected = expect(result).rejects.toThrow("Failed");
     reject(new Error("Failed"));
-    await rejected;
+    await result;
+    expect(mocks.toastError).toHaveBeenCalledWith("Failed");
     expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.relations).toEqual([existing]);
     expect(client.getQueryData(["issue-relations", "project"])).toEqual([]);
     expect(mocks.record).not.toHaveBeenCalled();
@@ -93,7 +98,7 @@ describe("global relation mutations", () => {
       const kinds: RelationKinds = { targetType: "objective" };
       const created = { id: "created", ...normalizeRelation("other-issue", type, { id: "objective", type: "objective" }) };
       mocks.add.mockResolvedValue(created);
-      await hook.addRelation("project", "other-issue", type, "objective", kinds);
+      await hook.addRelation("other-issue", type, "objective", kinds);
       expect(mocks.add).toHaveBeenCalledWith("project", {
         source_id: "other-issue", target_id: "objective", type,
         source_type: undefined, target_type: "objective",
@@ -111,14 +116,14 @@ describe("global relation mutations", () => {
 
   it("forwards both objective kinds and retains issue-only defaults", async () => {
     mocks.add.mockResolvedValue(existing);
-    await hook.addRelation("project", "objective-a", "related", "objective-b", {
+    await hook.addRelation("objective-a", "related", "objective-b", {
       sourceType: "objective", targetType: "objective",
     });
     expect(mocks.add).toHaveBeenLastCalledWith("project", {
       source_id: "objective-a", target_id: "objective-b", type: "related",
       source_type: "objective", target_type: "objective",
     });
-    await hook.addRelation("project", "a", "blocks", "b");
+    await hook.addRelation("a", "blocks", "b");
     expect(mocks.add).toHaveBeenLastCalledWith("project", {
       source_id: "a", target_id: "b", type: "blocks",
       source_type: undefined, target_type: undefined,
@@ -126,7 +131,7 @@ describe("global relation mutations", () => {
   });
 
   it("preserves kinds when recording relation removal for undo", async () => {
-    await hook.removeRelation("project", existing.id);
+    await hook.removeRelation(existing.id);
     const { id, ...snapshot } = existing;
     expect(mocks.record).toHaveBeenCalledWith({
       kind: "relation-remove", projectId: "project", relationId: id, relation: snapshot,
@@ -138,7 +143,7 @@ describe("global relation mutations", () => {
 
   it("keeps a confirmed removal out of a board read that started before it", async () => {
     const startedBefore = Date.now() - 1;
-    await hook.removeRelation("project", existing.id);
+    await hook.removeRelation(existing.id);
     expect(applyPendingRelations(client, [existing], startedBefore)).toEqual([]);
     expect(isOwnRelationEcho(client, { operation: "DELETE", record: null, old_record: { id: existing.id } })).toBe(true);
     expect(applyPendingRelations(client, [existing], Date.now() + 1)).toEqual([existing]);
@@ -146,7 +151,8 @@ describe("global relation mutations", () => {
 
   it("restores typed cache rows without recording a failed removal", async () => {
     mocks.remove.mockRejectedValue(new Error("Failed"));
-    await expect(hook.removeRelation("project", existing.id)).rejects.toThrow("Failed");
+    await hook.removeRelation(existing.id);
+    expect(mocks.toastError).toHaveBeenCalledWith("Failed");
     expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.relations).toEqual([existing]);
     expect(mocks.record).not.toHaveBeenCalled();
     expect(applyPendingRelations(client, [existing], 0)).toEqual([existing]);
@@ -156,13 +162,13 @@ describe("global relation mutations", () => {
     let finish!: () => void;
     mocks.deleteIssue.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
     client.setQueryData(["issues", "project"], [issue]);
-    const result = hook.deleteIssue(issue.id, "project");
+    const result = hook.deleteIssue(issue.id);
     expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.issues).toEqual([]);
     expect(client.getQueryData(["issues", "project"])).toEqual([]);
     // A read that left before the DELETE cannot bring the card back.
     expect(applyPendingIssues([issue], Date.now() - 1)).toEqual([]);
     finish();
-    await result;
+    expect(await result).toBe(true);
     expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: GLOBAL_BOARD_KEY }));
     expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["issues", "project"] }));
     expect(applyPendingIssues([issue], Date.now() + 1)).toEqual([issue]);
@@ -170,7 +176,8 @@ describe("global relation mutations", () => {
 
   it("restores a card whose deletion failed", async () => {
     mocks.deleteIssue.mockRejectedValue(new Error("Failed"));
-    await expect(hook.deleteIssue(issue.id, "project")).rejects.toThrow("Failed");
+    expect(await hook.deleteIssue(issue.id)).toBe(false);
+    expect(mocks.toastError).toHaveBeenCalledWith("Failed", expect.anything());
     expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.issues).toEqual([issue]);
     expect(applyPendingIssues([issue], 0)).toEqual([issue]);
   });
@@ -178,7 +185,7 @@ describe("global relation mutations", () => {
   it("preserves both endpoint directions in issue-deletion fallback snapshots", async () => {
     const outgoing: IssueRelation = { ...existing, id: "outgoing", source_id: issue.id, source_type: "issue", target_id: "objective-b", target_type: "objective" };
     client.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) => ({ ...old!, relations: [existing, outgoing] }));
-    await hook.deleteIssue(issue.id, "project");
+    await hook.deleteIssue(issue.id);
     expect(mocks.record).toHaveBeenCalledWith(expect.objectContaining({
       kind: "delete",
       relations: [existing, outgoing].map(({ id: _id, ...snapshot }) => snapshot),

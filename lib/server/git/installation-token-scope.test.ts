@@ -3,18 +3,16 @@ import crypto from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-327 — THE FORGE TOKEN IS SCOPED FROM THE PROJECT REPOSITORY.
+ * MIN-327: the forge token is scoped to the project's repository.
  *
- * `POST /app/installations/{id}/access_tokens` without a body returns the MAXIMAL
- * token of the installation: all its repositories, all its permissions. It was this token
- * which went into the `.git/config` of the agent's microVM — readable by the
- * model, exfiltrable by an injection, and it then opened all the private repositories
- * of the account for a project which only linked one.
+ * `POST /app/installations/{id}/access_tokens` without a body returns the
+ * maximal token of the installation: every repository, every permission. A
+ * project that links one repository must never hold a token that opens the
+ * account's other private repositories.
  *
- * We therefore test the two halves of the contract: what `getInstallationToken`
- * SENDS (scope + permissions), and what `resolveRepoCloneTarget` ASKS it
- * depending on who will hold the token. The `fetch` is wrong — it's the only thing that
- * comes out of the process here.
+ * Both halves of the contract are tested: what `getInstallationToken` sends
+ * (scope and permissions), and what `resolveRepoCloneTarget` asks for. Only
+ * `fetch` is faked, the one thing that leaves the process here.
  */
 
 const h = vi.hoisted(() => ({
@@ -86,15 +84,14 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-describe("le mint d'un token d'installation", () => {
-  it("n'envoie aucun corps quand on ne lui donne pas de portée", async () => {
-    // The historical form remains possible — it is that of the calls which enumerate
-    // installation repositories, and which CANNOT be scoped to a repository.
+describe("installation token mint", () => {
+  it("sends no body without a scope", async () => {
+    // Enumerating an installation's repositories cannot be scoped to one.
     await getInstallationToken(4242);
     expect(h.minted).toEqual([null]);
   });
 
-  it("transmet `repositories` et `permissions` tels qu'on les lui donne", async () => {
+  it("forwards `repositories` and `permissions` as given", async () => {
     await getInstallationToken(4242, {
       repositories: ["minddy"],
       permissions: { contents: "read" },
@@ -104,16 +101,15 @@ describe("le mint d'un token d'installation", () => {
     ]);
   });
 
-  it("ne resserre PAS un token large en le resservant depuis le cache", async () => {
-    // The trap we keep here: a cache key on the only `installationId`
-    // would return the maximum token of the first call to a caller who requested a
-    // restricted token. The restriction would be true on the wire, false in memory.
-    const large = await getInstallationToken(4242);
-    const etroit = await getInstallationToken(4242, {
+  it("never serves a wide cached token to a narrower request", async () => {
+    // A cache keyed on `installationId` alone would hand the maximal token of
+    // the first call to a caller that asked for a restricted one.
+    const wide = await getInstallationToken(4242);
+    const narrow = await getInstallationToken(4242, {
       repositories: ["minddy"],
       permissions: { contents: "read" },
     });
-    expect(large.token).not.toBe(etroit.token);
+    expect(wide.token).not.toBe(narrow.token);
     expect(h.minted).toHaveLength(2);
   });
 
@@ -131,43 +127,18 @@ describe("le mint d'un token d'installation", () => {
   });
 });
 
-describe("project clone target", () => {
+describe("project forge target", () => {
   it("always scopes the token to the linked stable repository id", async () => {
     await resolveRepoCloneTarget("proj-1");
     expect(h.minted[0]).toMatchObject({ repository_ids: [1288848861] });
   });
 
-  it("does not narrow the permissions of the token that remains in the function", async () => {
-    // `full`: he is the one who opens the PRs, comments, rereads, merges. Take away from him
-    // permissions would limit nothing more (the repository is already the only one) and
-    // would break installations that did not accept a recent permission.
-    await resolveRepoCloneTarget("proj-1", "full");
+  it("keeps the installation's own permissions", async () => {
+    // Narrowing them would protect nothing more (the repository is already
+    // the only one) and would break installations that did not accept a
+    // recent permission.
+    await resolveRepoCloneTarget("proj-1");
     expect(h.minted[0]).not.toHaveProperty("permissions");
-  });
-
-  it("gives a pushing run `contents: write`", async () => {
-    await resolveRepoCloneTarget("proj-1", "repo-write");
-    expect(h.minted[0]).toMatchObject({
-      repository_ids: [1288848861],
-      permissions: { contents: "write" },
-    });
-  });
-
-  it("gives a review run `contents: read`", async () => {
-    // The heart of the ticket: a proofread is the only anchor from which the content comes
-    // from an unknown fork, and it doesn't write anything to the repository.
-    await resolveRepoCloneTarget("proj-1", "repo-read");
-    expect(h.minted[0]).toMatchObject({
-      repository_ids: [1288848861],
-      permissions: { contents: "read" },
-    });
-  });
-
-  it("returns DIFFERENT tokens for the three profiles", async () => {
-    const full = await resolveRepoCloneTarget("proj-1", "full");
-    const write = await resolveRepoCloneTarget("proj-1", "repo-write");
-    const read = await resolveRepoCloneTarget("proj-1", "repo-read");
-    expect(new Set([full!.token, write!.token, read!.token]).size).toBe(3);
   });
 });
 

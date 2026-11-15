@@ -13,11 +13,12 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import type { Issue, IssueRelationType } from "@/lib/types";
 
 /**
- * Opens the issue linked to a PR in the side panel, ABOVE the Pull
- * Requests page, without navigating to the board (MIN-66). The page being cross-project, on
- * loads the project data from the PR on the fly (members, categories,
- * objectives, issues, relationships) and we plug in the mutations like the board.
- * Mounted with `key={projectId}:{issueId}` → hooks refetched when the project changes.
+ * Opens the issue linked to a PR in the side panel, ABOVE the Pull Requests
+ * page, without navigating to the board (MIN-66). The page is cross-project, so
+ * the PR's project data (members, categories, objectives, issues, relations) is
+ * loaded on the fly and the board's writers are plugged in.
+ * Mounted with `key={projectId}:{issueId}`, so the hooks refetch when the
+ * project changes.
  */
 export function PrIssuePanel({
   projectId,
@@ -42,7 +43,7 @@ export function PrIssuePanel({
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
 
-  // Issue displayed (can change via relationships/parent in the panel).
+  // The issue shown (relations and the parent link can change it).
   const [openId, setOpenId] = useState(issueId);
   const issue: Issue | null = issues.find((i) => i.id === openId) ?? null;
 
@@ -80,10 +81,8 @@ export function PrIssuePanel({
       allIssues={issues}
       relations={relations}
       onUpdate={updateIssue}
-      onDelete={async (id) => {
-        await deleteIssue(id);
-        onClose();
-      }}
+      // The panel closes itself after a successful delete, which calls onClose.
+      onDelete={deleteIssue}
       onSetCategories={setCategories}
       onOpenIssue={setOpenId}
       onAddRelation={handleAddRelation}

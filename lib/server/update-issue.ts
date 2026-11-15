@@ -151,12 +151,6 @@ export async function updateIssueFields({
  the writing (the ticket assignee, or the project owner). Stacks
  with `viaAssistant` — it's Numo who does it, but no one clicked. */
   viaAutomation?: boolean;
-  /** The write is a MECHANICAL consequence of the lifecycle of an agent run
- (`issue-status-sync`: start, PR open/merged/denied), and not a
- request. It carries `viaAssistant` like the assistant — hence this flag,
- which separates “Numo relays my request” from “Numo describes where his run is”.
- Only changes the ORIGIN seen by the automations (MIN-147). */
-  viaAgentRun?: boolean;
   /** The write is a Smart Fill re-evaluation (MIN-750): the timeline names
    Smart-fill, the issue's objectives say it too, and the properties it
    writes stay its own instead of counting as set by hand. */
@@ -886,9 +880,9 @@ export async function updateIssueFields({
     }
   }
 
-  // Feedback (MIN-37): the public status of a linked post follows the outcome, EACH
-  // transition — the correspondence table is complete, there are no more
-  // transition qui ne dise rien (cf. status-sync).
+  // Feedback (MIN-37): the public status of a linked post follows every
+  // transition; the correspondence table is complete, no transition is silent
+  // (cf. status-sync).
   if ("status" in updates && updates.status !== before.status) {
     scheduleFeedbackStatusSync(issueId, updates.status, actorId);
 

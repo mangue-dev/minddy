@@ -1,60 +1,20 @@
 /**
- * Redact known credentials before any output leaves the loop (MIN-239).
- * MIN-421 removes reusable forge credentials from sandbox remotes, but this
- * remains defense in depth for trusted-side clone errors, desktop-local Git URLs,
- * and any future secret registered during a turn. The pure module is included in
- * the VM bundle and imports neither database nor environment access.
+ * Redaction of known credentials in Numo tool results (MIN-239): a tool that
+ * holds a secret registers it, and every string of the result is substituted
+ * before it reaches the model or the persisted thread.
  */
 
 /** Which replaces a secret. Recognizable, and readable by a human debugger. */
 export const REDACTED_MARK = "[redacted]";
 
 /**
- * Length floor. A three-character "secret" would substitute chunks
- * of words all over the output — the cure would be worse than the disease. No forge token
- * is short: `ghs_…` is around forty characters, an access
- * GitLab token is around sixty.
+ * Length floor. A three-character "secret" would substitute chunks of words
+ * all over the output. No forge token is short: `ghs_…` is around forty
+ * characters, a GitLab access token around sixty.
  */
 const MIN_SECRET_LENGTH = 12;
 
-/**
- * The secrets carried by a token-authenticated clone URL
- * (`https://x-access-token:<token>@github.com/…`, `https://oauth2:<token>@…`).
- *
- * The password, in BOTH of its forms: as `URL` renders it (percent-encoded,
- * this is what git writes in `.git/config`) and decoded (this is the raw token, that
- * which can also appear alone in a header or an error message). Both
- * are identical for an alphanumeric token — duplication costs nothing and
- * covers the day it is no longer.
- *
- * The user (`x-access-token`, `oauth2`) is never a secret: it is a
- * protocol constant, and overriding it would make URLs unreadable for nothing.
- */
-export function authUrlSecrets(authUrl: string | null | undefined): string[] {
-  if (!authUrl) return [];
-  let password: string;
-  try {
-    password = new URL(authUrl).password;
-  } catch {
-    return [];
-  }
-  if (!password) return [];
-  const out = [password];
-  try {
-    const decoded = decodeURIComponent(password);
-    if (decoded !== password) out.push(decoded);
-  } catch {
-    // Percent-malformed encoding: raw form is sufficient.
-  }
-  return out;
-}
-
-/**
- * The secret register of a run, and it is MUTABLE on purpose.
- *
- * A run can last longer than a forge installation token, so credentials may be
- * registered more than once while trusted infrastructure rotates them.
- */
+/** The secret register of one conversation turn; tools add to it as they run. */
 export class SecretRedactor {
   private readonly secrets = new Set<string>();
 
@@ -63,22 +23,11 @@ export class SecretRedactor {
     if (value && value.length >= MIN_SECRET_LENGTH) this.secrets.add(value);
   }
 
-  /** Registers the token carried by a clone URL. Never lift. */
-  addAuthUrl(authUrl: string | null | undefined): void {
-    for (const secret of authUrlSecrets(authUrl)) this.add(secret);
-  }
-
-  /** Number of secrets tracked — useful for testing and debugging, nothing else. */
-  get size(): number {
-    return this.secrets.size;
-  }
-
   /**
- * The text, secrets substituted. `split`/`join` rather than a regex: a token
- * is a literal string, and a regex built on it would require
- * to escape it — a special character missed and the substitution silently fails,
- * which is exactly the failure mode we don't want here.
- */
+   * The text, secrets substituted. `split`/`join` rather than a regex: a
+   * token is a literal string, and a regex built from it would need escaping
+   * that can silently fail.
+   */
   redact = (text: string): string => {
     if (!text || this.secrets.size === 0) return text;
     let out = text;
@@ -93,23 +42,13 @@ export class SecretRedactor {
 export type RedactText = (text: string) => string;
 
 /**
- * The substitution applied to STRINGS of any value, **en
- * depth** — a tool `preview`, a Numo tool result, an event payload
- *: all are nested objects, and it's basically a secret that's
- * cache.
- *
- * “In depth” was FALSE until MIN-328: the comment announced it, the
- * code only went down one level. A substitution that does not go down is
- * worse than no substitution: it gives the appearance of guarantee.
- *
- * Here rather than in the supervisor (MIN-343): Numo needs this too, and a
- * SECOND substitution written next to it would be the original fault started again.
+ * Applies the substitution to every string of a value, at any depth: tool
+ * results are nested objects and a secret can sit anywhere (MIN-328).
  */
 export function redactDeep(value: unknown, redact: RedactText): unknown {
   if (typeof value === "string") return redact(value);
   if (Array.isArray(value)) return value.map((item) => redactDeep(item, redact));
-  // `null` is an object; a Date, a Buffer and others have nothing to gain from
-  // be copied field by field — only simple objects are lowered.
+  // Only plain objects are walked; a Date or a Buffer is kept as is.
   if (value === null || typeof value !== "object") return value;
   if (Object.getPrototypeOf(value) !== Object.prototype) return value;
   const out: Record<string, unknown> = {};

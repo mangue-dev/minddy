@@ -3,7 +3,7 @@ import { act, createElement, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentRunPrResponse, PullRequestListItem } from "@/lib/agent-api";
+import type { PullRequestDetailResponse, PullRequestListItem } from "@/lib/agent-api";
 import { usePrContextActions } from "./pr-context-actions";
 
 const state = vi.hoisted(() => ({
@@ -46,13 +46,13 @@ const item = (pr_state: PullRequestListItem["pr_state"] = "open"): PullRequestLi
   title: "Fix the card", author: null, head_branch: "fix-card", created_at: "", updated_at: "", issue: null,
   project: { id: "project", key: "APP", name: "App", icon_url: null, orb_seed: null },
 });
-const detail = (overrides: Partial<AgentRunPrResponse> = {}): AgentRunPrResponse => ({
+const detail = (overrides: Partial<PullRequestDetailResponse> = {}): PullRequestDetailResponse => ({
   pr: { draft: false, title: "Fix the card", url: "https://github.com/acme/app/pull/7", head: "fix-card", base: "main" },
   files: [], checks: null,
   viewer: { capability: "write" },
   readiness: { state: "ready", blockers: [], passed: [], mergeAllowed: true, methods: ["squash"], preferredMethod: "squash" },
   ...overrides,
-} as unknown as AgentRunPrResponse);
+} as unknown as PullRequestDetailResponse);
 
 let client: QueryClient, root: Root, host: HTMLDivElement;
 let hook: ReturnType<typeof usePrContextActions>;
@@ -119,11 +119,11 @@ describe("usePrContextActions", () => {
     await settle();
     // In flight: nothing re-disables.
     expect(ids(hook.itemContextActions(row()))).toEqual(["pr-merge", "pr-state-draft", "pr-state-closed"]);
-    await act(async () => { finish(detail({ viewer: { capability: "read" } as AgentRunPrResponse["viewer"] })); });
+    await act(async () => { finish(detail({ viewer: { capability: "read" } as PullRequestDetailResponse["viewer"] })); });
     await settle();
     expect(ids(hook.itemContextActions(row()))).toEqual(["pr-merge", "pr-state-draft", "pr-state-closed"]);
     // The next opening, even on the same row, reads again and reflects the new answer.
-    state.detail = () => Promise.resolve(detail({ viewer: { capability: "read" } as AgentRunPrResponse["viewer"] }));
+    state.detail = () => Promise.resolve(detail({ viewer: { capability: "read" } as PullRequestDetailResponse["viewer"] }));
     expect(ids(await openMenu())).toEqual([]);
   });
 
@@ -134,7 +134,7 @@ describe("usePrContextActions", () => {
   });
 
   it("hides forge writes from a viewer without write access", async () => {
-    state.detail = () => Promise.resolve(detail({ viewer: { capability: "read" } as AgentRunPrResponse["viewer"] }));
+    state.detail = () => Promise.resolve(detail({ viewer: { capability: "read" } as PullRequestDetailResponse["viewer"] }));
     await render();
     expect(ids(await openMenu())).toEqual([]);
   });
@@ -151,7 +151,7 @@ describe("usePrContextActions", () => {
   it("withholds merge when readiness blocks it and offers the fix entries instead", async () => {
     state.detail = () => Promise.resolve(detail({
       readiness: { state: "blocked", blockers: [{ id: "c", kind: "conflicts", required: true, status: "blocked", source: "pull_request" }],
-        passed: [], mergeAllowed: false, methods: ["squash"], preferredMethod: "squash" } as unknown as AgentRunPrResponse["readiness"],
+        passed: [], mergeAllowed: false, methods: ["squash"], preferredMethod: "squash" } as unknown as PullRequestDetailResponse["readiness"],
     }));
     await render();
     const actions = await openMenu();

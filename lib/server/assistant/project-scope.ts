@@ -3,38 +3,27 @@ import { decodeProjectName } from "@/lib/server/project-content";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function resolveAssistantProjectId(
-  contextProjectId: string | null,
-  requestedProjectId: unknown,
-): string | null {
-  if (typeof requestedProjectId !== "string") return contextProjectId;
-  const explicitProjectId = requestedProjectId.trim();
-  return explicitProjectId || contextProjectId;
-}
-
 export interface AssistantProjectTargetResolver {
   userId: string;
   service: SupabaseClient;
 }
 
 /**
- * Resolve the project target of a project-scoped tool call. A model may name
+ * Resolve the `project_id` of a project-scoped tool call. A model may name
  * the project instead of passing its id — the user said "minddy (MIN)" and the
  * model relayed the key or the label. Accept a project key or exact name as
- * well, resolved against the projects the caller can access. A real UUID and
- * an implicit conversation context keep behaving exactly as before, and a
- * value matching nothing falls through to the access check unchanged.
+ * well, resolved against the projects the caller can access. A value matching
+ * nothing falls through to the access check unchanged.
  */
 export async function resolveAssistantProjectTarget(
   ctx: AssistantProjectTargetResolver,
-  contextProjectId: string | null,
   requestedProjectId: unknown,
-): Promise<{ projectId: string | null; error?: string }> {
-  const projectId = resolveAssistantProjectId(contextProjectId, requestedProjectId);
+): Promise<{ projectId: string | null }> {
   const explicit = typeof requestedProjectId === "string"
     ? requestedProjectId.trim()
     : "";
-  if (!explicit || UUID_RE.test(projectId ?? "")) {
+  const projectId = explicit || null;
+  if (!projectId || UUID_RE.test(projectId)) {
     return { projectId };
   }
 

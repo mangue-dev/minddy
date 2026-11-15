@@ -50,10 +50,8 @@ describe("the pages' Markdown projection bundle", () => {
 
   // 20 s is not a performance assertion — it is what this case COSTS: one more
   // Node process, a `require` of a 1.1 MB bundle, and a jsdom DOM built from scratch.
-  // The old 5 s default held until the suite started loading the machine elsewhere;
-  // the first test to launch parallel subprocesses (`lib/desktop/git-config.git.test.ts`,
-  // MIN-359) made it exceed the limit half the time. The message described a timeout,
-  // not what consumed it. A case whose failure depends on its NEIGHBORS teaches us
+  // The 5 s default failed half the time once other suites launched parallel
+  // subprocesses (MIN-359): a case whose failure depends on its neighbors teaches
   // nothing about what it tests.
   it("loads and projects under the Vercel condition", { timeout: 20_000 }, () => {
     // Pass the entire graph to `require` in a Node process without ESM interop — the

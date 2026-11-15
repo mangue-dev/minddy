@@ -19,7 +19,6 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -89,17 +88,6 @@ const IssueSidePanel = dynamic(
 );
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import { afterFirstContentIdle } from "@/lib/first-content";
-import { createIssueApi } from "@/lib/issues-api";
-import {
-  insertIssueEverywhere,
-  issueWrites,
-  mergeServerIssue,
-  removeIssueEverywhere,
-} from "@/lib/optimistic/issue-writes";
-import { createIssueDeferred } from "@/lib/create-issue-deferred";
-import { buildOptimisticIssue } from "@/lib/optimistic-issue";
-import { useUndoHistory } from "@/lib/undo/undo-context";
-import { snapshotIssue } from "@/lib/undo/undo-core";
 import {
   familyBoardStatuses,
   issueFamilyBoardExitHref,
@@ -114,11 +102,9 @@ import {
   preloadSurface,
 } from "@/lib/lazy-app-surfaces";
 import type {
-  CreateIssueInput,
   Issue,
   IssueRelationType,
   RelationEndpointType,
-  IssueUpdateInput,
 } from "@/lib/types";
 
 function ProjectBoard() {
@@ -148,9 +134,11 @@ function ProjectBoard() {
     issues,
     loading: issuesLoading,
     createIssue,
+    createIssueInProject,
     updateIssue,
     deleteIssue,
     moveIssue,
+    setIssueCycle,
     setCategories,
   } = useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } =
@@ -163,31 +151,22 @@ function ProjectBoard() {
   const { integrations } = useIntegrationsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
-  // Import and priming by Numo are reserved for the owner (the API
-  // reserve): the empty board only shows what is actually within range.
+  // Import and seeding by Numo are the owner's (the API reserves them): the
+  // empty board only offers what is actually within reach.
   const isOwner = !!project && project.owner_id === myUserId;
   // Project readers (MIN-693) browse the board without creating anything.
   const { canWrite } = useProjectCapabilities(projectId);
-  // Smart triage mode (MIN-566) — read once so the toolbar prop narrows off
-  // cleanly (`off` renders no button at all).
   const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const appTabs = useOptionalAppTabSession();
   // No new tab on the phone (MIN-967): the family entry opens the board here.
   const mobile = useMobileLayout() === true;
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
-  // picking work into your week from a project board must work too. The patch
-  // mirrors the server side-effect: adding assigns to me, never a status bump.
+  // picking work into your week from a project board must work too.
   const { currentCycle, nextCycle, cyclesEnabled } = useMyCycleQuery();
   const onSetIssueCycle = useCallback(
-    (issue: Issue, cycleId: string | null) =>
-      void updateIssue(
-        issue.id,
-        cycleId && myUserId
-          ? { cycle_id: cycleId, assignee_id: myUserId }
-          : { cycle_id: cycleId }
-      ).catch((err) => toast.error((err as Error).message)),
-    [updateIssue, myUserId]
+    (issue: Issue, cycleId: string | null) => void setIssueCycle(issue.id, cycleId),
+    [setIssueCycle]
   );
   const buildCycleMenuActions = useCycleMenuActions(
     currentCycle?.id ?? null,
@@ -293,17 +272,16 @@ function ProjectBoard() {
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
   );
-  // The import boot (MIN-171): `?setup=import` opens the import panel
-  // with the CSV deposited in the wizard.
+  // The import start (MIN-171): `?setup=import` opens the import panel with
+  // the CSV dropped in the wizard.
   const [importOpen, setImportOpen] = useState(false);
   const [importMounted, setImportMounted] = useState(false);
   // What the wizard collected one step earlier (brief pasted, CSV submitted).
   // Taken once: reopening it later leaves an empty surface.
   const [handoff, setHandoff] = useState<ReturnType<typeof takeSeedHandoff>>(null);
-  // The reset is TAKEN, it is not replayed: a replayed effect (StrictMode in
-  // dev does it systematically) would find it empty and delete the one we
-  // just got. The ref therefore keeps a copy, which the replays reread
-  // instead of a discount already consumed.
+  // The handoff is TAKEN once: a replayed effect (StrictMode does it in dev)
+  // would find it empty and erase the one just received. The ref keeps a copy
+  // that replays read instead of the consumed handoff.
   const handoffTaken = useRef(false);
   const takenHandoff = useRef<ReturnType<typeof takeSeedHandoff>>(null);
   // Views Numo is currently building from a description (their chip shows a
@@ -342,70 +320,12 @@ function ProjectBoard() {
     setCreateOpen(true);
   }, []);
 
-  // Create in an arbitrary project (the create dialog's "create in another
-  // project" dropdown). Refresh that project's board cache so the issue shows
-  // the next time it's viewed. `useIssuesQuery` above only owns the current one.
-  const queryClient = useQueryClient();
-  const { record } = useUndoHistory();
-  // Optimistic (MIN-40): the dialog closes without waiting for POST. The map
-  // is inserted into the cache of the target project (visible on the next display),
-  // replaced by the server line on success, removed + toast on failure.
-  const createIssueInProject = useCallback(
-    async (targetProjectId: string, input: CreateIssueInput) => {
-      // Smart-fill (MIN-260): the server fills the ticket BEFORE inserting the
-      // line, so no optimistic card — it would be empty for the duration of
-      // remplissage. Cf. [create-issue-deferred](../../../../lib/create-issue-deferred.ts).
-      if (input.smart_fill) {
-        createIssueDeferred({ queryClient, projectId: targetProjectId, input, record });
-        return null;
-      }
-      const optimistic = buildOptimisticIssue(
-        input,
-        targetProjectId,
-        myUserId,
-        queryClient.getQueryData<Issue[]>(["issues", targetProjectId]) ?? [],
-      );
-      // Registered BEFORE the patch (MIN-156): a GET response
-      // played earlier can no longer make the newly created map disappear.
-      const handle = issueWrites.begin({ kind: "insert", row: optimistic });
-      insertIssueEverywhere(queryClient, targetProjectId, optimistic);
-      // The map names its line: the real-time echo of our creation is
-      // recognized, not adopted alongside it (lib/optimistic-issue.ts).
-      void createIssueApi(targetProjectId, { ...input, id: optimistic.id }).then(
-        (issue) => {
-          insertIssueEverywhere(queryClient, targetProjectId, issue);
-          mergeServerIssue(queryClient, targetProjectId, issue);
-          issueWrites.settle(handle, issue);
-          record({
-            kind: "create",
-            projectId: targetProjectId,
-            issueId: issue.id,
-            snapshot: snapshotIssue(issue),
-          });
-        },
-        (err) => {
-          issueWrites.fail(handle);
-          removeIssueEverywhere(queryClient, targetProjectId, optimistic.id);
-          toast.error((err as Error).message);
-        },
-      );
-      return optimistic;
-    },
-    [queryClient, myUserId, record],
-  );
-
   // Relations (MIN-25): open a related issue by id, add/remove relations.
   const openIssueById = useCallback((id: string) => {
     setOpenIssueId(id);
     setOpenIssueTab("description");
   }, []);
 
-  // Smart triage (MIN-566): the toolbar button. The server rewrites the
-  // open columns' positions per the project's mode and returns the moves —
-  // they are ALREADY persisted, the client only applies them to the caches
-  // (no per-issue PATCH) and refetches to stay authoritative. The manual
-  // drag order remains editable: this is one gesture among others, not a
-  // lock-in.
   const handleOpenIssue = useCallback((issue: Issue) => {
     setOpenIssueId(issue.id);
     setOpenIssueTab("description");
@@ -513,23 +433,6 @@ function ProjectBoard() {
     },
     [openIntent, project],
   );
-  const handleUpdateIssue = useCallback(
-    (id: string, patch: IssueUpdateInput) => {
-      void updateIssue(id, patch).catch((err) =>
-        toast.error((err as Error).message),
-      );
-    },
-    [updateIssue],
-  );
-  const handleSetCategories = useCallback(
-    (id: string, ids: string[]) => {
-      void setCategories(id, ids).catch((err) =>
-        toast.error((err as Error).message),
-      );
-    },
-    [setCategories],
-  );
-
   const handleCreateView = async (name: string, description?: string) => {
     const view = await createViewAndSelect(name);
     const wish = description?.trim();
@@ -646,14 +549,14 @@ function ProjectBoard() {
     }
   }, [newParam, pathname, router]);
 
-  // End of the creation wizard: /projects/[id]?setup=numo|import opens the primer
-  // that the user has chosen (MIN-171). The URL only carries the statement —
-  // what was entered travels in memory (project-seed-handoff) because a
-  // `File` does not serialize. The instruction is single-use, like `?new=`
-  // : closing it should not reopen it the next time it is rendered.
+  // End of the creation wizard: /projects/[id]?setup=numo|import opens the
+  // starting point the user chose (MIN-171). The URL only carries the choice;
+  // what was entered travels in memory (project-seed-handoff), since a `File`
+  // does not serialize. Single-use, like `?new=`: closing it must not reopen
+  // it on the next render.
   useEffect(() => {
     if (setupParam !== "import" && setupParam !== "numo") return;
-    // The first message NAMES the project: we are therefore waiting to know it.
+    // The first message NAMES the project, so wait until it is known.
     if (setupParam === "numo" && !project) return;
     if (!handoffTaken.current) {
       handoffTaken.current = true;
@@ -661,11 +564,10 @@ function ProjectBoard() {
       setHandoff(takenHandoff.current);
     }
     if (setupParam === "numo") {
-      // The pasted brief (MIN-173) does not open a backstage pass: it OPENS
-      // THE CONVERSATION. This is the same screen as "I'm talking about it with Numo", on
-      // first message - the one that didn't stick starts with questions from
-      // Numo, the one who pasted shares his text, and the two can
-      // respond before a single ticket exists.
+      // A pasted brief (MIN-173) OPENS THE CONVERSATION — the same screen as
+      // "Talk it through with Numo", only the first message differs: without a
+      // brief Numo starts with questions, with one it starts from the text,
+      // and both can go back and forth before a single issue exists.
       const taken = takenHandoff.current;
       const brief = taken?.kind === "numo" ? taken.brief?.trim() : null;
       openAssistant({
@@ -717,12 +619,11 @@ function ProjectBoard() {
       {issuesLoading ? (
         <BoardLoadingSkeleton position={boardScrollPosition} />
       ) : issues.length === 0 ? (
-        /* Empty board: the THREE ways to put something on it, in order
- of what we do most — a ticket in hand (the shortcut se
- shows where it is used), the import of an existing backlog, the
- conversation with Numo. Nothing to read to understand: the scene says
- “nothing here, a first card will land there”, the buttons say the
- remains. Import and seed remain with the owner (the API reserves them for him, and he pays for the call). */
+        /* Empty board: the THREE ways to fill it, most frequent first — an
+           issue in hand (the shortcut shows where it is used), the import of
+           an existing backlog, the conversation with Numo. Import and seeding
+           stay with the owner: the API reserves them, and the owner pays for
+           the call. */
         <PageScroll className="px-6 py-8">
           <div className="mx-auto max-w-content">
             <EmptyScene icon={BOARD_ICON} title={t("emptyTitle")}>
@@ -870,8 +771,8 @@ function ProjectBoard() {
               onOpenPlan={handleOpenPlan}
               onCreateIssue={openCreate}
               onAskNumo={handleAskNumoForIssues}
-              onUpdateIssue={handleUpdateIssue}
-              onSetCategories={handleSetCategories}
+              onUpdateIssue={updateIssue}
+              onSetCategories={setCategories}
               onDeleteIssue={deleteIssue}
               onMove={moveIssue}
               horizontalScroll={boardScrollPosition}

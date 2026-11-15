@@ -15,8 +15,7 @@ import type { MintProfile } from "@/lib/server/forge-relay/mint";
 /**
  * Token-provider seam for the managed forge relay (docs/managed-forge-relay-plan.md,
  * Phase 1). The scoping, caching, and error-handling logic of the callers
- * (`lib/server/agent/repo-access.ts` and everything routed through it) stays
- * untouched — only the token source behind this interface is swapped.
+ * stays untouched; only the token source behind this interface is swapped.
  *
  * Two implementations:
  *
@@ -38,7 +37,7 @@ import type { MintProfile } from "@/lib/server/forge-relay/mint";
 
 export interface InstallationTokenRequest {
   installationId: number | string;
-  /** Same constraint as the local path: short repo names, fixed permission profiles. */
+  /** Same constraint as the local path: repository-scoped, no narrowed permissions. */
   scope?: InstallationTokenScope;
 }
 
@@ -103,24 +102,20 @@ function cacheRelayToken(key: string, token: InstallationToken): void {
 }
 
 /**
- * Maps a local mint scope to its wire profile. The relay only accepts the
- * fixed profiles of MIN-327 — an empty/absent permission object would be
- * indistinguishable from "the app's full power set" and is exactly the
- * accidental over-mint the profile field exists to prevent.
+ * Maps a local mint scope to its wire profile. Local callers only mint a
+ * repository list (no scope) or a repository-scoped token with the
+ * installation's own permissions (`full`). The relay accepts only its fixed
+ * profiles, so any narrower permission set is refused here rather than
+ * silently widened.
  */
 function mintProfileFromScope(
   scope?: InstallationTokenScope,
 ): MintProfile {
   if (!scope) return "repository-list";
-  const permissions = scope.permissions;
-  const entries = Object.entries(permissions ?? {});
-  if (entries.length === 0) return "full";
-  if (entries.length === 1 && entries[0][0] === "contents") {
-    if (entries[0][1] === "write") return "repo-write";
-    if (entries[0][1] === "read") return "repo-read";
-  }
+  const permissions = Object.entries(scope.permissions ?? {});
+  if (permissions.length === 0) return "full";
   throw new Error(
-    `No relay mint profile for permissions: ${JSON.stringify(permissions)}`,
+    `No relay mint profile for permissions: ${JSON.stringify(scope.permissions)}`,
   );
 }
 

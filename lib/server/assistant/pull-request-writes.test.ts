@@ -72,13 +72,12 @@ vi.mock("@/lib/server/git/github-app", () => ({ getGithubAppSlug }));
 vi.mock("@/lib/server/issue-reads", () => ({ assertIssueInProject }));
 
 const { executePullRequestWriteTool } = await import("./pull-request-writes");
+const { withPrOperation } = await import("@/lib/server/agent/pr-operation-lock");
 
 const TARGET = {
   provider: "github" as const,
   repoFullName: "acme/app",
   defaultBranch: "main",
-  remoteUrl: "https://github.com/acme/app",
-  authUrl: "https://x:tok@github.com/acme/app",
   token: "tok",
   linkId: "link-1",
   connectionId: "conn-1",
@@ -179,6 +178,29 @@ describe("merge_pull_request", () => {
         forgeSync: "github",
       }),
     );
+  });
+
+  it("waits out a merge already running from the PR page instead of merging twice", async () => {
+    const mergePullRequest = vi.fn().mockResolvedValue(undefined);
+    forgeFor.mockReturnValue(forgeWith({
+      getPullRequest: vi.fn().mockResolvedValue(pr()),
+      mergePullRequest,
+    }));
+    let release!: () => void;
+    const pageMerge = withPrOperation(
+      { provider: "github", repoFullName: "acme/app", number: 42 },
+      "merge",
+      () => new Promise<void>((resolve) => { release = resolve; }),
+    );
+
+    const { result, success } = await run();
+
+    expect(success).toBe(false);
+    expect(result).toMatchObject({ error: expect.stringContaining("already being merged") });
+    expect(mergePullRequest).not.toHaveBeenCalled();
+    expect(upsertPullRequest).not.toHaveBeenCalled();
+    release();
+    await pageMerge;
   });
 
   it.each(["github", "gitlab"])("settles every current issue association after a %s merge", async (provider) => {

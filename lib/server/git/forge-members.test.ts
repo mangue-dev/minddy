@@ -1,25 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * `buildForgeAssigneeIndex` — the “octocat” bridge → the minddy member who has
- * connected this account.
+ * `buildForgeAssigneeIndex` — the bridge from “octocat” to the minddy member
+ * who linked that account.
  *
- * What these tests pinpoint is not the happy rapprochement, but the two
- * safeguards, because that they are the ones who cost a lot when they jump:
+ * These tests pin down not the happy match but the two safeguards, because
+ * they are the ones that cost the most when they fail:
  *
- * 1. **Only MEMBERS of the project** enter the index. `issues.assignee_id`
- * carries an FK to `auth.users`, not to `project_members`: assign a
- * login known to minddy but foreign to the project WILL PASS into the database, and the
- * ticket would land with someone who doesn't even see the project. Nothing
- * would be raised, no one would see it.
- * 2. **Nothing is guessed.** No matching by name, unlike
- * CSV import — here we have an exact equality, and a wrong assignment costs
- * more expensive than an absence assigned.
+ * 1. **Only project MEMBERS** enter the index. `issues.assignee_id` has an FK
+ *    to `auth.users`, not to `project_members`: assigning a login known to
+ *    minddy but foreign to the project WOULD pass in the database, and the
+ *    issue would land with someone who cannot even see the project. Nothing
+ *    would throw, and nobody would notice.
+ * 2. **Nothing is guessed.** No name matching, unlike the CSV import: this is
+ *    an exact equality, and a wrong assignment costs more than a missing one.
  *
- * The third point is more discreet: the queried table is not the same
- * depending on the forge (`git_user_identities` on the GitHub side, `git_connections` on the
- * GitLab side, where the OAuth connection IS identity). Getting the wrong table would make a
- * index silently empty — so no more assigned, with no errors anywhere.
+ * The third point is subtler: the queried table depends on the forge
+ * (`git_user_identities` for GitHub, `git_connections` for GitLab, where the
+ * OAuth connection IS the identity). Querying the wrong table would leave the
+ * index silently empty, so nothing would be assigned and no error would show.
  */
 
 interface Row extends Record<string, unknown> {}
@@ -28,13 +27,13 @@ let projectRows: Row[] = [];
 let memberRows: Row[] = [];
 let identityRows: Row[] = [];
 let connectionRows: Row[] = [];
-/** The tables actually queried, in order — the correct referral probe. */
+/** The tables actually queried, in order: the probe for correct routing. */
 let queried: string[] = [];
-/** Force the identity lookup to fail (the “we return an empty index” branch). */
+/** Forces the identity lookup to fail (the “return an empty index” branch). */
 let failIdentityLookup = false;
 
-/** Double PostgREST string, reduced to whatever the module touches: `eq`, `in`,
- `select`, and resolution to array or single row. */
+/** PostgREST chain double, reduced to what the module touches: `eq`, `in`,
+ `select`, and resolution to an array or a single row. */
 function table(name: string, rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
   const query: Record<string, unknown> = {};
@@ -97,7 +96,7 @@ beforeEach(() => {
 });
 
 describe("buildForgeAssigneeIndex", () => {
-  it("indexe le owner et les membres — le owner n'a pas de ligne project_members", async () => {
+  it("indexes the owner and the members; the owner has no project_members row", async () => {
     memberRows.push({ project_id: PROJECT, user_id: "user-dev", role: "member" });
     identityRows.push(
       { provider: "github", user_id: OWNER, account_login: "octocat" },
@@ -107,7 +106,7 @@ describe("buildForgeAssigneeIndex", () => {
     const index = await buildForgeAssigneeIndex({ projectId: PROJECT, provider: "github" });
 
     expect(index.get("octocat")).toBe(OWNER);
-    // Indexed in lowercase: the forge does not have the same case from one endpoint to another.
+    // Indexed in lowercase: the forge does not keep the same case across endpoints.
     expect(index.get("hubot")).toBe("user-dev");
   });
 
@@ -124,7 +123,7 @@ describe("buildForgeAssigneeIndex", () => {
     expect(index.has("reader")).toBe(false);
   });
 
-  it("LAISSE DEHORS un login connu de minddy mais étranger au projet", async () => {
+  it("LEAVES OUT a login known to minddy but foreign to the project", async () => {
     identityRows.push(
       { provider: "github", user_id: OWNER, account_login: "octocat" },
       { provider: "github", user_id: "user-stranger", account_login: "intruder" },
@@ -136,7 +135,7 @@ describe("buildForgeAssigneeIndex", () => {
     expect(index.has("intruder")).toBe(false);
   });
 
-  it("lit git_connections côté GitLab — la connexion OAuth EST l'identité", async () => {
+  it("reads git_connections for GitLab, where the OAuth connection IS the identity", async () => {
     connectionRows.push({ provider: "gitlab", user_id: OWNER, account_login: "octo-gl" });
     identityRows.push({ provider: "gitlab", user_id: OWNER, account_login: "jamais-lu" });
 
@@ -147,7 +146,7 @@ describe("buildForgeAssigneeIndex", () => {
     expect(queried).not.toContain("git_user_identities");
   });
 
-  it("ne mélange pas les forges : une identité GitLab ne répond pas pour GitHub", async () => {
+  it("does not mix forges: a GitLab identity does not answer for GitHub", async () => {
     identityRows.push({ provider: "gitlab", user_id: OWNER, account_login: "octocat" });
 
     const index = await buildForgeAssigneeIndex({ projectId: PROJECT, provider: "github" });
@@ -155,7 +154,7 @@ describe("buildForgeAssigneeIndex", () => {
     expect(index.size).toBe(0);
   });
 
-  it("premier arrivé, premier servi quand deux comptes déclarent le même login", async () => {
+  it("first come, first served when two accounts declare the same login", async () => {
     memberRows.push({ project_id: PROJECT, user_id: "user-dev" });
     identityRows.push(
       { provider: "github", user_id: OWNER, account_login: "octocat" },
@@ -167,17 +166,17 @@ describe("buildForgeAssigneeIndex", () => {
     expect(index.get("octocat")).toBe(OWNER);
   });
 
-  it("rend un index VIDE plutôt que de lever quand le lookup échoue", async () => {
+  it("returns an EMPTY index rather than throwing when the lookup fails", async () => {
     failIdentityLookup = true;
     identityRows.push({ provider: "github", user_id: OWNER, account_login: "octocat" });
 
     const index = await buildForgeAssigneeIndex({ projectId: PROJECT, provider: "github" });
 
-    // Empty = no one is assigned, the behavior before MIN-144. Not an exception.
+    // Empty = nobody is assigned, the behavior before MIN-144. Not an exception.
     expect(index.size).toBe(0);
   });
 
-  it("n'interroge pas les identités quand le projet n'a personne", async () => {
+  it("does not query identities when the project has nobody", async () => {
     projectRows = [];
 
     const index = await buildForgeAssigneeIndex({ projectId: PROJECT, provider: "github" });
@@ -193,20 +192,20 @@ describe("matchForgeAssignee", () => {
     ["hubot", "user-dev"],
   ]);
 
-  it("prend le PREMIER assigné reconnu, dans l'ordre de la forge", () => {
-    // The two forges accept several assignees, minddy only one.
+  it("takes the FIRST recognized assignee, in the forge's order", () => {
+    // Both forges accept several assignees, minddy only one.
     expect(matchForgeAssignee(["hubot", "octocat"], index)).toBe("user-dev");
   });
 
-  it("saute ceux qu'on ne reconnaît pas plutôt que de renoncer", () => {
+  it("skips unrecognized assignees rather than giving up", () => {
     expect(matchForgeAssignee(["inconnu", "octocat"], index)).toBe("user-owner");
   });
 
-  it("compare hors casse et hors espaces", () => {
+  it("compares ignoring case and surrounding spaces", () => {
     expect(matchForgeAssignee(["  OctoCat "], index)).toBe("user-owner");
   });
 
-  it("rend null quand personne n'est reconnu — jamais un assigné deviné", () => {
+  it("returns null when nobody is recognized, never a guessed assignee", () => {
     expect(matchForgeAssignee(["inconnu", "autre"], index)).toBeNull();
     expect(matchForgeAssignee([], index)).toBeNull();
   });

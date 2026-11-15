@@ -94,7 +94,7 @@ export async function adminGrantForRequest(
 }
 
 /** The grant of a background turn: no session, the live account decides. */
-export interface AdminBackgroundGrant {
+interface AdminBackgroundGrant {
   background: true;
 }
 

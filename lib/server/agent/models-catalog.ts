@@ -42,10 +42,8 @@ import { providerSupportsModelCapability } from "@/lib/model-catalog-capability"
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 
 /**
- * Code agent template catalog (MIN-46), resolved according to the provider
- * ASSET of an account (its unique BYOK, or the OpenRouter platform key). Source
- * unique shared by the route `/api/agent/models` (UI picker) AND the tool
- * `list_agent_models` of Numo (wizard) — same list, same cache, same default.
+ * Model catalog (MIN-46) of an account's active provider (its BYOK, or the
+ * OpenRouter platform key), served by `/api/agent/models` to the model picker.
  *
  * We only return `{ id, name, multiplier? }` per model (+ the slug provider,
  * the configured account default and the plan cap): the picker reformats via

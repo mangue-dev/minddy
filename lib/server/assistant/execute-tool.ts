@@ -24,7 +24,6 @@ import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 
-import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
 import { executeMcpSetupTool } from "@/lib/server/mcp-setup";
 
@@ -38,12 +37,17 @@ import {
   type ProjectAccess,
 } from "@/lib/server/project-access";
 import { resolveProjectRole } from "@/lib/project-roles";
-import { SENSITIVE_TOOLS, guardProactiveTool, type SensitiveCategory } from "./proactive-guard";
+import { guardProactiveTool } from "./proactive-guard";
+import { COMMENT_NOT_ALLOWED_MESSAGE, READ_ONLY_PROJECT_MESSAGE } from "./tool-capabilities";
 import {
-  COMMENT_NOT_ALLOWED_MESSAGE,
-  READ_ONLY_PROJECT_MESSAGE,
-  numoToolCapability,
-} from "./tool-capabilities";
+  REMINDER_TOOLS,
+  REMINDER_WRITE_TOOLS,
+  WAITS_FOR_USER_TOOLS,
+  numoToolPolicy,
+  type ProjectScopedToolName,
+  type SensitiveCategory,
+  type UserScopedToolName,
+} from "./tool-policy";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import {
   MAX_DESCRIPTION_LENGTH,
@@ -71,8 +75,7 @@ import {
   updateDatabaseViewsForAgent,
 } from "@/lib/server/database-view-tools";
 
-/** The names that Numo bears, so that patch refusals refer to tools
- * which exist IN THE CHAT (see IssueTextTools). */
+/** Numo's own tool names, so that a refused edit points to tools that exist in the chat (see IssueTextTools). */
 const NUMO_TEXT_TOOLS: IssueTextTools = {
   read: "get_issue",
   appendToPlan: "append_to_plan",
@@ -124,6 +127,7 @@ import {
   getRoutineForUser,
   listRoutinesForUser,
   updateRoutine,
+  type RoutineErrorKey,
 } from "@/lib/server/routines";
 import {
   routineOccurrenceDetail,
@@ -305,10 +309,10 @@ import {
   type InboxReadCategory,
   type InboxReadState,
 } from "@/lib/inbox-tool";
-import { resolveAssistantProjectId, resolveAssistantProjectTarget } from "./project-scope";
+import { resolveAssistantProjectTarget } from "./project-scope";
+import { MAX_BULK_ISSUES, MAX_PATCH_CHARS } from "@/lib/server/mcp/surface-limits";
 import { smartAssignFromStatusOf } from "@/lib/smart-assign-config";
 import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
-import { PERSONAL_TARGET_TOOLS } from "./tools";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -321,10 +325,11 @@ export interface ToolContext {
   documentationHelp?: boolean;
   /** Cancels the database transport of project and issue listing tools. */
   readAbortSignal?: AbortSignal;
-  /** Context project for legacy comment entry points. */
+  /**
+   * The project the turn was opened from. Context only: every project tool
+   * names its own target in `project_id`.
+   */
   projectId: string | null;
-  /** Conversation tools must name their own target, independent of page navigation. */
-  requireExplicitProjectTarget?: boolean;
   userId: string;
   /** Model of the current generation — Numo's PR comments carry it in their signature. */
   model?: string;
@@ -342,9 +347,9 @@ export interface ToolContext {
       the user's Account → Preferences choice. Defaults to 'triage'. */
   numoDefaultStatus?: IssueStatusValue;
   /**
-   * Web search for the current tour: the run of the ledger to which to attach its lines
-   * `web_search`, and the counter (MUTED) which caps searches for the same
-   * tour. Absent = surface does not open web search.
+   * Web search for this turn: the ledger run its `web_search` lines attach
+   * to, and the counter (mutated) that caps the searches of the turn.
+   * Absent where the surface offers no web search.
    */
   webSearch?: WebSearchTurn;
   /** Conversation for the turn (ledger drill-down). Null outside chat. */
@@ -356,7 +361,6 @@ export interface ToolContext {
   operationBudgetUsd?: number | null;
   operationBudgetPercent?: number | null;
   routineId?: string | null;
-  /** Automation chain that owns this parent Numo operation, if any. */
   /**
    * The administrator session this turn was admitted from (MIN-829), or the
    * background grant of an admin account's background turn (MIN-944). Every
@@ -403,9 +407,6 @@ export interface ToolContext {
   reminderGrants?: readonly SensitiveCategory[] | null;
 }
 
-const WATCH_WRITE_TOOLS = new Set(["create_watch", "update_watch", "cancel_watch"]);
-const WATCH_TOOLS = new Set([...WATCH_WRITE_TOOLS, "list_watches"]);
-
 /**
  * Who may use the reminder tools (MIN-923). Setting or cancelling one is the
  * user's own request in a conversation with Numo; a routine or a mention
@@ -413,11 +414,11 @@ const WATCH_TOOLS = new Set([...WATCH_WRITE_TOOLS, "list_watches"]);
  * so neither sees the reminders at all.
  */
 function watchToolRefusal(toolName: string, ctx: ToolContext): string | null {
-  if (!WATCH_TOOLS.has(toolName)) return null;
+  if (!REMINDER_TOOLS.has(toolName)) return null;
   if (ctx.journalSource === "routine" || ctx.journalSource === "mention") {
     return `${toolName} is not available here: reminders are set, listed and cancelled only in a conversation with the user. Do not retry.`;
   }
-  if (WATCH_WRITE_TOOLS.has(toolName) && (ctx.reminder || ctx.journalSource !== "conversation")) {
+  if (REMINDER_WRITE_TOOLS.has(toolName) && (ctx.reminder || ctx.journalSource !== "conversation")) {
     return `${toolName} is not available in this turn: reminders are set and cancelled only when the user asks in a conversation. Do not retry.`;
   }
   return null;
@@ -425,19 +426,19 @@ function watchToolRefusal(toolName: string, ctx: ToolContext): string | null {
 
 /** What a reminder's unattended turn refuses, with the reason the model reads. */
 function reminderRefusal(toolName: string): string | null {
-  if (toolName === "ask_user" || toolName === "propose_backlog") {
+  if (WAITS_FOR_USER_TOOLS.has(toolName)) {
     return `${toolName} is not available: this reminder turn runs unattended and nobody can answer. Decide, or leave it to the user in your reply.`;
   }
-  if (toolName in SENSITIVE_TOOLS) {
+  if (numoToolPolicy(toolName)?.sensitive) {
     return `${toolName} is refused in a reminder turn: it needs the user. Say in your reply what you would do and leave it to them.`;
   }
   return null;
 }
 
-/** Status of web search for ONE round (one Numo response, one @Numo). */
-export interface WebSearchTurn {
+/** Web search in one turn (one Numo answer, one @Numo reply). */
+interface WebSearchTurn {
   runId: string;
-  /** Research already done this round — serves as a cap AND a ledger `seq`. */
+  /** Searches already made this turn: the cap's count and the ledger `seq`. */
   used: number;
 }
 
@@ -445,32 +446,28 @@ export interface ToolExecution {
   result: unknown;
   success: boolean;
   /**
-   * What the MODEL reads back, when it's not what the screen shows. A
-   * seed proposal (MIN-173) makes forty titles with their
-   * descriptions: the thread must display them, the model has just written them and
-   * has nothing more to do with them. `result` then goes to the browser and to the
-   * message metadata, `modelResult` in the conversation history.
+   * What the MODEL reads back, when it is not what the screen shows. A seed
+   * proposal (MIN-173) holds forty titles with their descriptions: the thread
+   * displays them, while the model has just written them and has nothing
+   * more to do with them. `result` goes to the browser and the message
+   * metadata, `modelResult` to the conversation history.
    */
   modelResult?: unknown;
   /**
-   * The LIVE IDENTIFIERS that `result` carries — a freshly created `mdy_` * key, the SSO secret of a board (MIN-343).
-   *
-   * They go to the browser with the result, live, and will not NOWHERE
-   * elsewhere: the loop substitutes them before writing `assistant_messages` and
-   * before returning control to the model. A secret left in the history would be
-   * replayed to the supplier each turn, rereadable in base, and would start again in
-   * account export — three leaks for a value which is only used once,
-   * under the eyes of its owner.
-   *
-   * Corollary assumed: the model never sees the value, so cannot copy the
-   * into its response. It's the screen that shows it (`SecretCallout`), and
-   * the prompt tells it.
+   * The live secrets `result` carries, such as a board's SSO secret
+   * (MIN-343). They reach the browser with the live result and nowhere else:
+   * the loop replaces them before writing `assistant_messages` and before
+   * handing back to the model. A secret left in the history would be sent to
+   * the provider on every turn, readable in the database and repeated in the
+   * account export, for a value used once under its owner's eyes. The model
+   * never sees the value, so it cannot copy it into its answer: the screen
+   * shows it (`SecretCallout`), and the prompt says so.
    */
   secrets?: string[];
   /**
-   * The turn ends here: the hand passes to the user, as on `ask_user`.
-   * What the loop would chain would be of no use until he has
-   * responded to what this result puts in front of him.
+   * The turn ends here and hands over to the user, as `ask_user` does:
+   * nothing the loop could chain is useful until they answer what this
+   * result shows them.
    */
   pause?: boolean;
 }
@@ -483,7 +480,6 @@ function toolError(message: string): ToolExecution {
   return { result: { error: message }, success: false };
 }
 
-/** Map a lib/server/* failure into a readable tool error. */
 /** Role refusals from the shared cores (MIN-693), in words Numo can relay. */
 const ROLE_ERROR_MESSAGES: Record<string, string> = {
   readOnlyProject: READ_ONLY_PROJECT_MESSAGE,
@@ -515,8 +511,7 @@ function capabilityDenied(toolName: string, capability: string): ToolExecution {
   return settingsError("ownerOnly");
 }
 
-/** Refusal to attach a PR, told to Numo so that he relays them as they are
- rather than inventing a reason. */
+/** Why a pull request could not be linked, for Numo to relay rather than invent a reason. */
 const PR_LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
     "The pull request could not be linked. Refresh it and try again.",
@@ -527,11 +522,10 @@ const PR_LINK_REFUSALS: Record<PrLinkRefusal, string> = {
 };
 
 /**
- * Refusal of a routine write (MIN-185), told to Numo to relay them
- * rather than inventing a reason — or worse, looking for a workaround.
- * `ownerOnly` in particular: it's a rule, not a technical obstacle.
+ * Why a routine write failed (MIN-185), for Numo to relay rather than invent
+ * a reason or look for a workaround: `ownerOnly` is a rule, not an obstacle.
  */
-function routineErrorMessage(r: { errorKey: string }): string {
+function routineErrorMessage(r: { errorKey: RoutineErrorKey }): string {
   switch (r.errorKey) {
     case "ownerOnly":
       return "Only the project's OWNER can create or change a routine — it is their usage budget that runs every time. Tell the user plainly; there is no way around it, do not retry and do not offer one.";
@@ -781,9 +775,8 @@ async function writePlan(
   };
 }
 
-/** create_view / update_view for both scopes: project mode uses the current or
-    explicitly targeted project, while global mode targets the user's personal
-    cross-project view. */
+/** create_view / update_view on a project's views, or on the user's personal
+    cross-project views when `projectId` is null. */
 async function executeViewTool(
   toolName: "create_view" | "update_view",
   args: Record<string, unknown>,
@@ -830,9 +823,9 @@ async function executeViewTool(
   return result.ok ? shape(result) : libError(result);
 }
 
-/** list_views for both scopes: the project's views in project mode, the user's
-    personal cross-project views in global mode (project_id null). RLS scopes
-    both — a global view is only ever visible to its owner. */
+/** list_views: a project's views, or the user's personal cross-project views
+    when `projectId` is null. RLS scopes both: a cross-project view is only
+    ever visible to its owner. */
 async function listViews(
   ctx: ToolContext,
   projectId: string | null,
@@ -1004,11 +997,6 @@ async function executeWebSearch(
   });
 }
 
-/** Reads whose text can show images: their result lists them (MIN-728). */
-const DOCUMENT_READ_TOOLS = new Set([
-  "get_issue", "get_objective", "get_page", "get_scratchpad", "get_feedback",
-]);
-
 export async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
@@ -1034,7 +1022,7 @@ export async function executeTool(
   // Typed mentions in what Numo reads carry the target's current label, or a
   // neutral one when the user may not see it (MIN-734).
   const execution = raw.success ? await mentionsForNumo(raw, ctx.userId) : raw;
-  if (!execution.success || !DOCUMENT_READ_TOOLS.has(toolName)) return execution;
+  if (!execution.success || !numoToolPolicy(toolName)?.readsDocument) return execution;
   const result = execution.result;
   if (!result || typeof result !== "object" || Array.isArray(result)) return execution;
   const images = imagesIn(result);
@@ -1046,6 +1034,13 @@ export async function executeTool(
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** A UUID argument, trimmed and lowercased, or null. */
+function uuidArg(value: unknown): string | null {
+  return typeof value === "string" && UUID_PATTERN.test(value.trim())
+    ? value.trim().toLowerCase()
+    : null;
+}
+
 async function executeMemoryTool(
   toolName: "remember" | "forget",
   args: Record<string, unknown>,
@@ -1054,12 +1049,9 @@ async function executeMemoryTool(
   if (!ctx.memoryWritable) {
     return toolError("Memory is not available here: it is switched off, or this is a routine or a comment mention. Do not retry.");
   }
-  const id = (value: unknown) => typeof value === "string" && UUID_PATTERN.test(value.trim())
-    ? value.trim().toLowerCase()
-    : null;
   try {
     if (toolName === "forget") {
-      const memoryId = id(args.id);
+      const memoryId = uuidArg(args.id);
       if (!memoryId || !(await deleteNumoMemory(ctx.service, ctx.userId, memoryId))) {
         return toolError("No memory with this id. Take ids from your memory list.");
       }
@@ -1067,14 +1059,14 @@ async function executeMemoryTool(
     }
     let projectId: string | null = null;
     if (args.project_id !== null && args.project_id !== undefined && args.project_id !== "") {
-      projectId = id(args.project_id);
+      projectId = uuidArg(args.project_id);
       if (!projectId || !(await getProjectAccess(ctx.userId, projectId))) {
         return toolError("project_id must be the id of a project the user can open (use list_projects), or null.");
       }
     }
     const replaces = args.replaces === null || args.replaces === undefined || args.replaces === ""
       ? null
-      : id(args.replaces);
+      : uuidArg(args.replaces);
     if (args.replaces && !replaces) {
       return toolError("replaces must be the id of an existing memory, or null.");
     }
@@ -1122,10 +1114,7 @@ async function executeConversationSearchTool(
         success: true,
       };
     }
-    const conversationId = typeof args.conversation_id === "string"
-      && UUID_PATTERN.test(args.conversation_id.trim())
-      ? args.conversation_id.trim().toLowerCase()
-      : null;
+    const conversationId = uuidArg(args.conversation_id);
     if (!conversationId) return toolError("conversation_id must be an id from search_conversations.");
     if (conversationId === ctx.conversationId) {
       return toolError("This is the current conversation: it is already in your context.");
@@ -1148,12 +1137,9 @@ async function executeJournalTool(
   if (!ctx.journalSource) {
     return toolError("The journal is not available here. Do not retry.");
   }
-  const id = (value: unknown) => typeof value === "string" && UUID_PATTERN.test(value.trim())
-    ? value.trim().toLowerCase()
-    : null;
   try {
     if (toolName === "journal_close") {
-      const entryId = id(args.entry_id);
+      const entryId = uuidArg(args.entry_id);
       if (!entryId) return toolError("No open journal entry with this id. Take ids from your journal list.");
       const entry = await closeJournalEntry(ctx.service, ctx.userId, entryId, args.reason,
         { scope: ctx.journalScope ?? undefined });
@@ -1162,7 +1148,7 @@ async function executeJournalTool(
     }
     let projectId: string | null = null;
     if (args.project_id !== null && args.project_id !== undefined && args.project_id !== "") {
-      projectId = id(args.project_id);
+      projectId = uuidArg(args.project_id);
       if (!projectId || !(await getProjectAccess(ctx.userId, projectId))) {
         return toolError("project_id must be the id of a project the user can open (use list_projects), or null.");
       }
@@ -1255,9 +1241,7 @@ async function executeWatchListTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
-  const id = typeof args.id === "string" && UUID_PATTERN.test(args.id.trim())
-    ? args.id.trim().toLowerCase()
-    : null;
+  const id = uuidArg(args.id);
   try {
     if (toolName === "cancel_watch") {
       if (!id || !(await cancelNumoWatch(ctx.service, ctx.userId, id))) {
@@ -1384,9 +1368,7 @@ async function executeCreateWatch(
   }
   const replaces = args.replaces === null || args.replaces === undefined || args.replaces === ""
     ? null
-    : typeof args.replaces === "string" && UUID_PATTERN.test(args.replaces.trim())
-      ? args.replaces.trim().toLowerCase()
-      : "invalid";
+    : uuidArg(args.replaces) ?? "invalid";
   if (replaces === "invalid") return toolError("replaces must be the id of a reminder the user keeps, or null.");
   let canceled: string | null = null;
   try {
@@ -1511,22 +1493,89 @@ async function executeToolUnlisted(
   if (ctx.documentationHelp && toolName !== "get_help") {
     return toolError("Only public documentation help is available in this conversation.");
   }
-  if (ctx.readAbortSignal && (toolName === "list_projects" || toolName === "list_issues")) {
+  if (ctx.readAbortSignal && numoToolPolicy(toolName)?.cancellableRead) {
     ctx = { ...ctx,
       service: abortableReadClient(ctx.service, ctx.readAbortSignal),
       supabase: abortableReadClient(ctx.supabase, ctx.readAbortSignal) };
   }
+  // The one error boundary of every handler: a failure is a tool result the
+  // model reads, never a failed turn. Only the error's class is logged, never
+  // its message, which may quote the user's content.
   try {
-    if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {
+    return await dispatchTool(toolName, args, ctx);
+  } catch (error) {
+    console.error("[assistant] tool_execution_failed", { tool: toolName, error: errorClass(error) });
+    return toolError("Tool execution failed");
+  }
+}
+
+function errorClass(error: unknown): string {
+  if (error instanceof Error) return error.constructor?.name || error.name;
+  return typeof error;
+}
+
+/** Runs a tool where its policy's scope says: before or after resolving a project. */
+async function dispatchTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  if (ADMIN_TOOL_NAMES.has(toolName)) {
+    return executeAdminTool(toolName, args, ctx);
+  }
+  const policy = numoToolPolicy(toolName);
+  if (!policy) return toolError(`Unknown tool: ${toolName}`);
+  if (policy.waitsForUser && (ctx.routineId || ctx.proactive)) {
+    return toolError(UNATTENDED_REFUSAL);
+  }
+  // A personal reminder or note (MIN-982) names no project.
+  if (policy.scope !== "project" &&
+      !(policy.scope === "project_or_personal" && args.project_id !== null)) {
+    return executeUserTool(toolName as UserScopedToolName, args, ctx);
+  }
+
+  const { projectId } = await resolveAssistantProjectTarget(ctx, args.project_id);
+  if (!projectId) {
+    return toolError(
+      "No explicit project target. Pass project_id (use list_projects to discover projects).",
+    );
+  }
+  const access = await getProjectAccess(ctx.userId, projectId);
+  if (!access) {
+    return toolError(
+      "Project not found or not accessible. Pass the project's id (resolve it with list_projects) or its exact key or name.",
+    );
+  }
+  // One capability gate for every project tool (MIN-693): the live role
+  // decides, so a role change applies to the next tool call.
+  if (!accessAllows(access, policy.capability)) {
+    return capabilityDenied(toolName, policy.capability);
+  }
+  return executeProjectTool(toolName as ProjectScopedToolName, args, ctx, projectId, access);
+}
+
+/** The tools that run without a project: the user's own data, the web, per-item writes, views. */
+async function executeUserTool(
+  toolName: UserScopedToolName,
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  switch (toolName) {
+    case "list_mcp_tools":
+    case "call_mcp_tool":
       return executeMcpTool(ctx.userId, toolName, args);
-    }
-    if (MCP_SETUP_TOOL_NAMES.has(toolName)) {
+    case "list_mcp_presets":
+    case "configure_mcp_connection":
       return executeMcpSetupTool(ctx.userId, toolName, args);
-    }
-    if (ADMIN_TOOL_NAMES.has(toolName)) {
-      return executeAdminTool(toolName, args, ctx);
-    }
-    if (toolName === "get_help") {
+    // The loop pauses on ask_user before any tool runs: reaching here means
+    // nobody is there to answer.
+    case "ask_user":
+      return toolError(UNATTENDED_REFUSAL);
+    case "create_watch":
+      return executeCreateWatch(args, ctx, null, null);
+    case "notify_me":
+      return executeNotifyMe(args, ctx, null);
+    case "get_help": {
       const topic = typeof args.topic === "string" ? args.topic : "";
       const article = getKnowledgeArticle(topic, resolveApplicationLocale(ctx.locale));
       return article
@@ -1542,7 +1591,7 @@ async function executeToolUnlisted(
           };
     }
     // ── Project discovery and global-only filter options ───────────────
-    if (toolName === "list_projects") {
+    case "list_projects": {
       const visible = await accessibleProjects(ctx);
       if (visible.error) return toolError(visible.error);
       return {
@@ -1557,46 +1606,31 @@ async function executeToolUnlisted(
         success: true,
       };
     }
-    if (toolName === "list_global_filter_options") {
+    case "list_global_filter_options": {
       return listGlobalFilterOptions(ctx);
     }
 
     // ── Web (outside minddy) ────────────────────────────────────────────
-    if (toolName === "web_search") {
+    case "web_search": {
       return executeWebSearch(args, ctx);
     }
 
-    // ── View tools (scope = the conversation's) ─────────────────────────
-    // Project mode → the current project's view by default, or an explicitly
-    // targeted accessible project. Global mode (ctx.projectId null) → the
-    // user's personal cross-project view (project_id null).
-    if (toolName === "list_views") {
-      if (ctx.requireExplicitProjectTarget && args.project_id !== null &&
+    // ── Views: a project's, or the user's cross-project ones (null) ─────
+    case "list_views":
+    case "create_view":
+    case "update_view": {
+      if (args.project_id !== null &&
           (typeof args.project_id !== "string" || !args.project_id.trim())) {
         return toolError("Specify project_id, or null for a personal cross-project view.");
       }
-      const projectId = resolveAssistantProjectId(
-        ctx.requireExplicitProjectTarget ? null : ctx.projectId, args.project_id,
-      );
-      if (projectId && !(await getProjectAccess(ctx.userId, projectId))) {
-        return toolError("Project not found or not accessible.");
-      }
-      return listViews(ctx, projectId);
-    }
-    if (toolName === "create_view" || toolName === "update_view") {
-      if (ctx.requireExplicitProjectTarget && args.project_id !== null &&
-          (typeof args.project_id !== "string" || !args.project_id.trim())) {
-        return toolError("Specify project_id, or null for a personal cross-project view.");
-      }
-      const projectId = resolveAssistantProjectId(
-        ctx.requireExplicitProjectTarget ? null : ctx.projectId, args.project_id,
-      );
+      const projectId = typeof args.project_id === "string" ? args.project_id.trim() : null;
       const viewAccess = projectId
         ? await getProjectAccess(ctx.userId, projectId)
         : null;
       if (projectId && !viewAccess) {
         return toolError("Project not found or not accessible.");
       }
+      if (toolName === "list_views") return listViews(ctx, projectId);
       // A personal view is the user's own bookkeeping; a shared view changes
       // the project (MIN-693). The view core enforces the same rule on update.
       if (
@@ -1611,13 +1645,13 @@ async function executeToolUnlisted(
     }
 
     // ── Account tools (the requesting user's own account — no project) ──
-    if (toolName === "get_account_settings") {
+    case "get_account_settings": {
       const r = await getAccountSettings({ userId: ctx.userId, supabase: ctx.supabase });
       return r.ok
         ? { result: { settings: r.settings }, success: true }
         : toolError(r.error);
     }
-    if (toolName === "update_account_settings") {
+    case "update_account_settings": {
       const r = await updateAccountSettings({
         userId: ctx.userId,
         input: args,
@@ -1629,7 +1663,7 @@ async function executeToolUnlisted(
     }
 
     // ── User statistics (MIN-501 — read-only, like the Statistics page) ──
-    if (toolName === "get_user_stats") {
+    case "get_user_stats": {
       const r = await readUserStatsTool({
         userId: ctx.userId,
         supabase: ctx.supabase,
@@ -1639,14 +1673,14 @@ async function executeToolUnlisted(
         ? { result: { stats: r.stats }, success: true }
         : toolError(r.error);
     }
-    if (toolName === "get_plan_usage") {
+    case "get_plan_usage": {
       const r = await readPlanUsageTool({ userId: ctx.userId });
       return r.ok
         ? { result: { usage: r.usage }, success: true }
         : toolError(r.error);
     }
 
-    if (toolName === "list_inbox") {
+    case "list_inbox": {
       const state: InboxReadState =
         args.state === "all" || args.state === "read" || args.state === "unread"
           ? args.state
@@ -1675,63 +1709,62 @@ async function executeToolUnlisted(
     }
 
     // ── Trash (MIN-133 — personal and inter-project) ──────────────
-    if (
-      toolName === "list_trash" ||
-      toolName === "move_to_trash" ||
-      toolName === "restore_from_trash"
-    ) {
+    case "list_trash":
+    case "move_to_trash":
+    case "restore_from_trash": {
       return executeTrashTool(toolName, args, ctx);
     }
 
     // ── Cycle tools (the user's personal cross-project cycle — MIN-32) ──
-    if (
-      toolName === "get_cycle" ||
-      toolName === "fill_cycle" ||
-      toolName === "add_issues_to_cycle" ||
-      toolName === "move_issues" ||
-      toolName === "remove_issues_from_cycle"
-    ) {
+    case "get_cycle":
+    case "fill_cycle":
+    case "add_issues_to_cycle":
+    case "move_issues":
+    case "remove_issues_from_cycle": {
       return executeCycleTool(toolName, args, ctx);
     }
 
     // ── Scratchpad tools (the user's personal task notebook) ────────────
-    if (
-      toolName === "get_scratchpad" ||
-      toolName === "add_scratchpad_tasks" ||
-      toolName === "update_scratchpad_tasks" ||
-      toolName === "edit_scratchpad_text" ||
-      toolName === "set_scratchpad"
-    ) {
+    case "get_scratchpad":
+    case "add_scratchpad_tasks":
+    case "update_scratchpad_tasks":
+    case "edit_scratchpad_text":
+    case "set_scratchpad": {
       return executeScratchpadTool(toolName, args, ctx);
     }
 
     // ── Numo's memory (MIN-915 — the user's own, never a project's) ────
-    if (toolName === "remember" || toolName === "forget") {
+    case "remember":
+    case "forget": {
       return executeMemoryTool(toolName, args, ctx);
     }
 
     // ── Earlier conversations (MIN-956 — the user's own Numo history) ───
-    if (toolName === "search_conversations" || toolName === "read_conversation") {
+    case "search_conversations":
+    case "read_conversation": {
       return executeConversationSearchTool(toolName, args, ctx);
     }
 
     // ── Numo's journal (MIN-927 — the user's own, never a project's) ────
-    if (toolName === "journal_write" || toolName === "journal_close") {
+    case "journal_write":
+    case "journal_close": {
       return executeJournalTool(toolName, args, ctx);
     }
 
     // ── Numo's reminders (MIN-923 — the user's own, across projects) ────
-    if (toolName === "list_watches" || toolName === "cancel_watch" || toolName === "update_watch") {
+    case "list_watches":
+    case "cancel_watch":
+    case "update_watch": {
       return executeWatchListTool(toolName, args, ctx);
     }
 
-    if (toolName === "list_conversation_attachments") {
+    case "list_conversation_attachments": {
       return { result: await listConversationAttachments(ctx, attachmentOffset(args.offset)), success: true };
     }
-    if (toolName === "read_conversation_attachment") {
+    case "read_conversation_attachment": {
       return { result: await readConversationAttachment(ctx, args.attachment_id, attachmentOffset(args.offset), attachmentReadLimit(args.limit)), success: true };
     }
-    if (toolName === "create_file") {
+    case "create_file": {
       try {
         const result = await createGeneratedFile(ctx, args);
         // The thread needs the object to serve it; the model, like for the
@@ -1743,1895 +1776,1858 @@ async function executeToolUnlisted(
         throw error;
       }
     }
-    if (toolName === "view_image") {
+    case "view_image": {
       return { result: await viewDocumentImage(ctx, args.src), success: true };
     }
 
-    // ── A personal reminder or note (MIN-982): it names no project ──────
-    if (PERSONAL_TARGET_TOOLS.has(toolName) && args.project_id === null) {
-      return toolName === "create_watch"
-        ? executeCreateWatch(args, ctx, null, null)
-        : executeNotifyMe(args, ctx, null);
+    default: {
+      const unhandled: never = toolName;
+      return toolError(`Unknown tool: ${unhandled}`);
     }
+  }
+}
 
-    // ── Project scope resolution (all remaining tools) ──────────────────
-    const target = await resolveAssistantProjectTarget(
-      ctx,
-      ctx.requireExplicitProjectTarget ? null : ctx.projectId,
-      args.project_id,
-    );
-    if (target.error) {
-      return toolError(target.error);
+/** The tools that run inside a resolved, capability-gated project. */
+async function executeProjectTool(
+  toolName: ProjectScopedToolName,
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string,
+  access: ProjectAccess,
+): Promise<ToolExecution> {
+  switch (toolName) {
+    // ── Read tools (shared with the MCP server — issue-reads.ts) ──────
+    case "list_issues": {
+      const r = await listIssues(readCtx(ctx, projectId, access), args);
+      return "error" in r ? toolError(r.error) : { result: r, success: true };
     }
-    const projectId = target.projectId;
-    if (!projectId) {
-      return toolError(
-        "No explicit project target. Pass project_id (use list_projects to discover projects).",
+    case "search_issues": {
+      const r = await searchIssues(readCtx(ctx, projectId, access), args);
+      return "error" in r ? toolError(r.error) : { result: r, success: true };
+    }
+    case "get_issue": {
+      const r = await getIssue(readCtx(ctx, projectId, access), args);
+      if ("error" in r) return toolError(r.error);
+      // Plan tasks come out parsed, with the indices append_to_plan's sibling
+      // update_plan_tasks addresses — without them the only way to tick a
+      // task off would be to resend a whole rewritten plan.
+      const parsed = parsePlan(
+        typeof r.issue.plan === "string" ? r.issue.plan : null,
       );
+      const base = {
+        ...r,
+        // Each sub-issue (and the duplicate) as a summary: their own
+        // descriptions and plans crowded the issue's plan out of the
+        // result (MIN-974). get_issue on one of them reads it in full.
+        sub_issues: r.sub_issues.map(linkedIssueSummary),
+        ...(r.duplicate_of
+          ? { duplicate_of: linkedIssueSummary(r.duplicate_of) }
+          : {}),
+        plan_rev:
+          typeof r.issue.updated_at === "string" ? r.issue.updated_at : "",
+      };
+      if (parsed.tasks.length === 0) return { result: base, success: true };
+      return {
+        result: {
+          ...base,
+          ...planTaskIndex(
+            parsed,
+            getToolResultCharLimit("get_issue") - JSON.stringify(base).length,
+          ),
+        },
+        success: true,
+      };
     }
-    const access = await getProjectAccess(ctx.userId, projectId);
-    if (!access) {
-      return toolError(
-        "Project not found or not accessible. Pass the project's id (resolve it with list_projects) or its exact key or name.",
+    case "list_members": {
+      const r = await listMembers(
+        readCtx(ctx, projectId, access),
+        access.project.owner_id,
       );
+      if ("error" in r) return toolError(r.error);
+      // Owners also see pending invitations (for cancel_invitation).
+      const pending_invitations = access.isOwner
+        ? await listPendingInvitations(projectId, access.project.owner_id)
+        : [];
+      return {
+        result: { ...r, pending_invitations },
+        success: true,
+      };
     }
-    // One capability gate for every project tool (MIN-693): the live role
-    // decides, so a role change applies to the next tool call.
-    const capability = numoToolCapability(toolName);
-    const required =
-      capability === "personal" || capability === "personal_write"
-        ? "admin"
-        : capability;
-    if (!accessAllows(access, required)) {
-      return capabilityDenied(toolName, required);
+    // ── Project statistics (MIN-878 — the General settings' numbers) ──
+    case "get_project_stats": {
+      const r = await readProjectStats(readCtx(ctx, projectId, access), {
+        ownerId: access.project.owner_id,
+        timeZone: ctx.timezone,
+      });
+      return "error" in r ? toolError(r.error) : { result: r, success: true };
     }
-
-    switch (toolName) {
-      // ── Read tools (shared with the MCP server — issue-reads.ts) ──────
-      case "list_issues": {
-        const r = await listIssues(readCtx(ctx, projectId, access), args);
-        return "error" in r ? toolError(r.error) : { result: r, success: true };
+    case "get_objective": {
+      const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
+      if (!UUID_PATTERN.test(objectiveId)) {
+        return toolError("objective_id must be an objective UUID from list_objectives.");
       }
-      case "search_issues": {
-        const r = await searchIssues(readCtx(ctx, projectId, access), args);
-        return "error" in r ? toolError(r.error) : { result: r, success: true };
-      }
-      case "get_issue": {
-        const r = await getIssue(readCtx(ctx, projectId, access), args);
-        if ("error" in r) return toolError(r.error);
-        // Plan tasks come out parsed, with the indices append_to_plan's sibling
-        // update_plan_tasks addresses — without them the only way to tick a
-        // task off would be to resend a whole rewritten plan.
-        const parsed = parsePlan(
-          typeof r.issue.plan === "string" ? r.issue.plan : null,
-        );
-        const base = {
-          ...r,
-          // Each sub-issue (and the duplicate) as a summary: their own
-          // descriptions and plans crowded the issue's plan out of the
-          // result (MIN-974). get_issue on one of them reads it in full.
-          sub_issues: r.sub_issues.map(linkedIssueSummary),
-          ...(r.duplicate_of
-            ? { duplicate_of: linkedIssueSummary(r.duplicate_of) }
-            : {}),
-          plan_rev:
-            typeof r.issue.updated_at === "string" ? r.issue.updated_at : "",
-        };
-        if (parsed.tasks.length === 0) return { result: base, success: true };
-        return {
-          result: {
-            ...base,
-            ...planTaskIndex(
-              parsed,
-              getToolResultCharLimit("get_issue") - JSON.stringify(base).length,
-            ),
-          },
-          success: true,
-        };
-      }
-      case "list_members": {
-        const r = await listMembers(
-          readCtx(ctx, projectId, access),
-          access.project.owner_id,
-        );
-        if ("error" in r) return toolError(r.error);
-        // Owners also see pending invitations (for cancel_invitation).
-        const pending_invitations = access.isOwner
-          ? await listPendingInvitations(projectId, access.project.owner_id)
-          : [];
-        return {
-          result: { ...r, pending_invitations },
-          success: true,
-        };
-      }
-      // ── Project statistics (MIN-878 — the General settings' numbers) ──
-      case "get_project_stats": {
-        const r = await readProjectStats(readCtx(ctx, projectId, access), {
-          ownerId: access.project.owner_id,
-          timeZone: ctx.timezone,
-        });
-        return "error" in r ? toolError(r.error) : { result: r, success: true };
-      }
-      case "get_objective": {
-        const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(objectiveId)) {
-          return toolError("objective_id must be an objective UUID from list_objectives.");
-        }
-        const { data: objective, error } = await objectiveStore(ctx.supabase)
-          .select("id, name, description, status, lead_user_id, target_date")
-          .is("deleted_at", null)
-          .eq("project_id", projectId)
-          .eq("id", objectiveId)
-          .maybeSingle();
-        if (error) return toolError(error.message);
-        if (!objective) return toolError("Objective not found in this project.");
-        // The objective's own comment thread, as on an issue: without it Numo
-        // believed objectives had none (MIN-793).
-        const [relations, { data: comments, error: commentsError }, { data: commentResources }, forecast] =
-          await Promise.all([
-            resolveEntityRelations(
-              ctx.supabase,
-              { projectId, projectKey: access.project.key },
-              objective.id,
-            ),
-            commentStore(ctx.supabase, "comments", ctx.userId)
-              .select("id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at")
-              .eq("objective_id", objective.id)
-              .order("created_at", { ascending: true }),
-            ctx.supabase
-              .from("attachments")
-              .select(
-                "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
-              )
-              .eq("objective_id", objective.id)
-              .not("comment_id", "is", null)
-              .order("created_at", { ascending: true }),
-            // The Momentum panel's estimated finish date (MIN-977), from the
-            // same server forecast and in the user's zone, so both agree. It
-            // is a best-effort extra: a failure leaves the rest of the read.
-            getObjectiveForecast(ctx.userId, objective.id, { timeZone: ctx.timezone || "UTC" })
-              .then((value) => value?.forecastDate
-                ? {
-                    estimated_finish_date: value.forecastDate,
-                    estimated_days: value.forecastDays,
-                    basis: value.basis,
-                  }
-                : null)
-              .catch((error: unknown) => {
-                console.error("[numo] objective forecast failed:", (error as Error).message);
-                return null;
-              }),
-          ]);
-        if (commentsError) return toolError("Unable to read objective comments.");
-        const resourcesByComment = new Map<string, Record<string, unknown>[]>();
-        for (const stored of commentResources ?? []) {
-          const row = await decodeAttachmentRow("attachments", stored, ctx.userId, projectId);
-          const list = resourcesByComment.get(row.comment_id as string) ?? [];
-          list.push(resourceSummary(row));
-          resourcesByComment.set(row.comment_id as string, list);
-        }
-        const [authors, keyActors] = await Promise.all([
-          fetchAuthUsersById(ctx.service, (comments ?? []).map((c) => c.author_id as string)),
-          resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
-        ]);
-        return {
-          result: {
-            objective,
-            forecast,
-            comments: (comments ?? []).map((c) => {
-              const resources = resourcesByComment.get(c.id as string);
-              return {
-                id: c.id,
-                author: c.via_assistant
-                  ? "Numo"
-                  : c.via_mcp
-                    ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
-                    : displayName(toNamed(authors.get(c.author_id as string)), "User"),
-                body: c.body,
-                parent_id: c.parent_id,
-                created_at: c.created_at,
-                ...(resources ? { resources } : {}),
-              };
-            }),
-            linked_feedback: await listFeedbackForObjective(projectId, objective.id),
-            relations: relations.map((r) => r.kind === "objective"
-              ? {
-                  relation: r.relation,
-                  objective_id: r.other.id,
-                  name: r.other.name,
-                  status: r.other.status,
-                  lead_user_id: r.other.lead_user_id,
-                }
-              : {
-                  relation: r.relation,
-                  issue_id: r.other.id,
-                  identifier: r.other.identifier,
-                  title: r.other.title,
-                  status: r.other.status,
-                }),
-          },
-          success: true,
-        };
-      }
-      case "list_objectives": {
-        // RESOURCES come with it, and that's what the tool description says
-        // has always promised — she promised it without anything happening
-        // send (MIN-275). A lens that carries the page of its spec said so
-        // so in the app and nowhere for Numo, who went back to glue a
-        // markdown link in a description.
-        //
-        // Read to the SESSION client, therefore under `pages_select`: a page
-        // basket goes back down `page: null`, and the pill remains inert without
-        // that we have to take care of the trash (lib/server/resource-select.ts).
-        const [{ data, error }, { data: attachmentRows }] = await Promise.all([
-          objectiveStore(ctx.supabase)
-            .select("id, name, status, lead_user_id, target_date")
-            .is("deleted_at", null)
-            .eq("project_id", projectId)
+      const { data: objective, error } = await objectiveStore(ctx.supabase)
+        .select("id, name, description, status, lead_user_id, target_date")
+        .is("deleted_at", null)
+        .eq("project_id", projectId)
+        .eq("id", objectiveId)
+        .maybeSingle();
+      if (error) return toolError(error.message);
+      if (!objective) return toolError("Objective not found in this project.");
+      // The objective's own comment thread, as on an issue: without it Numo
+      // believed objectives had none (MIN-793).
+      const [relations, { data: comments, error: commentsError }, { data: commentResources }, forecast] =
+        await Promise.all([
+          resolveEntityRelations(
+            ctx.supabase,
+            { projectId, projectKey: access.project.key },
+            objective.id,
+          ),
+          commentStore(ctx.supabase, "comments", ctx.userId)
+            .select("id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at")
+            .eq("objective_id", objective.id)
             .order("created_at", { ascending: true }),
           ctx.supabase
             .from("attachments")
             .select(
-              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
+              "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
             )
-            .eq("project_id", projectId)
-            .not("objective_id", "is", null)
-            // An objective resource can be recognized by its null `comment_id`: the
-            // thread has some too, and they don't belong to
-            // the objective, but to the message.
-            .is("comment_id", null)
+            .eq("objective_id", objective.id)
+            .not("comment_id", "is", null)
             .order("created_at", { ascending: true }),
-        ]);
-        if (error) return toolError(error.message);
-
-        const resourcesByObjective = new Map<
-          string,
-          Record<string, unknown>[]
-        >();
-        for (const stored of attachmentRows ?? []) {
-          const row = await decodeAttachmentRow("attachments", stored,
-            ctx.userId, projectId);
-          const id = row.objective_id as string;
-          const list = resourcesByObjective.get(id) ?? [];
-          list.push(resourceSummary(row));
-          resourcesByObjective.set(id, list);
-        }
-
-        return {
-          result: {
-            objectives: (data ?? []).map((objective) => {
-              const resources = resourcesByObjective.get(
-                objective.id as string,
-              );
-              return resources ? { ...objective, resources } : objective;
+          // The Momentum panel's estimated finish date (MIN-977), from the
+          // same server forecast and in the user's zone, so both agree. It
+          // is a best-effort extra: a failure leaves the rest of the read.
+          getObjectiveForecast(ctx.userId, objective.id, { timeZone: ctx.timezone || "UTC" })
+            .then((value) => value?.forecastDate
+              ? {
+                  estimated_finish_date: value.forecastDate,
+                  estimated_days: value.forecastDays,
+                  basis: value.basis,
+                }
+              : null)
+            .catch((error: unknown) => {
+              console.error("[numo] objective forecast failed:", (error as Error).message);
+              return null;
             }),
-          },
-          success: true,
-        };
+        ]);
+      if (commentsError) return toolError("Unable to read objective comments.");
+      const resourcesByComment = new Map<string, Record<string, unknown>[]>();
+      for (const stored of commentResources ?? []) {
+        const row = await decodeAttachmentRow("attachments", stored, ctx.userId, projectId);
+        const list = resourcesByComment.get(row.comment_id as string) ?? [];
+        list.push(resourceSummary(row));
+        resourcesByComment.set(row.comment_id as string, list);
       }
-      case "list_categories": {
-        const { data, error } = await categoryStore(ctx.supabase)
-          .select("id, name, color")
+      const [authors, keyActors] = await Promise.all([
+        fetchAuthUsersById(ctx.service, (comments ?? []).map((c) => c.author_id as string)),
+        resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
+      ]);
+      return {
+        result: {
+          objective,
+          forecast,
+          comments: (comments ?? []).map((c) => {
+            const resources = resourcesByComment.get(c.id as string);
+            return {
+              id: c.id,
+              author: c.via_assistant
+                ? "Numo"
+                : c.via_mcp
+                  ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
+                  : displayName(toNamed(authors.get(c.author_id as string)), "User"),
+              body: c.body,
+              parent_id: c.parent_id,
+              created_at: c.created_at,
+              ...(resources ? { resources } : {}),
+            };
+          }),
+          linked_feedback: await listFeedbackForObjective(projectId, objective.id),
+          relations: relations.map((r) => r.kind === "objective"
+            ? {
+                relation: r.relation,
+                objective_id: r.other.id,
+                name: r.other.name,
+                status: r.other.status,
+                lead_user_id: r.other.lead_user_id,
+              }
+            : {
+                relation: r.relation,
+                issue_id: r.other.id,
+                identifier: r.other.identifier,
+                title: r.other.title,
+                status: r.other.status,
+              }),
+        },
+        success: true,
+      };
+    }
+    case "list_objectives": {
+      // RESOURCES come with it, and that's what the tool description says
+      // has always promised — she promised it without anything happening
+      // send (MIN-275). A lens that carries the page of its spec said so
+      // so in the app and nowhere for Numo, who went back to glue a
+      // markdown link in a description.
+      //
+      // Read to the SESSION client, therefore under `pages_select`: a page
+      // basket goes back down `page: null`, and the pill remains inert without
+      // that we have to take care of the trash (lib/server/resource-select.ts).
+      const [{ data, error }, { data: attachmentRows }] = await Promise.all([
+        objectiveStore(ctx.supabase)
+          .select("id, name, status, lead_user_id, target_date")
+          .is("deleted_at", null)
           .eq("project_id", projectId)
-          .order("position", { ascending: true });
-        if (error) return toolError(error.message);
-        return { result: { categories: data ?? [] }, success: true };
-      }
-      case "list_integrations": {
-        const { data, error } = await ctx.supabase
-          .from("integrations")
-          // A single literal string: `select` types its columns as READ
-          // this text, and a concatenation makes the result opaque.
+          .order("created_at", { ascending: true }),
+        ctx.supabase
+          .from("attachments")
           .select(
-            "id, project_id, name, kind, objective_id, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
+            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
           )
           .eq("project_id", projectId)
-          .order("id", { ascending: true });
-        if (error) return toolError(error.message);
-        return {
-          result: {
-            integrations: await Promise.all((data ?? []).map(async (row) => ({
-              id: row.id,
-              name: await decodeIntegrationField(row,"name",row.name),
-              kind: row.kind,
-              objective_id: row.objective_id,
-              revoked_at: row.revoked_at,
-              // Without URL there is no webhook: `null` rather than an object to
-              // half filled, which would make it look like a webhook is turned off but set.
-              webhook: row.webhook_url
-                ? {
-                    url: await decodeIntegrationField(row,"webhook_url",row.webhook_url),
-                    events: row.webhook_events,
-                    scope: row.webhook_scope,
-                    last_status: normalizeWebhookStatus(
-                      row.webhook_last_status,
-                    ),
-                    last_at: row.webhook_last_at,
-                  }
-                : null,
-            }))),
-          },
-          success: true,
-        };
+          .not("objective_id", "is", null)
+          // An objective resource can be recognized by its null `comment_id`: the
+          // thread has some too, and they don't belong to
+          // the objective, but to the message.
+          .is("comment_id", null)
+          .order("created_at", { ascending: true }),
+      ]);
+      if (error) return toolError(error.message);
+
+      const resourcesByObjective = new Map<
+        string,
+        Record<string, unknown>[]
+      >();
+      for (const stored of attachmentRows ?? []) {
+        const row = await decodeAttachmentRow("attachments", stored,
+          ctx.userId, projectId);
+        const id = row.objective_id as string;
+        const list = resourcesByObjective.get(id) ?? [];
+        list.push(resourceSummary(row));
+        resourcesByObjective.set(id, list);
       }
 
-      // ── Write tools ───────────────────────────────────────────────────
-      case "create_issue": {
-        // Without an explicit status the issue lands in the user's configured
-        // Numo default (triage unless changed in Account → Preferences) — the
-        // human validation gate for assistant-created issues.
-        const status = isStatus(args.status)
-          ? args.status
-          : (ctx.numoDefaultStatus ?? "triage");
-        const result = await createIssueForProject({
-          projectId,
-          projectName: access.project.name,
-          actorId: ctx.userId,
-          input: { ...args, status },
-          viaAssistant: true,
-        });
-        if (!result.ok) return libError(result);
-        return {
-          result: {
-            issue: {
-              ...result.issue,
-              identifier: issueIdentifier(
-                access.project.key,
-                result.issue.number as number,
-              ),
-            },
-          },
-          success: true,
-        };
-      }
-
-      // The start of a project, through conversation (MIN-173). No factory
-      // more: this is the pass of the glued brief (MIN-172), called with what
-      // Numo set with user instead of pasted text. She DOES NOT WRITE
-      // NOTHING — what is written is what the preview of the thread will have validated, by
-      // `/api/projects/[id]/brief/apply`, exactly like from the board.
-      case "propose_backlog": {
-        if (ctx.routineId || ctx.proactive) return toolError(UNATTENDED_REFUSAL);
-        // Reserved for the owner, like the modal: it is he who pays
-        // the call, and it's a batch of tickets all at once in HIS project.
-        if (!access.isOwner) {
-          return toolError(
-            "Only the project owner can seed the backlog of this project.",
-          );
-        }
-        const brief = typeof args.brief === "string" ? args.brief.trim() : "";
-        if (brief.length < MIN_BRIEF_CHARS) {
-          return toolError(
-            "The brief is too short to cut up. Frame the project with the user first, then send back everything the conversation established.",
-          );
-        }
-        const proposal = await proposeBacklogFromBrief({
-          brief,
-          projectName: access.project.name,
-          userId: ctx.userId,
-          projectId,
-        });
-        if (!proposal) {
-          return toolError(
-            "The pass returned nothing usable. Tell the user, and offer to try again.",
-          );
-        }
-        const counts = {
-          objectives: proposal.objectives.length,
-          issues: proposal.issues.length,
-        };
-        return {
-          // `proposal` is only used on the screen: it is the thread card
-          // show, uncheck and send to write.
-          result: {
-            status: "awaiting_user_review",
-            project_id: projectId,
-            ...counts,
-            proposal,
-          },
-          modelResult: {
-            status: "awaiting_user_review",
-            ...counts,
-            note: "The proposal is now on the user's screen, where they uncheck, rename and create the issues themselves — your turn ended on this call. NOTHING exists yet: do not create, edit or comment on any of these issues, and do not list them back. Wait for the user to tell you what they created. What they create lands in the BACKLOG (not in triage): the whole point of the on-screen review is that it replaces the triage gate.",
-          },
-          success: true,
-          pause: true,
-        };
-      }
-
-      case "update_issues":
-        return executeUpdateIssues(args, ctx, projectId);
-
-      // ── Pages: the project wiki (MIN-273) ─────────────────────────
-      //
-      // The same kernel as the MCP and the code agent (lib/server/page-tools.ts):
-      // this block only translates Numo's arguments and renders his refusals.
-      case "create_page":
-        return executeCreatePage(args, ctx, projectId);
-      case "create_page_database": {
-        const result = await createPageDatabase(args, { projectId, actorId: ctx.userId });
-        return result.ok
-          ? { result: result.data, success: result.success }
-          : toolError(result.message);
-      }
-      case "list_pages":
-      case "search_pages":
-      case "get_page":
-      case "update_page_database":
-      case "list_page_database_views":
-      case "update_page_database_views":
-      case "update_page":
-      case "append_to_page":
-      case "edit_page_text":
-        return executePageTool(toolName, args, ctx, projectId);
-
-      case "append_to_plan": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(
-          ctx.supabase,
-          issueId,
-          projectId,
-        );
-        if (!scoped.ok) return toolError(scoped.error);
-        const markdown = typeof args.markdown === "string" ? args.markdown : "";
-        if (!markdown.trim()) {
-          return toolError(
-            "markdown must contain the block to add to the plan.",
-          );
-        }
-        const section =
-          typeof args.section === "string" && args.section.trim()
-            ? args.section.trim()
-            : null;
-        const field = args.field === "description" ? "description" : "plan";
-        const current = await readIssueText(ctx, issueId);
-        if ("error" in current) return toolError(current.error);
-        const next = appendToPlan(current[field], markdown, section, {
-          beforeQuestions: field === "plan",
-        });
-        if (next === null) {
-          return toolError(
-            `This ${field} has no "${section}" heading. Read it with get_issue to see its headings, or omit "section" to append at the end.`,
-          );
-        }
-        const cap = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
-        if (next.length > cap) {
-          return toolError(`The ${field} is capped at ${cap} characters.`);
-        }
-        if (field === "description") {
-          const result = await updateIssueFields({
-            issueId,
-            actorId: ctx.userId,
-            input: { description: next },
-            viaAssistant: true,
-            expectedUpdatedAt: current.updatedAt || undefined,
-          });
-          if (!result.ok) return libError(result);
-          return { result: { field, length: next.length }, success: true };
-        }
-        return writePlan(
-          ctx,
-          issueId,
-          next,
-          undefined,
-          current.updatedAt || undefined,
-        );
-      }
-
-      case "update_plan_tasks": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(
-          ctx.supabase,
-          issueId,
-          projectId,
-        );
-        if (!scoped.ok) return toolError(scoped.error);
-        const raw = Array.isArray(args.tasks) ? args.tasks : null;
-        if (!raw || raw.length === 0 || raw.length > 50) {
-          return toolError(
-            "tasks must be a list of 1 to 50 task-state changes.",
-          );
-        }
-        const changes: { index: number; state: PlanTaskState }[] = [];
-        for (const item of raw) {
-          const row = item as Record<string, unknown>;
-          const index = row.task_index;
-          if (
-            typeof index !== "number" ||
-            !Number.isInteger(index) ||
-            index < 0
-          ) {
-            return toolError("task_index must be a non-negative integer.");
-          }
-          if (!isPlanTaskState(row.state)) {
-            return toolError(
-              `Invalid task state "${String(row.state)}" — use pending, in_progress, completed or cancelled.`,
+      return {
+        result: {
+          objectives: (data ?? []).map((objective) => {
+            const resources = resourcesByObjective.get(
+              objective.id as string,
             );
-          }
-          changes.push({ index, state: row.state });
-        }
-        const current = await readIssueText(ctx, issueId);
-        if ("error" in current) return toolError(current.error);
-        const expectedRev =
-          typeof args.expected_rev === "string" ? args.expected_rev : "";
-        if (!expectedRev || expectedRev !== current.updatedAt) {
-          return toolError(
-            "The plan changed since get_issue. Read the issue again for fresh plan_tasks and plan_rev, then retry.",
-          );
-        }
-        const parsed = parsePlan(current.plan);
-        // All or nothing: a stale index points at another task, so refuse the
-        // whole call rather than flip the wrong checkbox.
-        const invalid = changes
-          .map((c) => c.index)
-          .filter((i) => !parsed.tasks[i]);
-        if (invalid.length > 0) {
-          return toolError(
-            `No plan task at index(es) ${[...new Set(invalid)].join(", ")} — this plan has ${parsed.tasks.length} task(s). Call get_issue again for fresh plan_tasks.`,
-          );
-        }
-        let next = current.plan;
-        for (const change of changes) {
-          next = setTaskState(
-            next,
-            parsed.tasks[change.index].line,
-            change.state,
-          );
-        }
-        return writePlan(
-          ctx,
-          issueId,
-          next,
-          changes.length,
-          current.updatedAt || undefined,
+            return resources ? { ...objective, resources } : objective;
+          }),
+        },
+        success: true,
+      };
+    }
+    case "list_categories": {
+      const { data, error } = await categoryStore(ctx.supabase)
+        .select("id, name, color")
+        .eq("project_id", projectId)
+        .order("position", { ascending: true });
+      if (error) return toolError(error.message);
+      return { result: { categories: data ?? [] }, success: true };
+    }
+    case "list_integrations": {
+      const { data, error } = await ctx.supabase
+        .from("integrations")
+        // A single literal string: `select` types its columns as READ
+        // this text, and a concatenation makes the result opaque.
+        .select(
+          "id, project_id, name, kind, objective_id, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
+        )
+        .eq("project_id", projectId)
+        .order("id", { ascending: true });
+      if (error) return toolError(error.message);
+      return {
+        result: {
+          integrations: await Promise.all((data ?? []).map(async (row) => ({
+            id: row.id,
+            name: await decodeIntegrationField(row,"name",row.name),
+            kind: row.kind,
+            objective_id: row.objective_id,
+            revoked_at: row.revoked_at,
+            // Without URL there is no webhook: `null` rather than an object to
+            // half filled, which would make it look like a webhook is turned off but set.
+            webhook: row.webhook_url
+              ? {
+                  url: await decodeIntegrationField(row,"webhook_url",row.webhook_url),
+                  events: row.webhook_events,
+                  scope: row.webhook_scope,
+                  last_status: normalizeWebhookStatus(
+                    row.webhook_last_status,
+                  ),
+                  last_at: row.webhook_last_at,
+                }
+              : null,
+          }))),
+        },
+        success: true,
+      };
+    }
+
+    // ── Write tools ───────────────────────────────────────────────────
+    case "create_issue": {
+      // Without an explicit status the issue lands in the user's configured
+      // Numo default (triage unless changed in Account → Preferences) — the
+      // human validation gate for assistant-created issues.
+      const status = isStatus(args.status)
+        ? args.status
+        : (ctx.numoDefaultStatus ?? "triage");
+      const result = await createIssueForProject({
+        projectId,
+        projectName: access.project.name,
+        actorId: ctx.userId,
+        input: { ...args, status },
+        viaAssistant: true,
+      });
+      if (!result.ok) return libError(result);
+      return {
+        result: {
+          issue: {
+            ...result.issue,
+            identifier: issueIdentifier(
+              access.project.key,
+              result.issue.number as number,
+            ),
+          },
+        },
+        success: true,
+      };
+    }
+
+    // Starting a project through conversation (MIN-173): the pasted-brief
+    // pass (MIN-172), fed with what Numo framed with the user. It writes
+    // nothing: what gets written is what the thread's preview validates,
+    // through `/api/projects/[id]/brief/apply`, as from the board.
+    case "propose_backlog": {
+      // Owner only, like the modal: the owner pays for the call, and it is a
+      // batch of issues at once in their project.
+      if (!access.isOwner) {
+        return toolError(
+          "Only the project owner can seed the backlog of this project.",
         );
       }
-
-      case "edit_issue_text": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(
-          ctx.supabase,
-          issueId,
-          projectId,
+      const brief = typeof args.brief === "string" ? args.brief.trim() : "";
+      if (brief.length < MIN_BRIEF_CHARS) {
+        return toolError(
+          "The brief is too short to cut up. Frame the project with the user first, then send back everything the conversation established.",
         );
-        if (!scoped.ok) return toolError(scoped.error);
-        const field = args.field === "description" ? "description" : "plan";
-        if (args.field !== "plan" && args.field !== "description") {
-          return toolError('field must be "plan" or "description".');
-        }
-        const current = await readIssueText(ctx, issueId);
-        if ("error" in current) return toolError(current.error);
+      }
+      const proposal = await proposeBacklogFromBrief({
+        brief,
+        projectName: access.project.name,
+        userId: ctx.userId,
+        projectId,
+      });
+      if (!proposal) {
+        return toolError(
+          "The pass returned nothing usable. Tell the user, and offer to try again.",
+        );
+      }
+      const counts = {
+        objectives: proposal.objectives.length,
+        issues: proposal.issues.length,
+      };
+      return {
+        // `proposal` is only used on the screen: it is the thread card
+        // show, uncheck and send to write.
+        result: {
+          status: "awaiting_user_review",
+          project_id: projectId,
+          ...counts,
+          proposal,
+        },
+        modelResult: {
+          status: "awaiting_user_review",
+          ...counts,
+          note: "The proposal is now on the user's screen, where they uncheck, rename and create the issues themselves — your turn ended on this call. NOTHING exists yet: do not create, edit or comment on any of these issues, and do not list them back. Wait for the user to tell you what they created. What they create lands in the BACKLOG (not in triage): the whole point of the on-screen review is that it replaces the triage gate.",
+        },
+        success: true,
+        pause: true,
+      };
+    }
 
-        const edit = editIssueText({
-          field,
-          current: current[field],
-          edits: numoTextEdits(args),
-          tools: NUMO_TEXT_TOOLS,
-        });
-        if (!edit.ok) return toolError(edit.message);
+    case "update_issues":
+      return executeUpdateIssues(args, ctx, projectId);
 
-        // A patched plan starts again with writePlan: same writing, same tasks
-        // rendered, so the indexes remain usable immediately afterwards.
-        if (field === "plan") {
-          if (edit.content.length > MAX_PLAN_LENGTH) {
-            return toolError(
-              `The plan is capped at ${MAX_PLAN_LENGTH} characters.`,
-            );
-          }
-          return writePlan(
-            ctx,
-            issueId,
-            edit.content,
-            undefined,
-            current.updatedAt || undefined,
-          );
-        }
-        if (edit.content.length > MAX_DESCRIPTION_LENGTH) {
-          return toolError(
-            `The description is capped at ${MAX_DESCRIPTION_LENGTH} characters.`,
-          );
-        }
+    // ── Pages: the project wiki (MIN-273) ─────────────────────────
+    //
+    // The same kernel as the MCP and the code agent (lib/server/page-tools.ts):
+    // this block only translates Numo's arguments and renders his refusals.
+    case "create_page":
+      return executeCreatePage(args, ctx, projectId);
+    case "create_page_database": {
+      const result = await createPageDatabase(args, { projectId, actorId: ctx.userId });
+      return result.ok
+        ? { result: result.data, success: result.success }
+        : toolError(result.message);
+    }
+    case "list_pages":
+    case "search_pages":
+    case "get_page":
+    case "update_page_database":
+    case "list_page_database_views":
+    case "update_page_database_views":
+    case "update_page":
+    case "append_to_page":
+    case "edit_page_text":
+      return executePageTool(toolName, args, ctx, projectId);
+
+    case "append_to_plan": {
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const scoped = await assertIssueInProject(
+        ctx.supabase,
+        issueId,
+        projectId,
+      );
+      if (!scoped.ok) return toolError(scoped.error);
+      const markdown = typeof args.markdown === "string" ? args.markdown : "";
+      if (!markdown.trim()) {
+        return toolError(
+          "markdown must contain the block to add to the plan.",
+        );
+      }
+      const section =
+        typeof args.section === "string" && args.section.trim()
+          ? args.section.trim()
+          : null;
+      const field = args.field === "description" ? "description" : "plan";
+      const current = await readIssueText(ctx, issueId);
+      if ("error" in current) return toolError(current.error);
+      const next = appendToPlan(current[field], markdown, section, {
+        beforeQuestions: field === "plan",
+      });
+      if (next === null) {
+        return toolError(
+          `This ${field} has no "${section}" heading. Read it with get_issue to see its headings, or omit "section" to append at the end.`,
+        );
+      }
+      const cap = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
+      if (next.length > cap) {
+        return toolError(`The ${field} is capped at ${cap} characters.`);
+      }
+      if (field === "description") {
         const result = await updateIssueFields({
           issueId,
           actorId: ctx.userId,
-          input: { description: edit.content },
+          input: { description: next },
           viaAssistant: true,
           expectedUpdatedAt: current.updatedAt || undefined,
         });
         if (!result.ok) return libError(result);
-        return {
-          result: {
-            field,
-            additions: edit.additions,
-            deletions: edit.deletions,
-            length: edit.content.length,
-          },
-          success: true,
-        };
+        return { result: { field, length: next.length }, success: true };
+      }
+      return writePlan(
+        ctx,
+        issueId,
+        next,
+        undefined,
+        current.updatedAt || undefined,
+      );
+    }
+
+    case "update_plan_tasks": {
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const scoped = await assertIssueInProject(
+        ctx.supabase,
+        issueId,
+        projectId,
+      );
+      if (!scoped.ok) return toolError(scoped.error);
+      const raw = Array.isArray(args.tasks) ? args.tasks : null;
+      if (!raw || raw.length === 0 || raw.length > 50) {
+        return toolError(
+          "tasks must be a list of 1 to 50 task-state changes.",
+        );
+      }
+      const changes: { index: number; state: PlanTaskState }[] = [];
+      for (const item of raw) {
+        const row = item as Record<string, unknown>;
+        const index = row.task_index;
+        if (
+          typeof index !== "number" ||
+          !Number.isInteger(index) ||
+          index < 0
+        ) {
+          return toolError("task_index must be a non-negative integer.");
+        }
+        if (!isPlanTaskState(row.state)) {
+          return toolError(
+            `Invalid task state "${String(row.state)}" — use pending, in_progress, completed or cancelled.`,
+          );
+        }
+        changes.push({ index, state: row.state });
+      }
+      const current = await readIssueText(ctx, issueId);
+      if ("error" in current) return toolError(current.error);
+      const expectedRev =
+        typeof args.expected_rev === "string" ? args.expected_rev : "";
+      if (!expectedRev || expectedRev !== current.updatedAt) {
+        return toolError(
+          "The plan changed since get_issue. Read the issue again for fresh plan_tasks and plan_rev, then retry.",
+        );
+      }
+      const parsed = parsePlan(current.plan);
+      // All or nothing: a stale index points at another task, so refuse the
+      // whole call rather than flip the wrong checkbox.
+      const invalid = changes
+        .map((c) => c.index)
+        .filter((i) => !parsed.tasks[i]);
+      if (invalid.length > 0) {
+        return toolError(
+          `No plan task at index(es) ${[...new Set(invalid)].join(", ")} — this plan has ${parsed.tasks.length} task(s). Call get_issue again for fresh plan_tasks.`,
+        );
+      }
+      let next = current.plan;
+      for (const change of changes) {
+        next = setTaskState(
+          next,
+          parsed.tasks[change.index].line,
+          change.state,
+        );
+      }
+      return writePlan(
+        ctx,
+        issueId,
+        next,
+        changes.length,
+        current.updatedAt || undefined,
+      );
+    }
+
+    case "edit_issue_text": {
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const scoped = await assertIssueInProject(
+        ctx.supabase,
+        issueId,
+        projectId,
+      );
+      if (!scoped.ok) return toolError(scoped.error);
+      const field = args.field === "description" ? "description" : "plan";
+      if (args.field !== "plan" && args.field !== "description") {
+        return toolError('field must be "plan" or "description".');
+      }
+      const current = await readIssueText(ctx, issueId);
+      if ("error" in current) return toolError(current.error);
+
+      const edit = editIssueText({
+        field,
+        current: current[field],
+        edits: numoTextEdits(args),
+        tools: NUMO_TEXT_TOOLS,
+      });
+      if (!edit.ok) return toolError(edit.message);
+
+      // A patched plan starts again with writePlan: same writing, same tasks
+      // rendered, so the indexes remain usable immediately afterwards.
+      if (field === "plan") {
+        if (edit.content.length > MAX_PLAN_LENGTH) {
+          return toolError(
+            `The plan is capped at ${MAX_PLAN_LENGTH} characters.`,
+          );
+        }
+        return writePlan(
+          ctx,
+          issueId,
+          edit.content,
+          undefined,
+          current.updatedAt || undefined,
+        );
+      }
+      if (edit.content.length > MAX_DESCRIPTION_LENGTH) {
+        return toolError(
+          `The description is capped at ${MAX_DESCRIPTION_LENGTH} characters.`,
+        );
+      }
+      const result = await updateIssueFields({
+        issueId,
+        actorId: ctx.userId,
+        input: { description: edit.content },
+        viaAssistant: true,
+        expectedUpdatedAt: current.updatedAt || undefined,
+      });
+      if (!result.ok) return libError(result);
+      return {
+        result: {
+          field,
+          additions: edit.additions,
+          deletions: edit.deletions,
+          length: edit.content.length,
+        },
+        success: true,
+      };
+    }
+
+    case "set_issue_categories": {
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const scoped = await assertIssueInProject(
+        ctx.supabase,
+        issueId,
+        projectId,
+      );
+      if (!scoped.ok) return toolError(scoped.error);
+      const categoryIds = Array.isArray(args.category_ids)
+        ? args.category_ids.filter((v): v is string => typeof v === "string")
+        : [];
+      const result = await setIssueCategories({
+        issueId,
+        actorId: ctx.userId,
+        categoryIds,
+        viaAssistant: true,
+      });
+      if (!result.ok) return libError(result);
+      return { result: { category_ids: result.categoryIds }, success: true };
+    }
+
+    // Relationships between tickets — and now across tickets and objectives
+    // (MIN-513) — same core as HTTP routes and the MCP tool. BOTH ends are
+    // checked in the draft conversation: the heart controls access to the
+    // project, not the fact that the target in itself (an inter-project
+    // relationship does not exist).
+    case "link_issues":
+      return executeLinkIssues(args, ctx, projectId);
+
+    case "add_comment": {
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const scoped = await assertIssueInProject(
+        ctx.supabase,
+        issueId,
+        projectId,
+      );
+      if (!scoped.ok) return toolError(scoped.error);
+      const body = typeof args.body === "string" ? args.body : "";
+      const result = await addCommentToIssue({
+        issueId,
+        actorId: ctx.userId,
+        body,
+        viaAssistant: true,
+      });
+      if (!result.ok) return libError(result);
+      return { result: { comment: result.comment }, success: true };
+    }
+
+    case "create_watch":
+      return executeCreateWatch(args, ctx, projectId, access);
+
+    case "notify_me":
+      return executeNotifyMe(args, ctx, projectId);
+
+    case "add_objective_comment": {
+      const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
+      const { data: objective } = await objectiveStore(ctx.supabase)
+        .select("id")
+        .is("deleted_at", null)
+        .eq("id", objectiveId)
+        .eq("project_id", projectId)
+        .maybeSingle();
+      if (!objective) return toolError("Objective not found in this project.");
+      const result = await addCommentToObjective({
+        objectiveId,
+        actorId: ctx.userId,
+        body: typeof args.body === "string" ? args.body : "",
+        viaAssistant: true,
+      });
+      if (!result.ok) return libError(result);
+      return { result: { comment: result.comment }, success: true };
+    }
+
+    case "add_resource": {
+      const url = typeof args.url === "string" ? args.url.trim() : "";
+      const pageId = typeof args.page_id === "string" ? args.page_id.trim() : "";
+      const attachmentId = typeof args.attachment_id === "string" ? args.attachment_id.trim() : "";
+      const commentId = typeof args.comment_id === "string" ? args.comment_id.trim() : "";
+      if ([url, pageId, attachmentId].filter(Boolean).length !== 1) {
+        return toolError("Send exactly one of url, page_id or attachment_id.");
+      }
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const objectiveId =
+        typeof args.objective_id === "string" ? args.objective_id : "";
+      if (!!issueId === !!objectiveId) {
+        return toolError(
+          "Pass issue_id OR objective_id — a resource hangs from one parent.",
+        );
       }
 
-      case "set_issue_categories": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      if (issueId) {
         const scoped = await assertIssueInProject(
           ctx.supabase,
           issueId,
           projectId,
         );
         if (!scoped.ok) return toolError(scoped.error);
-        const categoryIds = Array.isArray(args.category_ids)
-          ? args.category_ids.filter((v): v is string => typeof v === "string")
-          : [];
-        const result = await setIssueCategories({
-          issueId,
-          actorId: ctx.userId,
-          categoryIds,
-          viaAssistant: true,
-        });
-        if (!result.ok) return libError(result);
-        return { result: { category_ids: result.categoryIds }, success: true };
-      }
-
-      // Relationships between tickets — and now across tickets and objectives
-      // (MIN-513) — same core as HTTP routes and the MCP tool. BOTH ends are
-      // checked in the draft conversation: the heart controls access to the
-      // project, not the fact that the target in itself (an inter-project
-      // relationship does not exist).
-      case "link_issues":
-        return executeLinkIssues(args, ctx, projectId);
-
-      case "add_comment": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(
-          ctx.supabase,
-          issueId,
-          projectId,
-        );
-        if (!scoped.ok) return toolError(scoped.error);
-        const body = typeof args.body === "string" ? args.body : "";
-        const result = await addCommentToIssue({
-          issueId,
-          actorId: ctx.userId,
-          body,
-          viaAssistant: true,
-        });
-        if (!result.ok) return libError(result);
-        return { result: { comment: result.comment }, success: true };
-      }
-
-      // Reached only from an unattended routine run: in a conversation the
-      // loop pauses on ask_user before any tool executes.
-      case "ask_user":
-        return toolError(UNATTENDED_REFUSAL);
-
-      case "create_watch":
-        return executeCreateWatch(args, ctx, projectId, access);
-
-      case "notify_me":
-        return executeNotifyMe(args, ctx, projectId);
-
-      case "add_objective_comment": {
-        const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
+      } else {
         const { data: objective } = await objectiveStore(ctx.supabase)
           .select("id")
           .is("deleted_at", null)
           .eq("id", objectiveId)
           .eq("project_id", projectId)
           .maybeSingle();
-        if (!objective) return toolError("Objective not found in this project.");
-        const result = await addCommentToObjective({
-          objectiveId,
-          actorId: ctx.userId,
-          body: typeof args.body === "string" ? args.body : "",
-          viaAssistant: true,
-        });
-        if (!result.ok) return libError(result);
-        return { result: { comment: result.comment }, success: true };
+        if (!objective) {
+          return toolError("Objective not found in this project.");
+        }
       }
 
-      case "add_resource": {
-        const url = typeof args.url === "string" ? args.url.trim() : "";
-        const pageId = typeof args.page_id === "string" ? args.page_id.trim() : "";
-        const attachmentId = typeof args.attachment_id === "string" ? args.attachment_id.trim() : "";
-        const commentId = typeof args.comment_id === "string" ? args.comment_id.trim() : "";
-        if ([url, pageId, attachmentId].filter(Boolean).length !== 1) {
-          return toolError("Send exactly one of url, page_id or attachment_id.");
+      if (commentId) {
+        const { data: comment, error } = await commentStore(ctx.supabase, "comments", ctx.userId)
+          .select("id,issue_id,objective_id,author_id").eq("id", commentId).maybeSingle();
+        if (error || !comment || comment.issue_id !== (issueId || null)
+          || comment.objective_id !== (objectiveId || null) || comment.author_id !== ctx.userId) {
+          return toolError("Comment not found on this parent or not authored by you.");
         }
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const objectiveId =
-          typeof args.objective_id === "string" ? args.objective_id : "";
-        if (!!issueId === !!objectiveId) {
-          return toolError(
-            "Pass issue_id OR objective_id — a resource hangs from one parent.",
-          );
-        }
+      }
+      if (attachmentId) {
+        const row = await copyConversationAttachment(ctx, attachmentId, {
+          projectId, issueId: issueId || null, objectiveId: objectiveId || null,
+          commentId: commentId || null, createdBy: ctx.userId,
+        });
+        return { result: { resource: { id: row.id, kind: "file", file_name: row.file_name,
+          mime_type: row.mime_type, size_bytes: row.size_bytes, comment_id: row.comment_id } }, success: true };
+      }
 
-        if (issueId) {
-          const scoped = await assertIssueInProject(
-            ctx.supabase,
-            issueId,
-            projectId,
-          );
-          if (!scoped.ok) return toolError(scoped.error);
-        } else {
-          const { data: objective } = await objectiveStore(ctx.supabase)
-            .select("id")
-            .is("deleted_at", null)
-            .eq("id", objectiveId)
-            .eq("project_id", projectId)
-            .maybeSingle();
-          if (!objective) {
-            return toolError("Objective not found in this project.");
-          }
-        }
-
-        if (commentId) {
-          const { data: comment, error } = await commentStore(ctx.supabase, "comments", ctx.userId)
-            .select("id,issue_id,objective_id,author_id").eq("id", commentId).maybeSingle();
-          if (error || !comment || comment.issue_id !== (issueId || null)
-            || comment.objective_id !== (objectiveId || null) || comment.author_id !== ctx.userId) {
-            return toolError("Comment not found on this parent or not authored by you.");
-          }
-        }
-        if (attachmentId) {
-          const row = await copyConversationAttachment(ctx, attachmentId, {
-            projectId, issueId: issueId || null, objectiveId: objectiveId || null,
-            commentId: commentId || null, createdBy: ctx.userId,
-          });
-          return { result: { resource: { id: row.id, kind: "file", file_name: row.file_name,
-            mime_type: row.mime_type, size_bytes: row.size_bytes, comment_id: row.comment_id } }, success: true };
-        }
-
-        let resource;
-        if (pageId) {
-          // The title is reread here, not requested from the model: this is the only source
-          // that cannot select the wrong page.
-          const { data: page } = await ctx.supabase
-            .from("pages")
-            .select("id, project_id, title, encrypted_content, encryption_version")
-            .eq("id", pageId)
-            .eq("project_id", projectId)
-            .is("deleted_at", null)
-            .maybeSingle();
-          if (!page) return toolError("Page not found in this project.");
-          const clearPage = await decodePageProjection(page, ctx.userId);
-          resource = {
-            kind: "page" as const,
-            page_id: pageId,
-            file_name: ((clearPage.title as string) ?? "").trim() || "Page",
-          };
-        } else {
-          try {
-            resource = await resolveLinkResource(url);
-          } catch (e) {
-            if (e instanceof FaviconError) {
-              return toolError(
-                "That url can't be reached — it must be a public http(s) address.",
-              );
-            }
-            return toolError((e as Error).message);
-          }
-        }
-
+      let resource;
+      if (pageId) {
+        // The title is reread here, not requested from the model: this is the only source
+        // that cannot select the wrong page.
+        const { data: page } = await ctx.supabase
+          .from("pages")
+          .select("id, project_id, title, encrypted_content, encryption_version")
+          .eq("id", pageId)
+          .eq("project_id", projectId)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (!page) return toolError("Page not found in this project.");
+        const clearPage = await decodePageProjection(page, ctx.userId);
+        resource = {
+          kind: "page" as const,
+          page_id: pageId,
+          file_name: ((clearPage.title as string) ?? "").trim() || "Page",
+        };
+      } else {
         try {
-          const [row] = await insertAttachments(getServiceClient(), {
-            projectId,
-            issueId: issueId || null,
-            objectiveId: objectiveId || null,
-            commentId: commentId || null,
-            createdBy: ctx.userId,
-            resources: [resource],
-          });
-          return {
-            result: {
-              resource: pageId
-                ? {
-                    id: row.id,
-                    kind: "page",
-                    page_id: row.page_id,
-                    title: row.file_name,
-                  }
-                : {
-                    id: row.id,
-                    kind: "link",
-                    url: row.url,
-                    title: row.file_name,
-                  },
-            },
-            success: true,
-          };
+          resource = await resolveLinkResource(url);
         } catch (e) {
+          if (e instanceof FaviconError) {
+            return toolError(
+              "That url can't be reached — it must be a public http(s) address.",
+            );
+          }
           return toolError((e as Error).message);
         }
       }
 
-      // ── Routines (MIN-185) ──────────────────────────────────────────
-      case "create_routine": {
-        const result = await createRoutine({
+      try {
+        const [row] = await insertAttachments(getServiceClient(), {
           projectId,
-          actorId: ctx.userId,
-          trigger: args.trigger,
-    prompt: typeof args.prompt === "string" ? args.prompt : "",
-          maxSpendPercent:
-            typeof args.max_spend_percent === "number"
-              ? args.max_spend_percent
-              : null,
-          frequency: typeof args.frequency === "string" ? args.frequency : undefined,
-          hour: typeof args.hour === "number" ? args.hour : undefined,
-          minute: typeof args.minute === "number" ? args.minute : undefined,
-          weekdays: args.weekdays === undefined ? undefined : numberList(args.weekdays),
-          daysOfMonth: args.days_of_month === undefined ? undefined : numberList(args.days_of_month),
-          // The browser's time zone is in the context of Numo: if it does not
-          // has not passed it, we refuse rather than leaving in UTC.
-          timezone: typeof args.timezone === "string" ? args.timezone : "",
-        });
-        if (!result.ok) return toolError(routineErrorMessage(result));
-        return {
-          result: { routine: routineForAssistantTool(result.routine) },
-          success: true,
-        };
-      }
-
-      case "list_routines": {
-        const rows = (await listRoutinesForUser(ctx.userId)).filter(
-          (r) => r.project_id === projectId,
-        );
-        const routineId =
-          typeof args.routine_id === "string" ? args.routine_id : "";
-        const routines = routinesForAssistantTool(rows, routineId);
-        if (!routines)
-          return toolError("No routine with that id in this project.");
-        return {
-          result: { routines },
-          success: true,
-        };
-      }
-
-      case "update_routine": {
-        const routineId =
-          typeof args.routine_id === "string" ? args.routine_id : "";
-        if (!routineId)
-          return toolError("routine_id is required (see list_routines).");
-        const result = await updateRoutine({
-          trigger: args.trigger,          routineId,
-          actorId: ctx.userId,
-          ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
-          ...(typeof args.enabled === "boolean"
-            ? { enabled: args.enabled }
-            : {}),
-          ...(typeof args.max_spend_percent === "number"
-            ? { maxSpendPercent: args.max_spend_percent }
-            : {}),
-          ...(typeof args.frequency === "string"
-            ? { frequency: args.frequency }
-            : {}),
-          ...(typeof args.hour === "number" ? { hour: args.hour } : {}),
-          ...(typeof args.minute === "number" ? { minute: args.minute } : {}),
-          ...(Array.isArray(args.weekdays)
-            ? { weekdays: numberList(args.weekdays) }
-            : {}),
-          ...(Array.isArray(args.days_of_month)
-            ? { daysOfMonth: numberList(args.days_of_month) }
-            : {}),
-          ...(typeof args.timezone === "string"
-            ? { timezone: args.timezone }
-            : {}),
-        });
-        if (!result.ok) return toolError(routineErrorMessage(result));
-        return {
-          result: { routine: routineForAssistantTool(result.routine) },
-          success: true,
-        };
-      }
-
-      // ── Routine runs (MIN-589) : relire ce que les occurrences ont fait ──
-      case "list_routine_runs": {
-        const routineId =
-          typeof args.routine_id === "string" ? args.routine_id : "";
-        if (!routineId)
-          return toolError("routine_id is required (see list_routines).");
-        const found = await getRoutineForUser(routineId, ctx.userId);
-        if (!found || found.routine.project_id !== projectId)
-          return toolError("No routine with that id in this project.");
-        const limit =
-          typeof args.limit === "number" && Number.isFinite(args.limit)
-            ? args.limit
-            : 20;
-        const runs = await routineRunSummaries(found.routine, limit);
-        return {
-          result: {
-            routine_id: routineId,
-            routine_title: found.routine.title,
-            runs,
-          },
-          success: true,
-        };
-      }
-
-      case "read_routine_occurrence": {
-        const occurrenceId =
-          typeof args.occurrence_id === "string" ? args.occurrence_id : "";
-        if (!occurrenceId)
-          return toolError(
-            "occurrence_id is required (see list_routine_runs).",
-          );
-        // Resolution goes through the occurrence first: its routine id is
-        // authoritative, so a single id is enough even when the conversation
-        // does not carry the routine anymore.
-        const { data: occurrenceRow, error: occurrenceError } = await ctx.service
-          .from("numo_routine_occurrences")
-          .select("*")
-          .eq("id", occurrenceId)
-          .maybeSingle();
-        if (occurrenceError) return toolError(occurrenceError.message);
-        if (!occurrenceRow)
-          return toolError(
-            "No occurrence with that id. Use list_routine_runs on the routine first.",
-          );
-        const occurrence = occurrenceRow as NumoRoutineOccurrence;
-        const found = await getRoutineForUser(occurrence.routine_id, ctx.userId);
-        if (!found || found.routine.project_id !== projectId)
-          return toolError("No occurrence with that id in this project.");
-        const detail = await routineOccurrenceDetail({
-          routine: found.routine,
-          occurrence,
-          readClient: ctx.supabase,
+          issueId: issueId || null,
+          objectiveId: objectiveId || null,
+          commentId: commentId || null,
+          createdBy: ctx.userId,
+          resources: [resource],
         });
         return {
           result: {
-            occurrence: detail.occurrence,
-            transcript: detail.transcript,
-            ...(detail.transcript_note
-              ? { transcript_note: detail.transcript_note }
-              : {}),
-          },
-          success: true,
-        };
-      }
-
-      case "read_pull_request": {
-        // Resolution shared with the PR write tools (MIN-550): the row from
-        // `pull_requests` (source of truth since MIN-143), then the project's
-        // repo target.
-        const resolved = await resolvePullRequest(
-          {
-            projectId,
-            userId: ctx.userId,
-            model: ctx.model ?? "",
-            locale: ctx.locale,
-            supabase: ctx.supabase,
-          },
-          args,
-        );
-        if ("error" in resolved) return toolError(resolved.error);
-        const { forge, target, number: prNumber, row } = resolved;
-
-        const [pr, diff, reviewComments, reviewThreads, conversationComments] =
-          await Promise.all([
-            forge.getPullRequest({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-            }),
-            forge.listPullRequestFiles({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-            }),
-            forge
-              .listPullRequestReviewComments({
-                token: target.token,
-                repoFullName: target.repoFullName,
-                number: prNumber,
-              })
-              .catch(() => []),
-            // Thread resolution (MIN-139), best-effort as above.
-            forge
-              .listReviewThreads({
-                token: target.token,
-                repoFullName: target.repoFullName,
-                number: prNumber,
-              })
-              .catch(() => []),
-            // Conversation comments (MIN-550): the thread Numo's own comments
-            // live in — their ids are what edit_own_pull_request_comment
-            // targets. Best-effort like the two lists above.
-            forge
-              .listPullRequestComments({
-                token: target.token,
-                repoFullName: target.repoFullName,
-                number: prNumber,
-              })
-              .catch(() => []),
-          ]);
-
-        // Checks CI (MIN-138): request changes to a red CI that has not
-        // of interest only if the agent sees WHAT breaks. `null` = unreadable
-        // (App permission not accepted, deposit without CI) — never blocking,
-        // like the review comments just above.
-        const checks = pr.headSha
-          ? await forge
-              .listChecks({
-                token: target.token,
-                repoFullName: target.repoFullName,
-                number: prNumber,
-                sha: pr.headSha,
-              })
-              .catch(() => null)
-          : null;
-
-        // Cap patch size so a huge diff doesn't blow the context window.
-        const PATCH_CAP = 4000;
-        // Conversation comments: the same ceilings as the code agent's read
-        // (30 posts, 2,000 characters each).
-        const MAX_CONVERSATION_COMMENTS = 30;
-        const MAX_COMMENT_BODY_CHARS = 2_000;
-        return {
-          result: {
-            // minddy's id of the pull request: what its mention carries
-            // (`[@#12](mention:pull_request/<id>)`, MIN-872).
-            ...(row ? { id: row.id } : {}),
-            number: pr.number,
-            url: pr.url,
-            state: pr.merged ? "merged" : pr.state,
-            title: pr.title,
-            body: pr.body,
-            head: pr.head,
-            base: pr.base,
-            draft: !!pr.draft,
-            checks: checks
+            resource: pageId
               ? {
-                  state: checks.state,
-                  passing: checks.passing,
-                  total: checks.total,
-                  failing: checks.checks
-                    .filter((c) => c.state === "failure")
-                    .map((c) => ({ name: c.name, url: c.url })),
+                  id: row.id,
+                  kind: "page",
+                  page_id: row.page_id,
+                  title: row.file_name,
+                }
+              : {
+                  id: row.id,
+                  kind: "link",
+                  url: row.url,
+                  title: row.file_name,
+                },
+          },
+          success: true,
+        };
+      } catch (e) {
+        return toolError((e as Error).message);
+      }
+    }
+
+    // ── Routines (MIN-185) ──────────────────────────────────────────
+    case "create_routine": {
+      const result = await createRoutine({
+        projectId,
+        actorId: ctx.userId,
+        trigger: args.trigger,
+  prompt: typeof args.prompt === "string" ? args.prompt : "",
+        maxSpendPercent:
+          typeof args.max_spend_percent === "number"
+            ? args.max_spend_percent
+            : null,
+        frequency: typeof args.frequency === "string" ? args.frequency : undefined,
+        hour: typeof args.hour === "number" ? args.hour : undefined,
+        minute: typeof args.minute === "number" ? args.minute : undefined,
+        weekdays: args.weekdays === undefined ? undefined : numberList(args.weekdays),
+        daysOfMonth: args.days_of_month === undefined ? undefined : numberList(args.days_of_month),
+        // The browser's time zone is in the context of Numo: if it does not
+        // has not passed it, we refuse rather than leaving in UTC.
+        timezone: typeof args.timezone === "string" ? args.timezone : "",
+      });
+      if (!result.ok) return toolError(routineErrorMessage(result));
+      return {
+        result: { routine: routineForAssistantTool(result.routine) },
+        success: true,
+      };
+    }
+
+    case "list_routines": {
+      const rows = (await listRoutinesForUser(ctx.userId)).filter(
+        (r) => r.project_id === projectId,
+      );
+      const routineId =
+        typeof args.routine_id === "string" ? args.routine_id : "";
+      const routines = routinesForAssistantTool(rows, routineId);
+      if (!routines)
+        return toolError("No routine with that id in this project.");
+      return {
+        result: { routines },
+        success: true,
+      };
+    }
+
+    case "update_routine": {
+      const routineId =
+        typeof args.routine_id === "string" ? args.routine_id : "";
+      if (!routineId)
+        return toolError("routine_id is required (see list_routines).");
+      const result = await updateRoutine({
+        trigger: args.trigger,          routineId,
+        actorId: ctx.userId,
+        ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
+        ...(typeof args.enabled === "boolean"
+          ? { enabled: args.enabled }
+          : {}),
+        ...(typeof args.max_spend_percent === "number"
+          ? { maxSpendPercent: args.max_spend_percent }
+          : {}),
+        ...(typeof args.frequency === "string"
+          ? { frequency: args.frequency }
+          : {}),
+        ...(typeof args.hour === "number" ? { hour: args.hour } : {}),
+        ...(typeof args.minute === "number" ? { minute: args.minute } : {}),
+        ...(Array.isArray(args.weekdays)
+          ? { weekdays: numberList(args.weekdays) }
+          : {}),
+        ...(Array.isArray(args.days_of_month)
+          ? { daysOfMonth: numberList(args.days_of_month) }
+          : {}),
+        ...(typeof args.timezone === "string"
+          ? { timezone: args.timezone }
+          : {}),
+      });
+      if (!result.ok) return toolError(routineErrorMessage(result));
+      return {
+        result: { routine: routineForAssistantTool(result.routine) },
+        success: true,
+      };
+    }
+
+    // ── Routine runs (MIN-589) : relire ce que les occurrences ont fait ──
+    case "list_routine_runs": {
+      const routineId =
+        typeof args.routine_id === "string" ? args.routine_id : "";
+      if (!routineId)
+        return toolError("routine_id is required (see list_routines).");
+      const found = await getRoutineForUser(routineId, ctx.userId);
+      if (!found || found.routine.project_id !== projectId)
+        return toolError("No routine with that id in this project.");
+      const limit =
+        typeof args.limit === "number" && Number.isFinite(args.limit)
+          ? args.limit
+          : 20;
+      const runs = await routineRunSummaries(found.routine, limit);
+      return {
+        result: {
+          routine_id: routineId,
+          routine_title: found.routine.title,
+          runs,
+        },
+        success: true,
+      };
+    }
+
+    case "read_routine_occurrence": {
+      const occurrenceId =
+        typeof args.occurrence_id === "string" ? args.occurrence_id : "";
+      if (!occurrenceId)
+        return toolError(
+          "occurrence_id is required (see list_routine_runs).",
+        );
+      // Resolution goes through the occurrence first: its routine id is
+      // authoritative, so a single id is enough even when the conversation
+      // does not carry the routine anymore.
+      const { data: occurrenceRow, error: occurrenceError } = await ctx.service
+        .from("numo_routine_occurrences")
+        .select("*")
+        .eq("id", occurrenceId)
+        .maybeSingle();
+      if (occurrenceError) return toolError(occurrenceError.message);
+      if (!occurrenceRow)
+        return toolError(
+          "No occurrence with that id. Use list_routine_runs on the routine first.",
+        );
+      const occurrence = occurrenceRow as NumoRoutineOccurrence;
+      const found = await getRoutineForUser(occurrence.routine_id, ctx.userId);
+      if (!found || found.routine.project_id !== projectId)
+        return toolError("No occurrence with that id in this project.");
+      const detail = await routineOccurrenceDetail({
+        routine: found.routine,
+        occurrence,
+        readClient: ctx.supabase,
+      });
+      return {
+        result: {
+          occurrence: detail.occurrence,
+          transcript: detail.transcript,
+          ...(detail.transcript_note
+            ? { transcript_note: detail.transcript_note }
+            : {}),
+        },
+        success: true,
+      };
+    }
+
+    case "read_pull_request": {
+      // Resolution shared with the PR write tools (MIN-550): the row from
+      // `pull_requests` (source of truth since MIN-143), then the project's
+      // repo target.
+      const resolved = await resolvePullRequest(
+        {
+          projectId,
+          userId: ctx.userId,
+          model: ctx.model ?? "",
+          locale: ctx.locale,
+          supabase: ctx.supabase,
+        },
+        args,
+      );
+      if ("error" in resolved) return toolError(resolved.error);
+      const { forge, target, number: prNumber, row } = resolved;
+
+      const [pr, diff, reviewComments, reviewThreads, conversationComments] =
+        await Promise.all([
+          forge.getPullRequest({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }),
+          forge.listPullRequestFiles({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }),
+          forge
+            .listPullRequestReviewComments({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+            })
+            .catch(() => []),
+          // Thread resolution (MIN-139), best-effort as above.
+          forge
+            .listReviewThreads({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+            })
+            .catch(() => []),
+          // Conversation comments (MIN-550): the thread Numo's own comments
+          // live in — their ids are what edit_own_pull_request_comment
+          // targets. Best-effort like the two lists above.
+          forge
+            .listPullRequestComments({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+            })
+            .catch(() => []),
+        ]);
+
+      // CI checks (MIN-138): a red CI is useful only when Numo sees what
+      // breaks. `null` = unreadable (App permission not accepted, repository
+      // without CI), never blocking, like the review comments above.
+      const checks = pr.headSha
+        ? await forge
+            .listChecks({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prNumber,
+              sha: pr.headSha,
+            })
+            .catch(() => null)
+        : null;
+
+      // Conversation comments: at most 30, of 2,000 characters each.
+      const MAX_CONVERSATION_COMMENTS = 30;
+      const MAX_COMMENT_BODY_CHARS = 2_000;
+      return {
+        result: {
+          // minddy's id of the pull request: what its mention carries
+          // (`[@#12](mention:pull_request/<id>)`, MIN-872).
+          ...(row ? { id: row.id } : {}),
+          number: pr.number,
+          url: pr.url,
+          state: pr.merged ? "merged" : pr.state,
+          title: pr.title,
+          body: pr.body,
+          head: pr.head,
+          base: pr.base,
+          draft: !!pr.draft,
+          checks: checks
+            ? {
+                state: checks.state,
+                passing: checks.passing,
+                total: checks.total,
+                failing: checks.checks
+                  .filter((c) => c.state === "failure")
+                  .map((c) => ({ name: c.name, url: c.url })),
+              }
+            : null,
+          files: diff.files.map((f) => ({
+            filename: f.filename,
+            status: f.status,
+            additions: f.additions,
+            deletions: f.deletions,
+            patch:
+              f.patch && f.patch.length > MAX_PATCH_CHARS
+                ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
+                : (f.patch ?? null),
+          })),
+          // The pagination of the forge cut the list: say it rather than
+          // let conclude on what has been seen.
+          files_truncated: diff.truncated,
+          // Comments anchored to the code, grouped into threads. `id` is the
+          // ROOT comment of the thread — what resolve_pull_request_threads
+          // targets. `line: null` = the target code has changed since: the
+          // anchor is no longer worth, only the hunk says what the
+          // discussion was about.
+          review_comments: groupReviewThreads(
+            reviewComments,
+            reviewThreads,
+          ).map((thread) => ({
+            id: thread.id,
+            path: thread.root.path,
+            line: thread.root.line,
+            original_line: thread.root.original_line,
+            side: thread.root.side,
+            // First line of a multi-line remark (`line` = the
+            // last) — without it, the target range is reduced to one point.
+            start_line: thread.root.start_line,
+            original_start_line: thread.root.original_start_line,
+            outdated: thread.resolution?.outdated ?? thread.root.line == null,
+            // Thread marked resolved = point set (`false` also covers the unknown).
+            resolved: !!thread.resolution?.resolved,
+            diff_hunk: thread.root.diff_hunk,
+            comments: thread.comments.map((c) => ({
+              author: c.user?.login ?? null,
+              body: c.body,
+              created_at: c.created_at,
+            })),
+          })),
+          // The conversation thread, most recent last — the same slice the
+          // PR page renders. `id` is what edit_own_pull_request_comment
+          // targets; `body` is capped so a long thread stays readable.
+          conversation_comments: conversationComments
+            .slice(-MAX_CONVERSATION_COMMENTS)
+            .map((c) => ({
+              id: c.id,
+              author: c.user?.login ?? null,
+              body:
+                c.body && c.body.length > MAX_COMMENT_BODY_CHARS
+                  ? c.body.slice(0, MAX_COMMENT_BODY_CHARS) +
+                    "\n… (comment truncated)"
+                  : c.body,
+              created_at: c.created_at,
+            })),
+        },
+        success: true,
+      };
+    }
+
+    /**
+     * Reattach to the hand an orphaned PR (MIN-163bis). The rule and
+     * its refusals live in `linkPullRequestToIssue`, shared with the app and
+     * the MCP; here, we only do gatekeeping and translation.
+     */
+    case "link_pull_request": {
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const scoped = await assertIssueInProject(
+        ctx.supabase,
+        issueId,
+        projectId,
+      );
+      if (!scoped.ok) return toolError(scoped.error);
+
+      const found = await resolveProjectPullRequest({
+        projectId,
+        ref: args.pull_request as string | number | undefined,
+        userId: ctx.userId,
+      });
+      if ("error" in found) {
+        return toolError(
+          found.error === "invalid_ref"
+            ? "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge."
+            : found.error === "no_repository"
+              ? "This project has no linked repository."
+              : "No pull request with that number in the repository linked to this project.",
+        );
+      }
+
+      const result = await linkPullRequestToIssue({
+        pr: found.pr,
+        issue: { id: issueId, projectId },
+        actorId: ctx.userId,
+      });
+      if (!result.ok) return toolError(PR_LINK_REFUSALS[result.code]);
+
+      return {
+        result: {
+          linked: true,
+          already: result.already,
+          pull_request: {
+            number: found.pr.number,
+            url: found.pr.url,
+            state: found.pr.state,
+            title: found.pr.title,
+          },
+          issue_id: issueId,
+          issue_status: result.status,
+        },
+        success: true,
+      };
+    }
+
+    /**
+     * PR management without touching the code (MIN-550): merge, rename /
+     * re-describe, comment, edit a comment Numo posted itself, resolve
+     * review conversations. The rules and the forge plumbing live in
+     * `pull-request-writes.ts`, shared with `read_pull_request` above; here
+     * we only gatekeep the identity of the call and relay.
+     */
+    case "merge_pull_request":
+    case "update_pull_request":
+    case "post_pull_request_comment":
+    case "edit_own_pull_request_comment":
+    case "resolve_pull_request_threads": {
+      return await executePullRequestWriteTool(
+        {
+          projectId,
+          userId: ctx.userId,
+          model: ctx.model ?? "Numo",
+          locale: ctx.locale,
+          supabase: ctx.supabase,
+        },
+        toolName as PullRequestWriteToolName,
+        args,
+      );
+    }
+
+    case "create_objective": {
+      const result = await createObjective({
+        projectId,
+        actorId: ctx.userId,
+        input: args,
+        viaAssistant: true,
+      });
+      if (!result.ok) return libError(result);
+      return { result: { objective: result.objective }, success: true };
+    }
+
+    case "update_objective": {
+      const objectiveId =
+        typeof args.objective_id === "string" ? args.objective_id : "";
+      if (!objectiveId) return toolError("objective_id is required.");
+      const {
+        description_edits: rawEdits,
+        description_append: rawAppend,
+        ...input
+      } = args;
+      // An empty or null list is no edit at all, not a refused one.
+      const descriptionEdits =
+        Array.isArray(rawEdits) && rawEdits.length > 0 ? rawEdits : null;
+      const descriptionAppend =
+        typeof rawAppend === "string" && rawAppend.trim() ? rawAppend : undefined;
+      const patches = Boolean(descriptionEdits || descriptionAppend);
+      if (patches && args.description !== undefined) {
+        return toolError(
+          "Pass either description (the whole text) or description_edits / description_append, not both.",
+        );
+      }
+      // Edits match the text people see: fold pending live typing in first.
+      if (patches) {
+        await materializePendingDescription("objective", objectiveId, projectId);
+      }
+      // Scope check: the objective must belong to the project in scope.
+      // The description is only read (and decrypted) when it is patched.
+      const { data: obj } = await objectiveStore(ctx.supabase)
+        .select(patches ? "id, description, updated_at" : "id")
+        .is("deleted_at", null)
+        .eq("id", objectiveId)
+        .eq("project_id", projectId)
+        .maybeSingle();
+      if (!obj) return toolError("Objective not found in this project.");
+      if (patches) {
+        const edit = patchObjectiveDescription(
+          (obj.description as string | null) ?? "",
+          { edits: numoTextEditList(descriptionEdits), append: descriptionAppend },
+          { read: "get_objective", replaceWhole: "update_objective { description }" },
+        );
+        if (!edit.ok) return toolError(edit.message);
+        input.description = edit.content;
+      }
+      const result = await updateObjective({
+        objectiveId,
+        actorId: ctx.userId,
+        input,
+        expectedUpdatedAt: patches ? (obj.updated_at as string) : null,
+        viaAssistant: true,
+      });
+      if (!result.ok) return libError(result);
+      return { result: { objective: result.objective }, success: true };
+    }
+
+    case "create_category": {
+      const result = await createCategory({
+        projectId,
+        actorId: ctx.userId,
+        input: args,
+      });
+      if (!result.ok) return libError(result);
+      return { result: { category: result.category }, success: true };
+    }
+
+    case "triage_decision": {
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      const decision = args.decision;
+      if (
+        decision !== "accept" &&
+        decision !== "decline" &&
+        decision !== "duplicate"
+      ) {
+        return toolError("decision must be accept, decline, or duplicate.");
+      }
+      const { data: issue } = await issueStore(ctx.supabase).select("id, status, updated_at")
+        .is("deleted_at", null)
+        .eq("id", issueId)
+        .eq("project_id", projectId)
+        .maybeSingle();
+      if (!issue) return toolError("Issue not found in this project.");
+      if (issue.status !== "triage") {
+        return toolError(
+          `This issue is not in triage (current status: ${issue.status}).`,
+        );
+      }
+      if (
+        decision === "duplicate" &&
+        typeof args.duplicate_of_id !== "string"
+      ) {
+        return toolError(
+          "duplicate_of_id is required for decision='duplicate'.",
+        );
+      }
+
+      const input: Record<string, unknown> =
+        decision === "accept"
+          ? { status: "backlog" }
+          : decision === "decline"
+            ? { status: "canceled" }
+            : { status: "duplicate", duplicate_of_id: args.duplicate_of_id };
+      // The status check above is only a read: the write is a CAS on that
+      // snapshot, so a member's concurrent triage decision is not overwritten.
+      // It runs BEFORE the comment, so a lost decision posts no explanation.
+      const result = await updateIssueFields({
+        issueId,
+        actorId: ctx.userId,
+        input,
+        viaAssistant: true,
+        expectedUpdatedAt: issue.updated_at as string,
+      });
+      if (!result.ok) return libError(result);
+
+      if (typeof args.comment === "string" && args.comment.trim()) {
+        const commented = await addCommentToIssue({
+          issueId,
+          actorId: ctx.userId,
+          body: args.comment,
+          viaAssistant: true,
+        });
+        if (!commented.ok) {
+          const failure = libError(commented).result as { error: string };
+          return toolError(
+            `The status changed to ${String(input.status)}, but the comment was not posted: ${failure.error}`,
+          );
+        }
+      }
+      return {
+        result: { decision, issue_id: issueId, status: input.status },
+        success: true,
+      };
+    }
+
+    // ── Feedback board ────────────────────────────────────────────────
+    // Feedback is RLS deny-all → reads/writes go through the service-client
+    // cores. The post is always re-scoped to the project in scope; the
+    // feedback comment mode's current post is the default target.
+
+    // The board's SETUP (public URL, SSO), as opposed to the
+    // posts on it — what Numo needs to hand the user a working "Feedback"
+    // button for their own app. Absolute URLs: the code goes elsewhere.
+    case "get_feedback_board": {
+      const board = await getFeedbackBoardConfig(projectId, SITE_URL);
+      // The board token is a capability link readers do not receive.
+      return {
+        result: {
+          board: access.canWrite
+            ? board
+            : { ...board, token: null, public_url: null },
+        },
+        success: true,
+      };
+    }
+
+    case "configure_feedback_board": {
+      if (!access.isOwner) return settingsError("ownerOnly");
+      const result = await configureFeedbackBoard({
+        projectId,
+        enabled: typeof args.enabled === "boolean" ? args.enabled : undefined,
+        generateSso: args.generate_sso_secret === true,
+        showCategories:
+          typeof args.show_categories === "boolean"
+            ? args.show_categories
+            : undefined,
+        showViews:
+          typeof args.show_views === "boolean" ? args.show_views : undefined,
+        allowComments:
+          typeof args.allow_comments === "boolean"
+            ? args.allow_comments
+            : undefined,
+        visibleViewIds: Array.isArray(args.visible_view_ids)
+          ? args.visible_view_ids.filter(
+              (v): v is string => typeof v === "string",
+            )
+          : undefined,
+        showPages:
+          typeof args.show_pages === "boolean" ? args.show_pages : undefined,
+        visiblePageIds: Array.isArray(args.visible_page_ids)
+          ? args.visible_page_ids.filter(
+              (v): v is string => typeof v === "string",
+            )
+          : undefined,
+        origin: SITE_URL,
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return {
+        result: {
+          board: result.config,
+          // Only present when asked for. A credential: the SCREEN surfaces it
+          // once (MIN-343) — it never enters the conversation history.
+          ...(result.sso_secret ? { sso_secret: result.sso_secret } : {}),
+        },
+        secrets: result.sso_secret ? [result.sso_secret] : undefined,
+        success: true,
+      };
+    }
+
+    case "list_feedback": {
+      // Filter on the query side, not on the window of 500 returned: this one
+      // is ordered by votes, therefore a status which does not collect any (spam,
+      // declined) falls outside the ceiling and the list wrongly returns empty.
+      const statuses = Array.isArray(args.status)
+        ? args.status.filter(isFeedbackPostStatus)
+        : undefined;
+      const posts = await listTeamFeedback(projectId, { statuses,
+        objectiveId: typeof args.objective_id === "string" || args.objective_id === null ? args.objective_id : undefined });
+      const limit =
+        typeof args.limit === "number"
+          ? Math.min(Math.max(1, args.limit), 200)
+          : 50;
+      const rows = posts.slice(0, limit).map((p) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        vote_count: p.vote_count,
+        is_public: p.is_public,
+        source: p.source,
+        objective_id: p.objective_id,
+        linked_issue_id: p.issue_id,
+      }));
+      return { result: { feedback: rows }, success: true };
+    }
+
+    case "get_feedback": {
+      const postId =
+        (typeof args.feedback_post_id === "string" &&
+          args.feedback_post_id) ||
+        ctx.feedbackPostId ||
+        "";
+      if (!postId) return toolError("feedback_post_id is required.");
+      const detail = await getTeamFeedbackDetail(projectId, postId);
+      if (!detail)
+        return toolError("Feedback post not found in this project.");
+      const { data: comments, error: commentsError } = await commentStore(ctx.service, "comments", ctx.userId)
+        .select(
+          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
+        )
+        .eq("feedback_post_id", postId)
+        .order("created_at", { ascending: true });
+      if (commentsError) return toolError("Unable to read feedback comments.");
+      // Resolve author display names (never surface raw uuids to the model).
+      const commentAuthorIds = [
+        ...new Set(
+          (comments ?? [])
+            .map((c) => c.author_id as string | null)
+            .filter((v): v is string => !!v),
+        ),
+      ];
+      const commentUsers = await fetchAuthUsersById(
+        ctx.service,
+        commentAuthorIds,
+      );
+      return {
+        result: {
+          feedback: {
+            id: detail.id,
+            title: detail.title,
+            body: detail.body,
+            objective_id: detail.objective_id,
+            submitted_title: detail.submitted_title,
+            submitted_body: detail.submitted_body,
+            status: detail.status,
+            vote_count: detail.vote_count,
+            is_public: detail.is_public,
+            source: detail.source,
+            author: detail.author
+              ? { name: detail.author.name, email: detail.author.email }
+              : null,
+            linked_issue: detail.issue
+              ? {
+                  id: detail.issue.id,
+                  identifier: issueIdentifier(
+                    access.project.key,
+                    detail.issue.number,
+                  ),
+                  status: detail.issue.status,
                 }
               : null,
-            files: diff.files.map((f) => ({
-              filename: f.filename,
-              status: f.status,
-              additions: f.additions,
-              deletions: f.deletions,
-              patch:
-                f.patch && f.patch.length > PATCH_CAP
-                  ? f.patch.slice(0, PATCH_CAP) + "\n… (diff truncated)"
-                  : (f.patch ?? null),
-            })),
-            // The pagination of the forge cut the list: say it rather than
-            // let conclude on what has been seen.
-            files_truncated: diff.truncated,
-            // Comments anchored to the code, grouped into threads. `id` is the
-            // ROOT comment of the thread — what resolve_pull_request_threads
-            // targets. `line: null` = the target code has changed since: the
-            // anchor is no longer worth, only the hunk says what the
-            // discussion was about.
-            review_comments: groupReviewThreads(
-              reviewComments,
-              reviewThreads,
-            ).map((thread) => ({
-              id: thread.id,
-              path: thread.root.path,
-              line: thread.root.line,
-              original_line: thread.root.original_line,
-              side: thread.root.side,
-              // First line of a multi-line remark (`line` = the
-              // last) — without it, the target range is reduced to one point.
-              start_line: thread.root.start_line,
-              original_start_line: thread.root.original_start_line,
-              outdated: thread.resolution?.outdated ?? thread.root.line == null,
-              // Thread marked resolved = point set (`false` also covers the unknown).
-              resolved: !!thread.resolution?.resolved,
-              diff_hunk: thread.root.diff_hunk,
-              comments: thread.comments.map((c) => ({
-                author: c.user?.login ?? null,
+            comments: (comments ?? []).map((c) => {
+              // A public comment written by a VISITOR of the board: Numo
+              // works for the team, so he sees it named, like her.
+              const visitor = c.feedback_users as unknown as {
+                name: string | null;
+                email: string | null;
+                pseudonym: string;
+              } | null;
+              return {
+                author: visitor
+                  ? visitor.name?.trim() ||
+                    visitor.email?.trim() ||
+                    visitor.pseudonym
+                  : c.via_assistant
+                    ? "Numo"
+                    : displayName(
+                        toNamed(
+                          c.author_id
+                            ? commentUsers.get(c.author_id as string)
+                            : null,
+                        ),
+                        "User",
+                      ),
+                visibility: (c.visibility as string) ?? "internal",
                 body: c.body,
                 created_at: c.created_at,
-              })),
-            })),
-            // The conversation thread, most recent last — the same slice the
-            // PR page renders. `id` is what edit_own_pull_request_comment
-            // targets; `body` is capped so a long thread stays readable.
-            conversation_comments: conversationComments
-              .slice(-MAX_CONVERSATION_COMMENTS)
-              .map((c) => ({
-                id: c.id,
-                author: c.user?.login ?? null,
-                body:
-                  c.body && c.body.length > MAX_COMMENT_BODY_CHARS
-                    ? c.body.slice(0, MAX_COMMENT_BODY_CHARS) +
-                      "\n… (comment truncated)"
-                    : c.body,
-                created_at: c.created_at,
-              })),
+              };
+            }),
           },
-          success: true,
-        };
-      }
+        },
+        success: true,
+      };
+    }
 
-      /**
-       * Reattach to the hand an orphaned PR (MIN-163bis). The rule and
-       * its refusals live in `linkPullRequestToIssue`, shared with the app and
-       * the MCP; here, we only do gatekeeping and translation.
-       */
-      case "link_pull_request": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(
-          ctx.supabase,
-          issueId,
-          projectId,
-        );
-        if (!scoped.ok) return toolError(scoped.error);
-
-        const found = await resolveProjectPullRequest({
-          projectId,
-          ref: args.pull_request as string | number | undefined,
-          userId: ctx.userId,
-        });
-        if ("error" in found) {
-          return toolError(
-            found.error === "invalid_ref"
-              ? "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge."
-              : found.error === "no_repository"
-                ? "This project has no linked repository."
-                : "No pull request with that number in the repository linked to this project.",
-          );
-        }
-
-        const result = await linkPullRequestToIssue({
-          pr: found.pr,
-          issue: { id: issueId, projectId },
-          actorId: ctx.userId,
-        });
-        if (!result.ok) return toolError(PR_LINK_REFUSALS[result.code]);
-
-        return {
-          result: {
-            linked: true,
-            already: result.already,
-            pull_request: {
-              number: found.pr.number,
-              url: found.pr.url,
-              state: found.pr.state,
-              title: found.pr.title,
-            },
-            issue_id: issueId,
-            issue_status: result.status,
+    case "promote_feedback_to_issue": {
+      const postId =
+        (typeof args.feedback_post_id === "string" &&
+          args.feedback_post_id) ||
+        ctx.feedbackPostId ||
+        "";
+      if (!postId) return toolError("feedback_post_id is required.");
+      const scoped = await getProjectFeedbackPost(projectId, postId);
+      if (!scoped)
+        return toolError("Feedback post not found in this project.");
+      const result = await promoteFeedbackPost({
+        postId,
+        actorId: ctx.userId,
+        projectName: access.project.name,
+      });
+      if (!result.ok) return libError(result);
+      return {
+        result: {
+          issue: {
+            ...result.issue,
+            identifier: issueIdentifier(
+              access.project.key,
+              result.issue.number as number,
+            ),
           },
-          success: true,
-        };
-      }
+        },
+        success: true,
+      };
+    }
 
-      /**
-       * PR management without touching the code (MIN-550): merge, rename /
-       * re-describe, comment, edit a comment Numo posted itself, resolve
-       * review conversations. The rules and the forge plumbing live in
-       * `pull-request-writes.ts`, shared with `read_pull_request` above; here
-       * we only gatekeep the identity of the call and relay.
-       */
-      case "merge_pull_request":
-      case "update_pull_request":
-      case "post_pull_request_comment":
-      case "edit_own_pull_request_comment":
-      case "resolve_pull_request_threads": {
-        return await executePullRequestWriteTool(
-          {
-            projectId,
-            userId: ctx.userId,
-            model: ctx.model ?? "Numo",
-            locale: ctx.locale,
-            supabase: ctx.supabase,
+    case "link_feedback_to_objective": {
+      const postId = typeof args.feedback_post_id === "string" ? args.feedback_post_id : ctx.feedbackPostId;
+      if (!postId) return toolError("feedback_post_id is required.");
+      if (!await getTeamFeedbackDetail(projectId, postId)) return toolError("Feedback post not found in this project.");
+      const result = await updateFeedbackPostFields({ postId, actorId: ctx.userId,
+        input: { objective_id: args.objective_id }, viaAssistant: true });
+      if (!result.ok) return toolError(result.errorKey);
+      return { result: { feedback_post_id: postId, objective_id: result.post.objective_id }, success: true };
+    }
+    case "update_integration_objective": {
+      if (!access.isOwner) return settingsError("ownerOnly");
+      if (typeof args.integration_id !== "string") return toolError("integration_id is required.");
+      const result = await updateIntegrationObjective({ projectId, integrationId: args.integration_id, objectiveId: args.objective_id });
+      if (!result.ok) return settingsError(result.errorKey);
+      return { result: { integration: result.integration }, success: true };
+    }
+    case "link_feedback_to_issue": {
+      const postId =
+        (typeof args.feedback_post_id === "string" &&
+          args.feedback_post_id) ||
+        ctx.feedbackPostId ||
+        "";
+      if (!postId) return toolError("feedback_post_id is required.");
+      const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+      if (!issueId) return toolError("issue_id is required.");
+      const scoped = await getProjectFeedbackPost(projectId, postId);
+      if (!scoped)
+        return toolError("Feedback post not found in this project.");
+      const result = await linkFeedbackIssue({
+        postId,
+        issueId,
+        actorId: ctx.userId,
+      });
+      if (!result.ok) return libError(result);
+      return {
+        result: { linked: true, feedback_post_id: postId, issue_id: issueId },
+        success: true,
+      };
+    }
+
+    case "unlink_feedback": {
+      const postId =
+        (typeof args.feedback_post_id === "string" &&
+          args.feedback_post_id) ||
+        ctx.feedbackPostId ||
+        "";
+      if (!postId) return toolError("feedback_post_id is required.");
+      const scoped = await getProjectFeedbackPost(projectId, postId);
+      if (!scoped)
+        return toolError("Feedback post not found in this project.");
+      const ok = await unlinkFeedbackIssue(postId, ctx.userId);
+      if (!ok) return toolError("Could not unlink the feedback post.");
+      return {
+        result: { unlinked: true, feedback_post_id: postId },
+        success: true,
+      };
+    }
+
+    case "add_feedback_comment": {
+      const postId =
+        (typeof args.feedback_post_id === "string" &&
+          args.feedback_post_id) ||
+        ctx.feedbackPostId ||
+        "";
+      if (!postId) return toolError("feedback_post_id is required.");
+      if (typeof args.body !== "string")
+        return toolError("body must be a string.");
+      const scoped = await getProjectFeedbackPost(projectId, postId);
+      if (!scoped)
+        return toolError("Feedback post not found in this project.");
+      const result = await addCommentToFeedbackPost({
+        postId,
+        actorId: ctx.userId,
+        body: args.body,
+        visibility: "internal",
+        viaAssistant: true,
+      });
+      if (!result.ok) return toolError(result.errorKey ?? "databaseError");
+      return {
+        result: { feedback_post_id: postId, comment: result.comment },
+        success: true,
+      };
+    }
+
+    case "respond_to_feedback": {
+      const postId =
+        (typeof args.feedback_post_id === "string" &&
+          args.feedback_post_id) ||
+        ctx.feedbackPostId ||
+        "";
+      if (!postId) return toolError("feedback_post_id is required.");
+      if (typeof args.response !== "string") {
+        return toolError("response must be a string.");
+      }
+      const scoped = await getProjectFeedbackPost(projectId, postId);
+      if (!scoped)
+        return toolError("Feedback post not found in this project.");
+      // The team response is a PUBLIC comment from the feedback thread
+      // (MIN-196), plus a return field. Signed “Team <project>” on the
+      // board — never in the name of who wrote it, including Numo.
+      const result = await addCommentToFeedbackPost({
+        postId,
+        actorId: ctx.userId,
+        body: args.response,
+        visibility: "public",
+        viaAssistant: true,
+      });
+      if (!result.ok) return toolError(result.errorKey ?? "databaseError");
+      return {
+        result: { feedback_post_id: postId, comment: result.comment },
+        success: true,
+      };
+    }
+
+    // ── Project settings (owner-gated inside the cores) ───────────────
+    case "update_project": {
+      const result = await updateProjectSettings({
+        projectId,
+        actorId: ctx.userId,
+        input: args,
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return {
+        result: {
+          project: {
+            id: result.project.id,
+            name: result.project.name,
+            key: result.project.key,
+            color: result.project.color,
+            smart_assign_enabled: result.project.smart_assign_enabled,
+            smart_assign_from_status: smartAssignFromStatusOf(result.project),
+            smart_assign_rules: result.project.smart_assign_rules,
+            smart_triage_mode: result.project.smart_triage_mode,
+            feedback_review_enabled: result.project.feedback_review_enabled,
+            feedback_review_skip_over_budget:
+              result.project.feedback_review_skip_over_budget,
+            feedback_translate_enabled: result.project.feedback_translate_enabled,
+            feedback_team_language: result.project.feedback_team_language,
+            feedback_no_translate_languages:
+              result.project.feedback_no_translate_languages,
+            ai_language: result.project.ai_language ?? null,
+            // Present when this call changed them: the map as it now is.
+            ...(result.project.ai_instructions
+              ? { ai_instructions: result.project.ai_instructions }
+              : {}),
           },
-          toolName as PullRequestWriteToolName,
-          args,
-        );
-      }
+        },
+        success: true,
+      };
+    }
 
-      case "create_objective": {
-        const result = await createObjective({
-          projectId,
-          actorId: ctx.userId,
-          input: args,
-          viaAssistant: true,
-        });
-        if (!result.ok) return libError(result);
-        return { result: { objective: result.objective }, success: true };
-      }
-
-      case "update_objective": {
-        const objectiveId =
-          typeof args.objective_id === "string" ? args.objective_id : "";
-        if (!objectiveId) return toolError("objective_id is required.");
-        const {
-          description_edits: rawEdits,
-          description_append: rawAppend,
-          ...input
-        } = args;
-        // An empty or null list is no edit at all, not a refused one.
-        const descriptionEdits =
-          Array.isArray(rawEdits) && rawEdits.length > 0 ? rawEdits : null;
-        const descriptionAppend =
-          typeof rawAppend === "string" && rawAppend.trim() ? rawAppend : undefined;
-        const patches = Boolean(descriptionEdits || descriptionAppend);
-        if (patches && args.description !== undefined) {
-          return toolError(
-            "Pass either description (the whole text) or description_edits / description_append, not both.",
-          );
-        }
-        // Edits match the text people see: fold pending live typing in first.
-        if (patches) {
-          await materializePendingDescription("objective", objectiveId, projectId);
-        }
-        // Scope check: the objective must belong to the project in scope.
-        // The description is only read (and decrypted) when it is patched.
-        const { data: obj } = await objectiveStore(ctx.supabase)
-          .select(patches ? "id, description, updated_at" : "id")
-          .is("deleted_at", null)
-          .eq("id", objectiveId)
-          .eq("project_id", projectId)
-          .maybeSingle();
-        if (!obj) return toolError("Objective not found in this project.");
-        if (patches) {
-          const edit = patchObjectiveDescription(
-            (obj.description as string | null) ?? "",
-            { edits: numoTextEditList(descriptionEdits), append: descriptionAppend },
-            { read: "get_objective", replaceWhole: "update_objective { description }" },
-          );
-          if (!edit.ok) return toolError(edit.message);
-          input.description = edit.content;
-        }
-        const result = await updateObjective({
-          objectiveId,
-          actorId: ctx.userId,
-          input,
-          expectedUpdatedAt: patches ? (obj.updated_at as string) : null,
-          viaAssistant: true,
-        });
-        if (!result.ok) return libError(result);
-        return { result: { objective: result.objective }, success: true };
-      }
-
-      case "create_category": {
-        const result = await createCategory({
-          projectId,
-          actorId: ctx.userId,
-          input: args,
-        });
-        if (!result.ok) return libError(result);
-        return { result: { category: result.category }, success: true };
-      }
-
-      case "triage_decision": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const decision = args.decision;
-        if (
-          decision !== "accept" &&
-          decision !== "decline" &&
-          decision !== "duplicate"
-        ) {
-          return toolError("decision must be accept, decline, or duplicate.");
-        }
-        const { data: issue } = await issueStore(ctx.supabase).select("id, status, updated_at")
-          .is("deleted_at", null)
-          .eq("id", issueId)
-          .eq("project_id", projectId)
-          .maybeSingle();
-        if (!issue) return toolError("Issue not found in this project.");
-        if (issue.status !== "triage") {
-          return toolError(
-            `This issue is not in triage (current status: ${issue.status}).`,
-          );
-        }
-        if (
-          decision === "duplicate" &&
-          typeof args.duplicate_of_id !== "string"
-        ) {
-          return toolError(
-            "duplicate_of_id is required for decision='duplicate'.",
-          );
-        }
-
-        const input: Record<string, unknown> =
-          decision === "accept"
-            ? { status: "backlog" }
-            : decision === "decline"
-              ? { status: "canceled" }
-              : { status: "duplicate", duplicate_of_id: args.duplicate_of_id };
-        // The status check above is only a read: the write is a CAS on that
-        // snapshot, so a member's concurrent triage decision is not overwritten.
-        // It runs BEFORE the comment, so a lost decision posts no explanation.
-        const result = await updateIssueFields({
-          issueId,
-          actorId: ctx.userId,
-          input,
-          viaAssistant: true,
-          expectedUpdatedAt: issue.updated_at as string,
-        });
-        if (!result.ok) return libError(result);
-
-        if (typeof args.comment === "string" && args.comment.trim()) {
-          const commented = await addCommentToIssue({
-            issueId,
-            actorId: ctx.userId,
-            body: args.comment,
-            viaAssistant: true,
-          });
-          if (!commented.ok) {
-            const failure = libError(commented).result as { error: string };
-            return toolError(
-              `The status changed to ${String(input.status)}, but the comment was not posted: ${failure.error}`,
-            );
-          }
-        }
-        return {
-          result: { decision, issue_id: issueId, status: input.status },
-          success: true,
-        };
-      }
-
-      // ── Feedback board ────────────────────────────────────────────────
-      // Feedback is RLS deny-all → reads/writes go through the service-client
-      // cores. The post is always re-scoped to the project in scope; the
-      // feedback comment mode's current post is the default target.
-
-      // The board's SETUP (public URL, SSO), as opposed to the
-      // posts on it — what Numo needs to hand the user a working "Feedback"
-      // button for their own app. Absolute URLs: the code goes elsewhere.
-      case "get_feedback_board": {
-        const board = await getFeedbackBoardConfig(projectId, SITE_URL);
-        // The board token is a capability link readers do not receive.
-        return {
-          result: {
-            board: access.canWrite
-              ? board
-              : { ...board, token: null, public_url: null },
+    case "invite_member": {
+      const result = await inviteMember({
+        projectId,
+        actorId: ctx.userId,
+        email: args.email,
+        role: args.role ?? "member",
+        // A member always comments: the option only exists for a reader.
+        canComment: args.role === "reader" && args.can_comment === true,
+        locale: resolveApplicationLocale(ctx.locale),
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return {
+        result: {
+          invitation: {
+            id: result.invitation.id,
+            email: result.invitation.invited_email,
+            role: result.invitation.role,
+            can_comment: result.invitation.can_comment,
           },
-          success: true,
-        };
-      }
+        },
+        success: true,
+      };
+    }
 
-      case "configure_feedback_board": {
-        if (!access.isOwner) return settingsError("ownerOnly");
-        const result = await configureFeedbackBoard({
-          projectId,
-          enabled: typeof args.enabled === "boolean" ? args.enabled : undefined,
-          generateSso: args.generate_sso_secret === true,
-          showCategories:
-            typeof args.show_categories === "boolean"
-              ? args.show_categories
-              : undefined,
-          showViews:
-            typeof args.show_views === "boolean" ? args.show_views : undefined,
-          allowComments:
-            typeof args.allow_comments === "boolean"
-              ? args.allow_comments
-              : undefined,
-          visibleViewIds: Array.isArray(args.visible_view_ids)
-            ? args.visible_view_ids.filter(
-                (v): v is string => typeof v === "string",
-              )
-            : undefined,
-          showPages:
-            typeof args.show_pages === "boolean" ? args.show_pages : undefined,
-          visiblePageIds: Array.isArray(args.visible_page_ids)
-            ? args.visible_page_ids.filter(
-                (v): v is string => typeof v === "string",
-              )
-            : undefined,
-          origin: SITE_URL,
-        });
-        if (!result.ok) return settingsError(result.errorKey);
-        return {
-          result: {
-            board: result.config,
-            // Only present when asked for. A credential: the SCREEN surfaces it
-            // once (MIN-343) — it never enters the conversation history.
-            ...(result.sso_secret ? { sso_secret: result.sso_secret } : {}),
-          },
-          secrets: result.sso_secret ? [result.sso_secret] : undefined,
-          success: true,
-        };
-      }
+    case "remove_member": {
+      const userId = typeof args.user_id === "string" ? args.user_id : "";
+      if (!userId) return toolError("user_id is required.");
+      const result = await removeMember({
+        projectId,
+        actorId: ctx.userId,
+        userId,
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return { result: { removed: userId }, success: true };
+    }
 
-      case "list_feedback": {
-        // Filter on the query side, not on the window of 500 returned: this one
-        // is ordered by votes, therefore a status which does not collect any (spam,
-        // declined) falls outside the ceiling and the list wrongly returns empty.
-        const statuses = Array.isArray(args.status)
-          ? args.status.filter(isFeedbackPostStatus)
-          : undefined;
-        const posts = await listTeamFeedback(projectId, { statuses,
-          objectiveId: typeof args.objective_id === "string" || args.objective_id === null ? args.objective_id : undefined });
-        const limit =
-          typeof args.limit === "number"
-            ? Math.min(Math.max(1, args.limit), 200)
-            : 50;
-        const rows = posts.slice(0, limit).map((p) => ({
-          id: p.id,
-          title: p.title,
-          status: p.status,
-          vote_count: p.vote_count,
-          is_public: p.is_public,
-          source: p.source,
-          objective_id: p.objective_id,
-          linked_issue_id: p.issue_id,
-        }));
-        return { result: { feedback: rows }, success: true };
+    case "update_member_role": {
+      const userId = typeof args.user_id === "string" ? args.user_id.trim() : "";
+      const invitationId =
+        typeof args.invitation_id === "string" ? args.invitation_id.trim() : "";
+      if (!userId === !invitationId) {
+        return toolError("Pass exactly one of user_id (a member) or invitation_id (a pending invitation).");
       }
-
-      case "get_feedback": {
-        const postId =
-          (typeof args.feedback_post_id === "string" &&
-            args.feedback_post_id) ||
-          ctx.feedbackPostId ||
-          "";
-        if (!postId) return toolError("feedback_post_id is required.");
-        const detail = await getTeamFeedbackDetail(projectId, postId);
-        if (!detail)
-          return toolError("Feedback post not found in this project.");
-        const { data: comments, error: commentsError } = await commentStore(ctx.service, "comments", ctx.userId)
-          .select(
-            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
-          )
-          .eq("feedback_post_id", postId)
-          .order("created_at", { ascending: true });
-        if (commentsError) return toolError("Unable to read feedback comments.");
-        // Resolve author display names (never surface raw uuids to the model).
-        const commentAuthorIds = [
-          ...new Set(
-            (comments ?? [])
-              .map((c) => c.author_id as string | null)
-              .filter((v): v is string => !!v),
-          ),
-        ];
-        const commentUsers = await fetchAuthUsersById(
-          ctx.service,
-          commentAuthorIds,
-        );
-        return {
-          result: {
-            feedback: {
-              id: detail.id,
-              title: detail.title,
-              body: detail.body,
-              objective_id: detail.objective_id,
-              submitted_title: detail.submitted_title,
-              submitted_body: detail.submitted_body,
-              status: detail.status,
-              vote_count: detail.vote_count,
-              is_public: detail.is_public,
-              source: detail.source,
-              author: detail.author
-                ? { name: detail.author.name, email: detail.author.email }
-                : null,
-              linked_issue: detail.issue
-                ? {
-                    id: detail.issue.id,
-                    identifier: issueIdentifier(
-                      access.project.key,
-                      detail.issue.number,
-                    ),
-                    status: detail.issue.status,
-                  }
-                : null,
-              comments: (comments ?? []).map((c) => {
-                // A public comment written by a VISITOR of the board: Numo
-                // works for the team, so he sees it named, like her.
-                const visitor = c.feedback_users as unknown as {
-                  name: string | null;
-                  email: string | null;
-                  pseudonym: string;
-                } | null;
-                return {
-                  author: visitor
-                    ? visitor.name?.trim() ||
-                      visitor.email?.trim() ||
-                      visitor.pseudonym
-                    : c.via_assistant
-                      ? "Numo"
-                      : displayName(
-                          toNamed(
-                            c.author_id
-                              ? commentUsers.get(c.author_id as string)
-                              : null,
-                          ),
-                          "User",
-                        ),
-                  visibility: (c.visibility as string) ?? "internal",
-                  body: c.body,
-                  created_at: c.created_at,
-                };
-              }),
-            },
-          },
-          success: true,
-        };
-      }
-
-      case "promote_feedback_to_issue": {
-        const postId =
-          (typeof args.feedback_post_id === "string" &&
-            args.feedback_post_id) ||
-          ctx.feedbackPostId ||
-          "";
-        if (!postId) return toolError("feedback_post_id is required.");
-        const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped)
-          return toolError("Feedback post not found in this project.");
-        const result = await promoteFeedbackPost({
-          postId,
-          actorId: ctx.userId,
-          projectName: access.project.name,
-        });
-        if (!result.ok) return libError(result);
-        return {
-          result: {
-            issue: {
-              ...result.issue,
-              identifier: issueIdentifier(
-                access.project.key,
-                result.issue.number as number,
-              ),
-            },
-          },
-          success: true,
-        };
-      }
-
-      case "link_feedback_to_objective": {
-        const postId = typeof args.feedback_post_id === "string" ? args.feedback_post_id : ctx.feedbackPostId;
-        if (!postId) return toolError("feedback_post_id is required.");
-        if (!await getTeamFeedbackDetail(projectId, postId)) return toolError("Feedback post not found in this project.");
-        const result = await updateFeedbackPostFields({ postId, actorId: ctx.userId,
-          input: { objective_id: args.objective_id }, viaAssistant: true });
-        if (!result.ok) return toolError(result.errorKey);
-        return { result: { feedback_post_id: postId, objective_id: result.post.objective_id }, success: true };
-      }
-      case "update_integration_objective": {
-        if (!access.isOwner) return settingsError("ownerOnly");
-        if (typeof args.integration_id !== "string") return toolError("integration_id is required.");
-        const result = await updateIntegrationObjective({ projectId, integrationId: args.integration_id, objectiveId: args.objective_id });
-        if (!result.ok) return settingsError(result.errorKey);
-        return { result: { integration: result.integration }, success: true };
-      }
-      case "link_feedback_to_issue": {
-        const postId =
-          (typeof args.feedback_post_id === "string" &&
-            args.feedback_post_id) ||
-          ctx.feedbackPostId ||
-          "";
-        if (!postId) return toolError("feedback_post_id is required.");
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        if (!issueId) return toolError("issue_id is required.");
-        const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped)
-          return toolError("Feedback post not found in this project.");
-        const result = await linkFeedbackIssue({
-          postId,
-          issueId,
-          actorId: ctx.userId,
-        });
-        if (!result.ok) return libError(result);
-        return {
-          result: { linked: true, feedback_post_id: postId, issue_id: issueId },
-          success: true,
-        };
-      }
-
-      case "unlink_feedback": {
-        const postId =
-          (typeof args.feedback_post_id === "string" &&
-            args.feedback_post_id) ||
-          ctx.feedbackPostId ||
-          "";
-        if (!postId) return toolError("feedback_post_id is required.");
-        const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped)
-          return toolError("Feedback post not found in this project.");
-        const ok = await unlinkFeedbackIssue(postId, ctx.userId);
-        if (!ok) return toolError("Could not unlink the feedback post.");
-        return {
-          result: { unlinked: true, feedback_post_id: postId },
-          success: true,
-        };
-      }
-
-      case "add_feedback_comment": {
-        const postId =
-          (typeof args.feedback_post_id === "string" &&
-            args.feedback_post_id) ||
-          ctx.feedbackPostId ||
-          "";
-        if (!postId) return toolError("feedback_post_id is required.");
-        if (typeof args.body !== "string")
-          return toolError("body must be a string.");
-        const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped)
-          return toolError("Feedback post not found in this project.");
-        const result = await addCommentToFeedbackPost({
-          postId,
-          actorId: ctx.userId,
-          body: args.body,
-          visibility: "internal",
-          viaAssistant: true,
-        });
-        if (!result.ok) return toolError(result.errorKey ?? "databaseError");
-        return {
-          result: { feedback_post_id: postId, comment: result.comment },
-          success: true,
-        };
-      }
-
-      case "respond_to_feedback": {
-        const postId =
-          (typeof args.feedback_post_id === "string" &&
-            args.feedback_post_id) ||
-          ctx.feedbackPostId ||
-          "";
-        if (!postId) return toolError("feedback_post_id is required.");
-        if (typeof args.response !== "string") {
-          return toolError("response must be a string.");
-        }
-        const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped)
-          return toolError("Feedback post not found in this project.");
-        // The team response is a PUBLIC comment from the feedback thread
-        // (MIN-196), plus a return field. Signed “Team <project>” on the
-        // board — never in the name of who wrote it, including Numo.
-        const result = await addCommentToFeedbackPost({
-          postId,
-          actorId: ctx.userId,
-          body: args.response,
-          visibility: "public",
-          viaAssistant: true,
-        });
-        if (!result.ok) return toolError(result.errorKey ?? "databaseError");
-        return {
-          result: { feedback_post_id: postId, comment: result.comment },
-          success: true,
-        };
-      }
-
-      // ── Project settings (owner-gated inside the cores) ───────────────
-      case "update_project": {
-        const result = await updateProjectSettings({
-          projectId,
-          actorId: ctx.userId,
-          input: args,
-        });
-        if (!result.ok) return settingsError(result.errorKey);
-        return {
-          result: {
-            project: {
-              id: result.project.id,
-              name: result.project.name,
-              key: result.project.key,
-              color: result.project.color,
-              smart_assign_enabled: result.project.smart_assign_enabled,
-              smart_assign_from_status: smartAssignFromStatusOf(result.project),
-              smart_assign_rules: result.project.smart_assign_rules,
-              smart_triage_mode: result.project.smart_triage_mode,
-              feedback_review_enabled: result.project.feedback_review_enabled,
-              feedback_review_skip_over_budget:
-                result.project.feedback_review_skip_over_budget,
-              feedback_translate_enabled: result.project.feedback_translate_enabled,
-              feedback_team_language: result.project.feedback_team_language,
-              feedback_no_translate_languages:
-                result.project.feedback_no_translate_languages,
-              ai_language: result.project.ai_language ?? null,
-              // Present when this call changed them: the map as it now is.
-              ...(result.project.ai_instructions
-                ? { ai_instructions: result.project.ai_instructions }
-                : {}),
-            },
-          },
-          success: true,
-        };
-      }
-
-      case "invite_member": {
-        const result = await inviteMember({
-          projectId,
-          actorId: ctx.userId,
-          email: args.email,
-          role: args.role ?? "member",
-          // A member always comments: the option only exists for a reader.
-          canComment: args.role === "reader" && args.can_comment === true,
-          locale: resolveApplicationLocale(ctx.locale),
-        });
-        if (!result.ok) return settingsError(result.errorKey);
-        return {
-          result: {
-            invitation: {
-              id: result.invitation.id,
-              email: result.invitation.invited_email,
-              role: result.invitation.role,
-              can_comment: result.invitation.can_comment,
-            },
-          },
-          success: true,
-        };
-      }
-
-      case "remove_member": {
-        const userId = typeof args.user_id === "string" ? args.user_id : "";
-        if (!userId) return toolError("user_id is required.");
-        const result = await removeMember({
+      if (userId) {
+        const result = await updateMemberRole({
           projectId,
           actorId: ctx.userId,
           userId,
-        });
-        if (!result.ok) return settingsError(result.errorKey);
-        return { result: { removed: userId }, success: true };
-      }
-
-      case "update_member_role": {
-        const userId = typeof args.user_id === "string" ? args.user_id.trim() : "";
-        const invitationId =
-          typeof args.invitation_id === "string" ? args.invitation_id.trim() : "";
-        if (!userId === !invitationId) {
-          return toolError("Pass exactly one of user_id (a member) or invitation_id (a pending invitation).");
-        }
-        if (userId) {
-          const result = await updateMemberRole({
-            projectId,
-            actorId: ctx.userId,
-            userId,
-            role: args.role,
-            canComment: args.role === "reader" ? args.can_comment : false,
-          });
-          if (!result.ok) return settingsError(result.errorKey);
-          return {
-            result: {
-              member: { user_id: userId, role: result.role, can_comment: result.canComment },
-              unassigned_issues: result.unassigned,
-            },
-            success: true,
-          };
-        }
-        const result = await updateInvitationRole({
-          projectId,
-          actorId: ctx.userId,
-          invitationId,
           role: args.role,
-          canComment: args.role === "reader" && args.can_comment === true,
+          canComment: args.role === "reader" ? args.can_comment : false,
         });
         if (!result.ok) return settingsError(result.errorKey);
         return {
           result: {
-            invitation: { id: invitationId, role: result.role, can_comment: result.canComment },
+            member: { user_id: userId, role: result.role, can_comment: result.canComment },
+            unassigned_issues: result.unassigned,
           },
           success: true,
         };
       }
-
-      case "cancel_invitation": {
-        const invitationId =
-          typeof args.invitation_id === "string" ? args.invitation_id : "";
-        if (!invitationId) return toolError("invitation_id is required.");
-        const result = await cancelInvitation({
-          projectId,
-          actorId: ctx.userId,
-          invitationId,
-        });
-        if (!result.ok) return settingsError(result.errorKey);
-        return { result: { cancelled: invitationId }, success: true };
-      }
-
-      case "update_category": {
-        const categoryId =
-          typeof args.category_id === "string" ? args.category_id : "";
-        if (!categoryId) return toolError("category_id is required.");
-        const result = await updateCategory({
-          categoryId,
-          projectId,
-          actorId: ctx.userId,
-          input: args,
-        });
-        if (!result.ok)
-          return settingsError(result.errorKey ?? "databaseError");
-        return { result: { category: result.category }, success: true };
-      }
-
-      case "reorder_categories": {
-        const result = await reorderCategories({
-          projectId,
-          actorId: ctx.userId,
-          categoryIds: args.category_ids,
-        });
-        if (!result.ok) {
-          return result.errorKey === "invalidRequest"
-            ? toolError("category_ids must be a non-empty list of distinct category ids from list_categories.")
-            : settingsError(result.errorKey ?? "databaseError");
-        }
-        return {
-          result: {
-            categories: result.categories.map(({ id, name, color }) => ({ id, name, color })),
-          },
-          success: true,
-        };
-      }
-
-      // ── Integrations (owner-gated) ────────────────────────────────────
-      case "create_integration": {
-        if (!access.isOwner) return settingsError("ownerOnly");
-        // 'issues' | 'feedback' — validated on the core side, default 'issues'.
-        const kind = isIntegrationKind(args.kind) ? args.kind : "issues";
-        const result = await createIntegration({
-          projectId,
-          actorId: ctx.userId,
-          name: args.name,
-          kind,
-          objectiveId: args.objective_id,
-        });
-        if (!result.ok) return settingsError(result.errorKey);
-        return {
-          result: {
-            integration: {
-              id: result.integration.id,
-              name: result.integration.name,
-              kind: result.integration.kind,
-              objective_id: result.integration.objective_id,
-            },
-            // The plaintext key is returned ONCE, to the SCREEN (MIN-343): the
-            // browser gets it live, the history never does.
-            key: result.key,
-            // …and a key is useless without the format that goes with it.
-            usage: integrationUsage(kind, SITE_URL),
-          },
-          secrets: [result.key],
-          success: true,
-        };
-      }
-
-      case "update_integration_webhook": {
-        if (!access.isOwner) return settingsError("ownerOnly");
-        const integrationId =
-          typeof args.integration_id === "string" ? args.integration_id : "";
-        if (!integrationId) return toolError("integration_id is required.");
-        const result = await updateIntegrationWebhook({
-          projectId,
-          integrationId,
-          input: args,
-          actor: "agent",
-        });
-        if (!result.ok) return settingsError(result.errorKey);
-        return {
-          result: {
-            integration: {
-              id: result.integration.id,
-              name: result.integration.name,
-              webhook_url: result.integration.webhook_url,
-              webhook_events: result.integration.webhook_events,
-              webhook_scope: result.integration.webhook_scope,
-            },
-            // The receiver remains to be written, and nothing about his contract can be guessed
-            // (the HMAC key is not the API key). Turn off the webhook,
-            // on the other hand, don't ask for anything anymore: no contract to relay.
-            ...(result.integration.webhook_url
-              ? { contract: integrationWebhookDoc() }
-              : {}),
-          },
-          success: true,
-        };
-      }
-
-      case "revoke_integration": {
-        if (!access.isOwner) return settingsError("ownerOnly");
-        const integrationId =
-          typeof args.integration_id === "string" ? args.integration_id : "";
-        if (!integrationId) return toolError("integration_id is required.");
-        const result = await revokeIntegration({ projectId, integrationId });
-        if (!result.ok) return settingsError(result.errorKey);
-        return { result: { revoked: integrationId }, success: true };
-      }
-
-      default:
-        return toolError(`Unknown tool: ${toolName}`);
+      const result = await updateInvitationRole({
+        projectId,
+        actorId: ctx.userId,
+        invitationId,
+        role: args.role,
+        canComment: args.role === "reader" && args.can_comment === true,
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return {
+        result: {
+          invitation: { id: invitationId, role: result.role, can_comment: result.canComment },
+        },
+        success: true,
+      };
     }
-  } catch {
-    console.error("[assistant] tool_execution_failed");
-    return toolError("Tool execution failed");
+
+    case "cancel_invitation": {
+      const invitationId =
+        typeof args.invitation_id === "string" ? args.invitation_id : "";
+      if (!invitationId) return toolError("invitation_id is required.");
+      const result = await cancelInvitation({
+        projectId,
+        actorId: ctx.userId,
+        invitationId,
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return { result: { cancelled: invitationId }, success: true };
+    }
+
+    case "update_category": {
+      const categoryId =
+        typeof args.category_id === "string" ? args.category_id : "";
+      if (!categoryId) return toolError("category_id is required.");
+      const result = await updateCategory({
+        categoryId,
+        projectId,
+        actorId: ctx.userId,
+        input: args,
+      });
+      if (!result.ok)
+        return settingsError(result.errorKey ?? "databaseError");
+      return { result: { category: result.category }, success: true };
+    }
+
+    case "reorder_categories": {
+      const result = await reorderCategories({
+        projectId,
+        actorId: ctx.userId,
+        categoryIds: args.category_ids,
+      });
+      if (!result.ok) {
+        return result.errorKey === "invalidRequest"
+          ? toolError("category_ids must be a non-empty list of distinct category ids from list_categories.")
+          : settingsError(result.errorKey ?? "databaseError");
+      }
+      return {
+        result: {
+          categories: result.categories.map(({ id, name, color }) => ({ id, name, color })),
+        },
+        success: true,
+      };
+    }
+
+    // ── Integrations (owner-gated) ────────────────────────────────────
+    case "create_integration": {
+      if (!access.isOwner) return settingsError("ownerOnly");
+      // 'issues' | 'feedback' — validated on the core side, default 'issues'.
+      const kind = isIntegrationKind(args.kind) ? args.kind : "issues";
+      const result = await createIntegration({
+        projectId,
+        actorId: ctx.userId,
+        name: args.name,
+        kind,
+        objectiveId: args.objective_id,
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return {
+        result: {
+          integration: {
+            id: result.integration.id,
+            name: result.integration.name,
+            kind: result.integration.kind,
+            objective_id: result.integration.objective_id,
+          },
+          // The plaintext key is returned ONCE, to the SCREEN (MIN-343): the
+          // browser gets it live, the history never does.
+          key: result.key,
+          // …and a key is useless without the format that goes with it.
+          usage: integrationUsage(kind, SITE_URL),
+        },
+        secrets: [result.key],
+        success: true,
+      };
+    }
+
+    case "update_integration_webhook": {
+      if (!access.isOwner) return settingsError("ownerOnly");
+      const integrationId =
+        typeof args.integration_id === "string" ? args.integration_id : "";
+      if (!integrationId) return toolError("integration_id is required.");
+      const result = await updateIntegrationWebhook({
+        projectId,
+        integrationId,
+        input: args,
+        actor: "agent",
+      });
+      if (!result.ok) return settingsError(result.errorKey);
+      return {
+        result: {
+          integration: {
+            id: result.integration.id,
+            name: result.integration.name,
+            webhook_url: result.integration.webhook_url,
+            webhook_events: result.integration.webhook_events,
+            webhook_scope: result.integration.webhook_scope,
+          },
+          // The receiver remains to be written, and nothing about his contract can be guessed
+          // (the HMAC key is not the API key). Turn off the webhook,
+          // on the other hand, don't ask for anything anymore: no contract to relay.
+          ...(result.integration.webhook_url
+            ? { contract: integrationWebhookDoc() }
+            : {}),
+        },
+        success: true,
+      };
+    }
+
+    case "revoke_integration": {
+      if (!access.isOwner) return settingsError("ownerOnly");
+      const integrationId =
+        typeof args.integration_id === "string" ? args.integration_id : "";
+      if (!integrationId) return toolError("integration_id is required.");
+      const result = await revokeIntegration({ projectId, integrationId });
+      if (!result.ok) return settingsError(result.errorKey);
+      return { result: { revoked: integrationId }, success: true };
+    }
+
+    default: {
+      const unhandled: never = toolName;
+      return toolError(`Unknown tool: ${unhandled}`);
+    }
   }
 }
 
@@ -4128,9 +4124,6 @@ function numoTextEditList(list: unknown): TextPassageEdit[] {
     };
   });
 }
-
-/** Issues, relations or pages one bulk call may touch, as on the MCP. */
-const MAX_BULK_ISSUES = 50;
 
 /**
  * update_issues: one call edits 1–50 issues — every `issue_ids` entry gets the

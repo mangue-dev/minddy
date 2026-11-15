@@ -1,4 +1,5 @@
 import {
+  PRIORITY_RANK,
   STATUSES,
   isClosedStatus,
   type IssueStatus,
@@ -93,23 +94,6 @@ export function lockToMe(config: ViewConfig): ViewConfig {
   return { ...config, filters: { ...config.filters, assignee: [ME_ASSIGNEE] } };
 }
 
-/** Is a config equivalent to the default? */
-export function isDefaultConfig(config: ViewConfig): boolean {
-  const f = config.filters;
-  const empty =
-    isDefaultStatusFilter(f.status) &&
-    !f.priority?.length &&
-    !f.assignee?.length &&
-    !f.effort?.length;
-  return (
-    empty &&
-    config.sort === "smart" &&
-    (!config.display.sortDirection || config.display.sortDirection === "asc") &&
-    !config.display.hideDone &&
-    !config.display.hideRecurring
-  );
-}
-
 /** The sorts the invert-direction button applies to (MIN-592): "smart" and
     "manual" carry their own order and never reverse. */
 export const DIRECTIONAL_SORTS: readonly ViewSort[] = [
@@ -185,13 +169,9 @@ export function activeFilterCount(config: ViewConfig): number {
 
 /** Shared with the Smart Triage rules (lib/smart-triage.ts) — the same tiers
     must not drift between the view sort and the column reorder. */
-export const PRIORITY_ORDER: Record<string, number> = {
-  urgent: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-  none: 4,
-};
+export const PRIORITY_ORDER: Record<string, number> = Object.fromEntries(
+  Object.entries(PRIORITY_RANK).map(([priority, rank]) => [priority, PRIORITY_RANK.urgent - rank])
+);
 
 /** Context the "smart" sort needs on top of the issue rows themselves. */
 export type SmartSortContext = {

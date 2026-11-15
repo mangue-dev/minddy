@@ -1,6 +1,7 @@
 import type { CommentFollowUp } from "@/lib/comment-follow-up";
 import { parsePlan, type PlanProgress } from "@/lib/plan";
 import { issueIdentifier } from "@/lib/issue-constants";
+import type { PullRequestState } from "@/lib/pull-request-contract";
 import type { Issue, IssueRelationType } from "@/lib/types";
 
 /**
@@ -36,14 +37,12 @@ export interface PromptRelation {
   title: string;
 }
 
-export type PromptPullRequestState = "draft" | "open" | "merged" | "closed";
-
 /** A pull request linked to the issue, whoever opened it (Numo, an external
  *  agent or a person). Optional fields are omitted when the forge never
  *  reported them — the prompt never invents them. */
 export interface PromptPullRequest {
   number: number;
-  state: PromptPullRequestState;
+  state: PullRequestState;
   url?: string | null;
   headBranch?: string | null;
   baseBranch?: string | null;
@@ -119,7 +118,7 @@ function escapeAttribute(value: string): string {
 
 // ── Branches ────────────────────────────────────────────────────────────────
 
-const LIVE_PR_STATES: ReadonlySet<PromptPullRequestState> = new Set(["draft", "open"]);
+const LIVE_PR_STATES: ReadonlySet<PullRequestState> = new Set(["draft", "open"]);
 const BRANCH_SLUG_MAX = 40;
 
 /**

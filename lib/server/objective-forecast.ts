@@ -4,7 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
-import { CLOSED_STATUSES } from "@/lib/server/issue-reads";
+import { CLOSED_STATUSES } from "@/lib/issue-constants";
 import {
   FORECAST_PROFILE_DAYS,
   objectiveForecast,
@@ -89,7 +89,7 @@ export async function getObjectiveForecast(
   for (const issue of linked) issues.set(issue.id, issue);
 
   const status = objective.status as ObjectiveStatus;
-  const open = linked.some((issue) => !CLOSED_STATUSES.includes(issue.status));
+  const open = linked.some((issue) => !(CLOSED_STATUSES as readonly string[]).includes(issue.status));
   if (status === "canceled" || !open) {
     return { forecastDate: null, forecastDays: null, basis: null };
   }

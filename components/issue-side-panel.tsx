@@ -63,6 +63,7 @@ import {
   prefetchIssuePromptContext,
 } from "@/lib/issue-prompt-context";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
+import { cycleMembershipPatch } from "@/lib/cycle";
 import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
@@ -153,9 +154,11 @@ export function IssueSidePanel({
   allIssues: Issue[];
   /** Every project relation row (raw); resolved for this issue below. */
   relations: IssueRelation[];
-  onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<unknown>;
-  onDelete: (issueId: string) => Promise<void>;
-  onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
+  /** The shared issue writers (lib/use-issue-mutations.ts): they show their
+      own errors and resolve to null or false on failure. */
+  onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<Issue | null>;
+  onDelete: (issueId: string) => Promise<boolean>;
+  onSetCategories: (issueId: string, categoryIds: string[]) => Promise<boolean>;
   onOpenIssue: (id: string) => void;
   onAddRelation: (
     sourceId: string,
@@ -323,18 +326,12 @@ export function IssueSidePanel({
   const prReadiness = useIssuePrReadiness(issue?.id ?? "");
 
   // Cycle (MIN-32): the panel reads the current cycle itself rather than
-  // brought down by its four callers — the hook is already spoiled by the
-  // user preferences, so costs nothing when cycles are off.
+  // receiving it from each caller — the hook is gated by the user's
+  // preferences, so it costs nothing when cycles are off.
   const { currentCycle, nextCycle } = useMyCycleQuery();
   const onSetIssueCycle = useCallback(
     (target: Issue, cycleId: string | null) =>
-      void onUpdate(
-        target.id,
-        // Mirrors the server side-effect: adding assigns to me, never a status bump.
-        cycleId && user?.id
-          ? { cycle_id: cycleId, assignee_id: user.id }
-          : { cycle_id: cycleId }
-      ).catch((err) => toast.error((err as Error).message)),
+      void onUpdate(target.id, cycleMembershipPatch(cycleId, user?.id)),
     [onUpdate, user?.id]
   );
   const buildCycleActions = useCycleMenuActions(
@@ -483,11 +480,7 @@ export function IssueSidePanel({
     const outcome = await promptDelivery.deliver(
       issuePromptFor(input, "implement", promptDelivery),
     );
-    if (autoStart) {
-      void onUpdate(issue.id, { status: "in_progress" }).catch((err) =>
-        toast.error((err as Error).message)
-      );
-    }
+    if (autoStart) void onUpdate(issue.id, { status: "in_progress" });
     announcePrompt(outcome, t(autoStart ? "promptCopiedMoved" : "promptCopied"), autoStart ? 1 : 0);
   }, [issue, promptInput, promptDelivery, user?.user_metadata, onUpdate, announcePrompt, t]);
 
@@ -606,11 +599,7 @@ export function IssueSidePanel({
         ? { description: fields.description.trim() || null }
         : {}),
     };
-    if (Object.keys(updates).length > 0) {
-      void onUpdate(issue.id, updates).catch((err) =>
-        toast.error((err as Error).message)
-      );
-    }
+    if (Object.keys(updates).length > 0) void onUpdate(issue.id, updates);
     // The dictation writes WHAT the panel displays: we note the version in passing,
     // otherwise the echo of our own patch would come back as a distant write
     // and would go up the editor a second time.
@@ -625,11 +614,7 @@ export function IssueSidePanel({
       descriptionEdited.current = false;
       setEditorKey((k) => k + 1);
     }
-    if (category_ids) {
-      void onSetCategories(issue.id, category_ids).catch((err) =>
-        toast.error((err as Error).message)
-      );
-    }
+    if (category_ids) void onSetCategories(issue.id, category_ids);
   };
 
   const openMentionedIssue = useCallback(
@@ -751,11 +736,11 @@ export function IssueSidePanel({
 
   const patch = async (updates: IssueUpdateInput) => {
     if (!issue) return false;
-    const write = onUpdate(issue.id, updates).then(() => true, (err) => {
+    const write = onUpdate(issue.id, updates).then((saved) => {
+      if (saved) return true;
       // Keep failed text edits recoverable instead of accepting a tab departure.
       if (updates.title !== undefined) titleEdited.current = true;
       if (updates.description !== undefined) descriptionEdited.current = true;
-      toast.error((err as Error).message);
       return false;
     });
     pendingWrites.current.add(write);
@@ -769,7 +754,7 @@ export function IssueSidePanel({
     if (!issue) return;
     for (const { issueId, parent_id } of hierarchyPatches(kind, [issue], targetId, allIssues)) {
       if (issueId === issue.id) void patch({ parent_id });
-      else void onUpdate(issueId, { parent_id }).catch((err) => toast.error((err as Error).message));
+      else void onUpdate(issueId, { parent_id });
     }
   };
 
@@ -871,7 +856,7 @@ export function IssueSidePanel({
   const setRecurrence = useStableCallback((next: IssueUpdateInput) => void patch(next));
   const setCategories = useStableCallback((ids: string[]) => {
     if (!issue) return;
-    void onSetCategories(issue.id, ids).catch((err) => toast.error((err as Error).message));
+    void onSetCategories(issue.id, ids);
   });
   const setParentLinkStable = useStableCallback(setParentLink);
   // The sub-issues menu's "Add an existing sub-issue": the panel's relation
@@ -898,7 +883,7 @@ export function IssueSidePanel({
     : null;
 
   const handleDelete = async () => {
-    await onDelete(issue.id);
+    if (!(await onDelete(issue.id))) return;
     toast.success(t("issueDeletedToast"));
     onOpenChange(false);
   };
@@ -1373,11 +1358,7 @@ export function IssueSidePanel({
             categories={categories}
             objectives={objectives}
             onUpdate={(updates) => void patch(updates)}
-            onSetCategories={(ids) =>
-              void onSetCategories(issue.id, ids).catch((err) =>
-                toast.error((err as Error).message)
-              )
-            }
+            onSetCategories={(ids) => void onSetCategories(issue.id, ids)}
           />
 
           {canComment && (

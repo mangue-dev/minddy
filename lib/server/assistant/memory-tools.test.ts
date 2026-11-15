@@ -27,8 +27,8 @@ vi.mock("@/lib/server/numo/conversation-search", async (original) => ({
 }));
 
 import { executeTool, type ToolContext } from "./execute-tool";
-import { CONVERSATION_ASSISTANT_TOOLS, PROJECT_SCOPED_TOOLS } from "./tools";
-import { NUMO_TOOL_CAPABILITIES, readerToolSet } from "./tool-capabilities";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
+import { readerToolSet } from "./tool-capabilities";
 import { NumoMemoryError } from "@/lib/server/numo/memory-content";
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
@@ -37,7 +37,6 @@ const MEMORY = "22222222-2222-4222-8222-222222222222";
 function context(overrides: Partial<ToolContext> = {}): ToolContext {
   return {
     projectId: null,
-    requireExplicitProjectTarget: true,
     userId: "user-1",
     supabase: {} as SupabaseClient,
     service: {} as SupabaseClient,
@@ -67,14 +66,11 @@ describe("Numo memory tools (MIN-915)", () => {
     expect(tool("remember")?.function.parameters.required)
       .toEqual(["content", "project_id", "replaces"]);
     expect(tool("forget")?.function.parameters.required).toEqual(["id"]);
-    expect(PROJECT_SCOPED_TOOLS.has("remember")).toBe(false);
-    expect(PROJECT_SCOPED_TOOLS.has("forget")).toBe(false);
     expect(tool("update_account_settings")?.function.parameters.properties)
       .toHaveProperty("numo_memory");
   });
 
   it("stays available to a Reader, since it changes no project", () => {
-    expect(NUMO_TOOL_CAPABILITIES.remember).toBe("personal");
     const names = readerToolSet(CONVERSATION_ASSISTANT_TOOLS, false)
       .map((candidate) => candidate.function.name);
     expect(names).toEqual(expect.arrayContaining(["remember", "forget"]));
@@ -141,8 +137,6 @@ describe("Numo's search in earlier conversations (MIN-956)", () => {
       .toEqual(["query", "after", "before", "limit"]);
     expect(tool("read_conversation")?.function.parameters.required)
       .toEqual(["conversation_id", "offset"]);
-    expect(PROJECT_SCOPED_TOOLS.has("search_conversations")).toBe(false);
-    expect(NUMO_TOOL_CAPABILITIES.search_conversations).toBe("personal");
     expect(readerToolSet(CONVERSATION_ASSISTANT_TOOLS, false).map((candidate) => candidate.function.name))
       .toEqual(expect.arrayContaining(["search_conversations", "read_conversation"]));
   });

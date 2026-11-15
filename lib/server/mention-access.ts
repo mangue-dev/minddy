@@ -14,7 +14,7 @@ import {
   type MentionMeta,
 } from "@/lib/mention-link";
 import { mentionDateFrom } from "@/lib/mention-date";
-import { isPullRequestState, type PullRequestState } from "@/lib/mention-preview";
+import { isPullRequestState, type PullRequestState } from "@/lib/pull-request-contract";
 import { findPullRequestsWithProjects } from "@/lib/server/agent/pull-requests";
 import { getMcpConnection } from "@/lib/server/mcp-client";
 import { mcpPresetForUrl } from "@/lib/mcp-catalog";

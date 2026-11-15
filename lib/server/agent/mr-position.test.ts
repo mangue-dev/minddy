@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { resolveDiffPosition } from "./mr-position";
 
 /**
- * Tests of GitLab position resolution (MIN-69): an added line gives
- * `new_line` alone, a deleted `old_line` alone, a context line BOTH
- * — and a line outside diff gives null (422 on the API side, "lineNotInDiff" on the UI).
+ * Tests of GitLab position resolution (MIN-69): an added line yields
+ * `new_line` alone, a deleted line `old_line` alone, a context line BOTH, and
+ * a line outside the diff yields null (422 from the API, "lineNotInDiff" in the UI).
  */
 
 // Simple hunk: base lines 10-14, one deletion (11), one insertion (12).
@@ -20,21 +20,21 @@ const DIFF = [
 ].join("\n");
 
 describe("resolveDiffPosition", () => {
-  it("ligne ajoutée (RIGHT) → new_line seul", () => {
+  it("added line (RIGHT) → new_line only", () => {
     expect(resolveDiffPosition(DIFF, 11, "RIGHT")).toEqual({ oldLine: null, newLine: 11 });
   });
 
-  it("ligne supprimée (LEFT) → old_line seul", () => {
+  it("deleted line (LEFT) → old_line only", () => {
     expect(resolveDiffPosition(DIFF, 11, "LEFT")).toEqual({ oldLine: 11, newLine: null });
   });
 
-  it("ligne de contexte → les deux numéros, décalage suivi après +/-", () => {
-    // context-b: old 12 / new 12 (the -/+ cancels), RIGHT side like LEFT.
+  it("context line → both numbers, offset tracked after +/-", () => {
+    // context-b: old 12 / new 12 (the -/+ cancel out), same on RIGHT and LEFT.
     expect(resolveDiffPosition(DIFF, 12, "RIGHT")).toEqual({ oldLine: 12, newLine: 12 });
     expect(resolveDiffPosition(DIFF, 12, "LEFT")).toEqual({ oldLine: 12, newLine: 12 });
   });
 
-  it("suit le décalage quand ajouts et suppressions ne s'équilibrent pas", () => {
+  it("tracks the offset when additions and deletions do not balance", () => {
     const diff = [
       "@@ -5,3 +5,4 @@",
       " ctx", // old 5 / new 5
@@ -49,7 +49,7 @@ describe("resolveDiffPosition", () => {
     expect(resolveDiffPosition(diff, 8, "RIGHT")).toEqual({ oldLine: 7, newLine: 8 });
   });
 
-  it("multi-hunks : les compteurs se recalent à chaque en-tête @@", () => {
+  it("multiple hunks: counters reset at each @@ header", () => {
     const diff = [
       "@@ -1,2 +1,2 @@",
       " a", // old 1 / new 1
@@ -65,13 +65,13 @@ describe("resolveDiffPosition", () => {
     expect(resolveDiffPosition(diff, 41, "LEFT")).toEqual({ oldLine: 41, newLine: null });
   });
 
-  it("ligne hors diff → null (jamais de position inventée)", () => {
+  it("line outside the diff → null (never an invented position)", () => {
     expect(resolveDiffPosition(DIFF, 9, "RIGHT")).toBeNull();
     expect(resolveDiffPosition(DIFF, 15, "RIGHT")).toBeNull();
     expect(resolveDiffPosition(DIFF, 999, "LEFT")).toBeNull();
   });
 
-  it("ignore le marqueur « no newline » et le vide final du split", () => {
+  it("ignores the \"no newline\" marker and the trailing empty split entry", () => {
     const diff = [
       "@@ -1,2 +1,2 @@",
       " keep", // old 1 / new 1
@@ -82,7 +82,7 @@ describe("resolveDiffPosition", () => {
       "",
     ].join("\n");
     expect(resolveDiffPosition(diff, 2, "RIGHT")).toEqual({ oldLine: null, newLine: 2 });
-    // Line 3 does not exist anywhere — the final "" should not count as context.
+    // Line 3 does not exist anywhere: the final "" must not count as context.
     expect(resolveDiffPosition(diff, 3, "RIGHT")).toBeNull();
   });
 });

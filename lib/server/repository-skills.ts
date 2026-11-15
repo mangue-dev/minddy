@@ -16,8 +16,7 @@ import {
   type RepoCloneTarget,
 } from "@/lib/server/agent/repo-access";
 import { isValidGitBranchName } from "@/lib/server/agent/branch-name";
-import { getFileAtRef as getGithubFileAtRef } from "@/lib/server/agent/pr";
-import { getFileAtRef as getGitlabFileAtRef } from "@/lib/server/agent/mr";
+import { forgeFor } from "@/lib/server/agent/forge";
 import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
 import {
   GITLAB_API_BASE,
@@ -154,30 +153,19 @@ async function readRepositoryFile(
   path: string,
   ref: string,
 ): Promise<string | null> {
-  const options = {
+  return forgeFor(target.provider).getFileAtRef({
     token: target.token,
     repoFullName: target.repoFullName,
     path,
     ref,
-  };
-  return target.provider === "github"
-    ? getGithubFileAtRef(options)
-    : getGitlabFileAtRef(options);
-}
-
-async function projectRepositoryTarget(
-  projectId: string,
-): Promise<RepoCloneTarget | null> {
-  // This code runs in trusted server infrastructure. Full forge credentials stay
-  // here and avoid creating a durable GitLab project token for every picker open.
-  return resolveRepoCloneTarget(projectId, "full");
+  });
 }
 
 export async function listProjectRepositorySkills(
   projectId: string,
   requestedRef?: string | null,
 ): Promise<RepositorySkillSummary[]> {
-  const target = await projectRepositoryTarget(projectId);
+  const target = await resolveRepoCloneTarget(projectId);
   if (!target) return [];
   const ref = requestedRef?.trim() || target.defaultBranch;
   if (!isValidGitBranchName(ref)) throw new Error("Invalid repository ref");
@@ -202,7 +190,7 @@ export async function loadProjectRepositorySkills(
   ) {
     return null;
   }
-  const target = await projectRepositoryTarget(projectId);
+  const target = await resolveRepoCloneTarget(projectId);
   if (!target) return null;
   const ref = requestedRef?.trim() || target.defaultBranch;
   if (!isValidGitBranchName(ref)) return null;

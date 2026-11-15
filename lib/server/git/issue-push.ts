@@ -10,7 +10,7 @@ import type { IssueStatus } from "@/lib/issue-constants";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
 import { GITLAB_API_BASE, gitlabHeaders } from "./gitlab-rest";
-import { forgeProviderForConnection } from "./forge-provider";
+import { mintLinkedRepositoryToken } from "./linked-repository-token";
 import { getGitlabAccessToken } from "./gitlab-app";
 import { resolveForgeActor } from "./forge-actor";
 import { remoteStateForStatus, type RemoteState } from "./issue-sync-core";
@@ -255,25 +255,18 @@ async function resolveWriteToken(
       provider: target.provider,
       repoFullName: target.repoFullName,
     });
-    // `read` is not enough to close an issue: we instead fall back on the App
-    // que d'aller chercher un 403 au nom de quelqu'un qui n'y peut rien.
+    // `read` is not enough to close an issue: fall back on the App rather than
+    // collect a 403 on behalf of someone who cannot fix it.
     if (actor.kind === "actor" && actor.capability !== "read") return actor.token;
   }
 
   try {
     if (target.provider === "github") {
       if (target.installationId == null) return null;
-      // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED
-      // connection mints its fallback token through the Cloud control plane —
-      // the local App key does not exist (relay-only) or belongs to another
-      // App than the installation (mixed setup). GitLab stays instance-side:
-      // `getGitlabAccessToken` already routes the refresh grant by source.
-      const forge = forgeProviderForConnection(target.connectionSource);
-      const repositoryId = Number(target.externalRepoId);
-      if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) return null;
-      const { token } = await forge.getInstallationToken({
+      const { token } = await mintLinkedRepositoryToken({
         installationId: target.installationId,
-        scope: { repositoryIds: [repositoryId] },
+        externalRepoId: target.externalRepoId,
+        connectionSource: target.connectionSource,
       });
       return token;
     }

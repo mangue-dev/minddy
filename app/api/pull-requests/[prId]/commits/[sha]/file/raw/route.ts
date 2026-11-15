@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Side must be base or head" }, { status: 400 });
   }
 
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
   return prCommitFileBytesResponse(auth.scope, sha, path, side);
 }

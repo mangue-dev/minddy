@@ -1,3 +1,4 @@
+import { PRIORITY_RANK, isClosedStatus } from "./issue-constants";
 import type { IssueEffort, IssuePriority, IssueStatus } from "./issue-constants";
 import type { ObjectiveStatus } from "./objective-constants";
 import type { IssueRelation } from "./types";
@@ -124,6 +125,16 @@ export function leavesCycleOnStatus(
   return !!issue?.cycle_id && nextStatus !== undefined && !statusAllowsCycle(nextStatus);
 }
 
+/** The patch that moves an issue into or out of a cycle, mirroring the server
+ *  side effect so the card does not flash: adding assigns the issue to the
+ *  viewer, and never bumps its status. */
+export function cycleMembershipPatch(
+  cycleId: string | null,
+  userId: string | null | undefined
+): { cycle_id: string | null; assignee_id?: string } {
+  return cycleId && userId ? { cycle_id: cycleId, assignee_id: userId } : { cycle_id: cycleId };
+}
+
 // ── Points ───────────────────────────────────────────────────────────────────
 
 /** T-shirt effort → Fibonacci points. Hidden from the UI (3 XL ≠ 3 XS). */
@@ -201,8 +212,6 @@ export function computeTargetPoints(
   return Math.max(1, Math.round(INTENSITY_BASE_POINTS[intensity] * factor * durationWeeks));
 }
 
-const CLOSED_STATUSES: readonly IssueStatus[] = ["done", "canceled", "duplicate"];
-const isClosed = (status: IssueStatus) => CLOSED_STATUSES.includes(status);
 
 type PointedIssue = { effort: IssueEffort | null; status: IssueStatus };
 
@@ -238,7 +247,7 @@ const COMPLETION_CREDIT: Partial<Record<IssueStatus, number>> = {
     the cycle's progression ring and the objectives' progress bar so both grade
     completion the same way. */
 export function statusCompletionCredit(status: IssueStatus): number {
-  if (isClosed(status)) return 1;
+  if (isClosedStatus(status)) return 1;
   return COMPLETION_CREDIT[status] ?? 0;
 }
 
@@ -287,13 +296,6 @@ export type RecoIssue = {
   objective_id?: string | null;
 };
 
-const PRIORITY_RANK: Record<IssuePriority, number> = {
-  urgent: 4,
-  high: 3,
-  medium: 2,
-  low: 1,
-  none: 0,
-};
 
 /** The status an objective reads as in the issue-status arithmetic: an open
  *  objective (planned / in_progress) maps to an open issue status, a closed one
@@ -353,6 +355,47 @@ export function cycleBlockingRelations(
   return { relations: out, objectiveStatuses };
 }
 
+/**
+ * What the boards' orderings read about blocking (MIN-513, MIN-576): every
+ * issue's status, objective-ended `blocks` edges folded onto the objective's
+ * issues (an objective blocker carries its mapped status), and each issue's
+ * objective. `knownRelations` drops the `blocks` edges with an end unknown
+ * here — trashed or foreign — so the board rules ignore them rather than act
+ * on a guessed "open"; the same preparation the server reorder applies.
+ */
+export function boardBlockingContext(
+  issues: ReadonlyArray<{ id: string; status: IssueStatus; objective_id: string | null }>,
+  relations: IssueRelation[],
+  objectiveStatusById: Map<string, ObjectiveStatus>
+): {
+  relations: IssueRelation[];
+  knownRelations: IssueRelation[];
+  statusById: Map<string, IssueStatus>;
+  objectiveByIssue: Map<string, string | null>;
+} {
+  const statusById = new Map<string, IssueStatus>();
+  const issuesByObjective = new Map<string, string[]>();
+  const objectiveByIssue = new Map<string, string | null>();
+  for (const issue of issues) {
+    statusById.set(issue.id, issue.status);
+    objectiveByIssue.set(issue.id, issue.objective_id);
+    if (!issue.objective_id) continue;
+    const list = issuesByObjective.get(issue.objective_id);
+    if (list) list.push(issue.id);
+    else issuesByObjective.set(issue.objective_id, [issue.id]);
+  }
+  const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
+    relations,
+    issuesByObjective,
+    objectiveStatusById
+  );
+  for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+  const knownRelations = folded.filter(
+    (r) => r.type !== "blocks" || (statusById.has(r.source_id) && statusById.has(r.target_id))
+  );
+  return { relations: folded, knownRelations, statusById, objectiveByIssue };
+}
+
 /** target id → ids of the issues blocking it, from stored `blocks` edges. */
 function blockersIndex(relations: IssueRelation[]): Map<string, string[]> {
   const index = new Map<string, string[]>();
@@ -378,7 +421,7 @@ function isBlockedIn(
   return blockers.some((b) => {
     if (allow?.has(b)) return false;
     const status = statusById.get(b);
-    return status !== undefined && !isClosed(status);
+    return status !== undefined && !isClosedStatus(status);
   });
 }
 

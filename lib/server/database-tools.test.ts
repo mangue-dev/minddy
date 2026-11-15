@@ -20,7 +20,7 @@ vi.mock("@/lib/server/routine-hooks", async importOriginal => ({
 
 import { registerPageTools } from "./mcp/page-tools";
 import { executeTool, type ToolContext } from "./assistant/execute-tool";
-import { PROJECT_ASSISTANT_TOOLS } from "./assistant/tools";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./assistant/tools";
 import { DATABASE_TOOL_SCHEMA, DATABASE_TOOL_PARAMETERS } from "./database-tool-schema";
 
 const PROJECT = "49930000-0000-4000-8000-000000000001";
@@ -48,7 +48,7 @@ async function call(surface: typeof surfaces[number], args: Record<string, unkno
     });
     return { success: !result.isError, result: JSON.parse(result.content[0].text) };
   }
-  return executeTool("update_page_database", args, { projectId: PROJECT, userId: ACTOR, locale: "en" } as ToolContext);
+  return executeTool("update_page_database", { project_id: PROJECT, ...args }, { projectId: PROJECT, userId: ACTOR, locale: "en" } as ToolContext);
 }
 
 beforeEach(() => {
@@ -113,6 +113,6 @@ describe.each(surfaces)("%s database tools", (surface) => {
 });
 
 it("advertises the shared contract on Numo and MCP", () => {
-  expect(PROJECT_ASSISTANT_TOOLS.find(t => t.function.name === "update_page_database")?.function.parameters.properties).toMatchObject(DATABASE_TOOL_PARAMETERS.properties);
+  expect(CONVERSATION_ASSISTANT_TOOLS.find(t => t.function.name === "update_page_database")?.function.parameters.properties).toMatchObject(DATABASE_TOOL_PARAMETERS.properties);
   expect(mcpSchema.omit({ project_id: true }).shape).toEqual(DATABASE_TOOL_SCHEMA.shape);
 });

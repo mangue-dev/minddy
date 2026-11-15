@@ -3,22 +3,26 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DESKTOP_IPC } from "./ipc-contract";
+import { registerDesktopIpc, type DesktopIpcHandlers } from "./ipc-main";
+
 const mocks = vi.hoisted(() => ({
-  handle: vi.fn(),
-  on: vi.fn(),
   protocolHandle: vi.fn(),
 }));
 vi.mock("../../desktop/node_modules/electron", () => ({
-  ipcMain: { handle: mocks.handle, on: mocks.on },
   protocol: { handle: mocks.protocolHandle, registerSchemesAsPrivileged: vi.fn() },
 }));
+
+interface FakeEvent {
+  sender: { isDestroyed(): boolean; send: (channel: string, ...args: unknown[]) => void };
+  senderFrame: { url: string } | null;
+}
 
 const mainFrame = { url: "minddy-app://welcome/" };
 const contents = { mainFrame, isDestroyed: () => false, send: vi.fn() };
 
 function dependencies() {
   return {
-    contents: () => contents as never,
     state: vi.fn(() => ({
       origin: "https://www.minddy.app",
       cloudOrigin: "https://www.minddy.app",
@@ -40,11 +44,22 @@ function dependencies() {
 }
 
 async function setup() {
-  const { registerServerChoiceIpc } = await import("../../desktop/src/server-choice");
+  const { serverChoiceHandlers } = await import("../../desktop/src/server-choice");
   const deps = dependencies();
-  registerServerChoiceIpc(deps);
-  const channels = new Map<string, (event: unknown, ...args: unknown[]) => unknown>(
-    [...mocks.handle.mock.calls, ...mocks.on.mock.calls].map(([name, handler]) => [name, handler]),
+  const channels = new Map<string, (event: FakeEvent, ...args: unknown[]) => unknown>();
+  const register = (name: string, handler: (event: FakeEvent, ...args: unknown[]) => unknown) => {
+    if (name.startsWith("minddy:server-choice:")) channels.set(name, handler);
+  };
+  const others = Object.fromEntries(
+    Object.entries(DESKTOP_IPC).map(([name, entry]) => [name, entry.kind === "state" ? { ready: vi.fn() } : vi.fn()]),
+  );
+  registerDesktopIpc<FakeEvent>(
+    {
+      ipcMain: { on: register, handle: register },
+      mainContents: () => contents,
+      context: () => ({ origin: "https://www.minddy.app", localOrigin: "http://localhost:6463", customServerOrigin: null }),
+    },
+    { ...others, ...serverChoiceHandlers<FakeEvent>(deps) } as DesktopIpcHandlers<FakeEvent>,
   );
   const handler = (channel: string) => channels.get(`minddy:server-choice:${channel}`)!;
   return { deps, channels, handler };
@@ -65,7 +80,9 @@ describe("server choice IPC", () => {
     expect(deps.connect).toHaveBeenCalledWith("https://tickets.example.com");
     expect(handler("connect")(event, "ftp://nope")).toEqual({ error: { code: "serverInvalid" } });
     await handler("install")(event);
-    expect(deps.install).toHaveBeenCalledWith(expect.any(Function));
+    const report = deps.install.mock.calls[0][0] as (progress: unknown) => void;
+    report({ step: "clone", state: "running" });
+    expect(contents.send).toHaveBeenCalledWith("minddy:server-choice:progress", { step: "clone", state: "running" });
   });
 
   it("refuses every channel to any server's page, another frame or another renderer", async () => {
@@ -73,15 +90,17 @@ describe("server choice IPC", () => {
     const strangers = [
       { sender: contents, senderFrame: { url: "https://www.minddy.app/home" } },
       { sender: contents, senderFrame: { url: "minddy-app://welcome/" } },
-      { sender: {}, senderFrame: mainFrame },
+      { sender: { isDestroyed: () => false, send: vi.fn() }, senderFrame: mainFrame },
+      // The main window's top frame, showing a server's page.
+      { sender: contents, senderFrame: mainFrame },
     ];
+    mainFrame.url = "https://www.minddy.app/home";
     for (const event of strangers) {
       for (const [name, run] of channels) {
         await run(event, name.endsWith("connect") ? "https://tickets.example.com" : "docker");
       }
     }
-    const { contents: _contents, ...actions } = deps;
-    for (const fn of Object.values(actions)) expect(fn).not.toHaveBeenCalled();
+    for (const fn of Object.values(deps)) expect(fn).not.toHaveBeenCalled();
   });
 
   it("opens download pages from a closed list only", async () => {

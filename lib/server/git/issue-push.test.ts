@@ -2,42 +2,43 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RemoteIssueIdentity } from "@/lib/server/git/issue-push";
 
 /**
- * `scheduleRemoteStatusPush` — the UP half of the sync: the status of a
- * ticket minddy closes (or reopens) the issue it came from.
+ * `scheduleRemoteStatusPush` — the UPSTREAM half of the sync: the status of a
+ * minddy issue closes (or reopens) the forge issue it came from.
  *
- * This is the only place in the issue sync that WRITEs to a third party, and on
- * someone's account. Three properties deserve to be pinned for this
- * reason, not for the cover:
+ * This is the only place in the issue sync that WRITES to a third party, and
+ * on someone's account. Three properties deserve pinning for that reason, not
+ * for coverage:
  *
- * 1. **Silence by default.** Almost all tickets are born in
- * minddy and have no remote identity: the hook must exit without
- * THE LEAST query. A guard that would relax would make a round trip
- * network for each card move, for nothing.
- * 2. **The toggle cuts both directions.** Cutting the import must cut the return:
- * it would be incomprehensible if a single switch only stopped one —
- * and the user who cuts would believe to have cut.
- * 3. **What we really write.** `done` is a purple “completed” check mark,
- * `canceled` a gray “not planned” circle. This is the only nuance of our
- * three closed statuses that survives traversal, and it plays on a
- * field in the request body.
+ * 1. **Silent by default.** Almost every issue is born in minddy and has no
+ *    remote identity: the hook must return without A SINGLE query. A guard
+ *    that loosened would cost a network round trip on every card move, for
+ *    nothing.
+ * 2. **The toggle cuts both directions.** Turning off the import must turn off
+ *    the push back: a single switch that stopped only one direction would be
+ *    baffling, and whoever turned it off would believe it was off.
+ * 3. **What is actually written.** `done` is a purple “completed” check mark,
+ *    `canceled` a gray “not planned” circle. It is the only nuance of our
+ *    three closed statuses that survives the trip, and it rides on one field
+ *    of the request body.
  *
- * The module is best-effort from start to finish: nothing that fails here should be traced back to the one that failed. moved the card.
+ * The module is best-effort from start to finish: nothing that fails here may
+ * reach the person who moved the card.
  */
 
 interface Row extends Record<string, unknown> {}
 
 let linkRows: Row[] = [];
 let issueRows: Row[] = [];
-/** Outgoing HTTP calls, in order — probe this entire file. */
+/** Outgoing HTTP calls, in order: the probe for this whole file. */
 let calls: { url: string; method: string; body: Record<string, unknown>; auth: string }[] =
   [];
 /** Scheduled background jobs to wait for explicitly. */
 let background: Promise<unknown>[] = [];
-/** What `resolveForgeActor` renders — the human actor and their right to the deposit. */
+/** What `resolveForgeActor` returns: the human actor and their repository access. */
 let actor: { kind: "actor"; token: string; capability: string } | { kind: "none" } = {
   kind: "none",
 };
-/** Response from the forge: `null` = 200, otherwise the error code to return. */
+/** The forge's response: `null` = 200, otherwise the error code to return. */
 let httpError: number | null = null;
 let httpGate: Promise<void> | null = null;
 
@@ -81,8 +82,8 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 
-// The background hook executes immediately AND returns its promise to the test: without
-// that, the assertions would run in front of the work they observe.
+// The background hook runs immediately AND hands its promise to the test:
+// otherwise the assertions would run before the work they observe.
 vi.mock("@/lib/server/after-safe", () => ({
   afterOrNow: (work: () => Promise<void>) => {
     background.push(work().catch(() => {}));
@@ -103,7 +104,7 @@ const { scheduleRemoteStatusPush } = await import("@/lib/server/git/issue-push")
 
 const PROJECT = "project-1";
 
-/** An active binding, such as `project_git_links` carries it. */
+/** An active link, as `project_git_links` stores it. */
 function link(overrides: Row = {}): void {
   linkRows.push({
     project_id: PROJECT,
@@ -117,7 +118,7 @@ function link(overrides: Row = {}): void {
   });
 }
 
-/** The ticket imported from a repository — one that has a remote identity. */
+/** The issue imported from a repository: one that has a remote identity. */
 const IMPORTED: RemoteIssueIdentity = {
   id: "issue-1",
   projectId: PROJECT,
@@ -126,7 +127,7 @@ const IMPORTED: RemoteIssueIdentity = {
   number: 7,
 };
 
-/** Schedule the repercussion and WAIT for the background work it has done. */
+/** Schedules the push and WAITS for the background work it started. */
 async function push(issue: RemoteIssueIdentity, status: string): Promise<void> {
   issueRows = [{
     id: issue.id,
@@ -175,8 +176,8 @@ beforeEach(() => {
   });
 });
 
-describe("scheduleRemoteStatusPush — quand il ne se passe RIEN", () => {
-  it("returns without a request for a ticket born in minddy", async () => {
+describe("scheduleRemoteStatusPush — when NOTHING happens", () => {
+  it("returns without a request for an issue born in minddy", async () => {
     link();
     await push({ ...IMPORTED, provider: null, repoId: null, number: null }, "done");
 
@@ -201,7 +202,7 @@ describe("scheduleRemoteStatusPush — quand il ne se passe RIEN", () => {
 describe("scheduleRemoteStatusPush — GitHub", () => {
   beforeEach(() => link());
 
-  it("closes as « completed » for completed work", async () => {
+  it("closes as \"completed\" for completed work", async () => {
     await push(IMPORTED, "done");
 
     expect(calls).toHaveLength(1);
@@ -210,14 +211,14 @@ describe("scheduleRemoteStatusPush — GitHub", () => {
     expect(calls[0].body).toEqual({ state: "closed", state_reason: "completed" });
   });
 
-  it("closes as « not planned » for work that will not happen", async () => {
+  it("closes as \"not planned\" for work that will not happen", async () => {
     await push(IMPORTED, "canceled");
     await push(IMPORTED, "duplicate");
 
     expect(calls.map((c) => c.body.state_reason)).toEqual(["not_planned", "not_planned"]);
   });
 
-  it("rouvre sans raison de fermeture — `state_reason` n'a de sens qu'à la fermeture", async () => {
+  it("reopens without a close reason: `state_reason` only makes sense when closing", async () => {
     await push(IMPORTED, "in_progress");
 
     expect(calls[0].body).toEqual({ state: "open" });
@@ -325,7 +326,7 @@ describe("scheduleRemoteStatusPush — GitLab", () => {
     ]);
   });
 
-  it("rouvre depuis n'importe quel statut ouvert", async () => {
+  it("reopens from any open status", async () => {
     await push(GITLAB_ISSUE, "triage");
 
     expect(calls[0].body).toEqual({ state_event: "reopen" });

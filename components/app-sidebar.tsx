@@ -203,16 +203,6 @@ const ProductFeedbackDialog = dynamic(
   { ssr: false },
 );
 
-/* ─── Brand ────────────────────────────────────────────────────────── */
-
-function SidebarQuickActions({ onCreate }: { onCreate?: () => void }) {
-  return (
-    <div className={cn("flex w-full min-w-0 shrink-0 gap-1")}>
-      <NewMenu variant="sidebar" collapsed={false} onAction={onCreate} />
-    </div>
-  );
-}
-
 /* ─── Nav ──────────────────────────────────────────────────────────── */
 
 function SidebarRow({ item, keyShortcuts }: { item: AppNavItem; keyShortcuts?: string }) {
@@ -1261,8 +1251,8 @@ export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, 
 }
 
 /** The desktop command/filter band is shared without mobile-specific chrome. */
-export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
-  secondary?: boolean; headerRef?: Ref<HTMLDivElement>; onCreate?: () => void;
+function SidebarTopBand({ secondary = false, headerRef }: {
+  secondary?: boolean; headerRef?: Ref<HTMLDivElement>;
 }) {
   return (
       <div
@@ -1279,7 +1269,9 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
         )}
       >
         <div className={cn("flex h-full w-full min-w-0 items-center", secondary && "hidden")}>
-          <SidebarQuickActions onCreate={onCreate} />
+          <div className="flex w-full min-w-0 shrink-0 gap-1">
+            <NewMenu variant="sidebar" collapsed={false} />
+          </div>
         </div>
         <div
           ref={headerRef}
@@ -1292,8 +1284,6 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
   );
 }
 
-/** What waits on the level a back row returns to (MIN-695): its count, and
- an incomplete-setting alert (Smart Assign) that colors it. */
 /**
  * The versions under the “What's new” menu: one small (14px) minddy mark, tinted
  * with the environment's color as on the public site, at the start of the
@@ -1379,7 +1369,7 @@ export function SidebarBackRow({ label, onBack, ariaLabel, badge, trailing }: {
  * Tickets page. Pure static route mapping: the level switches from the
  * server's HTML, no mounted-count involved.
  */
-export function secondaryNavBackTarget(
+function secondaryNavBackTarget(
   pathname: string,
   t: (key: MessageKey<"Nav">) => string,
   /** The project board shows one objective's issues (`?objective=`): it sits

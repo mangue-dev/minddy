@@ -8,17 +8,17 @@ import {
 import { setMergeRequestNoteAward } from "./mr";
 
 /**
- * MIN-147: react works EVERYWHERE in a PR, no longer only on
- * comments anchored to a line of code.
+ * MIN-147: reacting works EVERYWHERE in a PR, not only on comments anchored to
+ * a line of code.
  *
- * What is at stake here is a question of ADDRESS. Three surfaces render
- * exactly the same on the screen — a review comment, a thread message, the
- * body of the PR — and the forges store them in three different places. A
- * `PR_BODY_COMMENT_ID` (zero) traverses the entire chain to designate the body;
- * these tests verify that it lands on the correct URL on each side, and that an ordinary comment id
- * does not switch.
+ * What is at stake here is ADDRESSING. Three surfaces look exactly the same on
+ * screen (a review comment, a thread message, the PR body), and the forges
+ * store them in three different places. A `PR_BODY_COMMENT_ID` (zero) travels
+ * the whole chain to designate the body; these tests check that it lands on
+ * the right URL on each forge, and that an ordinary comment id is not
+ * rerouted.
  *
- * An address false is not seen when rereading: it responds 404 (or worse, puts
+ * A wrong address does not show in code review: it answers 404 (or worse, puts
  * the reaction on the wrong object) the day someone clicks.
  */
 
@@ -54,8 +54,8 @@ beforeEach(() => {
       if (url === "https://gitlab.com/api/v4/user") {
         return new Response(JSON.stringify({ username: "mangue-dev" }), { status: 200 });
       }
-      // Any list of awards / reactions is empty: we only test here
-      // addressing, not the flip-flop (covered by `pr-reaction.test.ts`).
+      // Every award / reaction list is empty: only addressing is tested here,
+      // not the toggle (covered by `pr-reaction.test.ts`).
       return new Response(JSON.stringify([]), { status: 200 });
     }),
   );
@@ -67,7 +67,7 @@ afterEach(() => {
 
 const posted = () => calls.filter((c) => c.method === "POST").map((c) => c.url);
 
-it("GitHub : un message du fil s'adresse en `issues/comments/{id}`", async () => {
+it("GitHub: a thread message is addressed as `issues/comments/{id}`", async () => {
   await setPullRequestConversationReaction({
     token: "user-token",
     repoFullName: REPO,
@@ -83,7 +83,7 @@ it("GitHub : un message du fil s'adresse en `issues/comments/{id}`", async () =>
   ]);
 });
 
-it("GitHub : le corps de la PR s'adresse en `issues/{number}` — pas en commentaire", async () => {
+it("GitHub: the PR body is addressed as `issues/{number}`, not as a comment", async () => {
   await setPullRequestConversationReaction({
     token: "user-token",
     repoFullName: REPO,
@@ -94,14 +94,14 @@ it("GitHub : le corps de la PR s'adresse en `issues/{number}` — pas en comment
     login: "mangue-dev",
   });
 
-  // A PR IS an issue at GitHub: his body reacts to the issue itself.
+  // On GitHub a PR IS an issue: its body takes reactions on the issue itself.
   expect(posted()).toEqual([
     `https://api.github.com/repos/${REPO}/issues/${NUMBER}/reactions`,
   ]);
   expect(calls.at(-1)?.body).toEqual({ content: "heart" });
 });
 
-it("GitLab : la note garde son URL, le corps de la MR prend celle de la MR", async () => {
+it("GitLab: a note keeps its URL, the MR body uses the MR's own", async () => {
   const award = (commentId: number) =>
     setMergeRequestNoteAward({
       token: "user-token",
@@ -120,7 +120,7 @@ it("GitLab : la note garde son URL, le corps de la MR prend celle de la MR", asy
   expect(posted()).toEqual([`${base}/notes/77/award_emoji`, `${base}/award_emoji`]);
 });
 
-it("GitHub : les réactions du corps sortent sous l'id zéro, celles des messages sous le leur", async () => {
+it("GitHub: body reactions come out under id zero, message reactions under their own id", async () => {
   const group = (content: string, count: number, viewer = false) => ({
     content,
     viewerHasReacted: viewer,
@@ -146,19 +146,19 @@ it("GitHub : les réactions du corps sortent sous l'id zéro, celles des message
   });
 
   expect(reactions).toEqual([
-    // `EYES` has fallen: a group with zero survives for an instant the removal of its
-    // last reaction, and displaying it would render an emoji that no one asked.
+    // `EYES` is dropped: a zero-count group briefly outlives the removal of its
+    // last reaction, and displaying it would show an emoji nobody added.
     { commentId: PR_BODY_COMMENT_ID, content: "+1", count: 2, mine: true },
     { commentId: 512, content: "rocket", count: 1, mine: false },
   ]);
 });
 
-it("GitHub : sans acteur, aucune réaction n'est « la mienne » — les comptes restent justes", async () => {
+it("GitHub: without an actor no reaction is marked as mine, and counts stay correct", async () => {
   graphql = {
     repository: {
       pullRequest: {
-        // The `viewerHasReacted` of the installation token is that of the BOT: the
-        // making it as it is would trigger a reaction in everyone that no one has asked.
+        // The installation token's `viewerHasReacted` belongs to the BOT: passing
+        // it through would light up, for everyone, a reaction nobody added.
         reactionGroups: [
           { content: "THUMBS_UP", viewerHasReacted: true, reactors: { totalCount: 3 } },
         ],
@@ -179,7 +179,7 @@ it("GitHub : sans acteur, aucune réaction n'est « la mienne » — les comptes
   ]);
 });
 
-it("GitHub : le corps n'est compté qu'une fois, même quand les messages paginent", async () => {
+it("GitHub: the body is counted once, even when messages paginate", async () => {
   const body = {
     content: "HOORAY",
     viewerHasReacted: false,
@@ -217,8 +217,8 @@ it("GitHub : le corps n'est compté qu'une fois, même quand les messages pagine
     viewerIsActor: true,
   });
 
-  // The body is carried by the PR, not by the pagination of its comments:
-  // rereading it on each page would double its screen count.
+  // The body belongs to the PR, not to its comment pagination: reading it
+  // again on each page would double its displayed count.
   expect(page).toBe(2);
   expect(reactions).toEqual([
     { commentId: PR_BODY_COMMENT_ID, content: "hooray", count: 1, mine: false },

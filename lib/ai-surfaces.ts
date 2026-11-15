@@ -176,24 +176,3 @@ export function surfaceForModelKey(modelKey: ByokModelKey): AiSurface {
   if (!definition) throw new Error(`No AI surface for model key ${modelKey}`);
   return definition.id;
 }
-
-/** Chains and routines are automations even if they run the same agent. */
-export function surfaceForAgentRun(run: {
-  chain_id?: string | null;
-  routine_id?: string | null;
-}): Extract<AiSurface, "agent" | "automations"> {
-  return run.chain_id || run.routine_id ? "automations" : "agent";
-}
-
-/**
- * Provider surface for a frozen code worker. Legacy automation runs retain the
- * surface they launched with; every run created under the account-only rule
- * uses the agent surface regardless of its trigger.
- */
-export function workerModelSurfaceForAgentRun(run: {
-  chain_id?: string | null;
-  routine_id?: string | null;
-  worker_model_source?: string | null;
-}): Extract<AiSurface, "agent" | "automations"> {
-  return run.worker_model_source === "account" ? "agent" : surfaceForAgentRun(run);
-}

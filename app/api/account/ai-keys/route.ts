@@ -247,13 +247,11 @@ export async function POST(request: NextRequest) {
     baseUrl = normalizeBaseUrl(raw);
   }
 
-  // The key is PRESENTED to the supplier before being registered (MIN-344): its
-  // mere presence on base lifted any usage ceiling, including that of
-  // compute of the microVM, which minddy pays for. A frank refusal (401/403) is a fact
-  // which is returned to the user immediately — registering a dead key does not
-  // help either now or on the first run. An `unknown` verdict
-  // (supplier unreachable) saves the key WITHOUT validation date: it does not
-  // raises nothing, and `getUserByok` will try again on first use.
+  // The key is presented to the provider before being stored (MIN-344): its
+  // mere presence lifts the usage ceiling. A clear refusal (401/403) goes back
+  // to the user at once, since a dead key helps nobody. An `unknown` verdict
+  // (provider unreachable) stores the key without a validation date: it lifts
+  // nothing, and `getUserByok` tries again on first use.
   const effectiveBaseUrl = resolveProviderBaseUrl(provider, baseUrl);
   // A local endpoint is deliberately opaque to the cloud: no listing or
   // probe should only bring this query out of the desktop app. The key is

@@ -57,7 +57,7 @@ export interface OpenRouterModelInfo {
   textOutput: boolean;
   /**
  * This is not a model but a SWITCH: `openrouter/auto` and its cousins
- * (`fusion`, `free`, `pareto-code`…), and the aliases `~éditeur/famille-latest`
+ * (`fusion`, `free`, `pareto-code`…), and the aliases `~vendor/family-latest`
  * which redirect to the latest model of a family. OpenRouter publishes them
  * in `/models` with `architecture.tokenizer: "Router"`, and the aliases carry
  * in addition to a `alias_target`. We keep them in the index - an id stuck in the hand

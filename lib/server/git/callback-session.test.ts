@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-324 — the link that the three forge callbacks had skipped: the
- * `state` says where we are going, the session says who is coming back. Two tests carry all the
- * correction: "an absence of session authorizes nothing" and "a `state` of a
- * other account does not constitute identity".
+ * MIN-324 — the link the three forge callbacks had skipped: the `state` says
+ * where the flow is going, the session says who is coming back. Two tests carry
+ * the whole fix: "a missing session authorizes nothing" and "another account's
+ * `state` does not establish identity".
  */
 
 const getClaims = vi.fn();
@@ -28,7 +28,7 @@ beforeEach(() => {
 });
 
 describe("sessionMatchesState", () => {
-  it("refuse deux absences : ne pas savoir qui revient n'autorise personne", () => {
+  it("rejects two missing values: not knowing who returns authorizes no one", () => {
     expect(sessionMatchesState(null, null)).toBe(false);
     expect(sessionMatchesState(undefined, undefined)).toBe(false);
     expect(sessionMatchesState("", "")).toBe(false);
@@ -46,19 +46,19 @@ describe("sessionMatchesState", () => {
     expect(sessionMatchesState("victime", "attaquant")).toBe(false);
   });
 
-  it("accepte l'égalité", () => {
+  it("accepts equal identifiers", () => {
     expect(sessionMatchesState("user-1", "user-1")).toBe(true);
   });
 });
 
 describe("readForgeCallbackSession", () => {
-  it("rend le `sub` des claims", async () => {
+  it("returns the claims' `sub`", async () => {
     getClaims.mockResolvedValue({ data: { claims: { sub: "user-1" } } });
     const session = await readForgeCallbackSession({} as never);
     expect(session.userId).toBe("user-1");
   });
 
-  it("rend null quand il n'y a pas de session", async () => {
+  it("returns null when there is no session", async () => {
     getClaims.mockResolvedValue({ data: null, error: { message: "no session" } });
     const session = await readForgeCallbackSession({} as never);
     expect(session.userId).toBeNull();

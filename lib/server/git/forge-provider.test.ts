@@ -153,7 +153,7 @@ describe("RelayForgeProvider", () => {
   it("mints GitHub tokens through the control plane, scoped per request", async () => {
     const result = await relayForgeProvider.getInstallationToken({
       installationId: 4242,
-      scope: { repositoryIds: [9001], permissions: { contents: "write" } },
+      scope: { repositoryIds: [9001] },
     });
     expect(result).toEqual({
       token: "relayed-token",
@@ -165,11 +165,19 @@ describe("RelayForgeProvider", () => {
         body: {
           installationId: 4242,
           repositoryIds: [9001],
-          profile: "repo-write",
+          profile: "full",
         },
       },
     ]);
     expect(installationTokenCalls).toHaveLength(0);
+  });
+
+  it("refuses a narrowed permission set instead of widening it", async () => {
+    await expect(relayForgeProvider.getInstallationToken({
+      installationId: 4242,
+      scope: { repositoryIds: [9001], permissions: { contents: "write" } },
+    })).rejects.toThrow(/No relay mint profile/);
+    expect(relayRequestCalls).toHaveLength(0);
   });
 
   it("uses the narrow pre-link profile for repository enumeration", async () => {
@@ -209,7 +217,7 @@ describe("RelayForgeProvider", () => {
     });
     const input = {
       installationId: 7777,
-      scope: { repositoryIds: [123], permissions: { contents: "read" as const } },
+      scope: { repositoryIds: [123] },
     };
 
     const first = relayForgeProvider.getInstallationToken(input);
@@ -244,11 +252,11 @@ describe("repo-access through the seam", () => {
       repo_full_name: "acme/app",
       default_branch: "trunk",
     };
-    const target = await resolveRepoCloneTarget("project-1", "repo-write");
+    const target = await resolveRepoCloneTarget("project-1");
     expect(installationTokenCalls).toEqual([
       {
         installationId: 42,
-        scope: { repositoryIds: [9001], permissions: { contents: "write" } },
+        scope: { repositoryIds: [9001] },
       },
     ]);
     expect(target).toMatchObject({
@@ -256,7 +264,6 @@ describe("repo-access through the seam", () => {
       repoFullName: "acme/app",
       defaultBranch: "trunk",
       token: "installation-token",
-      authUrl: "https://x-access-token:installation-token@github.com/acme/app.git",
     });
   });
 
@@ -274,14 +281,14 @@ describe("repo-access through the seam", () => {
       default_branch: "main",
       git_connections: { source: "relay" },
     };
-    const target = await resolveRepoCloneTarget("project-1", "repo-read");
+    const target = await resolveRepoCloneTarget("project-1");
     expect(relayRequestCalls).toEqual([
       {
         path: "/api/relay/github/installation-token",
         body: {
           installationId: 4242,
           repositoryIds: [9001],
-          profile: "repo-read",
+          profile: "full",
         },
       },
     ]);
@@ -289,7 +296,6 @@ describe("repo-access through the seam", () => {
     expect(target).toMatchObject({
       provider: "github",
       token: "relayed-token",
-      authUrl: "https://x-access-token:relayed-token@github.com/acme/app.git",
     });
     vi.unstubAllEnvs();
   });
@@ -309,7 +315,6 @@ describe("repo-access through the seam", () => {
       provider: "gitlab",
       token: "gitlab-connection-token",
       defaultBranch: "main",
-      authUrl: "https://oauth2:gitlab-connection-token@gitlab.com/acme/app.git",
     });
   });
 });

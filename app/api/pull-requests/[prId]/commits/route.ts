@@ -14,7 +14,7 @@ export const maxDuration = 60;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "read");
   if (!auth.ok) return auth.response;
   return prCommitsResponse(auth.scope);
 }

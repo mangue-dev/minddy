@@ -127,6 +127,7 @@ import {
   listRoutinesForUser,
   updateRoutine,
   type Routine,
+  type RoutineErrorKey,
 } from "@/lib/server/routines";
 import { forgeFor } from "@/lib/server/agent/forge";
 import {
@@ -212,6 +213,7 @@ import { durationBucket } from "@/lib/analytics-sanitize";
 import { isKnownTimezone } from "@/lib/routine-schedule";
 import { readInboxNotifications } from "@/lib/server/inbox";
 import { buildInboxToolResult } from "@/lib/inbox-tool";
+import { MAX_BULK_ISSUES, MAX_EDIT_DIFF_CHARS, MAX_PATCH_CHARS } from "./surface-limits";
 import {
   compactToolDescription,
   type DiscoveryAnnotations,
@@ -231,12 +233,8 @@ import {
     swamp the model's context) — the signed download_url is the way in. */
 const MAX_INLINE_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
 
-/** Per-file ceiling of the diff returned by minddy_get_pull_request — aligned with
- Numo's read_pull_request tool. */
-const MAX_PATCH_CHARS = 4000;
-
-/** Refusal to attach a PR → what the model must understand. The
- `code` of the shared core IS the MCP error code: only one vocabulary. */
+/** Why a pull request could not be linked. The shared core's `code` IS the
+ MCP error code: one vocabulary. */
 const LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
     "The pull request could not be linked. Refresh it and try again.",
@@ -378,13 +376,7 @@ function planTaskSummary(plan: string | null | undefined) {
   };
 }
 
-/** Ceiling of the diff returned by minddy_edit_issue_text: enough to confirm that
- * the edition landed in the right place, without re-transporting the document that we
- * precisely avoided rewriting. */
-const MAX_EDIT_DIFF_CHARS = 2000;
-
-/** The names that THIS surface bears, so that patch refusals refer to
- * tools that exist here (see IssueTextTools). */
+/** This surface's tool names, so that a refused edit points to tools that exist here (see IssueTextTools). */
 const MCP_TEXT_TOOLS: IssueTextTools = {
   read: "minddy_get_issue",
   appendToPlan: "minddy_append_to_plan",
@@ -450,8 +442,8 @@ function mcpRoutine(routine: Routine) {
   };
 }
 
-/** Refusal of the routine factory → MCP error, with the code which is fine. */
-function routineFailure(r: { errorKey: string }): ToolResult {
+/** A routine core refusal as the MCP error with its stable code. */
+function routineFailure(r: { errorKey: RoutineErrorKey }): ToolResult {
   switch (r.errorKey) {
     case "ownerOnly":
       return fail(
@@ -534,9 +526,6 @@ const LINK_FIELDS = z.object({
 });
 
 type LinkInput = z.infer<typeof LINK_FIELDS>;
-
-/** Issues one bulk call may touch. */
-const MAX_BULK_ISSUES = 50;
 
 /** The editable fields of minddy_update_issues, shared by both of its shapes. */
 const ISSUE_UPDATE_FIELDS = z.object({

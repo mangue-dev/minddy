@@ -67,7 +67,7 @@ import { prIdentifier } from "@/lib/repo-providers";
 import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type {
-  AgentRunPrResponse,
+  PullRequestDetailResponse,
   PullRequestListItem,
   PullRequestListResponse,
 } from "@/lib/agent-api";
@@ -199,7 +199,7 @@ function PrRow({
   onSelect,
 }: {
   pr: PullRequestListItem;
-  readiness: NonNullable<AgentRunPrResponse["readiness"]> | null;
+  readiness: NonNullable<PullRequestDetailResponse["readiness"]> | null;
   readinessUnavailable: boolean;
   selected: boolean;
   dateLabel: string;
@@ -321,7 +321,7 @@ function PrGroupRows({
   onLoadNextPage,
 }: {
   group: { key: PullRequestSection; items: PullRequestListItem[] };
-  readinessByPrId: Record<string, NonNullable<AgentRunPrResponse["readiness"]>>;
+  readinessByPrId: Record<string, NonNullable<PullRequestDetailResponse["readiness"]>>;
   unavailablePrIds: ReadonlySet<string>;
   readinessError: boolean;
   open: boolean;
@@ -608,7 +608,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       const previous = queryClient.getQueriesData<PullRequestListResponse | InfiniteData<PullRequestListResponse>>({
         queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
       });
-      const previousDetail = queryClient.getQueryData<AgentRunPrResponse>([
+      const previousDetail = queryClient.getQueryData<PullRequestDetailResponse>([
         "pull-request",
         prId,
       ]);
@@ -864,7 +864,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   reconcileRef.current = () => {
     const changes = pullRequestStatesToReconcile(pullRequests, {
       detail: (prId) => {
-        const state = queryClient.getQueryState<AgentRunPrResponse>(["pull-request", prId]);
+        const state = queryClient.getQueryState<PullRequestDetailResponse>(["pull-request", prId]);
         return state?.data ? { pr: state.data.pr, fetchedAt: state.dataUpdatedAt } : undefined;
       },
       readinessByPrId,

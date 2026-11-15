@@ -12,7 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ prId: string }> },
 ) {
   const { prId } = await params;
-  const auth = await authorizePrRequest(request, prId);
+  const auth = await authorizePrRequest(request, prId, "write");
   if (!auth.ok) return auth.response;
   let body: unknown;
   try {

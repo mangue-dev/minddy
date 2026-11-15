@@ -1,4 +1,4 @@
-import type { AgentRunPrResponse, PullRequestCheck, PullRequestDeploymentResponse } from "./agent-api";
+import type { PullRequestDetailResponse, PullRequestCheck, PullRequestDeploymentResponse } from "./agent-api";
 import type { PullRequestReadiness, ReadinessBlocker } from "./pr-readiness";
 import type { PullRequestReadinessBatchResponse } from "./agent-api";
 
@@ -36,7 +36,7 @@ export function settleMergeFlowOverride(
 }
 
 export function pullRequestRefetchInterval(
-  response: AgentRunPrResponse | undefined,
+  response: PullRequestDetailResponse | undefined,
 ): number | false {
   if (response?.checks?.state === "pending") return PULL_REQUEST_POLL_MS;
   if (

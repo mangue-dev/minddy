@@ -2,7 +2,7 @@ import { COMPLETED_PULL_REQUESTS_PAGE } from "./pull-request-sections";
 import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query";
 
 import type {
-  AgentRunPrResponse,
+  PullRequestDetailResponse,
   PullRequestListItem,
   PullRequestListResponse,
 } from "./agent-api";
@@ -88,7 +88,7 @@ export function updateCachedPullRequestState(
   // The detail has its own cache, served by the forge. Let it wait for its
   // refetch after having already changed the sidebar — two states of the
   // same PR during one network round trip would flash.
-  queryClient.setQueryData<AgentRunPrResponse>(["pull-request", prId], (data) => {
+  queryClient.setQueryData<PullRequestDetailResponse>(["pull-request", prId], (data) => {
     if (!data?.pr) return data;
     return {
       ...data,

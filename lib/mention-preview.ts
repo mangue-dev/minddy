@@ -3,6 +3,7 @@ import type { MentionLinkType } from "@/lib/mention-link";
 import type { DatabasePropertyType } from "@/lib/page-databases";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 import type { ProjectRole } from "@/lib/project-roles";
+import type { PullRequestState } from "@/lib/pull-request-contract";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { DisplayRelation } from "@/lib/relation-constants";
 import type { IssueCardCategory, IssueCardIssue, IssueCardObjective, Member } from "@/lib/types";
@@ -156,13 +157,6 @@ export interface CyclePreview {
   issues: Array<{ status: IssueStatus; effort: IssueEffort | null }>;
 }
 
-/** A pull request's states, as minddy names them. */
-export const PULL_REQUEST_STATES = ["draft", "open", "merged", "closed"] as const;
-export type PullRequestState = (typeof PULL_REQUEST_STATES)[number];
-
-export function isPullRequestState(value: unknown): value is PullRequestState {
-  return (PULL_REQUEST_STATES as readonly unknown[]).includes(value);
-}
 
 export interface PullRequestPreview {
   type: "pull_request";

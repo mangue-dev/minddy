@@ -29,7 +29,6 @@ const PROJECT = "11111111-1111-4111-8111-111111111111";
 function context(overrides: Partial<ToolContext> = {}): ToolContext {
   return {
     projectId: null,
-    requireExplicitProjectTarget: true,
     userId: "user-1",
     supabase: {} as SupabaseClient,
     service: {} as SupabaseClient,

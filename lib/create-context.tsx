@@ -28,20 +28,10 @@ import { useAuth } from "@/lib/auth-context";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import { createIssueApi } from "@/lib/issues-api";
 import { createObjectiveOptimistic } from "@/lib/optimistic-objective";
-import {
-  findCachedIssue,
-  insertIssueEverywhere,
-  issueWrites,
-  mergeServerIssue,
-  removeIssueEverywhere,
-} from "@/lib/optimistic/issue-writes";
-import { createIssueDeferred } from "@/lib/create-issue-deferred";
+import { findCachedIssue } from "@/lib/optimistic/issue-writes";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { buildOptimisticIssue } from "@/lib/optimistic-issue";
-import { useUndoHistory } from "@/lib/undo/undo-context";
-import { snapshotIssue } from "@/lib/undo/undo-core";
+import { useIssueMutations } from "@/lib/use-issue-mutations";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import {
   defaultCreateProjectId,
@@ -55,12 +45,7 @@ import {
   preloadSurface,
 } from "@/lib/lazy-app-surfaces";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type {
-  CreateIssueInput,
-  CreateObjectiveInput,
-  Issue,
-  Objective,
-} from "@/lib/types";
+import type { CreateObjectiveInput, Objective } from "@/lib/types";
 
 // Deferred, like the assistant panel: keeps the create dialogs (markdown editor,
 // dictation, attachments) out of every route's initial bundle. Loaded the first
@@ -83,7 +68,7 @@ interface OpenIssueOptions {
   assigneeId?: string | null;
   /** Prefills a "sub-issue of" relation to this issue, shown in the form. */
   parentId?: string | null;
-  /** Opens the already open microphone dialog (global shortcut ⌘⇧D). */
+  /** Opens the dialog with the microphone already listening (global shortcut ⌘⇧D). */
   dictate?: boolean;
   /** Reopens this saved draft of `projectId` in the form (drafts tray, MIN-753). */
   draftId?: string;
@@ -92,12 +77,12 @@ interface OpenIssueOptions {
 interface OpenObjectiveOptions {
   /** Same defaulting as {@link OpenIssueOptions.projectId}. */
   projectId?: string;
-  /** Prefills the name — quickly adding from a goal picker passes the
- * typed text into the search. */
+  /** Prefills the name — a quick add from an objective picker passes the text
+   *  typed in its search. */
   name?: string;
-  /** Recalled with the created objective, so that the picker who opened the dialog
- * links to his ticket. Never recalled for a creation in ANOTHER project
- * (split button): the objective is not linkable. */
+  /** Called with the created objective, so the picker that opened the dialog
+   *  links it to its issue. Never called for a creation in ANOTHER project
+   *  (split button): that objective cannot be linked. */
   onCreated?: (objective: Objective) => void;
   /** Same as {@link OpenIssueOptions.draftId}. */
   draftId?: string;
@@ -129,9 +114,8 @@ function activeObjectiveIdFromUrl(): string | null {
  * — not just inside a project. The target project defaults to the current route,
  * else the last project a ticket was created in (see {@link lastCreateProjectId}),
  * else the first; both dialogs let the user retarget via their split button.
- * Ticket creation is optimistic and goes through the write register en
- * wait + shared cache helpers (MIN-156), like `createIssue` des
- * two board hooks.
+ * Issue creation is the shared optimistic writer (lib/use-issue-mutations.ts),
+ * the one both boards use.
  *
  * The per-project board keeps its own local dialog for column-scoped presets
  * (a column's "+", objective mode, assigned-to-me) and the `C` shortcut.
@@ -165,8 +149,6 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => { targetInputs.current = { pathname, projects, offeredProjects }; }, [pathname, projects, offeredProjects]);
   const allProjectsRef = useRef(allProjects);
   useLayoutEffect(() => { allProjectsRef.current = allProjects; }, [allProjects]);
-  // Local undo history (MIN-35): creations from the global dialog record too.
-  const { record } = useUndoHistory();
 
   // Project whose members/categories/objectives feed each dialog. Set on the
   // first open and left in place (dialogs stay mounted for reuse). One per
@@ -176,8 +158,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const [objectiveTarget, setObjectiveTarget] = useState<string | null>(null);
   const [issueMounted, setIssueMounted] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
-  // Does the dialog open in dictation? Rested at EVERY opening, never
-  // left lying around: otherwise a `C` typed after a ⌘⇧D would turn the microphone back on.
+  // Whether the dialog opens dictating. Reset at EVERY opening: otherwise a
+  // `C` typed after a ⌘⇧D would turn the microphone back on.
   const [issueDictate, setIssueDictate] = useState(false);
   // The draft the next opening restores — reset at every opening too, so a
   // later `C` opens a blank form.
@@ -191,10 +173,10 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   }>({ objectiveId: null, assigneeId: null, parentId: null });
   const [objectiveOpen, setObjectiveOpen] = useState(false);
   const [objectiveMounted, setObjectiveMounted] = useState(false);
-  // Pre-filled name + recipient of the created objective, set by quick addition
-  // of a picker. The callback lives in a ref: it does not redraw anything, and it is
-  // CONSUMED upon creation — a subsequent opening (shortcut `O`, header) does not
-  // must not link its objective to the previous ticket.
+  // Prefilled name and recipient of the created objective, set by a picker's
+  // quick add. The callback lives in a ref: it renders nothing, and it is
+  // CONSUMED on creation — a later opening (shortcut `O`, header) must not link
+  // its objective to the previous issue.
   const [objectiveName, setObjectiveName] = useState<string | undefined>(undefined);
   const objectiveCreatedRef = useRef<((objective: Objective) => void) | null>(null);
 
@@ -206,52 +188,9 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const { categories } = useCategoriesQuery(issueMounted ? issueTarget : null);
   const { objectives } = useObjectivesQuery(issueMounted ? issueTarget : null);
 
-  // Optimistic (MIN-40): the card appears in the project cache AND the board
-  // aggregated upon opening, the dialog closes without waiting for POST; reconciled
-  // to success, removed + toast to failure. Realtime propagates to other clients.
-  const createIssueGlobal = useCallback(
-    async (projectId: string, input: CreateIssueInput) => {
-      // Smart-fill (MIN-260): the server fills the ticket BEFORE inserting the
-      // line, so no optimistic map — it would be empty for the duration of
-      // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
-      if (input.smart_fill) {
-        createIssueDeferred({ queryClient, projectId, input, record });
-        return null;
-      }
-      const optimistic = buildOptimisticIssue(
-        input,
-        projectId,
-        user?.id ?? null,
-        queryClient.getQueryData<Issue[]>(["issues", projectId]) ?? []
-      );
-      // Registered in the register BEFORE the patch (MIN-156): a GET response
-      // played earlier can no longer make the newly created map disappear.
-      const handle = issueWrites.begin({ kind: "insert", row: optimistic });
-      insertIssueEverywhere(queryClient, projectId, optimistic);
-      // The map names its line: the real-time echo of our creation is
-      // recognized, not adopted alongside it (lib/optimistic-issue.ts).
-      void createIssueApi(projectId, { ...input, id: optimistic.id }).then(
-        (issue) => {
-          insertIssueEverywhere(queryClient, projectId, issue);
-          mergeServerIssue(queryClient, projectId, issue);
-          issueWrites.settle(handle, issue);
-          record({
-            kind: "create",
-            projectId,
-            issueId: issue.id,
-            snapshot: snapshotIssue(issue),
-          });
-        },
-        (err) => {
-          issueWrites.fail(handle);
-          removeIssueEverywhere(queryClient, projectId, optimistic.id);
-          toast.error((err as Error).message);
-        }
-      );
-      return optimistic;
-    },
-    [queryClient, user, record]
-  );
+  // Optimistic (MIN-40): the card appears in its project's cache and on the
+  // aggregate board at once, and the dialog closes without waiting for the POST.
+  const { createIssue: createIssueGlobal } = useIssueMutations("global");
 
   // Optimistic: the objective is in the project cache and the cross-project
   // board as soon as the dialog closes (lib/optimistic-objective.ts).
@@ -265,9 +204,9 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     [queryClient]
   );
 
-  /** Creation from the dialog, in the targeted project: this is what the quick addition
- * of a picker is waiting for to link the objective to his ticket. The link
- * waits for the server row, which the ticket's reference requires. */
+  /** Creation from the dialog in its target project: what a picker's quick add
+   *  waits for to link the objective to its issue. The link waits for the
+   *  server row, which the issue's reference requires. */
   const createObjectiveForTarget = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
       const { objective, persisted } = createObjectiveOptimistic(queryClient, projectId, input);
@@ -406,23 +345,22 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [projects.length, openCreateIssue, openCreateObjective]);
 
-  // ⌘⇧D everywhere: “new ticket, by voice”. This is the dictation shortcut,
-  // extended to screens that had nothing to dictate — instead of doing nothing,
-  // it opens the creation form with the microphone already open.
+  // ⌘⇧D everywhere: "new issue, by voice". The dictation shortcut, extended to
+  // screens with nothing to dictate into: it opens the creation form with the
+  // microphone already listening.
   //
-  // He never TAKES the suit from whoever already wears it: each button of
-  // dictation (ticket panel, Objectives page, objective dialog, return,
-  // creation dialog itself) listens to it in the CAPTURE phase and does
-  // `preventDefault`. This listener is in bubble phase, on the window:
-  // so he goes AFTER them, and `defaultPrevented` tells him that a microphone more
-  // close responded. Nothing to record, nothing to keep up to date.
+  // It never takes the shortcut from a surface that already owns it: each
+  // dictation button (issue panel, Objectives page, objective dialog, feedback,
+  // the creation dialog itself) listens in the CAPTURE phase and calls
+  // `preventDefault`. This listener runs in the bubble phase on the window, so
+  // after them, and `defaultPrevented` says a closer microphone answered.
   useEffect(() => {
     if (projects.length === 0) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (!matchesModShiftCombo(e, "d")) return;
       if (e.defaultPrevented) return;
-      // An open dialog/side panel holds the keyboard (same guard as
-      // `C` and `O` just above): we do not stack a form.
+      // An open dialog or side panel holds the keyboard (same guard as `C`
+      // and `O` above): no form is stacked on it.
       if (hasVisibleOpenDialog()) return;
       e.preventDefault();
       openCreateIssue({ dictate: true });
@@ -513,9 +451,8 @@ export function useCreate(): CreateContextValue {
   return ctx;
 }
 
-/** Same context, but tolerated absent: the components shared with the board
- * PUBLIC (the boards) have no one to mount the creation dialogs, and
- * simply hide what depends on them. */
+/** The same context, tolerated absent: components shared with the PUBLIC
+ *  boards have nobody mounting the creation dialogs, and hide what needs them. */
 export function useCreateOptional(): CreateContextValue | null {
   return useContext(CreateContext);
 }
