@@ -3005,9 +3005,35 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
   {
     type: "function",
     function: {
+      name: "list_pull_requests",
+      description:
+        "List the pull requests of the project's linked repository, open ones (open and draft) by default, the most recently updated first: minddy id, number, title, state, URL, author, branches, and the issues each is attached to — an empty `issues` means a PR attached to no issue. Use it whenever the user talks about a pull request you have no id or number for, from any page (the board, an issue, a conversation): 'merge the open PR', 'the PR on the login fix'. Then act on it with its number through read_pull_request, merge_pull_request and the other PR tools. When several match and you cannot tell which one the user means, ask. Read-only.",
+      parameters: {
+        type: "object",
+        properties: {
+          state: {
+            type: "string",
+            enum: ["open", "merged", "closed", "all"],
+            description: "Which pull requests: open (default, includes drafts), merged, closed or all.",
+          },
+          query: {
+            type: "string",
+            description: "Optional text matched against the title, the branch, the author and the number. Omit it to list them all.",
+          },
+          limit: {
+            type: "number",
+            description: "At most this many pull requests (default 20, maximum 50).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "read_pull_request",
       description:
-        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. Its top-level `id` is minddy's id of the pull request: cite it as '[@#<number>](mention:pull_request/<id>)'.",
+        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Pass exactly one target: pull_request_id when the conversation carries a PR directly, including a human PR with no issue; pull_request for the number ('#42') or forge URL the user names, from any page; otherwise issue_id to resolve the issue's live or most recently updated PR. To find a PR the user describes without its number, list_pull_requests first. Its top-level `id` is minddy's id of the pull request: cite it as '[@#<number>](mention:pull_request/<id>)'.",
       parameters: {
         type: "object",
         properties: {
@@ -3020,6 +3046,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
             type: "string",
             description:
               "Minddy id of the pull request to read, as supplied by the pull request context.",
+          },
+          pull_request: {
+            type: "string",
+            description:
+              "Or the pull request the user names: its number ('42', '#42', '!42' on GitLab) or its forge URL — also a pull request attached to no issue (find it with list_pull_requests).",
           },
         },
       },
@@ -3065,7 +3096,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "merge_pull_request",
       description:
-        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks the draft state and the conflicts and refuses; the forge enforces the branch's required checks, so with protection a red or running CI refuses the merge — but where no protection demands checks the forge would accept a red one, so check the CI summary yourself and never merge through one. A refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so.",
+        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks the draft state and the conflicts and refuses; the forge enforces the branch's required checks, so with protection a red or running CI refuses the merge — but where no protection demands checks the forge would accept a red one, so check the CI summary yourself and never merge through one. A refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id, pull_request_id or pull_request (its number or URL), exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so.",
       parameters: {
         type: "object",
         properties: {
@@ -3078,6 +3109,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
             type: "string",
             description:
               "Minddy id of the pull request to merge, as supplied by the pull request context.",
+          },
+          pull_request: {
+            type: "string",
+            description:
+              "Or the pull request the user names: its number ('42', '#42', '!42' on GitLab) or its forge URL — also a pull request attached to no issue (find it with list_pull_requests).",
           },
           merge_method: {
             type: "string",
@@ -3093,7 +3129,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "update_pull_request",
       description:
-        "Rename a pull request and/or rewrite its description — the PR metadata only, NEVER the code. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass at least one of title and body. Use it on an explicit user request ('rename this PR…') or when you opened the PR through the agent and its title no longer describes what the branch carries.",
+        "Rename a pull request and/or rewrite its description — the PR metadata only, NEVER the code. Identify the pull request by issue_id, pull_request_id or pull_request (its number or URL), exactly one (same resolution as read_pull_request). Pass at least one of title and body. Use it on an explicit user request ('rename this PR…') or when you opened the PR through the agent and its title no longer describes what the branch carries.",
       parameters: {
         type: "object",
         properties: {
@@ -3106,6 +3142,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
             type: "string",
             description:
               "Minddy id of the pull request to edit, as supplied by the pull request context.",
+          },
+          pull_request: {
+            type: "string",
+            description:
+              "Or the pull request the user names: its number ('42', '#42', '!42' on GitLab) or its forge URL — also a pull request attached to no issue (find it with list_pull_requests).",
           },
           title: {
             type: "string",
@@ -3124,7 +3165,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "post_pull_request_comment",
       description:
-        "Post a comment in the conversation thread of a pull request (NOT anchored to code). The comment is signed at the forge as Numo (minddy). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request); body is the markdown comment. Use it to report a review verdict, answer a question in the thread, or keep the author posted — in the user's language.",
+        "Post a comment in the conversation thread of a pull request (NOT anchored to code). The comment is signed at the forge as Numo (minddy). Identify the pull request by issue_id, pull_request_id or pull_request (its number or URL), exactly one (same resolution as read_pull_request); body is the markdown comment. Use it to report a review verdict, answer a question in the thread, or keep the author posted — in the user's language.",
       parameters: {
         type: "object",
         properties: {
@@ -3137,6 +3178,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
             type: "string",
             description:
               "Minddy id of the pull request to comment on, as supplied by the pull request context.",
+          },
+          pull_request: {
+            type: "string",
+            description:
+              "Or the pull request the user names: its number ('42', '#42', '!42' on GitLab) or its forge URL — also a pull request attached to no issue (find it with list_pull_requests).",
           },
           body: {
             type: "string",
@@ -3165,6 +3211,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
             type: "string",
             description:
               "Minddy id of the pull request carrying the comment, as supplied by the pull request context.",
+          },
+          pull_request: {
+            type: "string",
+            description:
+              "Or the pull request the user names: its number ('42', '#42', '!42' on GitLab) or its forge URL — also a pull request attached to no issue (find it with list_pull_requests).",
           },
           comment_id: {
             type: "number",
@@ -3197,6 +3248,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
             type: "string",
             description:
               "Minddy id of the pull request carrying the conversations, as supplied by the pull request context.",
+          },
+          pull_request: {
+            type: "string",
+            description:
+              "Or the pull request the user names: its number ('42', '#42', '!42' on GitLab) or its forge URL — also a pull request attached to no issue (find it with list_pull_requests).",
           },
           comment_ids: {
             type: "array",

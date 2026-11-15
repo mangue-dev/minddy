@@ -257,6 +257,8 @@ export const NUMO_TOOL_POLICY = {
   // The pull request's body, up to 30 conversation comments of 2,000
   // characters, its review threads and file patches of 4,000 characters.
   read_pull_request: { scope: "project", capability: "read", replay: "retry", resultLimit: 64_000 },
+  // At most 50 rows of a few short fields each, with their attached issues.
+  list_pull_requests: { scope: "project", capability: "read", replay: "retry", resultLimit: 32_000 },
 
   // ── Internal comments ───────────────────────────────────────────────
   add_comment: { scope: "project", capability: "comment", touches: ISSUE_ID },

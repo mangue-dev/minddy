@@ -5,6 +5,9 @@ import type { RepoSyncState, VisibleRepo } from "./pull-requests";
 import { resolveLinkedRepositoryForRepo } from "./repo-access";
 import { stampRepoSync, syncRepoPullRequests } from "./pull-requests";
 
+/** What a sweep needs of a repository: the forge and its name. */
+type SweptRepo = Pick<VisibleRepo, "provider" | "repoFullName">;
+
 /** Share concurrent list and badge sweeps, without retaining credentials or results. */
 const sweeps = new Map<string, Promise<boolean>>();
 
@@ -21,7 +24,7 @@ const SWEEP_OVERLAP_MS = 60 * 60_000;
  * PRs, about five seconds a repository, on every list read past the minute
  * window (MIN-889).
  */
-export function sweepRepo(userId: string, repo: VisibleRepo, previous?: RepoSyncState): Promise<boolean> {
+export function sweepRepo(userId: string, repo: SweptRepo, previous?: RepoSyncState): Promise<boolean> {
   const key = JSON.stringify([userId, repo.provider, repo.repoFullName]);
   const pending = sweeps.get(key);
   if (pending) return pending;
@@ -37,7 +40,7 @@ function sweepWindowStart(previous: RepoSyncState | undefined): string | undefin
   return Number.isFinite(syncedAt) ? new Date(syncedAt - SWEEP_OVERLAP_MS).toISOString() : undefined;
 }
 
-async function performSweep(userId: string, repo: VisibleRepo, previous?: RepoSyncState): Promise<boolean> {
+async function performSweep(userId: string, repo: SweptRepo, previous?: RepoSyncState): Promise<boolean> {
   try {
     const target = await resolveLinkedRepositoryForRepo({
       userId,

@@ -34,6 +34,9 @@ const { resolveLinkedRepository } = vi.hoisted(() => ({
   resolveLinkedRepository: vi.fn(),
 }));
 const { forgeFor } = vi.hoisted(() => ({ forgeFor: vi.fn() }));
+const { resolveProjectPullRequest } = vi.hoisted(() => ({
+  resolveProjectPullRequest: vi.fn(),
+}));
 const { syncIssueStatusFromPr } = vi.hoisted(() => ({
   syncIssueStatusFromPr: vi.fn(),
 }));
@@ -61,6 +64,7 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
   pullRequestIssueIds,
 }));
 vi.mock("@/lib/server/agent/repo-access", () => ({ resolveLinkedRepository }));
+vi.mock("@/lib/server/agent/pr-link", () => ({ resolveProjectPullRequest }));
 vi.mock("@/lib/server/agent/forge", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/server/agent/forge")>();
   return { ...actual, forgeFor };
@@ -123,6 +127,7 @@ beforeEach(() => {
   syncIssueStatusFromPr.mockResolvedValue(undefined);
   broadcastPrChanged.mockReturnValue(undefined);
   forgeFor.mockReturnValue(forge);
+  resolveProjectPullRequest.mockResolvedValue({ pr: ROW });
 });
 
 // ── merge_pull_request ──────────────────────────────────────────────────────
@@ -588,6 +593,7 @@ describe("resolution", () => {
   it("refuses both targets — or none — at once", async () => {
     for (const args of [
       { issue_id: ISSUE_OK, pull_request_id: PR_ROW_ID },
+      { issue_id: ISSUE_OK, pull_request: "#42" },
       {},
     ]) {
       const { result, success } = await executePullRequestWriteTool(
@@ -597,7 +603,7 @@ describe("resolution", () => {
       );
       expect(success).toBe(false);
       expect((result as { error: string }).error).toContain(
-        "exactly one of issue_id or pull_request_id",
+        "exactly one of issue_id, pull_request_id or pull_request",
       );
     }
   });
@@ -625,5 +631,51 @@ describe("resolution", () => {
     expect((result as { error: string }).error).toContain(
       "not found in this project",
     );
+  });
+
+  // MIN-1004: on the board, the user names a PR attached to no issue by its
+  // number; nothing in context carries its minddy id.
+  it("merges a pull request attached to no issue, designated by its number", async () => {
+    const unlinked = { ...ROW, issue_id: null };
+    resolveProjectPullRequest.mockResolvedValue({ pr: unlinked });
+    pullRequestIssueIds.mockResolvedValue([]);
+    const mergePullRequest = vi.fn().mockResolvedValue(undefined);
+    forgeFor.mockReturnValue(forgeWith({
+      getPullRequest: vi.fn().mockResolvedValue({
+        number: 42, url: ROW.url, state: "open", draft: false, merged: false,
+        headSha: "sha", mergeable: true, mergeableState: "clean",
+      }),
+      mergePullRequest,
+    }));
+
+    const { result, success } = await executePullRequestWriteTool(
+      ctx,
+      "merge_pull_request",
+      { pull_request: "#42" },
+    );
+
+    expect(success).toBe(true);
+    expect(result).toMatchObject({ number: 42, state: "merged" });
+    expect(resolveProjectPullRequest).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      ref: "#42",
+      userId: "user-1",
+    });
+    expect(mergePullRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ repoFullName: "acme/app", number: 42 }),
+    );
+    expect(findPullRequestForIssue).not.toHaveBeenCalled();
+  });
+
+  it("points to list_pull_requests when no pull request carries that number", async () => {
+    resolveProjectPullRequest.mockResolvedValue({ error: "not_found" });
+    const { result, success } = await executePullRequestWriteTool(
+      ctx,
+      "merge_pull_request",
+      { pull_request: 404 },
+    );
+    expect(success).toBe(false);
+    expect((result as { error: string }).error).toContain("list_pull_requests");
+    expect(forgeFor).not.toHaveBeenCalled();
   });
 });
