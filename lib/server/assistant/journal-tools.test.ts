@@ -17,8 +17,8 @@ vi.mock("@/lib/server/numo/journal-content", async (original) => ({
 }));
 
 import { executeTool, type ToolContext } from "./execute-tool";
-import { CONVERSATION_ASSISTANT_TOOLS, PROJECT_SCOPED_TOOLS } from "./tools";
-import { NUMO_TOOL_CAPABILITIES, readerToolSet } from "./tool-capabilities";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
+import { readerToolSet } from "./tool-capabilities";
 import { NumoJournalError } from "@/lib/server/numo/journal-content";
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
@@ -28,7 +28,6 @@ const ISSUE = "33333333-3333-4333-8333-333333333333";
 function context(overrides: Partial<ToolContext> = {}): ToolContext {
   return {
     projectId: null,
-    requireExplicitProjectTarget: true,
     userId: "user-1",
     supabase: {} as SupabaseClient,
     service: {} as SupabaseClient,
@@ -57,14 +56,10 @@ describe("Numo journal tools (MIN-927)", () => {
   it("asks for every field, and takes the project as a subject rather than a target", () => {
     expect(tool("journal_write")?.function.parameters.required).toEqual(["content", "project_id"]);
     expect(tool("journal_close")?.function.parameters.required).toEqual(["entry_id", "reason"]);
-    expect(PROJECT_SCOPED_TOOLS.has("journal_write")).toBe(false);
-    expect(PROJECT_SCOPED_TOOLS.has("journal_close")).toBe(false);
     expect(tool("journal_write")?.function.parameters.properties).not.toHaveProperty("source");
   });
 
   it("stays available to a Reader, since it changes no project", () => {
-    expect(NUMO_TOOL_CAPABILITIES.journal_write).toBe("personal");
-    expect(NUMO_TOOL_CAPABILITIES.journal_close).toBe("personal");
     const names = readerToolSet(CONVERSATION_ASSISTANT_TOOLS, false)
       .map((candidate) => candidate.function.name);
     expect(names).toEqual(expect.arrayContaining(["journal_write", "journal_close"]));

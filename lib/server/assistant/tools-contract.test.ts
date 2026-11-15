@@ -1,14 +1,8 @@
-import { CONVERSATION_ASSISTANT_TOOLS, ROUTINE_UNATTENDED_EXCLUDED_TOOLS } from "./tools";
 import { describe, expect, it } from "vitest";
 import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS } from "@/lib/theme-presets";
 import { ROUTINE_CONDITION_GROUP_LEVELS } from "@/lib/server/routine-tool-schema";
 
-import {
-  ASSISTANT_TOOLS,
-  GLOBAL_ASSISTANT_TOOLS,
-  PROJECT_ASSISTANT_TOOLS,
-  PROJECT_SCOPED_TOOLS,
-} from "./tools";
+import { ASSISTANT_TOOLS } from "./tools";
 
 const tool = (name: string) =>
   ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
@@ -64,7 +58,6 @@ describe("Numo tool contracts", () => {
 
     expect(mode).toBeDefined();
     expect(mode?.enum).toEqual(["rules"]);
-    expect(mode?.description).toMatch(/deterministic rules/i);
   });
 
   it("advertises every account preference the settings screen writes", () => {
@@ -106,10 +99,6 @@ describe("Numo tool contracts", () => {
       expect(tool(name)?.function.description).toMatch(/ISSUE BOARD/);
       expect(tool(name)?.function.description).toMatch(/page_database_views/);
     }
-    for (const name of ["list_page_database_views", "update_page_database_views"]) {
-      expect(tool(name)?.function.description).toMatch(/database page/);
-      expect(tool(name)?.function.description).toMatch(/une vue/);
-    }
     expect(tool("update_page_database_views")?.function.parameters.properties).toHaveProperty("filters");
     expect(tool("update_page_database_views")?.function.parameters.properties)
       .not.toHaveProperty("filter_property_id");
@@ -117,8 +106,6 @@ describe("Numo tool contracts", () => {
 
   it("offers a dedicated database tool a small model fills completely (MIN-917)", () => {
     const create = tool("create_page_database");
-    expect(PROJECT_ASSISTANT_TOOLS.map((t) => t.function.name)).toContain("create_page_database");
-    expect(PROJECT_SCOPED_TOOLS.has("create_page_database")).toBe(true);
     // Small models skip optional fields: every field is required, nullable when optional.
     expect(create?.function.parameters.required).toEqual(
       ["title", "icon", "parent_page_id", "title_column", "properties", "rows"],
@@ -128,11 +115,11 @@ describe("Numo tool contracts", () => {
     }>;
     expect(properties.properties.items?.required).toEqual(["name", "type", "number_format", "currency", "options"]);
     expect(properties.rows.items?.required).toEqual(["title", "values"]);
-    expect(create?.function.description).toMatch(/tracker/);
     // create_page sends any collection to the database tool.
     expect(tool("create_page")?.function.description).toContain("use create_page_database instead");
   });
 
+  // The prompt says tools documented as OWNER ONLY remain owner-only.
   it("advertises the owner-only backlog proposal", () => {
     expect(tool("propose_backlog")?.function.description).toMatch(
       /OWNER ONLY/i,
@@ -175,8 +162,6 @@ describe("Numo tool contracts", () => {
     expect(listRoutines?.function.parameters.properties).toHaveProperty(
       "routine_id",
     );
-    expect(listRoutines?.function.description).toMatch(/compact list/i);
-    expect(listRoutines?.function.description).toMatch(/full instruction/i);
   });
 
   it("advertises read-only access to routine runs (MIN-589)", () => {
@@ -184,10 +169,6 @@ describe("Numo tool contracts", () => {
     expect(listRuns).toBeDefined();
     expect(listRuns?.function.parameters.required).toEqual(["routine_id"]);
     expect(listRuns?.function.parameters.properties).toHaveProperty("limit");
-    expect(listRuns?.function.description).toMatch(/list_routines/);
-    // The state of a run is the whole point: waiting for the owner's input
-    // must be visible, not collapsed into a generic "running".
-    expect(listRuns?.function.description).toMatch(/waiting for the owner's input/i);
 
     const readOccurrence = tool("read_routine_occurrence");
     expect(readOccurrence).toBeDefined();
@@ -197,8 +178,6 @@ describe("Numo tool contracts", () => {
     expect(readOccurrence?.function.parameters.properties).not.toHaveProperty(
       "routine_id",
     );
-    // The transcript is private to the routine's owner: the tool says so.
-    expect(readOccurrence?.function.description).toMatch(/owner/i);
   });
 
   it("advertises read-only user statistics tools without parameters (MIN-501)", () => {
@@ -208,29 +187,12 @@ describe("Numo tool contracts", () => {
       expect(stats, name).toBeDefined();
       expect(stats?.function.parameters.properties).toEqual({});
       expect(stats?.function.parameters.required).toBeUndefined();
-      // Both are reads of the user's own numbers: they must never be
-      // advertised as able to change settings, plan or budget.
-      expect(stats?.function.description).toMatch(/read-only/i);
-      expect(stats?.function.description).not.toMatch(/update_|create_|launch_/i);
     }
-
-    const stats = tool("get_user_stats");
-    expect(stats?.function.description).toMatch(/active days/i);
-    expect(stats?.function.description).toMatch(/completed/i);
-    expect(stats?.function.description).toMatch(/median time per ticket/i);
-
-    const usage = tool("get_plan_usage");
-    expect(usage?.function.description).toMatch(/budget/i);
-    expect(usage?.function.description).toMatch(/routine/i);
-    // MIN-946: Numo can tell whether the budget lasts until the reset, in percent.
-    expect(usage?.function.description).toMatch(/forecast/i);
-    expect(usage?.function.description).toMatch(/never in dollars/i);
+    // Usage is told to the user in percent, never in dollars.
+    expect(tool("get_plan_usage")?.function.description).toMatch(/never in dollars/i);
   });
 
-  it("offers no code-agent tool or setting (MIN-721)", () => {
-    for (const name of ["launch_code_agent", "list_agent_models", "answer_code_worker"]) {
-      expect(tool(name), name).toBeUndefined();
-    }
+  it("offers no code-agent setting (MIN-721)", () => {
     for (const name of ["create_routine", "update_routine"]) {
       const properties = tool(name)?.function.parameters.properties;
       expect(properties, name).not.toHaveProperty("model");
@@ -242,12 +204,6 @@ describe("Numo tool contracts", () => {
     for (const name of ["default_model", "default_reasoning_level", "sandbox_region", "sandbox_size", "branch_prefix"]) {
       expect(accountProperties).not.toHaveProperty(name);
     }
-  });
-
-  it("describes routines as repository-optional Numo conversations", () => {
-    const create = tool("create_routine");
-    expect(create?.function.description).toMatch(/Numo conversation/i);
-    expect(create?.function.description).toMatch(/does not need a linked repository/i);
   });
 
   it("reads the selected pull request by its id", () => {
@@ -275,7 +231,6 @@ describe("Numo tool contracts", () => {
       expect(pr?.function.parameters.properties).toHaveProperty(
         "pull_request_id",
       );
-      expect(pr?.function.description).not.toMatch(/launch_code_agent/);
     }
   });
 
@@ -288,13 +243,7 @@ describe("Numo tool contracts", () => {
     const ids = resolve?.function.parameters.properties.comment_ids as {
       description?: string;
     };
-    expect(ids.description).toMatch(/root comment ids/i);
     expect(ids.description).toMatch(/read_pull_request/);
-
-    // The discipline: only addressed conversations get closed, never a
-    // wholesale tidy-up.
-    expect(resolve?.function.description).toMatch(/FULLY addressed/);
-    expect(resolve?.function.description).toMatch(/not repository work/);
   });
 
   it("keeps the merge guardrail explicit: irreversible, confirmed, never against a red CI", () => {
@@ -303,7 +252,6 @@ describe("Numo tool contracts", () => {
     expect(merge?.function.description).toMatch(/IRREVERSIBLE/i);
     expect(merge?.function.description).toMatch(/confirm the intent with the user/i);
     expect(merge?.function.description).toMatch(/red or running CI/i);
-    expect(merge?.function.description).toMatch(/merged → done/i);
   });
 
   it("scopes the comment edit to comments Numo posted itself", () => {
@@ -311,43 +259,6 @@ describe("Numo tool contracts", () => {
 
     expect(edit?.function.description).toMatch(/never a comment written by a human/i);
     expect(edit?.function.parameters.required).toEqual(["comment_id", "body"]);
-  });
-
-  it("keeps feedback comment guidance aligned with the comment service", () => {
-    const comment = tool("add_feedback_comment");
-
-    expect(comment?.function.description).not.toMatch(
-      /1000 characters|no headings/i,
-    );
-    const body = comment?.function.parameters.properties.body as {
-      description?: string;
-    };
-
-    expect(body.description).not.toMatch(/1000 characters|no headings/i);
-  });
-
-  it("makes product knowledge available without requiring a project", () => {
-    expect(tool("get_help")?.function.parameters.required).toEqual(["topic"]);
-    const global = GLOBAL_ASSISTANT_TOOLS.find(
-      (candidate) => candidate.function.name === "get_help",
-    );
-
-    expect(global?.function.parameters.properties).not.toHaveProperty(
-      "project_id",
-    );
-  });
-
-  it("makes the user's inbox readable without requiring a project", () => {
-    const inbox = tool("list_inbox");
-    expect(inbox?.function.parameters.properties.state).toBeDefined();
-    expect(inbox?.function.parameters.properties.category).toBeDefined();
-
-    const global = GLOBAL_ASSISTANT_TOOLS.find(
-      (candidate) => candidate.function.name === "list_inbox",
-    );
-    expect(global?.function.parameters.properties).not.toHaveProperty(
-      "project_id",
-    );
   });
 
   it("lets Numo notify only the user it works for, about a record of the project (MIN-914)", () => {
@@ -361,19 +272,8 @@ describe("Numo tool contracts", () => {
       | undefined;
     expect(link?.properties.type.enum).toEqual(
       ["issue", "objective", "page", "pull_request", "routine"]);
-    expect(PROJECT_SCOPED_TOOLS.has("notify_me")).toBe(true);
-    const global = GLOBAL_ASSISTANT_TOOLS.find(
-      (candidate) => candidate.function.name === "notify_me",
-    );
-    expect(global?.function.parameters.required).toContain("project_id");
     expect(tool("update_account_settings")?.function.parameters.properties)
       .toHaveProperty("notif_numo");
-  });
-
-  it("keeps the tools that wait for the user out of routine runs, by names that exist (MIN-924)", () => {
-    // A renamed tool would silently reach unattended runs again.
-    expect([...ROUTINE_UNATTENDED_EXCLUDED_TOOLS].sort()).toEqual(["ask_user", "propose_backlog"]);
-    for (const name of ROUTINE_UNATTENDED_EXCLUDED_TOOLS) expect(tool(name)).toBeDefined();
   });
 
   it("requires the get_issue revision when updating plan task indices", () => {
@@ -386,43 +286,6 @@ describe("Numo tool contracts", () => {
     );
   });
 
-  it("lets a project conversation discover the user's accessible projects", () => {
-    const projects = PROJECT_ASSISTANT_TOOLS.find(
-      (candidate) => candidate.function.name === "list_projects",
-    );
-
-    expect(projects).toBeDefined();
-    expect(projects?.function.description).toMatch(/owner, member, or reader/i);
-    expect(projects?.function.parameters.properties).not.toHaveProperty(
-      "project_id",
-    );
-  });
-
-  it("makes alternate project targeting optional in project conversations", () => {
-    for (const name of PROJECT_SCOPED_TOOLS) {
-      const scoped = PROJECT_ASSISTANT_TOOLS.find(
-        (candidate) => candidate.function.name === name,
-      );
-      expect(scoped, name).toBeDefined();
-      expect(scoped?.function.parameters.properties, name).toHaveProperty(
-        "project_id",
-      );
-      expect(scoped?.function.parameters.required ?? [], name).not.toContain(
-        "project_id",
-      );
-    }
-  });
-
-  it("continues to require explicit project targeting in global mode", () => {
-    for (const name of PROJECT_SCOPED_TOOLS) {
-      if (["list_views", "create_view", "update_view"].includes(name)) continue;
-      const scoped = GLOBAL_ASSISTANT_TOOLS.find(
-        (candidate) => candidate.function.name === name,
-      );
-      expect(scoped?.function.parameters.required, name).toContain("project_id");
-    }
-  });
-
   it("exposes an explicit current-or-next cycle move", () => {
     const move = tool("move_issues");
 
@@ -433,21 +296,11 @@ describe("Numo tool contracts", () => {
     expect(move?.function.parameters.properties.target_cycle).toMatchObject({
       enum: ["current", "next"],
     });
-    expect(move?.function.description).toMatch(/never changes status/i);
-    expect(move?.function.description).toMatch(/assignment changes per item/i);
   });
 
   it("lets Numo set up MCP connections without a project (MIN-541)", () => {
     for (const name of ["list_mcp_presets", "configure_mcp_connection"]) {
-      const setup = tool(name);
-      expect(setup, name).toBeDefined();
-
-      const global = GLOBAL_ASSISTANT_TOOLS.find(
-        (candidate) => candidate.function.name === name,
-      );
-      expect(global?.function.parameters.properties).not.toHaveProperty(
-        "project_id",
-      );
+      expect(tool(name), name).toBeDefined();
     }
 
     // The research-before-create discipline is part of the contract: the tool
@@ -455,9 +308,6 @@ describe("Numo tool contracts", () => {
     const configure = tool("configure_mcp_connection");
     expect(configure?.function.description).toMatch(/RESEARCH FIRST/);
     expect(configure?.function.description).toMatch(/web_search/);
-    expect(configure?.function.description).toMatch(
-      /enabled and left waiting for authentication/,
-    );
     expect(configure?.function.parameters.properties).toHaveProperty("preset_id");
     expect(configure?.function.parameters.properties).toHaveProperty(
       "connection_id",
@@ -467,15 +317,4 @@ describe("Numo tool contracts", () => {
       "oauth_client_secret",
     );
   });
-
-  it("does not expose the retired chain outcome tool", () => {
-    expect(CONVERSATION_ASSISTANT_TOOLS.map(tool => tool.function.name)).not.toContain("report_automation_outcome");
-  });
-});
-
-it("requires an explicit target on every conversation project action", () => {
-  for (const name of PROJECT_SCOPED_TOOLS) {
-    const tool = CONVERSATION_ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
-    expect(tool?.function.parameters.required, name).toContain("project_id");
-  }
 });

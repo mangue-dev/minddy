@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ACCOUNT_TOOLS } from "./tools";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 import {
   readPlanUsageTool,
   readUserStatsTool,
@@ -334,8 +334,10 @@ describe("readPlanUsageTool", () => {
 });
 
 describe("stats tools — registration contract", () => {
-  it("registers both tools as account-scoped (no injected project_id)", () => {
-    expect(ACCOUNT_TOOLS.has("get_user_stats")).toBe(true);
-    expect(ACCOUNT_TOOLS.has("get_plan_usage")).toBe(true);
+  it("registers both tools without a project_id", () => {
+    for (const name of ["get_user_stats", "get_plan_usage"]) {
+      const tool = CONVERSATION_ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
+      expect(tool?.function.parameters.properties, name).not.toHaveProperty("project_id");
+    }
   });
 });

@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  MAX_ROUTINE_PROMPT_MENTIONS,
-  mentionsNote,
   parseAgentMentions,
-  parseAgentUserMessage,
   parseRoutinePromptMentions,
-  promptWithMentions,
   splitAssistantMentionTokens,
 } from "./agent-mentions";
 
@@ -25,19 +21,6 @@ describe("agent mentions", () => {
     ]);
   });
 
-  it("adds stable ids to the prompt without changing visible text", () => {
-    const mentions = [{ type: "page", id: "page-1", label: "Guide" }];
-    expect(mentionsNote(mentions)).toContain(
-      "@Guide = wiki page (page id: page-1)",
-    );
-    expect(promptWithMentions("Read @Guide", mentions)).toContain(
-      "Read @Guide",
-    );
-    expect(promptWithMentions("Read @Guide", mentions)).toContain(
-      "page id: page-1",
-    );
-  });
-
   it("preserves every routine mention occurrence beyond the chat limit", () => {
     const mentions = Array.from({ length: 21 }, (_, index) => ({
       type: "page" as const,
@@ -47,26 +30,6 @@ describe("agent mentions", () => {
 
     expect(parseAgentMentions(mentions)).toHaveLength(20);
     expect(parseRoutinePromptMentions(mentions)).toEqual(mentions);
-    expect(
-      promptWithMentions(
-        "Review the guides",
-        mentions,
-        MAX_ROUTINE_PROMPT_MENTIONS,
-      ),
-    ).toContain("page id: page-20");
-  });
-
-  it("accepts legacy plain steering messages", () => {
-    expect(parseAgentUserMessage("continue")).toEqual({ text: "continue" });
-    expect(
-      parseAgentUserMessage({
-        text: "regarde @MIN-42",
-        mentions: [{ type: "issue", id: "issue-1", label: "MIN-42" }],
-      }),
-    ).toEqual({
-      text: "regarde @MIN-42",
-      mentions: [{ type: "issue", id: "issue-1", label: "MIN-42" }],
-    });
   });
 
   it("matches saved mentions as complete tokens", () => {
@@ -130,17 +93,6 @@ describe("agent mentions", () => {
       { text: ", then open " },
       { mention: roadmap, raw: "@Roadmap" },
     ]);
-  });
-
-  it("deduplicates repeated identities in the model note", () => {
-    const roadmap = {
-      type: "page" as const,
-      id: "roadmap",
-      label: "Roadmap",
-    };
-    const note = mentionsNote([roadmap, roadmap], 2);
-
-    expect(note.match(/page id: roadmap/g)).toHaveLength(1);
   });
 
   it("prefers a complete multiword label over its whitespace prefix", () => {

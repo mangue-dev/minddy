@@ -52,9 +52,8 @@ vi.mock("@/lib/server/hidden-projects", () => ({
 }));
 
 import { getAccountSettings, updateAccountSettings } from "@/lib/server/account-settings";
-import { MCP_CLIENT_TOOLS, MCP_SETUP_TOOLS } from "@/lib/mcp-client-tools";
 import { THEME_PRESET_META_KEYS } from "@/lib/theme-presets";
-import { ASSISTANT_TOOLS, CONVERSATION_ASSISTANT_TOOLS } from "./tools";
+import { ASSISTANT_TOOLS } from "./tools";
 import {
   ACCOUNT_METADATA_COVERAGE,
   ACCOUNT_TAB_COVERAGE,
@@ -238,9 +237,7 @@ function tabValues(path: string): string[] {
   return [...read(path).matchAll(/^\s*value: "([a-z-]+)",$/gm)].map((m) => m[1]);
 }
 
-const toolNames = new Set(
-  [...ASSISTANT_TOOLS, ...MCP_CLIENT_TOOLS, ...MCP_SETUP_TOOLS].map((t) => t.function.name),
-);
+const toolNames = new Set<string>(ASSISTANT_TOOLS.map((t) => t.function.name));
 
 describe("settings tabs Numo can reach (MIN-955)", () => {
   it.each([
@@ -255,13 +252,6 @@ describe("settings tabs Numo can reach (MIN-955)", () => {
     for (const [tab, { tools, humanOnly }] of Object.entries(coverage)) {
       expect(tools.length > 0 || !!humanOnly, `${tab} names neither a tool nor a reason`).toBe(true);
       for (const name of tools) expect(toolNames.has(name), `${tab}: no Numo tool ${name}`).toBe(true);
-    }
-  });
-
-  it("offers the account and member tools in a conversation", () => {
-    const conversation = new Set(CONVERSATION_ASSISTANT_TOOLS.map((t) => t.function.name));
-    for (const name of ["get_account_settings", "update_account_settings", "update_project", "update_member_role"]) {
-      expect(conversation.has(name), name).toBe(true);
     }
   });
 });

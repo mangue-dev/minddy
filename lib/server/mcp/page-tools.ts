@@ -12,6 +12,7 @@ import {
   updateDatabaseViewsForAgent,
 } from "@/lib/server/database-view-tools";
 import type { McpServer } from "@modelcontextprotocol/server";
+import { MAX_EDIT_DIFF_CHARS } from "./surface-limits";
 import {
   addPageCommentForAgent,
   appendToPageForAgent,
@@ -667,11 +668,6 @@ export function registerPageTools(server: McpServer): void {
     }
   );
 }
-
-/** Ceiling of the returned diff: enough to confirm that the edition landed in the correct
- place, without re-transporting the document that we have just avoided rewriting
- (same limit as minddy_edit_issue_text). */
-const MAX_EDIT_DIFF_CHARS = 2000;
 
 function trimDiff<T extends { diff: string; page_id: string }>(data: T) {
   if (data.diff.length <= MAX_EDIT_DIFF_CHARS) return data;

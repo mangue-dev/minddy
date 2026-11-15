@@ -324,7 +324,7 @@ export interface AssistantSelectedItem {
 export type AssistantSelectedItemKind = "feedback" | "routine" | "objective" | "page";
 
 /** The quoted passage of `AssistantPageContext.selection`. */
-export interface AssistantSelectionContext {
+interface AssistantSelectionContext {
   text: string;
 }
 

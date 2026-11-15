@@ -49,7 +49,7 @@ vi.mock("@/lib/server/numo/watches", async (original) => ({
 }));
 
 import { executeTool, type ToolContext } from "./execute-tool";
-import { CONVERSATION_ASSISTANT_TOOLS, PROJECT_SCOPED_TOOLS } from "./tools";
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 import { guardProactiveTool, proactiveToolSet } from "./proactive-guard";
 import { NumoWatchError } from "@/lib/server/numo/watches";
 
@@ -60,7 +60,6 @@ const WATCH = "33333333-3333-4333-8333-333333333333";
 function context(overrides: Partial<ToolContext> = {}): ToolContext {
   return {
     projectId: null,
-    requireExplicitProjectTarget: true,
     userId: "user-1",
     supabase: {} as SupabaseClient,
     service: {} as SupabaseClient,
@@ -118,14 +117,13 @@ beforeEach(() => {
 
 describe("Numo reminder tools (MIN-923)", () => {
   it("asks for every field; only create_watch names a project", () => {
+    for (const name of ["list_watches", "cancel_watch", "update_watch"]) {
+      expect(tool(name)?.function.parameters.properties, name).not.toHaveProperty("project_id");
+    }
     expect(tool("create_watch")?.function.parameters.required).toEqual([
       "project_id", "when", "issue", "objective_id", "status", "at",
       "repeat", "time", "weekday", "day_of_month", "grants", "action", "instruction", "replaces",
     ]);
-    expect(PROJECT_SCOPED_TOOLS.has("update_watch")).toBe(false);
-    expect(PROJECT_SCOPED_TOOLS.has("create_watch")).toBe(true);
-    expect(PROJECT_SCOPED_TOOLS.has("list_watches")).toBe(false);
-    expect(PROJECT_SCOPED_TOOLS.has("cancel_watch")).toBe(false);
   });
 
   it("sets a reminder on an issue, waiting for done, from this conversation; a Reader may", async () => {
@@ -212,7 +210,7 @@ describe("Numo reminder tools (MIN-923)", () => {
     expect(names).not.toContain("update_watch");
     expect(names).toContain("list_watches");
     const refused = await guardProactiveTool("create_watch", issueDone,
-      { userId: "user-1", service: {} as SupabaseClient, projectId: null });
+      { userId: "user-1", service: {} as SupabaseClient });
     expect(refused.ok).toBe(false);
   });
 });

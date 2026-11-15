@@ -64,6 +64,7 @@ describe("Numo update_issues", () => {
 
   it("applies each issue's own fields and reports failures per issue", async () => {
     const result = await executeTool("update_issues", {
+      project_id: "project-1",
       issue_ids: ["a"],
       fields: { priority: "high" },
       updates: [
@@ -96,6 +97,7 @@ describe("Numo update_issues", () => {
       return { ok: true };
     });
     await executeTool("update_issues", {
+      project_id: "project-1",
       issue_ids: ["a", "b"], fields: { priority: "low" },
       updates: [{ issue_id: "c", fields: { parent_id: "a" } }],
     }, context());
@@ -104,12 +106,12 @@ describe("Numo update_issues", () => {
   });
 
   it("keeps the shared shape and deduplicates ids", async () => {
-    const result = await executeTool("update_issues", { issue_ids: ["a", "b", "a"], fields: { status: "done" } }, context());
+    const result = await executeTool("update_issues", { project_id: "project-1", issue_ids: ["a", "b", "a"], fields: { status: "done" } }, context());
     expect(result).toEqual({ success: true, result: { updated: 2, failed: [] } });
   });
 
   it("refuses shared issues without fields", async () => {
-    const result = await executeTool("update_issues", { issue_ids: ["a"], fields: {} }, context());
+    const result = await executeTool("update_issues", { project_id: "project-1", issue_ids: ["a"], fields: {} }, context());
     expect(result.success).toBe(false);
     expect(updateIssueFields).not.toHaveBeenCalled();
   });
@@ -118,6 +120,7 @@ describe("Numo update_issues", () => {
 describe("Numo link_issues", () => {
   it("writes a batch of relations in order with per-link results", async () => {
     const result = await executeTool("link_issues", {
+      project_id: "project-1",
       issue_id: "a",
       relation: "blocks",
       target_issue_id: "b",
@@ -141,7 +144,7 @@ describe("Numo link_issues", () => {
   });
 
   it.each([undefined, null, []])("keeps the single-relation shape when links is %j", async (links) => {
-    const result = await executeTool("link_issues", { issue_id: "a", relation: "related", target_issue_id: "b", links }, context());
+    const result = await executeTool("link_issues", { project_id: "project-1", issue_id: "a", relation: "related", target_issue_id: "b", links }, context());
     expect(result).toEqual({ success: true, result: { added: true, relation: "related" } });
   });
 });
@@ -151,6 +154,7 @@ describe("Numo batched page tools", () => {
     createPageForAgent.mockImplementation(async ({ title }: { title: string }) =>
       title === "Bad" ? { ok: false, code: "invalid_params", message: "Refused." } : { ok: true, data: { page_id: `id-${title}`, title } });
     const result = await executeTool("create_page", {
+      project_id: "project-1",
       title: "One", markdown: "1", parent_page_id: "parent",
       pages: [{ title: "Bad", markdown: "x" }, { title: "Two", markdown: "2", values: { p: 1 } }],
     }, context());
@@ -168,6 +172,7 @@ describe("Numo batched page tools", () => {
   it("passes the first replacement and the extra edits as one ordered list", async () => {
     editPageTextForAgent.mockResolvedValue({ ok: true, data: { page_id: "p" } });
     await executeTool("edit_page_text", {
+      project_id: "project-1",
       page_id: "p", old_string: "a", new_string: "b",
       edits: [{ old_string: "c", new_string: "d", replace_all: true }],
     }, context());

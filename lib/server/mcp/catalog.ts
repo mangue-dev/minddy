@@ -5,18 +5,14 @@ import type { ZodTypeAny } from "zod";
 import { registerMinddyTools } from "./tools";
 
 /**
- * The catalog of MCP tools, READ SINCE THEIR ACTUAL RECORDING (MIN-88).
+ * The catalog of MCP tools, read from their actual registration (MIN-88).
  *
- * `/llms.txt` and the MCP server card must list the minddy tools.
- * Copying them by hand would have guaranteed the drift: an added tool in
- * `tools.ts` would not appear anywhere, a renamed tool would lie, and a
- * code wizard would write an integration against an API that no longer exists.
- *
- * So we don't copy: we replay `registerMinddyTools` against one false
- * server which simply notes down what is recorded for it. The descriptions and
- * parameters are therefore, by construction, those that the server announces.
- *
- * No handler is executed — only the signature is kept.
+ * `/llms.txt` and the MCP server card list the minddy tools. A copy by hand
+ * would drift: a tool added in `tools.ts` would appear nowhere, a renamed one
+ * would lie, and a coding assistant would write an integration against an API
+ * that no longer exists. So `registerMinddyTools` is replayed against a fake
+ * server that records what is registered: the descriptions and parameters
+ * are, by construction, those the server announces. No handler runs.
  */
 
 export interface CatalogTool {

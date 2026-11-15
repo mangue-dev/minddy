@@ -2,7 +2,6 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NUMO_URGENT_NOTES_PER_DAY } from "@/lib/numo-background";
-import type { NumoWatchGrant } from "@/lib/numo-watches";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { issueStore } from "@/lib/server/issue-store";
 import { countPendingInvitations } from "@/lib/server/members";
@@ -11,7 +10,15 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import { getNumoMemoryScope } from "@/lib/server/numo/memory-content";
 import { ADMIN_BACKGROUND_FREE_TOOLS, ADMIN_TOOL_NAMES } from "./admin-tools";
 import { resolveAssistantProjectTarget } from "./project-scope";
-import { numoToolCapability } from "./tool-capabilities";
+import {
+  REMINDER_WRITE_TOOLS,
+  WAITS_FOR_USER_TOOLS,
+  flat,
+  numoToolCapability,
+  numoToolPolicy,
+  type SensitiveCategory,
+  type WriteTargets,
+} from "./tool-policy";
 import type { AssistantToolDef } from "./tools";
 
 /**
@@ -36,9 +43,9 @@ import type { AssistantToolDef } from "./tools";
  *   everything is theirs.
  *
  * The objects a write touches are read from the arguments THAT tool uses
- * (`SCOPED_WRITES`), never from any argument the call happens to carry, and
- * a write tool missing from the table is outside the scope in a shared
- * project: a new tool fails closed until it is classified here. Moving the
+ * (`touches` in `tool-policy.ts`), never from any argument the call happens
+ * to carry, and a write that names none is outside the scope in a shared
+ * project: a new tool fails closed until its policy says what it touches. Moving the
  * user's own issue under a teammate's objective or parent issue is accepted:
  * the change is on the user's issue.
  *
@@ -62,123 +69,44 @@ import type { AssistantToolDef } from "./tools";
  * Nothing changes in a conversation: the user is there to ask and to refuse.
  */
 
-/** The categories a memory, or a recurring reminder's grant, may allow. */
-export type SensitiveCategory = NumoWatchGrant;
+type Args = Record<string, unknown>;
 
-/** Tools that are sensitive whatever they target. */
-export const SENSITIVE_TOOLS: Readonly<Record<string, SensitiveCategory>> = {
-  move_to_trash: "trash",
-  restore_from_trash: "trash",
-  remove_member: "delete",
-  cancel_invitation: "delete",
-  revoke_integration: "delete",
-  merge_pull_request: "pull_request",
-  update_pull_request: "pull_request",
-  post_pull_request_comment: "pull_request",
-  edit_own_pull_request_comment: "pull_request",
-  resolve_pull_request_threads: "pull_request",
-  link_pull_request: "pull_request",
-  call_mcp_tool: "external",
-  configure_mcp_connection: "external",
-  update_account_settings: "account",
-  respond_to_feedback: "public_reply",
-};
-
-/** Tools that wait for an answer: nobody is there to give one. */
-export const PROACTIVE_EXCLUDED_TOOLS: ReadonlySet<string> = new Set(["ask_user", "propose_backlog"]);
-
-/**
- * Reminders (MIN-923) are set and cancelled at the user's request only: a
- * reminder that acts later would run outside this guard, so a background
- * turn must not set one from what it read. It may still list them.
- */
-export const PROACTIVE_REQUEST_ONLY_TOOLS: ReadonlySet<string> =
-  new Set(["create_watch", "update_watch", "cancel_watch"]);
-
-/**
- * The user's own planning and notes: never sensitive. Cycle moves stay
- * within the user's own cycles; adding an issue to a cycle is not here,
- * since it assigns the issue to the user (`add_issues_to_cycle` below).
- */
-const PERSONAL_TOOLS = new Set([
-  "fill_cycle", "move_issues", "remove_issues_from_cycle",
-  "add_scratchpad_tasks", "update_scratchpad_tasks", "set_scratchpad", "edit_scratchpad_text",
-  "journal_write", "journal_close",
-]);
-
-/** Classified `write` only to hide webhook URLs from Readers: it changes nothing. */
-const READ_ONLY_WRITES = new Set(["list_integrations"]);
-
-interface Targets {
-  issues: unknown[];
-  pages: unknown[];
-  objectives: unknown[];
-  feedback: unknown[];
+/** Whether a background turn offers `authorized_by` on this tool. */
+function mayNeedAuthorization(toolName: string): boolean {
+  if (ADMIN_TOOL_NAMES.has(toolName)) return !ADMIN_BACKGROUND_FREE_TOOLS.has(toolName);
+  const policy = numoToolPolicy(toolName);
+  return !!policy?.sensitive || policy?.background === "own_rule" || isProjectWrite(toolName);
 }
 
-type Args = Record<string, unknown>;
-type TargetsOf = (args: Args) => Partial<Targets> | "creates";
+/** A write the scope rule checks: one that changes a project, unless it is the user's own. */
+function isProjectWrite(toolName: string): boolean {
+  const background = numoToolPolicy(toolName)?.background;
+  if (background === "own" || background === "changes_nothing") return false;
+  const capability = numoToolCapability(toolName);
+  return capability === "write" || capability === "comment" || capability === "admin";
+}
 
-const list = (value: unknown): Args[] =>
-  Array.isArray(value) ? value.filter((item): item is Args => !!item && typeof item === "object") : [];
-const flat = (...values: unknown[]): unknown[] =>
-  values.flatMap((value) => Array.isArray(value) ? value : value === undefined ? [] : [value]);
-
-const ISSUE_ID: TargetsOf = (a) => ({ issues: [a.issue_id] });
-const PAGE_ID: TargetsOf = (a) => ({ pages: [a.page_id] });
-const OBJECTIVE_ID: TargetsOf = (a) => ({ objectives: [a.objective_id] });
-const CREATES: TargetsOf = () => "creates";
-
-/** The objects each project write changes, read from the arguments that tool uses. */
-export const SCOPED_WRITES: Readonly<Record<string, TargetsOf>> = {
-  add_comment: ISSUE_ID,
-  append_to_plan: ISSUE_ID,
-  update_plan_tasks: ISSUE_ID,
-  edit_issue_text: ISSUE_ID,
-  set_issue_categories: ISSUE_ID,
-  triage_decision: ISSUE_ID,
-  update_issues: (a) => ({ issues: flat(a.issue_ids, list(a.updates).map((u) => u.issue_id)) }),
-  // A relation shows on both sides: both ends must be the user's.
-  link_issues: (a) => {
-    const links = [a, ...list(a.links)];
-    return {
-      issues: flat(...links.map((l) => [l.issue_id, l.target_issue_id])),
-      objectives: flat(...links.map((l) => [l.source_objective_id, l.target_objective_id])),
-    };
-  },
-  // The receiver of the resource; `page_id` is the page attached, not changed.
-  add_resource: (a) => ({ issues: flat(a.issue_id), objectives: flat(a.objective_id) }),
-  update_page: (a) => ({ pages: flat(a.page_id, a.parent_page_id) }),
-  append_to_page: PAGE_ID,
-  edit_page_text: PAGE_ID,
-  update_page_database: PAGE_ID,
-  update_page_database_views: PAGE_ID,
-  update_objective: OBJECTIVE_ID,
-  add_objective_comment: OBJECTIVE_ID,
-  add_feedback_comment: (a) => ({ feedback: [a.feedback_post_id] }),
-  unlink_feedback: (a) => ({ feedback: [a.feedback_post_id] }),
-  link_feedback_to_objective: (a) => ({ feedback: [a.feedback_post_id], objectives: [a.objective_id] }),
-  link_feedback_to_issue: (a) => ({ feedback: [a.feedback_post_id], issues: [a.issue_id] }),
-  create_issue: CREATES,
-  create_page: CREATES,
-  create_page_database: CREATES,
-  create_objective: CREATES,
-  create_category: CREATES,
-  update_category: CREATES,
-  reorder_categories: CREATES,
-  promote_feedback_to_issue: CREATES,
-};
+/** Tools a background turn never runs: those that wait for an answer, and the reminder writes. */
+function proactiveExclusion(toolName: string): string | null {
+  if (WAITS_FOR_USER_TOOLS.has(toolName)) {
+    return `${toolName} is not available in the background: nobody is there to answer. Write a journal entry instead.`;
+  }
+  // A reminder that acts later would run outside this guard, so a background
+  // turn must not set one from what it read. It may still list them.
+  if (REMINDER_WRITE_TOOLS.has(toolName)) {
+    return `${toolName} is not available in the background: reminders are set and cancelled only when the user asks in a conversation. Write a journal entry instead.`;
+  }
+  return null;
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Shortest urgency reason accepted: a real sentence, not "urgent". */
 const URGENCY_REASON_MIN = 20;
 
-export interface ProactiveGuardContext {
+interface ProactiveGuardContext {
   userId: string;
   service: SupabaseClient;
-  projectId: string | null;
-  requireExplicitProjectTarget?: boolean;
   /** The background turn: an urgent note is counted against it. */
   turnId?: string | null;
   /**
@@ -188,24 +116,11 @@ export interface ProactiveGuardContext {
   reminderGrants?: readonly SensitiveCategory[] | null;
 }
 
-export type ProactiveGuardResult =
+type ProactiveGuardResult =
   | { ok: true; args: Record<string, unknown> }
   | { ok: false; error: string };
 
 interface GuardProject { id: string; key: string; owner_id: string }
-
-function isProjectWrite(toolName: string): boolean {
-  if (PERSONAL_TOOLS.has(toolName) || READ_ONLY_WRITES.has(toolName)) return false;
-  const capability = numoToolCapability(toolName);
-  return capability === "write" || capability === "comment" || capability === "admin";
-}
-
-/** Whether a background turn offers `authorized_by` on this tool. */
-export function mayNeedAuthorization(toolName: string): boolean {
-  if (ADMIN_TOOL_NAMES.has(toolName)) return !ADMIN_BACKGROUND_FREE_TOOLS.has(toolName);
-  return toolName in SENSITIVE_TOOLS || toolName === "notify_me" || toolName === "add_issues_to_cycle"
-    || toolName === "create_view" || toolName === "update_view" || isProjectWrite(toolName);
-}
 
 const AUTHORIZED_BY = {
   type: "string",
@@ -221,8 +136,7 @@ const AUTHORIZED_BY = {
 export function proactiveToolSet(tools: readonly AssistantToolDef[],
   options: { reminderGrants?: readonly SensitiveCategory[] | null } = {}): AssistantToolDef[] {
   const grants = options.reminderGrants ?? null;
-  return tools.filter((tool) => !PROACTIVE_EXCLUDED_TOOLS.has(tool.function.name) &&
-    !PROACTIVE_REQUEST_ONLY_TOOLS.has(tool.function.name)).map((tool) => {
+  return tools.filter((tool) => !proactiveExclusion(tool.function.name)).map((tool) => {
     const name = tool.function.name;
     if (!mayNeedAuthorization(name)) return tool;
     // A recurring reminder's grants decide, not a memory: no `authorized_by`,
@@ -246,7 +160,7 @@ export function proactiveToolSet(tools: readonly AssistantToolDef[],
   });
 }
 
-export function proactiveRefusal(toolName: string, reason: SensitiveCategory | "invalid_authorization" | "urgent_limit"): string {
+function proactiveRefusal(toolName: string, reason: SensitiveCategory | "invalid_authorization" | "urgent_limit"): string {
   const ask = "Do not retry and do not look for a workaround: write a journal entry that asks the user, and offer to do it on your own next time (they can tell you so in a conversation, and you will remember it).";
   switch (reason) {
     case "invalid_authorization":
@@ -263,7 +177,7 @@ export function proactiveRefusal(toolName: string, reason: SensitiveCategory | "
 }
 
 /** The refusal an occurrence of a recurring reminder reads for a category it was not granted. */
-export function reminderGrantRefusal(toolName: string, reason: SensitiveCategory): string {
+function reminderGrantRefusal(toolName: string, reason: SensitiveCategory): string {
   const ask = "Do not retry and do not look for a workaround: say so in a journal entry. The user can ask you in a conversation to change this reminder's permissions.";
   if (reason === "notification") {
     return `notify_me refused: this reminder may send a note only when it is urgent (urgent: true with urgency_reason). Otherwise write a journal entry.`;
@@ -283,8 +197,7 @@ async function projectById(ctx: ProactiveGuardContext, id: unknown): Promise<Gua
 }
 
 async function projectOf(ctx: ProactiveGuardContext, args: Args): Promise<GuardProject | null> {
-  const target = await resolveAssistantProjectTarget(ctx,
-    ctx.requireExplicitProjectTarget ? null : ctx.projectId, args.project_id);
+  const target = await resolveAssistantProjectTarget(ctx, args.project_id);
   return projectById(ctx, target.projectId);
 }
 
@@ -308,7 +221,7 @@ const strings = (values: unknown[] | undefined): string[] =>
  * a string, does not exist in the project, or a write that names none, is not.
  */
 async function targetsAreTheUsers(ctx: ProactiveGuardContext, project: GuardProject,
-  targets: Partial<Targets>): Promise<boolean> {
+  targets: Partial<WriteTargets>): Promise<boolean> {
   const declared = [targets.issues, targets.pages, targets.objectives, targets.feedback]
     .flatMap((values) => values ?? []).filter((value) => value !== undefined && value !== null);
   const issues = strings(targets.issues);
@@ -415,12 +328,8 @@ async function claimUrgentNote(ctx: ProactiveGuardContext): Promise<boolean> {
 export async function guardProactiveTool(toolName: string, rawArgs: Record<string, unknown>,
   ctx: ProactiveGuardContext): Promise<ProactiveGuardResult> {
   const { authorized_by: rawAuthorizedBy, urgent, urgency_reason: urgencyReason, ...args } = rawArgs;
-  if (PROACTIVE_EXCLUDED_TOOLS.has(toolName)) {
-    return { ok: false, error: `${toolName} is not available in the background: nobody is there to answer. Write a journal entry instead.` };
-  }
-  if (PROACTIVE_REQUEST_ONLY_TOOLS.has(toolName)) {
-    return { ok: false, error: `${toolName} is not available in the background: reminders are set and cancelled only when the user asks in a conversation. Write a journal entry instead.` };
-  }
+  const excluded = proactiveExclusion(toolName);
+  if (excluded) return { ok: false, error: excluded };
   // Anything but a memory id ("none", null, "") counts as no authorization.
   const authorizedBy = typeof rawAuthorizedBy === "string" && UUID_RE.test(rawAuthorizedBy.trim())
     ? rawAuthorizedBy.trim()
@@ -452,10 +361,11 @@ export async function guardProactiveTool(toolName: string, rawArgs: Record<strin
       : needsMemory("administration", "any");
   }
 
+  const policy = numoToolPolicy(toolName);
   const capability = numoToolCapability(toolName);
-  const fixed = SENSITIVE_TOOLS[toolName];
+  const fixed = policy?.sensitive;
   if (fixed === "trash") return needsMemory(fixed, await trashItemProject(ctx, args));
-  if (fixed || (capability === "admin" && !PERSONAL_TOOLS.has(toolName))) {
+  if (fixed || (capability === "admin" && policy?.background !== "own")) {
     const scope = capability === "personal" || capability === "personal_write"
       ? "any" as const
       : (await projectOf(ctx, args))?.id ?? null;
@@ -516,13 +426,19 @@ export async function guardProactiveTool(toolName: string, rawArgs: Record<strin
     return needsMemory("outside_scope", project.id);
   }
 
+  // A policy that promises a rule of its own, with no branch above, fails
+  // closed instead of passing as a personal tool.
+  if (policy?.background === "own_rule") {
+    return needsMemory("outside_scope", (await projectOf(ctx, args))?.id ?? null);
+  }
+
   if (!isProjectWrite(toolName)) return { ok: true, args };
   const project = await projectOf(ctx, args);
   // No project to check: the tool itself refuses the call.
   if (!project) return { ok: true, args };
   if (!(await isShared(ctx, project))) return { ok: true, args };
-  const targetsOf = SCOPED_WRITES[toolName];
-  const targets = targetsOf ? targetsOf(args) : "creates";
-  if (targets !== "creates" && await targetsAreTheUsers(ctx, project, targets)) return { ok: true, args };
+  // A write that names no object of its own changes the project itself.
+  const targets = policy?.touches?.(args);
+  if (targets && await targetsAreTheUsers(ctx, project, targets)) return { ok: true, args };
   return needsMemory("outside_scope", project.id);
 }

@@ -10,9 +10,8 @@ import { MAX_PLAN_LENGTH, parsePlan } from "@/lib/plan";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/server/update-issue";
 import { linkedIssueSummary, planTaskIndex } from "./execute-tool";
+import { DEFAULT_TOOL_RESULT_CHAR_LIMIT, DOCUMENT_READ_RESULT_CHAR_LIMIT } from "./tool-policy";
 import {
-  DEFAULT_TOOL_RESULT_CHAR_LIMIT,
-  DOCUMENT_READ_RESULT_CHAR_LIMIT,
   getToolResultCharLimit,
   replayedToolResult,
   serializeToolResult,

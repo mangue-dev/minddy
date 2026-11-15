@@ -30,7 +30,7 @@ const db = vi.hoisted(() => ({ tables: {} as Record<string, Row[]>, urgentClaims
 
 vi.mock("server-only", () => ({}));
 vi.mock("./project-scope", () => ({
-  resolveAssistantProjectTarget: async (_ctx: unknown, _context: unknown, requested: unknown) =>
+  resolveAssistantProjectTarget: async (_ctx: unknown, requested: unknown) =>
     ({ projectId: typeof requested === "string" ? requested : null }),
 }));
 vi.mock("@/lib/server/numo/memory-content", () => ({
@@ -73,8 +73,7 @@ vi.mock("@/lib/server/members", () => ({
     db.tables.project_invitations.filter((row) => row.project_id === projectId && row.status === "pending").length,
 }));
 
-import { guardProactiveTool, proactiveToolSet, SCOPED_WRITES } from "./proactive-guard";
-import { NUMO_TOOL_CAPABILITIES } from "./tool-capabilities";
+import { guardProactiveTool, proactiveToolSet } from "./proactive-guard";
 import type { AssistantToolDef } from "./tools";
 
 const ctx = {
@@ -88,8 +87,6 @@ const ctx = {
       return { data: true, error: null };
     },
   } as never,
-  projectId: null,
-  requireExplicitProjectTarget: true,
   turnId: "turn-1",
 };
 
@@ -296,10 +293,6 @@ describe("proactiveToolSet", () => {
     const byName = new Map(tools.map((t) => [t.function.name, Object.keys(t.function.parameters.properties)]));
     expect(byName.get("admin_get_instance_models")).toEqual(["project_id"]);
     expect(byName.get("admin_update_instance_models")).toContain("authorized_by");
-  });
-
-  it("maps only real tools, so a renamed tool fails closed rather than being skipped silently", () => {
-    for (const name of Object.keys(SCOPED_WRITES)) expect(NUMO_TOOL_CAPABILITIES).toHaveProperty(name);
   });
 });
 

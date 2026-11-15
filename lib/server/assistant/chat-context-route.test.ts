@@ -249,7 +249,7 @@ describe("conversation identity across project contexts", () => {
     expect(users[0].content).toContain("Attached project (id: a)");
     expect(users[1].content).toContain("Attached project (id: b)");
     expect(users[2].content).not.toContain("Attached project");
-    expect(h.process.mock.calls[2][3]).toMatchObject({ conversationId: "conversation", requireExplicitProjectTarget: true, projectId: null });
+    expect(h.process.mock.calls[2][3]).toMatchObject({ conversationId: "conversation", projectId: null });
     expect(db.conversations).toEqual([]);
   });
   it("creates conversations without attaching identity to the first project", async () => {

@@ -8,7 +8,7 @@ vi.mock("@/lib/server/encryption/registry", () => ({
   getEncryptedStore: () => encryption.store,
 }));
 
-import { resolveAssistantProjectId, resolveAssistantProjectTarget } from "./project-scope";
+import { resolveAssistantProjectTarget } from "./project-scope";
 
 vi.mock("server-only", () => ({}));
 
@@ -18,21 +18,6 @@ const USER_ID = "51600000-0000-4000-8000-000000000001";
 const PROJECT_ID = "07b14964-0def-4941-8ddf-686572d6345d";
 
 describe("Numo project scope", () => {
-  it("keeps the context project when no alternate target is supplied", () => {
-    expect(resolveAssistantProjectId("current-project", undefined)).toBe(
-      "current-project",
-    );
-    expect(resolveAssistantProjectId("current-project", "  ")).toBe(
-      "current-project",
-    );
-  });
-
-  it("lets an explicit alternate project override the context project", () => {
-    expect(
-      resolveAssistantProjectId("current-project", " alternate-project "),
-    ).toBe("alternate-project");
-  });
-
   it("requires a named project before cross-project work", () => {
     const prompt = buildSystemPrompt(
       {
@@ -90,7 +75,6 @@ describe("resolveAssistantProjectTarget — a named project resolves to its id",
   it("passes a real UUID through untouched", async () => {
     const out = await resolveAssistantProjectTarget(
       clientWith([]),
-      null,
       PROJECT_ID,
     );
     expect(out).toEqual({ projectId: PROJECT_ID });
@@ -99,7 +83,6 @@ describe("resolveAssistantProjectTarget — a named project resolves to its id",
   it("resolves a project key, case-insensitively", async () => {
     const out = await resolveAssistantProjectTarget(
       clientWith([{ id: PROJECT_ID, name: "minddy", key: "MIN" }]),
-      null,
       "min",
     );
     expect(out).toEqual({ projectId: PROJECT_ID });
@@ -108,7 +91,6 @@ describe("resolveAssistantProjectTarget — a named project resolves to its id",
   it("resolves an exact display name when the key does not match", async () => {
     const out = await resolveAssistantProjectTarget(
       clientWith([{ id: PROJECT_ID, name: "minddy", key: "MIN" }]),
-      null,
       "Minddy",
     );
     expect(out).toEqual({ projectId: PROJECT_ID });
@@ -129,25 +111,20 @@ describe("resolveAssistantProjectTarget — a named project resolves to its id",
       id: PROJECT_ID, key: "MIN", name: null,
       encrypted_content: sealed.encrypted_content as string,
       encryption_version: sealed.encryption_version as number,
-    }]), null, "Private project");
+    }]), "Private project");
     expect(out).toEqual({ projectId: PROJECT_ID });
     encryption.store = null;
     key.fill(0);
   });
 
-  it("keeps the implicit context project when the call names no project", async () => {
-    const out = await resolveAssistantProjectTarget(
-      clientWith([]),
-      PROJECT_ID,
-      undefined,
-    );
-    expect(out).toEqual({ projectId: PROJECT_ID });
+  it("finds no project when the call names none", async () => {
+    expect(await resolveAssistantProjectTarget(clientWith([]), undefined)).toEqual({ projectId: null });
+    expect(await resolveAssistantProjectTarget(clientWith([]), "  ")).toEqual({ projectId: null });
   });
 
   it("refuses an unknown label through the access check, with the list_projects guidance", async () => {
     const out = await resolveAssistantProjectTarget(
       clientWith([{ id: PROJECT_ID, name: "minddy", key: "MIN" }]),
-      null,
       "unknown project",
     );
     // No key/name match: the raw value falls through to the access check,

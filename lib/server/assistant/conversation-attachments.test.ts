@@ -72,7 +72,7 @@ function database() {
 }
 function ctx(): ToolContext {
   return { userId: USER, conversationId: "current", projectId: null,
-    requireExplicitProjectTarget: true, service: database() as never,
+    service: database() as never,
     supabase: database() as never, locale: "en" };
 }
 function file(overrides = {}) {

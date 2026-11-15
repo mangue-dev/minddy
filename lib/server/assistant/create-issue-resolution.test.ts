@@ -42,7 +42,6 @@ function service(projects: Array<Row> = [PROJECT_ROW]): SupabaseClient {
 function context(client: SupabaseClient = service()): ToolContext {
   return {
     projectId: null,
-    requireExplicitProjectTarget: true,
     userId: USER_ID,
     supabase: client,
     service: client,

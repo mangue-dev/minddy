@@ -16,6 +16,7 @@ import {
   type ToolExecution,
 } from "./execute-tool";
 import type { AssistantToolDef } from "./tools";
+import { numoToolPolicy } from "./tool-policy";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
 import { managedAiKeyMode } from "@/lib/managed-services";
@@ -299,47 +300,8 @@ export interface NumoCompactionContext {
   recordUsage: (generation: GenerationInfo, roundCount: number) => Promise<void>;
 }
 
-const RETRYABLE_READ_TOOLS = new Set([
-  "list_conversation_attachments",
-  "read_conversation_attachment",
-  "view_image",
-  "get_help",
-  "list_projects",
-  "list_global_filter_options",
-  "list_views",
-  "get_account_settings",
-  "list_inbox",
-  "get_user_stats",
-  "get_plan_usage",
-  "list_trash",
-  "get_cycle",
-  "get_scratchpad",
-  "list_issues",
-  "search_issues",
-  "get_issue",
-  "list_members",
-  "get_project_stats",
-  "list_objectives",
-  "list_categories",
-  "list_integrations",
-  "list_feedback",
-  "get_feedback",
-  "get_feedback_board",
-  "list_pages",
-  "get_page",
-  "search_pages",
-  "list_routines",
-  "list_routine_runs",
-  "read_routine_occurrence",
-  "read_pull_request",
-  "propose_backlog",
-  "web_search",
-  ...ADMIN_READ_TOOLS,
-  // A repeated report targets the same operation row and payload.
-]);
-
 export function toolReplayPolicy(toolName: string): "retry" | "reconcile" {
-  return RETRYABLE_READ_TOOLS.has(toolName) ? "retry" : "reconcile";
+  return numoToolPolicy(toolName)?.replay === "retry" || ADMIN_READ_TOOLS.has(toolName) ? "retry" : "reconcile";
 }
 
 async function saveToolResultMessage(
@@ -1017,8 +979,8 @@ export async function processChat(
       const hasAskUser = askUserPauses && [...toolCallAccumulators.values()].some(
         (acc) => acc.name === "ask_user"
       );
-      // A tool can also help (propose_backlog, MIN-173): this
-      // which it puts before the user's eyes awaits his gesture.
+      // A tool can hand over too (propose_backlog, MIN-173): what it puts
+      // in front of the user waits for their gesture.
       let pausedByTool = false;
 
       // Execute each tool and save results to DB. A stop requested while a
@@ -1088,7 +1050,7 @@ export async function processChat(
         }
 
         let execution: ToolExecution;
-        const cancellableRead = acc.name === "list_projects" || acc.name === "list_issues";
+        const cancellableRead = numoToolPolicy(acc.name)?.cancellableRead === true;
         const ledgerClaim = context.toolLedger
           ? await context.toolLedger.claim({
               toolCallId: acc.id,
