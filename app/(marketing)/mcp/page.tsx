@@ -90,7 +90,7 @@ export default async function McpPage() {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <code className="min-w-0 font-mono text-base leading-relaxed break-all sm:text-xl">{MCP_ENDPOINT}</code>
-                <CopyButton text={MCP_ENDPOINT} label={tCommon("copy")} copiedLabel={tCommon("copied")} className={COPY_BUTTON} />
+                <CopyButton text={MCP_ENDPOINT} label={tCommon("copy")} copiedLabel={tCommon("copied")} failedLabel={tCommon("copyFailed")} className={COPY_BUTTON} />
               </div>
             </div>
             <div className={cn("rounded-2xl p-6 sm:p-8", CARD_TONES.butter)}>
@@ -114,11 +114,11 @@ export default async function McpPage() {
                 {assistantPrompt}
               </p>
               <div className="mt-auto pt-5">
-                <CopyButton text={assistantPrompt} label={t("copyPrompt")} copiedLabel={tCommon("copied")} className={COPY_BUTTON} />
+                <CopyButton text={assistantPrompt} label={t("copyPrompt")} copiedLabel={tCommon("copied")} failedLabel={tCommon("copyFailed")} className={COPY_BUTTON} />
               </div>
             </li>
             {MCP_AGENTS.map((agent, index) => (
-              <AgentCard key={agent.id} agent={agent} copy={tCommon("copy")} copied={tCommon("copied")}
+              <AgentCard key={agent.id} agent={agent} copy={tCommon("copy")} copied={tCommon("copied")} copyFailed={tCommon("copyFailed")}
                 hint={ta(agent.hint)} tone={AGENT_TONES[index % AGENT_TONES.length]} />
             ))}
           </ul>
@@ -210,10 +210,11 @@ export default async function McpPage() {
 }
 
 /** Keep commands intact and keyboard-scrollable; copying always uses the shared artifact. */
-function AgentCard({ agent, copy, copied, hint, tone }: {
+function AgentCard({ agent, copy, copied, copyFailed, hint, tone }: {
   agent: McpAgent;
   copy: string;
   copied: string;
+  copyFailed: string;
   hint: string;
   tone: string;
 }) {
@@ -230,7 +231,7 @@ function AgentCard({ agent, copy, copied, hint, tone }: {
         <code>{artifact}</code>
       </pre>
       <div className="mt-auto pt-5">
-        <CopyButton text={artifact} label={copy} copiedLabel={copied} className={COPY_BUTTON} />
+        <CopyButton text={artifact} label={copy} copiedLabel={copied} failedLabel={copyFailed} className={COPY_BUTTON} />
       </div>
     </li>
   );

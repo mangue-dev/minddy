@@ -33,6 +33,7 @@ import { InlineTextInput } from "./InlineTextInput";
 import { autoFocusFieldIndex } from "./auto-focus";
 import type { FormFieldSpec } from "../registry/types";
 import type { ReactNode } from "react";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 export interface InlineFieldConfig {
   spec: FormFieldSpec;
@@ -306,6 +307,7 @@ export function InlineActionInput({
 
     if (e.key === "Enter") {
       e.preventDefault();
+      if (isImeComposing(e)) return;
       if (isSelectOpen && filteredOptions.length > 0) {
         const selectedOption = filteredOptions[activeField?.activeOptionIndex ?? 0];
         if (selectedOption) {
@@ -346,6 +348,7 @@ export function InlineActionInput({
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      if (isImeComposing(e)) return;
       if (isLastField) {
         onSubmit();
       } else {

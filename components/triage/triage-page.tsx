@@ -109,7 +109,6 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const tField = useTranslations("Field");
   const tIssueUI = useTranslations("IssueUI");
   const tAction = useTranslations("CommandPaletteActions");
-  const tPr = useTranslations("PullRequests");
   const propertyActions = useIssuePropertyMenuActions();
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
@@ -486,7 +485,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
       onSelect: () => {
         void navigator.clipboard.writeText(identifier).then(
           () => toast.success(identifier),
-          () => toast.error(tPr("copyFailed")),
+          () => toast.error(tCommon("copyFailed")),
         );
       },
     };

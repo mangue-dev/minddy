@@ -185,7 +185,7 @@ export function ResetPasswordForm() {
             <PasswordInput
               id="password"
               aria-invalid={error ? true : undefined}
-              aria-describedby={error ? "reset-password-error" : undefined}
+              aria-describedby={error ? "reset-password-rules reset-password-error" : "reset-password-rules"}
               className="h-12 app-desktop:h-12 bg-control"
               autoComplete="new-password"
               autoFocus
@@ -197,7 +197,7 @@ export function ResetPasswordForm() {
             />
           </Field>
 
-          <PasswordRules password={password} />
+          <PasswordRules id="reset-password-rules" password={password} />
 
           <Field id="confirmPassword" label={t("confirmPassword")}>
             <PasswordInput

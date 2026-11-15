@@ -81,7 +81,15 @@ async function notifyClients() {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || "/inbox";
-  const target = new URL(url, self.location.origin).href;
+  // Only ever open minddy itself: a payload carrying another origin, or a
+  // malformed URL, falls back to the inbox.
+  let target = new URL("/inbox", self.location.origin).href;
+  try {
+    const parsed = new URL(url, self.location.origin);
+    if (parsed.origin === self.location.origin) target = parsed.href;
+  } catch {
+    // Keep the inbox.
+  }
 
   event.waitUntil(
     (async () => {
@@ -89,8 +97,8 @@ self.addEventListener("notificationclick", (event) => {
         type: "window",
         includeUncontrolled: true,
       });
-      // A minddy tab already open: we put it back in the foreground and we put it there
-      // send, rather than opening a second tab of the same app.
+      // A minddy tab is already open: bring it to the foreground and navigate
+      // it, rather than opening a second tab of the same app.
       for (const client of windows) {
         if (new URL(client.url).origin !== self.location.origin) continue;
         await client.focus();

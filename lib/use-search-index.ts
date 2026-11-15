@@ -25,7 +25,7 @@
 // Complete reload remains the net: marked expired by the bridge, replayed at
 // opening the palette.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { navigationPreparationPending, subscribeNavigationPreparation } from "./navigation-preparation-priority";
 import type {
@@ -96,8 +96,15 @@ export function scheduleSearchIndexArm(
   };
 }
 
-async function fetchSearchIndexApi(): Promise<SearchIndexResponse> {
-  const response = await fetch("/api/me/search-index");
+/**
+ * `priority: "low"` for the idle prefetch nobody is waiting on, so it never
+ * competes with the page's own requests; browsers without Fetch Priority
+ * ignore the option.
+ */
+async function fetchSearchIndexApi(
+  priority: RequestPriority = "auto",
+): Promise<SearchIndexResponse> {
+  const response = await fetch("/api/me/search-index", { priority });
   const text = await response.text();
   let data: unknown = null;
   try {
@@ -122,6 +129,9 @@ async function fetchSearchIndexApi(): Promise<SearchIndexResponse> {
 export function useSearchIndex() {
   const queryClient = useQueryClient();
   const [armed, setArmed] = useState(false);
+  // Who is waiting for the index: nobody after the idle arm, the user once the
+  // palette opens (armNow, refreshIfStale).
+  const requestedBy = useRef<"idle" | "user">("idle");
 
   // Arm after the startup burst, then on idle: the palette never competes
   // with the page's critical API requests unless the user explicitly opens it.
@@ -135,14 +145,18 @@ export function useSearchIndex() {
 
   const { data } = useQuery({
     queryKey: SEARCH_INDEX_KEY,
-    queryFn: fetchSearchIndexApi,
+    queryFn: () => fetchSearchIndexApi(requestedBy.current === "idle" ? "low" : "auto"),
     enabled: armed,
     staleTime: SEARCH_INDEX_STALE_MS,
   });
 
-  const armNow = useCallback(() => setArmed(true), []);
+  const armNow = useCallback(() => {
+    requestedBy.current = "user";
+    setArmed(true);
+  }, []);
 
   const refreshIfStale = useCallback(() => {
+    requestedBy.current = "user";
     void queryClient.refetchQueries({ queryKey: SEARCH_INDEX_KEY, stale: true });
   }, [queryClient]);
 

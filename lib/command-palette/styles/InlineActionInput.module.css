@@ -288,11 +288,12 @@
   line-height: 1.4;
   min-width: 150px;
   max-width: 500px;
+  /* Grows with its text (and its placeholder while empty); InlineTextInput
+     measures it in JS only where this is unsupported. */
+  field-sizing: content;
   resize: none;
   overflow: hidden;
   transition: border-color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out;
-  /* Prevent default textarea behavior */
-  field-sizing: content;
 }
 
 .inlineTextInput:hover {

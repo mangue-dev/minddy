@@ -26,6 +26,7 @@ import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { SelfHostingHelpContext } from "@/lib/self-hosting-help-context";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { preserveDocumentationPosition } from "./documentation-help-context";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /** A private help conversation using Numo's durable runtime and account quota. */
 export function DocumentationNumo({ open, onClose, articleId, sections, locale, authenticated, wizard }: {
@@ -96,7 +97,7 @@ export function DocumentationNumo({ open, onClose, articleId, sections, locale, 
       </div>}
       <AgentBeam active={open && busy} keepMounted className="relative rounded-md">
         <Textarea ref={input} value={draft} disabled={!authenticated} aria-describedby={!authenticated ? "documentation-numo-sign-in" : undefined} onChange={event => setDraft(event.target.value)} aria-label={t("numoQuestion")} placeholder={t("numoQuestion")} className="max-h-36 min-h-24 resize-none pb-12" maxLength={10000} onKeyDown={event => {
-          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); }
+          if (event.key === "Enter" && !event.shiftKey && !isImeComposing(event)) { event.preventDefault(); submit(); }
         }} />
         {busy
           ? <Button type="button" size="icon" className="absolute bottom-2 right-2 size-8 rounded-full" aria-label={assistant("stop")} onClick={abort}><HugeiconsIcon icon={SquareIcon} className="size-3 fill-current" aria-hidden /></Button>

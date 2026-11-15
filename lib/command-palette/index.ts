@@ -3,8 +3,10 @@
  *
  * ```tsx
  * import { CommandPalette, usePalette } from "command-palette";
- * import "command-palette/src/styles/theme.css";
  * ```
+ *
+ * The palette's colors come from the app's tokens through
+ * components/command-palette.css, which the app imports.
  */
 
 // === Main component & controller ===

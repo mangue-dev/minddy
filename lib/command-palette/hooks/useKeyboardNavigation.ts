@@ -15,6 +15,7 @@ import { listenToNewKeydowns } from "./new-keydowns";
 import type { ActionExecutionContext } from "../registry/types";
 import type { PaletteItem } from "../types";
 import { haptic } from "@/lib/mobile/haptics";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 // =============================================================================
 // TYPES
@@ -143,7 +144,7 @@ export function useKeyboardNavigation({
 
           case "Enter": {
             e.preventDefault();
-            if (!allowSelectionRef.current) break;
+            if (!allowSelectionRef.current || isImeComposing(e)) break;
             const selectedItem = currentItems[currentActiveIndex];
             if (selectedItem) {
               haptic("selection");

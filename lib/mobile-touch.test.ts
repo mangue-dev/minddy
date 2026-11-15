@@ -474,7 +474,7 @@ describe("other touch pitfalls", () => {
     // The BODY of the pre-paint script lives in lib/theme-script.ts (pure
     // module); the component only injects it.
     const script = read(join(REPO, "lib/theme-script.ts"));
-    expect(script).toContain('name","theme-color"');
+    expect(script).toContain('u("theme-color",');
     // The observer keeps the tag current when we switch themes or palettes.
     expect(script).toContain("MutationObserver");
 

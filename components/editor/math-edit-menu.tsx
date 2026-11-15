@@ -18,6 +18,7 @@ import {
   mathError,
   renderMath,
 } from "@/components/pages/blocks/math";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 interface Target {
   pos: number;
@@ -240,7 +241,7 @@ function MathForm({
         onKeyDown={(event) => {
           // ⌘↵ saves everywhere; ↵ saves an inline equation, which is one
           // line, while a block keeps ↵ for its next line.
-          if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+          if (event.key !== "Enter" || isImeComposing(event)) return;
           if (event.metaKey || event.ctrlKey || (!display && !event.shiftKey)) {
             event.preventDefault();
             onSave();

@@ -10,6 +10,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { FormDialog } from "@/components/form-dialog";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { cn } from "@/lib/utils";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * A value edited where it is shown (MIN-737): the profile name, a project's
@@ -27,6 +28,7 @@ export function InlineEditField({
   validate,
   normalize = (next) => next,
   maxLength,
+  autoComplete,
   monospace = false,
   children,
   className,
@@ -45,6 +47,8 @@ export function InlineEditField({
   /** Applied on every keystroke (trimming, upper-casing a key…). */
   normalize?: (next: string) => string;
   maxLength?: number;
+  /** Autofill hint for the field, such as `name` for a person's name. */
+  autoComplete?: string;
   /** Upper-case monospace field, for identifiers such as a project key. */
   monospace?: boolean;
   /** How the value reads when it is not being edited. */
@@ -96,6 +100,7 @@ export function InlineEditField({
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
+      if (isImeComposing(event)) return;
       void save();
     } else if (event.key === "Escape") {
       event.preventDefault();
@@ -113,6 +118,7 @@ export function InlineEditField({
           value={draft}
           disabled={busy}
           maxLength={maxLength}
+          autoComplete={autoComplete}
           onChange={(e) => setDraft(normalize(e.target.value))}
           onKeyDown={onKeyDown}
           onFocus={(e) => e.currentTarget.select()}
@@ -164,6 +170,7 @@ export function InlineEditField({
             id={sheetInputId}
             value={draft}
             maxLength={maxLength}
+            autoComplete={autoComplete}
             onChange={(e) => setDraft(normalize(e.target.value))}
             placeholder={placeholder}
             className={cn(monospace && "font-mono uppercase")}

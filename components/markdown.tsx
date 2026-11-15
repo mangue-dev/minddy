@@ -447,8 +447,10 @@ function MarkdownRenderer({
                 />
               );
             }
+            // tabIndex: a block that scrolls sideways must be reachable from
+            // the keyboard to be scrolled at all.
             return (
-              <pre className="my-3 overflow-x-auto rounded-xl bg-muted p-4 [&_code]:text-[1em]">
+              <pre tabIndex={0} className="my-3 overflow-x-auto rounded-xl bg-muted p-4 focus-visible:outline-2 focus-visible:outline-ring [&_code]:text-[1em]">
                 {children}
               </pre>
             );

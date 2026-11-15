@@ -1,7 +1,7 @@
 /* Theme bridge for the command palette (lib/command-palette).
-   Defines every --cp-* token from the app's design tokens (app/tokens.css) instead of using
-   the library's default theme.css — so light/dark follow the app automatically
-   and the palette looks native. Paired with command-palette.tsx. */
+   Defines every --cp-* token from the app's design tokens (app/tokens.css);
+   the palette ships no theme of its own, so light/dark follow the app
+   automatically and the palette looks native. Paired with command-palette.tsx. */
 
 :root {
   /* === Surfaces === */
@@ -64,7 +64,7 @@
 
   /* === Row icons: muted for every entity type, and on the highlighted
  row too, so no row's icon reads louder than another's (MIN-846). The
- palette module's own tints (theme.css) are overridden here; a type
+ palette module's own tints are overridden here; a type
  without a token falls back to --cp-muted in the module. Status and
  objective indicators keep their own colors: they carry meaning. === */
   --cp-icon-active: var(--muted-foreground);

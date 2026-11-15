@@ -12,7 +12,9 @@ import {
   integrationKeyEnvLine,
   isIntegrationKind,
 } from "@/lib/feedback/integration-contract";
-import { CopyStateIcon } from "@/components/ui/copy-state-icon";
+import { CopyStateIcon, CopyStatus } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
+import { toast } from "sonner";
 
 /**
  * THE LIVING IDENTIFIER NO LONGER GOES THROUGH THE PHRASE OF NUMO (MIN-343).
@@ -75,7 +77,8 @@ export function liveSecretRevealKey(calls: readonly {
 export function SecretCallout({ envLine }: { envLine: string }) {
   const t = useTranslations("ToolCall");
   const [reveal, setReveal] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const tc = useTranslations("Common");
+  const { state, copied, copy } = useCopyFeedback(1500);
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-brand/25 bg-brand/5 p-3">
@@ -102,14 +105,13 @@ export function SecretCallout({ envLine }: { envLine: string }) {
           variant="ghost"
           size="icon-sm"
           aria-label={t("secretCopy")}
-          onClick={() => {
-            void navigator.clipboard.writeText(envLine);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
+          onClick={async () => {
+            if (!(await copy(envLine))) toast.error(tc("copyFailed"));
           }}
         >
           <CopyStateIcon copied={copied} checkClassName="text-emerald-500" />
         </Button>
+        <CopyStatus state={state} copiedLabel={tc("copied")} />
       </div>
       <p className="text-xs text-muted-foreground">{t("secretStoreServerSide")}</p>
     </div>

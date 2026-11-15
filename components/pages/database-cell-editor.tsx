@@ -12,6 +12,7 @@ import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /** A floating editor occupies the cell's visual position without resizing its
     row. On a phone it is a bottom sheet instead: a field over a 48 px cell is
@@ -236,7 +237,7 @@ export function DatabaseCellEditor({
             }}
             onBlur={() => void commit()}
             onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing) return;
+              if (isImeComposing(event)) return;
               if (event.key === "Escape") {
                 event.preventDefault();
                 event.stopPropagation();

@@ -51,12 +51,16 @@ const OPEN_GRAPH_LOCALE: Record<Locale, string> = {
 };
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
+// The editorial accent (DESIGN.md) is used rarely, and no page needs it at
+// first paint: no preload, so it stops competing with every route's critical
+// resources. The face still downloads on the first text that asks for it.
 const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
   subsets: ["latin"],
   weight: "400",
   style: "italic",
   display: "swap",
+  preload: false,
 });
 
 /* ── What lights up the safe areas ────────────────────── ───────────────────────

@@ -26,6 +26,7 @@ import { getDesktopBridge } from "@/lib/desktop/bridge";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { INSTANCE_VARIABLE_THEMES, adminListIncludes, type InstanceVariableTheme } from "@/lib/instance-variables";
 import { ADMIN_SECTIONS, adminSectionAnchor } from "@/lib/admin-sections";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * `/admin` → “Instance” (MIN-847): the instance variables an administrator
@@ -522,7 +523,7 @@ function EditDialog({
       aria-invalid={selfOut || undefined}
       aria-describedby={selfOut ? "instance-variable-error" : undefined}
       onKeyDown={(event) => {
-        if (event.key === "Enter" && !blocked) void save();
+        if (event.key === "Enter" && !blocked && !isImeComposing(event)) void save();
       }}
     />
   );

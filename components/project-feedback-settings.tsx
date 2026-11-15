@@ -34,7 +34,9 @@ import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard
 import { EmptyScene } from "@/components/empty-scene";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { CopyStateIcon } from "@/components/ui/copy-state-icon";
+import { CopyStateIcon, CopyStatus } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
+import { toast } from "sonner";
 
 /**
  * Feedback tab of settings (MIN-37). Two cumulative public channels — the
@@ -458,19 +460,20 @@ function SsoRow({
 
 function CopyButton({ value }: { value: string }) {
   const tc = useTranslations("Common");
-  const [copied, setCopied] = useState(false);
+  const { state, copied, copy } = useCopyFeedback(1500);
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      aria-label={copied ? tc("copied") : tc("copy")}
-      onClick={() => {
-        void navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }}
-    >
-      <CopyStateIcon copied={copied} checkClassName="text-emerald-500" />
-    </Button>
+    <>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={tc("copy")}
+        onClick={async () => {
+          if (!(await copy(value))) toast.error(tc("copyFailed"));
+        }}
+      >
+        <CopyStateIcon copied={copied} checkClassName="text-emerald-500" />
+      </Button>
+      <CopyStatus state={state} copiedLabel={tc("copied")} />
+    </>
   );
 }

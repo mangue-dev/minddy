@@ -388,7 +388,9 @@ const nextConfig = {
       { key: "Content-Security-Policy", value: csp },
     ];
 
-    const BASE_CSP = "frame-ancestors 'none'; base-uri 'self'";
+    // `object-src 'none'` blocks plugin content (<object>, <embed>), which the
+    // app never uses, without touching scripts.
+    const BASE_CSP = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
 
     // `/oauth/authorize` is excluded because multiple CSP headers intersect and
     // the stricter policy would win. Anchor exclusions on a slash or the end so

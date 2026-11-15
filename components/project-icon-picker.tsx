@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PROJECTS_KEY } from "@/lib/query-keys";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * The icon gestures of a project — import a site's favicon, upload a file,
@@ -301,10 +302,15 @@ export function ProjectIconPicker({
       value={siteUrl}
       onChange={(e) => setSiteUrl(e.target.value)}
       placeholder={t("iconSiteUrlPlaceholder")}
+      aria-label={t("iconSiteUrlPlaceholder")}
       inputMode="url"
+      spellCheck={false}
+      autoCapitalize="none"
+      autoCorrect="off"
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
+          if (isImeComposing(e)) return;
           void handleImport();
         }
       }}

@@ -299,7 +299,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
       onSelect: () => {
         void navigator.clipboard.writeText(identifier).then(
           () => toast.success(identifier),
-          () => toast.error(tPr("copyFailed")),
+          () => toast.error(tCommon("copyFailed")),
         );
       },
     };

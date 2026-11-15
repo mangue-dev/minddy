@@ -483,36 +483,49 @@ export function SelfHostButton() {
  * and the button remains grayed out as long as they are not all held: the refusal of the
  * server becomes a fallback, not a dialog mode.
  *
- * `aria-live` on the list: the checkmark is visual information, and without it
- * a screen reader would never hear that the rule has just been satisfied.
+ * Each rule says in words whether it is met, not only by colour and the
+ * checkmark. The list itself is not a live region, which would read every rule
+ * again on each keystroke; a hidden polite summary ("2 of 4 requirements met")
+ * changes only when a rule flips, and the field can point at the list with
+ * `aria-describedby` through `id`.
  *
  * Shared by the two screens which set a password (MIN-297): the wizard
  * registration and setting a new password. The same rules
  * are required, they must be SAYING in the same way.
  */
-export function PasswordRules({ password }: { password: string }) {
+export function PasswordRules({ password, id }: { password: string; id?: string }) {
   const t = useTranslations("Auth");
+  const rules = checkPassword(password);
+  const metCount = rules.filter((rule) => rule.met).length;
   return (
-    <ul className="space-y-1.5" aria-live="polite">
-      {checkPassword(password).map(({ id, met }) => (
-        <li
-          key={id}
-          className={`flex items-center gap-2 text-xs transition-colors ${
-            met ? "text-foreground" : "text-muted-foreground"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
-              met ? "border-transparent bg-emerald-600 text-white" : "border-border"
+    <>
+      <ul id={id} className="space-y-1.5">
+        {rules.map(({ id: rule, met }) => (
+          <li
+            key={rule}
+            className={`flex items-center gap-2 text-xs transition-colors ${
+              met ? "text-foreground" : "text-muted-foreground"
             }`}
           >
-            {met && <HugeiconsIcon icon={CheckIcon} className="size-3" strokeWidth={3} />}
-          </span>
-          {t(id, { min: MIN_PASSWORD_LENGTH })}
-        </li>
-      ))}
-    </ul>
+            <span
+              aria-hidden="true"
+              className={`flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                met ? "border-transparent bg-emerald-600 text-white" : "border-border"
+              }`}
+            >
+              {met && <HugeiconsIcon icon={CheckIcon} className="size-3" strokeWidth={3} />}
+            </span>
+            {t(rule, { min: MIN_PASSWORD_LENGTH })}{" "}
+            <span className="sr-only">
+              {met ? t("passwordRuleMet") : t("passwordRuleNotMet")}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="sr-only" aria-live="polite">
+        {password ? t("passwordRulesSummary", { met: metCount, total: rules.length }) : ""}
+      </p>
+    </>
   );
 }
 

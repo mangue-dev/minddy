@@ -4,7 +4,6 @@ import {
   memo,
   useCallback,
   useMemo,
-  useState,
   type ComponentProps,
   type ReactNode,
 } from "react";
@@ -52,6 +51,7 @@ import {
 } from "@/components/assistant/usage-exhausted-card";
 import { SkillChip } from "@/components/assistant/skill-chip";
 import { CopyStateIcon } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -95,14 +95,14 @@ interface ChatMessageProps {
 
 function CopyButton({ text, pinned }: { text: string; pinned: boolean }) {
   const tc = useTranslations("Common");
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyFeedback();
 
+  // The toast is the announcement here: the chat is not a modal, so the
+  // toaster stays readable by screen readers.
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(text);
-    toast(tc("copied"));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [text, tc]);
+    if (await copy(text)) toast(tc("copied"));
+    else toast.error(tc("copyFailed"));
+  }, [copy, text, tc]);
 
   return (
     <AppTooltip label={tc("copy")}>

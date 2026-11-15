@@ -43,7 +43,8 @@ import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import { integrationsKey } from "@/lib/query-keys";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
-import { CopyStateIcon } from "@/components/ui/copy-state-icon";
+import { CopyStateIcon, CopyStatus } from "@/components/ui/copy-state-icon";
+import { useCopyFeedback } from "@/lib/use-copy-feedback";
 
 /**
  * The returns configuration wizard — THE entry point to the tab
@@ -103,6 +104,7 @@ export function FeedbackSetupWizard({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("Settings");
+  const tc = useTranslations("Common");
   const promptDelivery = usePromptDelivery();
   const announcePrompt = usePromptAnnouncement();
   const promptLabel = usePromptActionLabel();
@@ -121,7 +123,7 @@ export function FeedbackSetupWizard({
     null,
   );
   const [copied, setCopied] = useState(false);
-  const [envCopied, setEnvCopied] = useState(false);
+  const envCopy = useCopyFeedback();
   /** Did this journey light up the board itself? Only this case falls apart. */
   const [provisionedBoard, setProvisionedBoard] = useState(false);
   /** One number per opening of the wizard, bumped by `reset()`. The close
@@ -181,7 +183,6 @@ export function FeedbackSetupWizard({
     setKeyCreated(false);
     setEnv(null);
     setCopied(false);
-    setEnvCopied(false);
     setProvisionedBoard(false);
   };
 
@@ -539,14 +540,14 @@ export function FeedbackSetupWizard({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={t("feedbackWizardEnvCopy")}
-                  onClick={() => {
-                    void navigator.clipboard.writeText(env.line);
-                    setEnvCopied(true);
-                    setTimeout(() => setEnvCopied(false), 2000);
+                  onClick={async () => {
+                    if (!(await envCopy.copy(env.line))) toast.error(tc("copyFailed"));
                   }}
                 >
-                  <CopyStateIcon copied={envCopied} checkClassName="text-success" />
+                  <CopyStateIcon copied={envCopy.copied} checkClassName="text-success" />
                 </Button>
+                {/* Inside the dialog: the modal hides the toaster from screen readers. */}
+                <CopyStatus state={envCopy.state} copiedLabel={tc("copied")} failedLabel={tc("copyFailed")} />
               </div>
               {keyCreated && (
                 <p className="text-xs leading-relaxed text-muted-foreground">

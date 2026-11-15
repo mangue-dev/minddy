@@ -119,6 +119,7 @@ import {
 import { useWeekStart } from "@/lib/use-week-start";
 import { keepFieldFocusOnPress } from "@/lib/keep-field-focus";
 import { haptic } from "@/lib/mobile/haptics";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
     text-ish) — MIN-24 scope. */
@@ -1367,6 +1368,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
+        // Keys an IME handles (Enter confirms a candidate, the arrows move
+        // between candidates) belong to the input method, not to the menus
+        // or the send shortcut.
+        if (isImeComposing(e)) return;
         if (
           e.key === "Backspace" &&
           editorRef.current &&

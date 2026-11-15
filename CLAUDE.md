@@ -178,6 +178,37 @@ key `mangue-ui-theme` is kept for existing preferences.
 starting with the rule that destructive actions always ask for confirmation
 through `ConfirmDeleteDialog`.
 
+## Web platform and browser support
+
+Use features that are Baseline Widely available without a fallback. Tailwind 4
+already sets the effective floor at Safari 16.4, Chrome 111 and Firefox 128;
+the Electron shell ships a newer Chromium, and the iOS shell renders in the
+system WebView of the installed iOS. Adopt a newer feature only behind feature
+detection with graceful degradation (`@supports`, `CSS.supports()`, an `in`
+check), and only when its fallback stays small (about 20 lines, no new
+dependency); otherwise keep the current approach.
+
+Before writing or changing UI markup, CSS or client-side JavaScript, look up
+the current pattern with Google Chrome's modern-web-guidance:
+
+```bash
+npx -y modern-web-guidance@latest search "light dismiss dialog"
+npx -y modern-web-guidance@latest retrieve "<id>"
+```
+
+Its guides are written for vanilla HTML and CSS; keep the project's own
+primitives (Radix-based `components/ui/`) and adapt the guidance to them. Its
+`legacy-scan <dir> --json` lists deterministic legacy patterns; check each hit
+against the rubric it prints before changing code. Patterns already settled in
+this repository:
+
+- Enter that submits, sends or selects from a text field returns early while an
+  IME composition is active: `isImeComposing` from `lib/keyboard/ime.ts`.
+- Text fields grow with `field-sizing: content` (the `Textarea` primitive);
+  `lib/use-autosize.ts` measures in JS only where it is unsupported.
+- The theme sets `color-scheme` on `<html>` and the matching
+  `<meta name="color-scheme">`, so native controls and scrollbars follow it.
+
 ## Internationalization: catalog and call-site contract
 
 Visible interface copy uses `next-intl`. The supported locales are `en`, `fr`,

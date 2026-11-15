@@ -172,7 +172,9 @@ export function AccountPreferencesSection() {
               <SelectContent>
                 {locales.map((code) => (
                   <SelectItem key={code} value={code}>
-                    {LANGUAGE_LABELS[code]}
+                    {/* Each name in its own language, so a screen reader
+                        pronounces "Deutsch" in German. */}
+                    <span lang={code}>{LANGUAGE_LABELS[code]}</span>
                   </SelectItem>
                 ))}
               </SelectContent>

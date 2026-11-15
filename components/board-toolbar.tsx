@@ -588,6 +588,7 @@ function ViewNameDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("viewNamePlaceholder")}
+            aria-label={t("viewNamePlaceholder")}
           />
           {withDescription && (
             <div className="flex flex-col gap-1.5">

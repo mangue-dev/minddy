@@ -2,13 +2,44 @@ import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import type { AnyExtension, NodeViewRenderer } from "@tiptap/core";
 import { common, createLowlight } from "lowlight";
 import { PAGE_COLOR_MARK } from "@/components/pages/blocks/color";
+import { writeClipboardText } from "@/lib/clipboard";
 
 const lowlight = createLowlight(common);
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function svgGlyph(shapes: [string, Record<string, string>][]): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  for (const [name, value] of Object.entries({
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+    "aria-hidden": "true",
+  })) svg.setAttribute(name, value);
+  for (const [tag, attrs] of shapes) {
+    const shape = document.createElementNS(SVG_NS, tag);
+    for (const [name, value] of Object.entries(attrs)) shape.setAttribute(name, value);
+    svg.append(shape);
+  }
+  return svg;
+}
+
+const checkGlyph = () => svgGlyph([["path", { d: "m5 12 4 4L19 6" }]]);
+const copyGlyph = () =>
+  svgGlyph([
+    ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" }],
+    ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }],
+  ]);
 export type CodeBlockLowlight = ReturnType<typeof createLowlight>;
 
 export interface CodeBlockLabels {
   copy: string;
   copied: string;
+  /** Announced when the browser refuses the clipboard write. */
+  copyFailed?: string;
   language: string;
 }
 
@@ -17,12 +48,14 @@ export interface CodeBlockLabels {
 const labels: CodeBlockLabels = {
   copy: "Copy",
   copied: "Copied",
+  copyFailed: "Could not copy to the clipboard",
   language: "Code language",
 };
 
 export function setCodeBlockLabels(next: CodeBlockLabels): void {
   labels.copy = next.copy;
   labels.copied = next.copied;
+  if (next.copyFailed) labels.copyFailed = next.copyFailed;
   labels.language = next.language;
 }
 
@@ -102,6 +135,12 @@ const codeBlockNodeView: NodeViewRenderer = ({
   copyButton.type = "button";
   copyButton.className = "code-block-node-copy";
 
+  // The live confirmation sits next to the button, not inside it: a button's
+  // children are presentational, so a live region there is not announced.
+  const copyStatus = document.createElement("span");
+  copyStatus.setAttribute("role", "status");
+  copyStatus.className = "sr-only";
+
   const pre = document.createElement("pre");
   Object.entries(HTMLAttributes).forEach(([name, value]) => {
     if (value != null) pre.setAttribute(name, String(value));
@@ -109,16 +148,16 @@ const codeBlockNodeView: NodeViewRenderer = ({
 
   const code = document.createElement("code");
   pre.append(code);
-  header.append(languageInput, copyButton);
+  header.append(languageInput, copyButton, copyStatus);
   dom.append(header, pre);
 
   let currentNode = node;
   let copyResetTimer: ReturnType<typeof setTimeout> | undefined;
 
   const copyIcon = (copied: boolean) => {
-    copyButton.innerHTML = copied
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>'
-      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+    // Built as DOM nodes rather than an HTML string, so the editor keeps no
+    // innerHTML sink that a Trusted Types policy would have to allow.
+    copyButton.replaceChildren(copied ? checkGlyph() : copyGlyph());
     copyButton.dataset.copied = copied ? "true" : "false";
   };
 
@@ -142,20 +181,19 @@ const codeBlockNodeView: NodeViewRenderer = ({
   };
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(code.textContent ?? "");
-      copyButton.setAttribute("aria-label", labels.copied);
-      copyButton.title = labels.copied;
-      copyIcon(true);
-      clearTimeout(copyResetTimer);
-      copyResetTimer = setTimeout(() => {
-        copyButton.setAttribute("aria-label", labels.copy);
-        copyButton.title = labels.copy;
-        copyIcon(false);
-      }, 2000);
-    } catch {
-      // Clipboard access can be unavailable in a non-secure or restricted context.
-    }
+    const ok = await writeClipboardText(code.textContent ?? "");
+    clearTimeout(copyResetTimer);
+    copyButton.title = ok ? labels.copied : (labels.copyFailed ?? labels.copy);
+    copyButton.dataset.failed = ok ? "false" : "true";
+    copyIcon(ok);
+    copyStatus.textContent = ok ? labels.copied : (labels.copyFailed ?? "");
+    copyResetTimer = setTimeout(() => {
+      copyButton.title = labels.copy;
+      copyButton.dataset.failed = "false";
+      copyIcon(false);
+      // Cleared so no stale message is left for screen-reader browse mode.
+      copyStatus.textContent = "";
+    }, 2000);
   };
 
   const updateLanguageAttribute = () => {

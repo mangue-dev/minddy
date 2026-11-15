@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { DictationWave } from "./dictation-wave";
 import type { DictationRecorder } from "./use-dictation-recorder";
 import { haptic } from "@/lib/mobile/haptics";
+import { isImeComposing } from "@/lib/keyboard/ime";
 
 /**
  * The dictation surface (MIN-773): one blocking pill, centred at the bottom of
@@ -128,7 +129,7 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
   useEffect(() => {
     if (!recording || confirmOpen) return;
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+      if (event.key !== "Enter" || event.shiftKey || isImeComposing(event)) return;
       const mod = event.metaKey || event.ctrlKey;
       const target = event.target instanceof Element ? event.target : null;
       if (!mod && target?.closest("[data-dictation-pill] button")) return;

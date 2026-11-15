@@ -51,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { writeClipboardText } from "@/lib/clipboard";
 import { Kbd } from "@/components/ui/kbd";
 import {
   PAGE_COLORS,
@@ -291,7 +292,10 @@ export function BlockMenu({
   const copyLink = async () => {
     const id = selectedBlockId(editor);
     if (!id) return;
-    await navigator.clipboard.writeText(blockLink(window.location.href, id));
+    if (!(await writeClipboardText(blockLink(window.location.href, id)))) {
+      toast.error(tCommon("copyFailed"));
+      return;
+    }
     toast.success(t("blockLinkCopied"));
   };
 
