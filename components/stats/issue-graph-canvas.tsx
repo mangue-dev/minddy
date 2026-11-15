@@ -282,7 +282,7 @@ export const IssueGraphCanvas = memo(function IssueGraphCanvas({
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
-              <text x={centre} y={top} textAnchor="middle" className="fill-muted-foreground text-[11px] font-medium">
+              <text x={centre} y={top} textAnchor="middle" className="fill-muted-foreground text-[0.6875rem] font-medium">
                 {objective.name}
                 {group.hiddenMembers > 0 ? ` +${group.hiddenMembers}` : ""}
               </text>
@@ -416,7 +416,7 @@ export const IssueGraphCanvas = memo(function IssueGraphCanvas({
                 y={node.y + 3.5}
                 aria-hidden
                 className={cn(
-                  "pointer-events-none fill-muted-foreground font-mono text-[10px] [paint-order:stroke] stroke-card stroke-[3px]",
+                  "pointer-events-none fill-muted-foreground font-mono text-[0.625rem] [paint-order:stroke] stroke-card stroke-[3px]",
                   node.id === hovered && "fill-foreground font-medium",
                 )}
               >

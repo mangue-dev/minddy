@@ -273,7 +273,7 @@ export function BudgetTrendChart() {
                       x={left - 7}
                       y={y(value) + 4}
                       textAnchor="end"
-                      className="fill-muted-foreground text-[11px]"
+                      className="fill-muted-foreground text-[0.6875rem]"
                     >
                       {axisNumber.format(value)}%
                     </text>
@@ -285,7 +285,7 @@ export function BudgetTrendChart() {
                     x={x(at)}
                     y={HEIGHT - 7}
                     textAnchor={i === 0 ? "start" : i === 2 ? "end" : "middle"}
-                    className="fill-muted-foreground text-[11px]"
+                    className="fill-muted-foreground text-[0.6875rem]"
                   >
                     {dayFormat.format(at)}
                   </text>
@@ -294,7 +294,7 @@ export function BudgetTrendChart() {
                   x={width - right}
                   y={15}
                   textAnchor="end"
-                  className="fill-muted-foreground text-[11px]"
+                  className="fill-muted-foreground text-[0.6875rem]"
                 >
                   {t("budgetIncluded")}
                 </text>

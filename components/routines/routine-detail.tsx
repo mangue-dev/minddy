@@ -425,7 +425,7 @@ export function RoutineDetail({
                                   >
                                     <span className="block truncate">{date}</span>
                                     {run.origin ? (
-                                      <span className="block text-[11px] text-muted-foreground">
+                                      <span className="block text-[0.6875rem] text-muted-foreground">
                                         {t(
                                           run.origin === "scheduled"
                                             ? "runOriginScheduled"
@@ -433,7 +433,7 @@ export function RoutineDetail({
                                         )}
                                       </span>
                                     ) : null}
-                                    {run.subject_id && run.subject_type ? <span className="block truncate text-[11px] text-muted-foreground">{t(`source_${run.subject_type}`)} · {run.subject_id}</span> : null}
+                                    {run.subject_id && run.subject_type ? <span className="block truncate text-[0.6875rem] text-muted-foreground">{t(`source_${run.subject_type}`)} · {run.subject_id}</span> : null}
                                   </button>
                                 </td>
                                 <td className="tabular-nums text-muted-foreground">

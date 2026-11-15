@@ -93,7 +93,7 @@ export function BoardDropIndicator({
       {/* Keep the badge below the line so a first-position marker stays inside
           the column's clipped content area. */}
       {count > 1 && (
-        <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+        <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold leading-none text-primary-foreground">
           {count}
         </span>
       )}

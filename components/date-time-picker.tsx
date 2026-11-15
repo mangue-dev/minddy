@@ -377,7 +377,7 @@ export function DateTimePicker({
         onClick={stop}
         onPointerDown={stop}
         className={cn(
-          "-m-1 flex items-center gap-1 rounded-md p-1 text-[11px] text-muted-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted",
+          "-m-1 flex items-center gap-1 rounded-md p-1 text-[0.6875rem] text-muted-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted",
           className,
         )}
       >

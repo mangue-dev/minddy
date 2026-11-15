@@ -290,7 +290,7 @@ function SourceBadge({ source }: { source: VariableView["source"] }) {
         tabIndex={0}
         variant={source === "unset" ? "outline" : "secondary"}
         className={cn(
-          "h-5 shrink-0 cursor-help text-[10px] outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+          "h-5 shrink-0 cursor-help text-[0.625rem] outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
           (source === "database" || source === "both") && "bg-violet-500/12 text-violet-700 dark:text-violet-300",
         )}
       >
@@ -325,7 +325,7 @@ function VariableRow({
       label={
         <span className="flex flex-wrap items-center gap-2">
           {label}
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{variable.key}</code>
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] text-muted-foreground">{variable.key}</code>
           <SourceBadge source={variable.source} />
         </span>
       }

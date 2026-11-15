@@ -25,7 +25,7 @@ function Card({ className, children }: { className?: string; children: ReactNode
 }
 
 function Identifier({ children }: { children: ReactNode }) {
-  return <span className="shrink-0 text-[11px] font-medium text-muted-foreground tabular-nums">{children}</span>;
+  return <span className="shrink-0 text-[0.6875rem] font-medium text-muted-foreground tabular-nums">{children}</span>;
 }
 
 type Ticket = {
@@ -85,7 +85,7 @@ function IssuesArt() {
 
 function Ask({ children }: { children: ReactNode }) {
   return (
-    <p className="ml-auto max-w-[80%] rounded-3xl rounded-br-lg bg-primary/15 px-3.5 py-2.5 text-[13px] leading-snug text-foreground">
+    <p className="ml-auto max-w-[80%] rounded-3xl rounded-br-lg bg-primary/15 px-3.5 py-2.5 text-[0.8125rem] leading-snug text-foreground">
       {children}
     </p>
   );
@@ -95,7 +95,7 @@ function Answer({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-2.5">
       <NumoFace className="mt-0.5 size-6 shrink-0 text-foreground" outlineWidth={3} />
-      <div className="min-w-0 flex-1 space-y-2.5 text-[13px] leading-snug text-foreground">{children}</div>
+      <div className="min-w-0 flex-1 space-y-2.5 text-[0.8125rem] leading-snug text-foreground">{children}</div>
     </div>
   );
 }
@@ -125,7 +125,7 @@ function NumoArt() {
       </Answer>
       <div className="flex items-center gap-2.5 rounded-full border border-border bg-background py-2.5 ps-3.5 pe-3 shadow-sm">
         <HugeiconsIcon icon={PlusSignIcon} className="size-4 shrink-0 text-muted-foreground" />
-        <span className="truncate text-[13px] text-muted-foreground">{tAssistant("inputPlaceholder")}</span>
+        <span className="truncate text-[0.8125rem] text-muted-foreground">{tAssistant("inputPlaceholder")}</span>
         <HugeiconsIcon icon={Mic01Icon} className="ml-auto size-4 shrink-0 text-muted-foreground" />
       </div>
     </div>

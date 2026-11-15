@@ -37,7 +37,7 @@ export function DocumentationSidebar({ articles, locale, currentId, labels, onNa
     <Link href={documentationPath(null, locale)} prefetch={false} onNavigate={onNavigate} aria-current={currentId === null ? "page" : undefined}
       className="mb-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><DocumentationIcon articleId={null} className="size-4 shrink-0" /><span>{labels.welcome}</span></Link>
     {topics.map(topic => <Collapsible key={topic} open={folds.isOpen(topicKeys.get(topic)!)} onOpenChange={open => folds.setOpen(topicKeys.get(topic)!, open)}>
-      <CollapsibleTrigger className="group flex min-h-10 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+      <CollapsibleTrigger className="group flex min-h-10 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
         <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none" aria-hidden />
         <span className={articles.some(article => article.topic === topic && article.id === currentId) ? "text-foreground" : undefined}>{topic}</span>
       </CollapsibleTrigger>
@@ -45,13 +45,13 @@ export function DocumentationSidebar({ articles, locale, currentId, labels, onNa
         <ul className="ml-4 space-y-0.5 py-1 pl-2">
           {articles.some(article => article.topic === topic && article.id === "installation") && <li>
             <Link href={localizedHref("/self-hosting/install", locale)} prefetch={false} onNavigate={onNavigate}
-              className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium leading-5 text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+              className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-[0.8125rem] font-medium leading-5 text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
               <DocumentationIcon articleId="installation" className="size-4 shrink-0" /><span>{labels.install}</span>
             </Link>
           </li>}
           {articles.filter(article => article.topic === topic).map(article => <li key={article.id}>
             <Link href={documentationPath(article.id, locale)} prefetch={false} onNavigate={onNavigate} aria-current={article.id === currentId ? "page" : undefined}
-              className="flex items-start gap-2 rounded-md px-3 py-2 text-[13px] leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><DocumentationIcon articleId={article.id} className="mt-0.5 size-4 shrink-0" /><span>{article.title}</span></Link>
+              className="flex items-start gap-2 rounded-md px-3 py-2 text-[0.8125rem] leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><DocumentationIcon articleId={article.id} className="mt-0.5 size-4 shrink-0" /><span>{article.title}</span></Link>
           </li>)}
         </ul>
       </CollapsibleContent>

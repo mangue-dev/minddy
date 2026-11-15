@@ -80,7 +80,12 @@ describe("useCsvImport", () => {
     await act(async () => {
       void latest!.handleFile(csvFile("a.csv", "Title,Mystery\nFirst,x\n"));
     });
-    expect(latest!.aiPending).toBe(true);
+    // Preparing yields to the main thread between steps, so file A reaches
+    // the model request a few tasks later.
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(latest!.aiPending).toBe(true);
+    });
 
     await act(async () => {
       await latest!.handleFile(csvFile("b.csv", "Title\nSecond\n"));

@@ -574,7 +574,7 @@ function RankCard({
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div className={cn("h-full rounded-full", entry.shareColor)} style={{ width: `${Math.max(entry.share * 100, entry.share > 0 ? 2 : 0)}%` }} />
                   </div>
-                  <span className="w-28 shrink-0 truncate text-right text-[11px] text-muted-foreground">
+                  <span className="w-28 shrink-0 truncate text-right text-[0.6875rem] text-muted-foreground">
                     {format.number(entry.share, { style: "percent" })} · {entry.detail}
                   </span>
                 </div>
@@ -738,7 +738,7 @@ function RunRowItem({
           <span className="min-w-0 break-words text-sm text-foreground">{featureLabel(run.feature)}</span>
           {run.model ? <ModelBadge model={run.model} size={12} className="py-0" /> : null}
           {run.calls > 1 ? (
-            <Badge variant="secondary" className="h-5 shrink-0 text-[10px]">
+            <Badge variant="secondary" className="h-5 shrink-0 text-[0.625rem]">
               {t("costs.callCount", { count: run.calls })}
             </Badge>
           ) : null}

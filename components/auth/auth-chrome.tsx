@@ -44,7 +44,7 @@ export type { OAuthProvider } from "@/lib/auth-context";
  * so sign-in, sign-up, password and 2FA screens keep one button.
  */
 export const AUTH_SUBMIT_CLASS =
-  "h-12 w-full justify-center gap-2 rounded-full text-[15px] font-semibold tracking-tight";
+  "h-12 w-full justify-center gap-2 rounded-full text-[0.9375rem] font-semibold tracking-tight";
 
 /**
  * The shape of an auth form while it loads (MIN-868): the heading and its

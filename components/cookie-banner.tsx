@@ -53,7 +53,7 @@ export function CookieBanner() {
       )}
     >
       <p className="text-sm font-medium">{t("title")}</p>
-      <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+      <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">
         {t("description")}{" "}
         {/* An absolute URL keeps the policy accessible from custom feedback domains. */}
         <a

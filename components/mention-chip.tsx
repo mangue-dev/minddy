@@ -469,10 +469,8 @@ function toneStyle(
   color: string | null | undefined,
   prState?: PullRequestState | null,
 ): CSSProperties {
-  const tone = mentionTone(type, seed, color, prState);
-  return {
-    "--mention-chip": `oklch(from ${tone} var(--mention-chip-l) c h / var(--mention-chip-a))`,
-    "--mention-chip-hover": `oklch(from ${tone} var(--mention-chip-l) c h / var(--mention-chip-a-hover))`,
-    "--mention-chip-ink": `oklch(from ${tone} var(--mention-chip-ink-l) c h)`,
-  } as CSSProperties;
+  // Only the tone is inline: the derived colors are computed in
+  // app/globals.css behind `@supports`, so a browser without relative color
+  // syntax keeps the neutral pill instead of an invalid, transparent one.
+  return { "--mention-tone": mentionTone(type, seed, color, prState) } as CSSProperties;
 }

@@ -32,6 +32,13 @@ import {
   isBackendUnavailableError,
   SERVER_UNAVAILABLE_PATH,
 } from "@/lib/backend-availability";
+import {
+  CSP_NONCE_HEADER,
+  REPORTING_ENDPOINTS,
+  createCspNonce,
+  isCdnCachedDocument,
+  reportOnlyScriptPolicy,
+} from "@/lib/csp";
 
 /**
  * Next 16 middleware (named `proxy`). It resolves public URL languages, protects app routes with a session, and keeps private content out of search indexes.
@@ -108,6 +115,20 @@ const ROUTE_HEADER = "x-minddy-route";
 const TRUST_HEADER_PREFIX = "x-minddy-";
 
 /**
+ * The script nonce of each request in flight (MIN-999, `lib/csp.ts`). One
+ * request can rebuild its forwarded headers several times; they must all carry
+ * the nonce that the response policy names.
+ */
+const REQUEST_NONCES = new WeakMap<NextRequest, string>();
+
+/**
+ * Next takes the nonce for its own scripts from the policy in the REQUEST
+ * headers, the enforcing header first. Only this proxy may supply one: a
+ * client-sent policy would otherwise pick the nonce Next stamps.
+ */
+const REQUEST_POLICY_HEADERS = ["content-security-policy", "content-security-policy-report-only"];
+
+/**
  * Rewrites the REQUEST headers (what the layout and next-intl read).
  *
  * Any INCOMING `x-minddy-*` leaves first (MIN-351). These headers are proxy assertions — “this page is public,” “the language of this URL
@@ -127,7 +148,15 @@ function withRequestHeaders(
   // are precisely the ones we wanted to remove.
   // oxlint-disable-next-line unicorn/no-useless-spread
   for (const name of [...headers.keys()]) {
-    if (name.toLowerCase().startsWith(TRUST_HEADER_PREFIX)) headers.delete(name);
+    const lower = name.toLowerCase();
+    if (lower.startsWith(TRUST_HEADER_PREFIX) || REQUEST_POLICY_HEADERS.includes(lower)) {
+      headers.delete(name);
+    }
+  }
+  const nonce = REQUEST_NONCES.get(request);
+  if (nonce) {
+    headers.set("content-security-policy-report-only", scriptPolicy(nonce));
+    headers.set(CSP_NONCE_HEADER, nonce);
   }
   for (const [name, value] of Object.entries(extra)) headers.set(name, value);
   return { request: { headers } };
@@ -297,10 +326,22 @@ function serverUnavailableResponse(request: NextRequest): NextResponse {
   return response;
 }
 
+function scriptPolicy(nonce: string | null): string {
+  return reportOnlyScriptPolicy(nonce, { dev: process.env.NODE_ENV === "development" });
+}
+
 export async function proxy(request: NextRequest) {
+  // A CDN-cached public page gets no nonce: its cached HTML would keep the
+  // nonce of the render that filled the cache (lib/csp.ts).
+  const nonce = isCdnCachedDocument(request.nextUrl.pathname) ? null : createCspNonce();
+  if (nonce) REQUEST_NONCES.set(request, nonce);
   try {
     const response = await routeRequest(request);
     response.headers.set("x-minddy-desktop-chrome", "1");
+    // Report-only: browsers report what this policy would block, block
+    // nothing, and the static enforced policy of next.config.mjs still applies.
+    response.headers.set("Content-Security-Policy-Report-Only", scriptPolicy(nonce));
+    response.headers.set("Reporting-Endpoints", REPORTING_ENDPOINTS);
     return response;
   } catch (error) {
     if (!isBackendUnavailableError(error)) throw error;

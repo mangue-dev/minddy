@@ -156,7 +156,7 @@ function Composer({ text, typed, number }: { text: string; typed: number; number
       </span>
 
       <div className="flex flex-col">
-        <p className="min-h-16 text-base leading-normal max-sm:min-h-12 max-sm:text-[15px]">
+        <p className="min-h-16 text-base leading-normal max-sm:min-h-12 max-sm:text-[0.9375rem]">
           {text.slice(0, typed)}
           <span className="ml-px inline-block h-[1.1em] w-px translate-y-[0.2em] animate-pulse bg-foreground" aria-hidden />
         </p>

@@ -59,7 +59,7 @@ export function IssuePrChip({
           onClick={onOpenPr}
           aria-label={`${t("viewPullRequest")} #${pr.prNumber}, ${stateLabel}`}
           className={cn(
-            "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium outline-none transition-colors",
+            "flex items-center gap-1 rounded-md px-1 py-0.5 text-[0.6875rem] font-medium outline-none transition-colors",
             tone,
             hover,
           )}

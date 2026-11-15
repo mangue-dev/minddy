@@ -383,7 +383,7 @@ export function SidebarRows({ sections, renderItem }: { sections: AppNavSection[
       </motion.li>;
     })}</ul>;
     return <section key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
-      {section.label && <motion.h2 variants={panelRowVariants} custom={reduce ? -1 : row} className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</motion.h2>}
+      {section.label && <motion.h2 variants={panelRowVariants} custom={reduce ? -1 : row} className={cn("truncate pt-1 pr-3 pb-1 text-[0.6875rem] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</motion.h2>}
       {reorder ? <ReorderableSidebarList items={section.items} reorder={reorder}>{list}</ReorderableSidebarList> : list}
     </section>;
   })}</>;
@@ -1344,7 +1344,7 @@ export function SidebarBackRow({ label, onBack, ariaLabel, badge, trailing }: {
             // which only fills the left half of its 18 px box. Amber marks the Smart Assign
             // alert, as the triangle does on Home's row.
             <span data-sidebar-back-badge aria-label={shown.label}
-              className={cn("absolute left-3 -top-2.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums ring-2 ring-sidebar",
+              className={cn("absolute left-3 -top-2.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-semibold leading-none tabular-nums ring-2 ring-sidebar",
                 shown.alert ? "bg-amber-500 text-white" : "bg-muted-foreground text-background",
                 shown.count <= 0 && "left-3 -top-0.5 h-2.5 min-w-2.5 px-0")}>
               {shown.count > 0 ? countLabel(shown.count) : null}

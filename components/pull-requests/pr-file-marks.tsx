@@ -111,7 +111,7 @@ export function DiffCounters({
 }) {
   const t = useTranslations("PullRequests");
   return (
-    <span className={cn("flex shrink-0 items-center gap-1 text-[11px] tabular-nums", className)}>
+    <span className={cn("flex shrink-0 items-center gap-1 text-[0.6875rem] tabular-nums", className)}>
       {hideEmpty && additions === 0 ? null : (
         <AppTooltip label={t("linesAdded", { count: additions })}>
           <span className="text-emerald-600 dark:text-emerald-400">+{additions}</span>

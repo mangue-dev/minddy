@@ -63,7 +63,7 @@ export function DraftsTray() {
                   aria-label={t("trayAria", { count: drafts.length })}
                   onPointerEnter={preloadPlainPreview}
                   onFocus={preloadPlainPreview}
-                  className="h-7 gap-1.5 rounded-full px-2 text-[13px] font-medium text-sidebar-foreground/70 shadow-none transition-transform hover:bg-sidebar-accent/70 hover:text-sidebar-foreground active:scale-[0.97] data-[state=open]:bg-sidebar-accent/70 data-[state=open]:text-sidebar-foreground"
+                  className="h-7 gap-1.5 rounded-full px-2 text-[0.8125rem] font-medium text-sidebar-foreground/70 shadow-none transition-transform hover:bg-sidebar-accent/70 hover:text-sidebar-foreground active:scale-[0.97] data-[state=open]:bg-sidebar-accent/70 data-[state=open]:text-sidebar-foreground"
                 >
                   <HugeiconsIcon icon={NoteEditIcon} className="size-4" />
                   <span className="leading-none">{t("tray")}</span>

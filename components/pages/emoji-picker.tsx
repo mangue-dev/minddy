@@ -128,7 +128,7 @@ export function EmojiPicker({
                 Emoji: ({ emoji, ...props }) => (
                   <button
                     type="button"
-                    className="flex size-8 items-center justify-center rounded-md text-lg data-[active]:bg-accent app-mobile:aspect-square app-mobile:h-auto app-mobile:w-[calc(100%/9)] app-mobile:shrink-0 app-mobile:rounded-xl app-mobile:text-[28px]"
+                    className="flex size-8 items-center justify-center rounded-md text-lg data-[active]:bg-accent app-mobile:aspect-square app-mobile:h-auto app-mobile:w-[calc(100%/9)] app-mobile:shrink-0 app-mobile:rounded-xl app-mobile:text-[1.75rem]"
                     {...props}
                   >
                     {emoji.emoji}

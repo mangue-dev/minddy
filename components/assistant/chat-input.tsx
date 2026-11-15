@@ -321,6 +321,27 @@ function createSkillNode(skill: RepositorySkillSummary): HTMLSpanElement {
   return pill;
 }
 
+/**
+ * Detached copy of the last published draft, keyed by its serialization. A
+ * surface remount restores the composer from these nodes rather than parsing
+ * the HTML string again, so the composer has no `innerHTML` sink (Trusted
+ * Types). The draft lives in memory only (assistant-composer-context), and
+ * this editor is its only producer, so the snapshot always matches it.
+ */
+let draftSnapshot: { html: string; nodes: DocumentFragment } | null = null;
+
+/** The editor's tokens without their portal-rendered visual children. */
+function snapshotDraftNodes(editor: HTMLElement): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+  fragment.append(...Array.from(editor.cloneNode(true).childNodes));
+  for (const token of fragment.querySelectorAll<HTMLElement>(
+    "[data-mention-id], [data-skill-path]",
+  )) {
+    token.replaceChildren();
+  }
+  return fragment;
+}
+
 let placeholderCanvas: CanvasRenderingContext2D | null | undefined;
 /** The width of the placeholder on one line, in the editor's font. Infinite
  when it cannot be measured, so the composer stays expanded rather than
@@ -553,6 +574,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const publishedDraftRef = useRef<string | undefined>(undefined);
     const publishDraft = useCallback(() => {
       const html = editorRef.current ? assistantDraftHtml(editorRef.current) : "";
+      draftSnapshot = editorRef.current
+        ? { html, nodes: snapshotDraftNodes(editorRef.current) }
+        : null;
       publishedDraftRef.current = html;
       onDraftHtmlChange?.(html);
     }, [onDraftHtmlChange]);
@@ -678,7 +702,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const clearEditor = useCallback(() => {
       if (editorRef.current) {
-        editorRef.current.innerHTML = "";
+        editorRef.current.replaceChildren();
         setIsEmpty(true);
         setMentionSlots([]);
         setSkillSlots([]);
@@ -1280,7 +1304,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       // The composer only contains “/request” (condition for opening the
       // menu): everything is replaced by the pill, followed by the non-breaking space
       // which makes a node editable with caret — same gesture as the mentions.
-      el.innerHTML = "";
+      el.replaceChildren();
       const pill = document.createElement("span");
       pill.contentEditable = "false";
       pill.dataset.commandId = option.id;
@@ -1473,8 +1497,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       setIsEmpty(empty);
       measureComposerLayout();
 
-      if (empty && el.innerHTML !== "") {
-        el.innerHTML = "";
+      if (empty && el.firstChild) {
+        el.replaceChildren();
       }
       refreshMention();
       refreshSlash();
@@ -1710,7 +1734,18 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const el = editorRef.current;
       if (draftHtml === undefined || !el || el.innerHTML === draftHtml) return;
       if (publishedDraftRef.current === draftHtml) return;
-      el.innerHTML = draftHtml;
+      if (draftHtml === "") {
+        el.replaceChildren();
+      } else if (draftSnapshot?.html === draftHtml) {
+        el.replaceChildren(draftSnapshot.nodes.cloneNode(true));
+      } else if (!/[<&]/.test(draftHtml)) {
+        // Plain text parses to itself: no markup, no entity.
+        el.textContent = draftHtml;
+      } else {
+        // Markup without a snapshot (a module reload in development): keep
+        // what is there rather than parse an HTML string.
+        return;
+      }
       publishedDraftRef.current = draftHtml;
       setIsEmpty(!el.textContent?.trim());
       syncMentionSlots();

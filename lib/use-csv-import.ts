@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { issuesFromMapping, prepareImport } from "@/lib/import/parse";
+import { issuesFromMapping, prepareImportInSteps } from "@/lib/import/parse";
 import { buildCsvDigest } from "@/lib/import/digest";
 import { mappingHasGaps, mergeMapping } from "@/lib/import/mapping";
 import {
@@ -126,7 +126,10 @@ export function useCsvImport({
       const read = ++readRequestRef.current;
       const text = await file.text();
       if (read !== readRequestRef.current) return;
-      const result = prepareImport(text, contextRef.current);
+      // Parsing a large file is long work: it yields between its steps so
+      // the page keeps answering, and a newer drop can overtake it meanwhile.
+      const result = await prepareImportInSteps(text, contextRef.current);
+      if (read !== readRequestRef.current) return;
       if (!result.ok) {
         toast.error(
           result.error === "tooManyIssues"

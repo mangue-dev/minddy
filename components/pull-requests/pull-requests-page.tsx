@@ -268,7 +268,7 @@ function PrRow({
           ) : null}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
-          <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[10px]" />
+          <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[0.625rem]" />
           {showReadiness ? (
             <PrReadinessIcon
               readiness={readiness}

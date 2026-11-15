@@ -366,3 +366,50 @@ describe("account palette headers (MIN-696)", () => {
     expect(forwardedHeaders(response)["x-minddy-transparency"]).toBeUndefined();
   });
 });
+
+describe("report-only script policy (MIN-999)", () => {
+  it.each(["/login", "/home", "/f/tok"])(
+    "gives %s one nonce, in the response policy and in what reaches rendering",
+    async (pathname) => {
+      // Signed in, /login would redirect to /home before rendering anything.
+      session = pathname === "/login" ? null : { user: { id: "u1" } };
+      const response = await proxy(request(pathname, {
+        // A client-sent policy would choose the nonce Next stamps.
+        "content-security-policy": "script-src 'nonce-attacker'",
+        "content-security-policy-report-only": "script-src 'nonce-attacker'",
+        "x-minddy-nonce": "attacker",
+      }));
+      const policy = response.headers.get("content-security-policy-report-only") ?? "";
+      const nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
+      expect(nonce).toBeTruthy();
+      expect(nonce).not.toBe("attacker");
+      expect(response.headers.get("reporting-endpoints")).toContain("/api/csp-report");
+
+      const forwarded = forwardedHeaders(response);
+      expect(forwarded["x-minddy-nonce"]).toBe(nonce);
+      expect(forwarded["content-security-policy-report-only"]).toContain(`'nonce-${nonce}'`);
+      expect(forwarded["content-security-policy"]).toBeUndefined();
+    },
+  );
+
+  it.each(["/", "/fr/tarifs", "/docs", "/fr/documentation/numo"])(
+    "gives the CDN-cached page %s a policy without a nonce",
+    async (pathname) => {
+      session = null;
+      const response = await proxy(request(pathname, { "x-minddy-nonce": "attacker" }));
+      const policy = response.headers.get("content-security-policy-report-only") ?? "";
+      expect(policy).toContain("require-trusted-types-for 'script'");
+      expect(policy).not.toContain("nonce-");
+      expect(policy).not.toContain("script-src");
+      const forwarded = forwardedHeaders(response);
+      expect(forwarded["x-minddy-nonce"]).toBeUndefined();
+      expect(forwarded["content-security-policy-report-only"]).toBeUndefined();
+    },
+  );
+
+  it("draws a new nonce for each request", async () => {
+    const nonceOf = async () =>
+      /'nonce-([^']+)'/.exec((await proxy(request("/login"))).headers.get("content-security-policy-report-only") ?? "")?.[1];
+    expect(await nonceOf()).not.toBe(await nonceOf());
+  });
+});

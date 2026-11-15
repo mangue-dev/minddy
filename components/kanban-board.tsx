@@ -364,7 +364,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   const [landingPreview, setLandingPreview] =
     useState<BoardLandingPreview | null>(null);
   const isLanding = landingPreview !== null;
-  const dragPreviewHtmlRef = useRef<string | null>(null);
+  const dragPreviewRef = useRef<HTMLElement | null>(null);
   const dragBoundsRef = useRef<BoardDragBounds | null>(null);
   const dragBoundsModifier = useMemo(
     () => createBoardBoundsModifier(dragBoundsRef),
@@ -442,7 +442,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     dropAnimation.cancel();
     cardAnimations.cancel();
     setLandingPreview(null);
-    dragPreviewHtmlRef.current = captureBoardDragPreview(
+    dragPreviewRef.current = captureBoardDragPreview(
       String(event.active.id),
       scrollerRef.current,
     );
@@ -652,7 +652,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               style={{ pointerEvents: "none" }}
               zIndex={20}
             >
-              {activeId && dragPreviewHtmlRef.current ? (
+              {activeId && dragPreviewRef.current ? (
                 <div className="relative w-full">
                   {/* The badge represents the rest of a multi-card bundle. */}
                   {draggingIds.size > 1 && (
@@ -662,8 +662,13 @@ export const KanbanBoard = memo(function KanbanBoard({
                   )}
                   <div
                     aria-hidden
-                    dangerouslySetInnerHTML={{
-                      __html: dragPreviewHtmlRef.current,
+                    // The captured clone is moved in as a DOM node: no HTML
+                    // string is parsed, so no Trusted Types sink is needed.
+                    ref={(host) => {
+                      const preview = dragPreviewRef.current;
+                      if (host && preview && host.firstChild !== preview) {
+                        host.replaceChildren(preview);
+                      }
                     }}
                   />
                 </div>

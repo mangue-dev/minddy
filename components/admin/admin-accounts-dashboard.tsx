@@ -68,7 +68,7 @@ function PlanBadge({ user }: { user: AdminUserRow }) {
       <TooltipTrigger asChild>
         <Badge
           variant={overridden ? "secondary" : "outline"}
-          className="h-5 shrink-0 text-[10px]"
+          className="h-5 shrink-0 text-[0.625rem]"
         >
           {user.billing.planId}
           {overridden ? " ·" : ""}
@@ -308,7 +308,7 @@ function UserSheet({
           <div className="flex flex-wrap items-center gap-1.5">
             <PlanBadge user={user} />
             {user.usage.blocked ? (
-              <Badge variant="destructive" className="h-5 shrink-0 text-[10px]">
+              <Badge variant="destructive" className="h-5 shrink-0 text-[0.625rem]">
                 {t("quotas.blocked")}
               </Badge>
             ) : null}
@@ -406,7 +406,7 @@ function UserSheet({
                           others are behind her, they no longer release
                           Nothing. Saying this avoids reading the stack as a cumulation. */}
                       {index === 0 ? (
-                        <Badge variant="secondary" className="h-5 shrink-0 text-[10px]">
+                        <Badge variant="secondary" className="h-5 shrink-0 text-[0.625rem]">
                           {t("quotas.resetActive")}
                         </Badge>
                       ) : null}

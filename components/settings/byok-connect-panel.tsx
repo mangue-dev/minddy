@@ -297,7 +297,7 @@ export function ByokConnectPanel({
                 onChange={(event) => setBaseUrlDraft(event.target.value)}
                 placeholder={t("aiKeyBaseUrlPlaceholder")}
                 spellCheck={false}
-                className="font-mono text-[13px]"
+                className="font-mono text-[0.8125rem]"
               />
             </label>
           ) : null}
@@ -311,7 +311,7 @@ export function ByokConnectPanel({
                 type="password"
                 autoComplete="new-password"
                 spellCheck={false}
-                className="font-mono text-[13px]"
+                className="font-mono text-[0.8125rem]"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !isImeComposing(event)) void saveKey();
                 }}

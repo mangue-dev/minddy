@@ -429,7 +429,7 @@ function tabBadge(indicator: AppTabIndicator | null, nav: NavTranslator): ReactN
   return (
     <span
       aria-label={nav(indicator.label, { count: indicator.count })}
-      className="px-1 text-[9px] font-medium leading-3 tabular-nums text-muted-foreground"
+      className="px-1 text-[0.5625rem] font-medium leading-3 tabular-nums text-muted-foreground"
     >
       {countLabel(indicator.count)}
     </span>

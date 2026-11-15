@@ -215,7 +215,7 @@ export function PrHunk({
         {lineLabel ? (
           <div
             data-testid="pr-hunk-line-label"
-            className="px-2.5 pb-1.5 font-mono text-[11px] text-muted-foreground"
+            className="px-2.5 pb-1.5 font-mono text-[0.6875rem] text-muted-foreground"
           >
             {lineLabel}
           </div>
@@ -257,7 +257,7 @@ export function PrHunk({
           {lineLabel ? (
             <div
               data-testid="pr-hunk-line-label"
-              className="px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground"
+              className="px-2.5 py-1.5 font-mono text-[0.6875rem] text-muted-foreground"
             >
               {lineLabel}
             </div>

@@ -34,8 +34,30 @@ export interface SectionCopyOptions {
 /** Transaction meta that redraws the buttons, their label or icon having changed. */
 export const SECTION_COPY_REFRESH = "sectionCopyRefresh";
 
-const COPY_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** The fallback copy glyph, built as DOM nodes rather than parsed from markup. */
+function copyGlyph(): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  for (const [name, value] of Object.entries({
+    width: "13",
+    height: "13",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+  })) svg.setAttribute(name, value);
+  const rect = document.createElementNS(SVG_NS, "rect");
+  for (const [name, value] of Object.entries({ width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" })) {
+    rect.setAttribute(name, value);
+  }
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2");
+  svg.append(rect, path);
+  return svg;
+}
 
 /** Rank of a title (1–3 in the editor), 0 for any other block. */
 const headingRank = (el: Element): number =>
@@ -141,7 +163,7 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
             // One action button (shared wiring: section chrome + tooltip + click).
             const makeButton = (
               className: string,
-              svg: string,
+              icon: () => SVGSVGElement,
               label: string,
               onClick: () => void
             ): HTMLElement => {
@@ -152,7 +174,7 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
               btn.setAttribute("aria-label", label);
               const cleanup = options.renderIcon?.(btn) ?? null;
               if (cleanup) iconCleanups.set(btn, cleanup);
-              else btn.innerHTML = svg;
+              else btn.replaceChildren(icon());
               // Keep focus/selection in the editor; just act.
               btn.addEventListener("mousedown", (e) => {
                 e.preventDefault();
@@ -189,7 +211,7 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
                 Decoration.widget(
                   pos + 1,
                   () =>
-                    makeButton("scratchpad-section-copy", COPY_SVG, label, () =>
+                    makeButton("scratchpad-section-copy", copyGlyph, label, () =>
                       options.onCopy(index)
                     ),
                   {

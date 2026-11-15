@@ -336,7 +336,7 @@ describe("other touch pitfalls", () => {
     }
     expect(read(UI("input"))).toContain("app-desktop:text-sm");
     const css = read(GLOBALS);
-    expect(css).toMatch(/textarea:not\(\.title-field\),\s*select,\s*\[contenteditable\]:not\(\[contenteditable="false"\], \.title-field\) \{\s*font-size: 16px;/);
+    expect(css).toMatch(/textarea:not\(\.title-field\),\s*select,\s*\[contenteditable\]:not\(\[contenteditable="false"\], \.title-field\) \{\s*font-size: max\(16px, 1rem\);/);
     // iOS zooms into any focused editable element, not only form fields: the
     // home Numo composer and the compact rich editor are `text-sm` hosts
     // (MIN-841).

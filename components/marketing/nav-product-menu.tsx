@@ -146,7 +146,7 @@ export function NavProductMenu({
                     return (
                       <li key={key} className="px-3 py-3">
                         <span className="block text-sm leading-snug font-medium text-foreground">{t("navMenu_compare_title")}</span>
-                        <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
+                        <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[0.8125rem]">
                           {COMPARISONS.map(comparison => (
                             <a key={comparison.slug} href={localizedHref(`/alternatives/${comparison.slug}`, locale)} onClick={() => setOpen(false)}
                               className="rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
@@ -162,7 +162,7 @@ export function NavProductMenu({
                       <a href={localizedHref(entry.href, locale)} onClick={() => setOpen(false)}
                         className="block rounded-lg px-3 py-3 transition-colors hover:bg-background/65 focus-visible:bg-background/65 focus-visible:outline-2 focus-visible:outline-ring">
                         <span className="block text-sm leading-snug font-medium text-foreground">{t(`navMenu_${key}_title`)}</span>
-                        {index < 2 && key !== "changelog" && <span className="mt-1.5 block text-[13px] leading-relaxed text-pretty text-muted-foreground">{t(`navMenu_${key}_desc`)}</span>}
+                        {index < 2 && key !== "changelog" && <span className="mt-1.5 block text-[0.8125rem] leading-relaxed text-pretty text-muted-foreground">{t(`navMenu_${key}_desc`)}</span>}
                       </a>
                     </li>
                   );
@@ -177,7 +177,7 @@ export function NavProductMenu({
                 {platform !== "unsupported" && <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden><PlatformLogo platform={platform} /></span>}
                 {platform === "unsupported" ? t("downloadMinddy") : t("downloadFor", { platform: PLATFORM_NAMES[platform] })}
               </span>
-              <span className="text-[13px] leading-none text-muted-foreground">{t("navMenu_download_desc")}</span>
+              <span className="text-[0.8125rem] leading-none text-muted-foreground">{t("navMenu_download_desc")}</span>
             </span>
             <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-foreground" aria-hidden />
           </a>}

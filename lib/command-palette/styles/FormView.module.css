@@ -36,7 +36,7 @@
   flex: 1;
   padding: 32px;
   color: var(--cp-muted);
-  font-size: 14px;
+  font-size: 0.875rem;
   text-align: center;
 }
 
@@ -83,7 +83,7 @@
 }
 
 .title {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--cp-fg);
   margin: 0;
@@ -128,7 +128,7 @@
 
 .label {
   display: block;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--cp-fg);
   margin-bottom: 6px;
@@ -142,7 +142,7 @@
 .input {
   width: 100%;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--cp-fg);
   background: var(--cp-bg);
   border: 1px solid var(--cp-border);
@@ -171,7 +171,7 @@
 
 .error {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--cp-danger);
   margin-top: 4px;
 }
@@ -206,7 +206,7 @@ select.input {
 .submitButton {
   flex: 1;
   padding: 10px 16px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   border-radius: 8px;
   cursor: default;
@@ -259,11 +259,11 @@ select.input {
 
 :global(html[data-app-layout="mobile"]) .input {
   padding: 14px 12px;
-  font-size: 16px; /* Prevents iOS zoom */
+  font-size: max(16px, 1rem); /* Prevents iOS zoom */
 }
 
 :global(html[data-app-layout="mobile"]) .cancelButton,
   :global(html[data-app-layout="mobile"]) .submitButton {
   padding: 14px 16px;
-  font-size: 16px;
+  font-size: 1rem;
 }

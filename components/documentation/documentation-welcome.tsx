@@ -52,7 +52,7 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
                 </div>
                 <CardContent className="space-y-2 p-5">
                   <h3 id={`guide-${article.id}`} className="text-sm font-medium leading-5">{installation ? t("installWizardTitle") : article.title}</h3>
-                  <p className="text-[13px] leading-5 opacity-80">{installation ? t("installWizardSummary") : article.summary}</p>
+                  <p className="text-[0.8125rem] leading-5 opacity-80">{installation ? t("installWizardSummary") : article.summary}</p>
                 </CardContent>
               </Card>
             </Link>

@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useMemo, type ElementType, type JSX } from "react";
+import { memo, useMemo, type ElementType, type JSX, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import ReactMarkdown, { defaultUrlTransform, type ExtraProps, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -339,6 +340,26 @@ function rehypeChain(
     every entity type. `members` remains the lightweight compatibility path for
     member and Numo mentions. Both paths render the same MentionChip component
     used while composing. */
+/**
+ * A preformatted block that is not a code block. It scrolls sideways, so it
+ * must be reachable from the keyboard to be scrolled at all, and a focusable
+ * region needs a name. Its own component so only this rare branch reads the
+ * translations (`Common` is in the public client feed too).
+ */
+function ScrollablePre({ children }: { children: ReactNode }) {
+  const t = useTranslations("Common");
+  return (
+    <pre
+      tabIndex={0}
+      role="region"
+      aria-label={t("codeRegion")}
+      className="my-3 overflow-x-auto rounded-xl bg-muted p-4 focus-visible:outline-2 focus-visible:outline-ring [&_code]:text-[1em]"
+    >
+      {children}
+    </pre>
+  );
+}
+
 function MarkdownRenderer({
   children,
   className,
@@ -447,13 +468,7 @@ function MarkdownRenderer({
                 />
               );
             }
-            // tabIndex: a block that scrolls sideways must be reachable from
-            // the keyboard to be scrolled at all.
-            return (
-              <pre tabIndex={0} className="my-3 overflow-x-auto rounded-xl bg-muted p-4 focus-visible:outline-2 focus-visible:outline-ring [&_code]:text-[1em]">
-                {children}
-              </pre>
-            );
+            return <ScrollablePre>{children}</ScrollablePre>;
           },
           kbd: styled(
             "kbd",

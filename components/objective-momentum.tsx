@@ -313,7 +313,7 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
                 );
               })}
             </div>
-            <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+            <div className="mt-1.5 flex justify-between text-[0.6875rem] text-muted-foreground">
               <span>{insight.period ? periodStart : t("momentumEightWeeksAgo")}</span>
               <span>{insight.period ? periodEnd : t("momentumLastSevenDays")}</span>
             </div>

@@ -21,7 +21,7 @@ import { OtpInput } from "@/components/otp-input";
  * 2FA instead of bypassing it for the duration of a session. The screen says it before
  * let's use it, not afterwards.
  */
-const AUTH_SECONDARY_CLASS = "h-12 w-full justify-center rounded-full text-[15px] font-medium";
+const AUTH_SECONDARY_CLASS = "h-12 w-full justify-center rounded-full text-[0.9375rem] font-medium";
 
 export function MfaChallenge({
   onVerified,

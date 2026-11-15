@@ -316,7 +316,7 @@ export const ObjectiveRelationsSection = memo(function ObjectiveRelationsSection
             )}
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[0.6875rem] text-muted-foreground">
               {t("relations")}
             </span>
             <span

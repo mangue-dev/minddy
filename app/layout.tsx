@@ -20,6 +20,8 @@ import { KeyboardModality } from "@/components/keyboard-modality";
 import { PostHogInit } from "@/components/posthog-init";
 import { AppLayoutInitScript } from "@/components/app-layout-init-script";
 import { ThemeInitScript } from "@/components/theme-init-script";
+import { CspNonceProvider } from "@/components/csp-nonce";
+import { CSP_NONCE_HEADER } from "@/lib/csp";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { publicClientMessages } from "@/lib/public-client-messages";
 import { RuntimeConfigProvider } from "@/lib/runtime-config-provider";
@@ -180,6 +182,8 @@ export default async function RootLayout({
   // this header so that they follow the system preference instead of being forced
   // to dark mode like the internal app (MIN-60).
   const isPublicSite = headerList.get("x-minddy-public") === "1";
+  // The proxy's per-request script nonce (MIN-999, `lib/csp.ts`).
+  const nonce = headerList.get(CSP_NONCE_HEADER) ?? undefined;
 
   // The theme saved on the ACCOUNT, asserted by the proxy for app routes
   // (`lib/account-theme.ts`). It becomes the default everywhere — the
@@ -228,8 +232,9 @@ export default async function RootLayout({
             (useServerInsertedHTML) : un <script> rendu par un composant fait
             complaining about React 19 every time the client re-renders the root layout — see the
             composant. */}
-        <AppLayoutInitScript />
+        <AppLayoutInitScript nonce={nonce} />
         <ThemeInitScript
+          nonce={nonce}
           defaultTheme={defaultTheme}
           accountTheme={accountTheme}
           appearance={appearance}
@@ -238,6 +243,7 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
+        <CspNonceProvider nonce={nonce}>
         <ThemeProvider defaultTheme={defaultTheme}>
           <TooltipProvider>
             <RuntimeConfigProvider config={runtimeConfig}>
@@ -282,6 +288,7 @@ export default async function RootLayout({
             </RuntimeConfigProvider>
           </TooltipProvider>
         </ThemeProvider>
+        </CspNonceProvider>
       </body>
     </html>
   );

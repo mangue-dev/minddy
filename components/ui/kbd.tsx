@@ -79,11 +79,11 @@ export function Kbd({
         // 18px cap centered at 18px, sagged at 16/17/19px.
         square
           ? size === "sm"
-            ? "size-[15px] text-[10px] leading-[15px]"
-            : "size-[18px] text-[11px] leading-[18px]"
+            ? "size-[15px] text-[0.625rem] leading-[15px]"
+            : "size-[18px] text-[0.6875rem] leading-[18px]"
           : size === "sm"
-            ? "h-[15px] min-w-[15px] px-1 text-[10px] leading-[15px]"
-            : "h-[18px] min-w-[18px] px-1 text-[11px] leading-[18px]",
+            ? "h-[15px] min-w-[15px] px-1 text-[0.625rem] leading-[15px]"
+            : "h-[18px] min-w-[18px] px-1 text-[0.6875rem] leading-[18px]",
         className
       )}
       {...props}
@@ -110,7 +110,7 @@ function renderSeparator(separator: React.ReactNode | string | undefined) {
   if (separator === undefined) separator = "then";
   if (typeof separator === "string") {
     return (
-      <span className="text-current opacity-60 text-[10px]">{separator}</span>
+      <span className="text-current opacity-60 text-[0.625rem]">{separator}</span>
     );
   }
   return separator;

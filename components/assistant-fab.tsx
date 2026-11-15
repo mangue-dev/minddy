@@ -119,7 +119,7 @@ export function AssistantFab() {
  (`app-mobile:hidden` mask without unmounting). The activity signal
  already passes through the `AgentBeam` above. */}
                     <NumoLauncherIcon unread={unread} question={question} className="size-4" />
-                    <span className="text-[13px] font-medium leading-none">Numo</span>
+                    <span className="text-[0.8125rem] font-medium leading-none">Numo</span>
                   </motion.button>
                 </TooltipTrigger>
                 <TooltipContent

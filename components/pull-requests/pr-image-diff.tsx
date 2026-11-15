@@ -147,7 +147,7 @@ function ImagePane({
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
       <span
         className={cn(
-          "text-[11px] font-medium",
+          "text-[0.6875rem] font-medium",
           tone === "base"
             ? "text-red-600 dark:text-red-400"
             : "text-emerald-600 dark:text-emerald-400",
@@ -204,14 +204,14 @@ function ImagePane({
             />
           </LayoutGroup>
         ) : (
-          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
             <HugeiconsIcon icon={ImageNotFound01Icon} className="size-3.5" />
             {version.status === "failed" ? t("imageFailed") : t("imageAbsent")}
           </span>
         )}
       </div>
       {caption ? (
-        <span className="text-[11px] tabular-nums text-muted-foreground">{caption}</span>
+        <span className="text-[0.6875rem] tabular-nums text-muted-foreground">{caption}</span>
       ) : null}
     </div>
   );

@@ -68,7 +68,7 @@ export function PullRequestPreviewFace({
         {pending ? <Skeleton className="h-3 w-24" /> : <span className="min-w-0 truncate">{repository}</span>}
         <span
           className={cn(
-            "ml-auto inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium",
+            "ml-auto inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.6875rem] font-medium",
             PR_STATE_STYLES[state] || "bg-secondary text-secondary-foreground",
           )}
         >

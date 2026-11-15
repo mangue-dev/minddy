@@ -205,6 +205,15 @@ export const PUBLIC_ROUTE_PATHS = [
   "/es/cookies",
 ];
 
+/**
+ * Every route except the sign-in chain an OAuth popup walks through (MIN-999):
+ * the consent screen and its API, sign-in, sign-up, password reset and the
+ * `/auth/*` email and social-login callbacks. Segments are anchored on a slash
+ * or the end so `/loginx` or `/authors` would still get COOP.
+ */
+export const COOP_SOURCE =
+  "/((?!(?:oauth|login|signup|forgot-password|reset-password|auth|api/oauth|api/auth)(?:/|$)).*)";
+
 export const ATTACHMENT_FILE_SOURCE = "/api/attachments/file";
 export const ATTACHMENT_PREVIEW_CSP = [
   "sandbox",
@@ -370,16 +379,21 @@ const nextConfig = {
 
     // Security headers for every route (MIN-118). HSTS applies only over HTTPS;
     // Vercel owns the HTTP redirect. The domain has not been submitted to the
-    // browser preload list. A nonce-based script policy needs a separate render
-    // change because Next and the theme initializer emit inline scripts. The
+    // browser preload list. The script policy (nonce + Trusted Types) is set
+    // per request by `proxy.ts`, in report-only mode for now (MIN-999). The
     // assistant's dictation feature requires microphone access from this origin.
+    //
+    // Framing is limited to minddy itself rather than forbidden outright: a
+    // blob document (the PDF preview of `components/file-viewer.tsx`) inherits
+    // its creator's policy, and WebKit then refused to show it inside the page
+    // with `frame-ancestors 'none'`. Other origins still cannot frame the app.
     const securityHeaders = (csp) => [
       {
         key: "Strict-Transport-Security",
         value: "max-age=31536000; includeSubDomains; preload",
       },
       { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-Frame-Options", value: "SAMEORIGIN" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
         key: "Permissions-Policy",
@@ -390,7 +404,7 @@ const nextConfig = {
 
     // `object-src 'none'` blocks plugin content (<object>, <embed>), which the
     // app never uses, without touching scripts.
-    const BASE_CSP = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
+    const BASE_CSP = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'";
 
     // `/oauth/authorize` is excluded because multiple CSP headers intersect and
     // the stricter policy would win. Anchor exclusions on a slash or the end so
@@ -407,11 +421,7 @@ const nextConfig = {
     // CSP so uploaded markup cannot inherit the application's permissive policy.
     headers.push({
       source: ATTACHMENT_FILE_SOURCE,
-      headers: securityHeaders(ATTACHMENT_PREVIEW_CSP).map((header) =>
-        header.key === "X-Frame-Options"
-          ? { ...header, value: "SAMEORIGIN" }
-          : header,
-      ),
+      headers: securityHeaders(ATTACHMENT_PREVIEW_CSP),
     });
 
     // The OAuth consent screen alone omits `form-action`. Its form posts to the
@@ -422,6 +432,20 @@ const nextConfig = {
     headers.push({
       source: "/oauth/authorize",
       headers: securityHeaders(BASE_CSP),
+    });
+
+    // COOP keeps cross-origin windows from holding a handle on minddy's
+    // (MIN-999). It stays off the whole sign-in chain: web MCP clients open
+    // `/oauth/authorize` in a popup and read `window.opener` when it returns,
+    // and a single COOP response along the way (sign-in, sign-up, password
+    // reset, the email or social-login callbacks, the authorization API's
+    // redirect) severs that link for good. `-allow-popups` keeps the handle the
+    // app holds on the provider tab it opens (`lib/mcp-authorization.ts`).
+    headers.push({
+      source: COOP_SOURCE,
+      headers: [
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+      ],
     });
 
     // The push notification service worker (MIN-183).

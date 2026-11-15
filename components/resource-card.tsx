@@ -122,7 +122,7 @@ export function ResourceTile({ icon, label }: { icon: ReactNode; label?: string 
     <span className="flex h-full w-[56px] flex-col items-center justify-center gap-1 rounded-[10px] bg-muted ring-1 ring-border">
       {icon}
       {label && (
-        <span className="max-w-full truncate px-1 text-[10px] leading-none font-semibold tracking-wide text-muted-foreground uppercase">
+        <span className="max-w-full truncate px-1 text-[0.625rem] leading-none font-semibold tracking-wide text-muted-foreground uppercase">
           {label}
         </span>
       )}
@@ -199,7 +199,7 @@ export function ResourceCard({
       <span className={cn("flex w-full items-center justify-center", FIGURE_HEIGHT)}>{figure}</span>
       <CardName name={name} struck={struck} />
       {detail && (
-        <span className={cn("text-[11px] leading-4", busy ? "text-muted-foreground" : "text-blue-600 dark:text-blue-400")}>
+        <span className={cn("text-[0.6875rem] leading-4", busy ? "text-muted-foreground" : "text-blue-600 dark:text-blue-400")}>
           {detail}
         </span>
       )}

@@ -158,7 +158,7 @@ export function ObjectiveBoardHeader({
                 className="size-7"
               />
               <div className="flex flex-col leading-tight">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[0.6875rem] text-muted-foreground">
                   {t("progressLabel")}
                 </span>
                 <span className="text-xs font-medium tabular-nums">
@@ -181,7 +181,7 @@ export function ObjectiveBoardHeader({
               className="size-7"
             />
             <div className="flex min-w-0 flex-col leading-tight">
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-[0.6875rem] text-muted-foreground">
                 {t("leadFieldLabel")}
               </span>
               <span className="max-w-[9rem] truncate text-xs font-medium">
@@ -205,7 +205,7 @@ export function ObjectiveBoardHeader({
               <HugeiconsIcon icon={DATE_ICON} className="size-5" />
             </span>
             <div className="flex flex-col leading-tight">
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-[0.6875rem] text-muted-foreground">
                 {t("targetDatePlaceholder")}
               </span>
               <span

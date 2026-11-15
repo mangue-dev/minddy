@@ -1789,7 +1789,7 @@ export function PrDetail({
                 {/* The two branches, in code pills: base — head, the merge
                     direction carried by the arrow between them. */}
                 {baseBranch ? (
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.6875rem] text-foreground">
                     {baseBranch}
                   </code>
                 ) : null}
@@ -1812,7 +1812,7 @@ export function PrDetail({
                 ) : null}
                 {headBranch ? (
                   <span className="inline-flex items-center gap-0.5">
-                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.6875rem] text-foreground">
                       {headBranch}
                     </code>
                     <CopyBranchButton value={headBranch} />

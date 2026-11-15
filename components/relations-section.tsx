@@ -395,7 +395,7 @@ export const RelationsSection = memo(function RelationsSection({
                 {/* A private return is not on the board: saying it here avoids
  having to look for something on a public page that is not there. */}
                 {!post.is_public && (
-                  <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
                     {t("feedbackPrivate")}
                   </span>
                 )}

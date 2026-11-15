@@ -419,10 +419,12 @@ a.markdown-link[data-documentation-citation]::before {
 :root {
   --mention-chip: oklch(0.21 0.012 265 / 6%); --mention-chip-hover: oklch(0.21 0.012 265 / 12%);
   --mention-chip-l: 0.62; --mention-chip-a: 13%; --mention-chip-a-hover: 22%; --mention-chip-ink-l: 0.47;
+  --mention-chip-c-max: 0.4;
 }
 .dark {
   --mention-chip: oklch(0 0 0 / 25%); --mention-chip-hover: oklch(0 0 0 / 40%);
   --mention-chip-l: 0.72; --mention-chip-a: 18%; --mention-chip-a-hover: 28%; --mention-chip-ink-l: 0.84;
+  --mention-chip-c-max: 0.12;
 }
 
 /* A pill placed on an INK surface rather than on the page: the bubble
@@ -434,9 +436,26 @@ a.markdown-link[data-documentation-citation]::before {
    not on the pill: it applies to all those it carries. */
 .mention-on-ink {
   --mention-chip-l: 0.8; --mention-chip-a: 22%; --mention-chip-a-hover: 32%; --mention-chip-ink-l: 0.88;
+  --mention-chip-c-max: 0.12;
 }
 .dark .mention-on-ink {
   --mention-chip-l: 0.58; --mention-chip-a: 16%; --mention-chip-a-hover: 26%; --mention-chip-ink-l: 0.45;
+  --mention-chip-c-max: 0.4;
+}
+
+/* The tinted pill: its tone (set inline by components/mention-chip.tsx)
+   brought to the lightness and opacity above. Only the lightness is
+   replaced, and at the high lightness of the dark page and of the ink bubble
+   a saturated tone falls outside sRGB, where browsers clip it instead of
+   mapping it and its hue drifts; `--mention-chip-c-max` caps the chroma
+   there (0.4 leaves the light page untouched). Without relative color
+   syntax the pill keeps the neutral values above. */
+@supports (color: oklch(from red l c h)) {
+  [style*="--mention-tone:"] {
+    --mention-chip: oklch(from var(--mention-tone) var(--mention-chip-l) min(c, var(--mention-chip-c-max)) h / var(--mention-chip-a));
+    --mention-chip-hover: oklch(from var(--mention-tone) var(--mention-chip-l) min(c, var(--mention-chip-c-max)) h / var(--mention-chip-a-hover));
+    --mention-chip-ink: oklch(from var(--mention-tone) var(--mention-chip-ink-l) min(c, var(--mention-chip-c-max)) h);
+  }
 }
 
 /* A pill placed on a TINTED surface: the bubble of a message sent to Numo,
@@ -444,11 +463,11 @@ a.markdown-link[data-documentation-citation]::before {
    a person's purple or an issue's blue all but vanish on lavender — so it is
    laid over the page's own background first, and reads exactly as it does
    on the page (MIN-879). */
-.mention-on-tint [style*="--mention-chip:"] {
+.mention-on-tint [style*="--mention-tone:"] {
   background: linear-gradient(var(--mention-chip), var(--mention-chip)), var(--background);
 }
 @media (hover: hover) and (pointer: fine) {
-  .mention-on-tint [style*="--mention-chip:"]:is(a, button):hover {
+  .mention-on-tint [style*="--mention-tone:"]:is(a, button):hover {
     background: linear-gradient(var(--mention-chip-hover), var(--mention-chip-hover)), var(--background);
   }
 }
@@ -566,7 +585,7 @@ button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
 .pr-diff-view {
   --minddy-diff-bg: var(--card);
   --diffs-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --diffs-font-size: 13px;
+  --diffs-font-size: 0.8125rem;
   --diffs-line-height: 20px;
 
   /* Background and text: those of the card which bears the diff, not a white/black one
@@ -1525,7 +1544,7 @@ div:has(> [data-streamdown="table"]) {
   textarea:not(.title-field),
   select,
   [contenteditable]:not([contenteditable="false"], .title-field) {
-    font-size: 16px;
+    font-size: max(16px, 1rem);
   }
 }
 
@@ -1985,38 +2004,40 @@ html[data-app-shell] textarea {
   }
 }
 
-/* Animate the inner wrapper: Radix disables outer transitions while measuring.
-   Force-mounted answers stay in server HTML, including when collapsed. */
-.faq-accordion [data-slot="accordion-content"] > div {
-  display: grid;
-  grid-template-rows: 0fr;
-  visibility: hidden;
+/* FAQ answers (components/marketing/faq-accordion.tsx) live in
+   `::details-content`, hidden with content-visibility while closed so
+   find-in-page still reaches them. The block size animates to and from its
+   intrinsic height where `interpolate-size` exists; elsewhere the answer
+   simply appears, which is the fallback. */
+.faq-accordion > details::details-content {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  /* Constant layout containment keeps the transition from jittering on the
+     answer's margins while content-visibility toggles. */
+  contain: layout;
+}
+
+.faq-accordion > details:not([open])::details-content {
+  block-size: 0;
   opacity: 0;
-  transition: grid-template-rows 280ms ease, opacity 200ms ease, visibility 280ms;
 }
 
-.faq-accordion [data-slot="accordion-content"][data-state="open"] > div {
-  grid-template-rows: 1fr;
-  visibility: visible;
-  opacity: 1;
+.faq-accordion-chevron {
+  transition: rotate 280ms ease;
 }
 
-.faq-accordion [data-slot="accordion-trigger-icon"] {
-  transition: transform 280ms ease;
+.faq-accordion > details[open] .faq-accordion-chevron {
+  rotate: 180deg;
 }
 
-.faq-accordion [data-slot="accordion-trigger-icon"]:last-child {
-  display: none;
-}
-
-.faq-accordion [aria-expanded="true"] [data-slot="accordion-trigger-icon"]:first-of-type {
-  display: block;
-  transform: rotate(180deg);
+@media (prefers-reduced-motion: no-preference) {
+  .faq-accordion > details::details-content {
+    transition: block-size 280ms ease, opacity 200ms ease, content-visibility 280ms allow-discrete;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .faq-accordion [data-slot="accordion-content"] > div,
-  .faq-accordion [data-slot="accordion-trigger-icon"] {
+  .faq-accordion-chevron {
     transition: none;
   }
   .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
@@ -3164,7 +3185,7 @@ html[data-first-run-open] .content-toaster[data-sonner-toaster][data-x-position=
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 20px;
   color: inherit;
 }
@@ -3559,9 +3580,9 @@ html[data-integrated-caption-controls] {
 /* Sizes written as one-off pixel values follow the same steps as the scale
    above. */
 :root[data-app-layout="mobile"] {
-  .text-\[13px\], .text-\[13\.5px\], .text-\[12\.5px\], .text-\[0\.8rem\] { font-size: 0.9375rem; }
-  .text-\[12px\], .text-\[11px\], .text-\[0\.7rem\] { font-size: 0.75rem; }
-  .text-\[10px\], .text-\[9px\] { font-size: 0.6875rem; }
+  .text-\[0\.8125rem\], .text-\[0\.84375rem\], .text-\[0\.78125rem\], .text-\[0\.8rem\] { font-size: 0.9375rem; }
+  .text-\[0\.75rem\], .text-\[0\.6875rem\], .text-\[0\.7rem\] { font-size: 0.75rem; }
+  .text-\[0\.625rem\], .text-\[0\.5625rem\] { font-size: 0.6875rem; }
 }
 /* The keyboard covers the home indicator: nothing steps back from it. */
 :root[data-app-layout="mobile"][data-mobile-keyboard] {
@@ -3728,7 +3749,7 @@ html[data-integrated-caption-controls] {
   }
   .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]) { align-items: center; }
   .mobile-bottom-sheet :is([data-slot="dialog-title"], [data-slot="sheet-title"]):not(.sr-only) {
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 600;
     line-height: 1.3;
   }
@@ -4727,7 +4748,7 @@ html[data-integrated-caption-controls] {
   background: var(--collab-color);
   color: #fff;
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 500;
   font-style: normal;
   letter-spacing: normal;
@@ -4821,7 +4842,7 @@ html[data-integrated-caption-controls] {
   background-image: linear-gradient(var(--selection-block), var(--selection-block));
 }
 .ProseMirror code .is-inline-selected,
-.ProseMirror .is-inline-selected:has([style*="--mention-chip"]) {
+.ProseMirror .is-inline-selected:has([style*="--mention-tone"]) {
   background-color: transparent;
 }
 /* Inside a selected block, only the block's box is painted. */
@@ -4833,7 +4854,7 @@ html[data-integrated-caption-controls] {
   background-color: transparent;
   background-image: none;
 }
-.ProseMirror .is-block-selected .mention-selected [style*="--mention-chip"] {
+.ProseMirror .is-block-selected .mention-selected [style*="--mention-tone"] {
   background-image: none;
 }
 
@@ -4843,7 +4864,7 @@ html[data-integrated-caption-controls] {
    selection covers (`mention-selected`, components/markdown-mention.tsx), and
    the chip inside (the element carrying its tone) is overlaid with the
    selection color, over its own background. */
-.mention-selected [style*="--mention-chip"] {
+.mention-selected [style*="--mention-tone"] {
   background-image: linear-gradient(var(--selection-block), var(--selection-block));
 }
 
