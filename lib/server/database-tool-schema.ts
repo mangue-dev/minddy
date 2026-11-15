@@ -1,4 +1,5 @@
 import "server-only";
+import { withoutUuidPatterns } from "@/lib/server/json-schema-compact";
 
 import { z } from "zod";
 import { DATABASE_PROPERTY_TYPES } from "@/lib/page-databases";
@@ -43,7 +44,7 @@ export const DATABASE_TOOL_SCHEMA = z.object({
   name: columnName.optional(),
 });
 
-const jsonSchema = z.toJSONSchema(DATABASE_TOOL_SCHEMA);
+const jsonSchema = withoutUuidPatterns(z.toJSONSchema(DATABASE_TOOL_SCHEMA));
 export const DATABASE_TOOL_PARAMETERS: {
   type: "object";
   properties: Record<string, unknown>;

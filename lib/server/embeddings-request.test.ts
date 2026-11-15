@@ -36,9 +36,13 @@ import { embedTexts, requestEmbeddings } from "./embeddings";
 
 beforeEach(() => { h.bodies = []; h.model = "text-embedding-ada-002"; });
 
+
+/** Ledger record of these calls; the ledger itself is not under test. */
+const TEST_RECORD = { billTo: { userId: "user-1" } };
+
 describe("requestEmbeddings", () => {
   it("omits the dimensions parameter for the issue index and keeps the native size", async () => {
-    const batch = await requestEmbeddings(["text"], {
+    const batch = await requestEmbeddings(["text"], { record: TEST_RECORD,
       modelKey: "issue_embedding_model", surface: "automations", feature: "issue_embedding",
       billedUserId: "u1", dimensions: "any", xTitle: "test",
     });
@@ -62,7 +66,7 @@ describe("requestEmbeddings", () => {
 
   it("splits a long batch into bounded requests and keeps each text's position", async () => {
     const texts = Array.from({ length: 70 }, (_, i) => `text ${i}`);
-    const batch = await requestEmbeddings(texts, {
+    const batch = await requestEmbeddings(texts, { record: TEST_RECORD,
       modelKey: "issue_embedding_model", surface: "automations", feature: "issue_embedding",
       billedUserId: "u1", dimensions: "any", xTitle: "test",
     });

@@ -133,7 +133,8 @@ export interface ShortTitleInput {
  * when the historical locale is unavailable.
  */
   locale: string;
-  usage: ShortTitleUsage | null;
+  /** Who pays (MIN-1001): required, so a title is never an unrecorded call. */
+  usage: ShortTitleUsage;
   signal?: AbortSignal;
 }
 
@@ -214,18 +215,16 @@ Two or three words each. Nothing was lost that a reader needed.`;
       logPrefix: "[numo-title]",
       modelKey: SHORT_TITLE_MODEL_KEY,
       signal,
-      record: usage
-        ? {
-            feature: usage.feature,
-            runId: usage.runId,
-            seq: SHORT_TITLE_USAGE_SEQ,
-            billTo: { userId: usage.userId },
-            projectId: usage.projectId ?? null,
-            conversationId: usage.conversationId ?? null,
-            numoTurnId: usage.numoTurnId ?? null,
-            routineId: usage.routineId ?? null,
-          }
-        : undefined,
+      record: {
+        feature: usage.feature,
+        runId: usage.runId,
+        seq: SHORT_TITLE_USAGE_SEQ,
+        billTo: { userId: usage.userId },
+        projectId: usage.projectId ?? null,
+        conversationId: usage.conversationId ?? null,
+        numoTurnId: usage.numoTurnId ?? null,
+        routineId: usage.routineId ?? null,
+      },
     }
   );
 

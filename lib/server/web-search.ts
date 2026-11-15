@@ -199,6 +199,10 @@ async function attemptWebSearch(params: {
               { role: "user", content: query },
             ],
             maxOutputTokens: MAX_ANSWER_TOKENS,
+            // Summarizing search results needs no reflection (MIN-1001). Not
+            // `off`: this request has no replay for a model that must reason,
+            // and `minimal` is accepted by every family that reasons.
+            reasoning: { effort: "minimal" },
             extensions: {
               plugins: [{ id: "web", engine: "exa", max_results: maxResults }],
             },
@@ -346,6 +350,8 @@ export async function runWebSearchTool(params: {
     completionTokens: outcome.usage.completionTokens,
     totalTokens: outcome.usage.totalTokens,
     cost: outcome.usage.cost,
+    cachedTokens: outcome.usage.cachedTokens,
+    cacheWriteTokens: outcome.usage.cacheWriteTokens,
     billTo: params.billTo,
     projectId: params.projectId ?? null,
     conversationId: params.conversationId ?? null,

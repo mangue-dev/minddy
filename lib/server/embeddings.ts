@@ -85,7 +85,8 @@ export async function requestEmbeddings(
     surface: AiSurface;
     feature: AiFeature;
     billedUserId: string | null;
-    record?: EmbeddingUsageRecord;
+    /** Required (MIN-1001): every paid embedding call lands in the ledger. */
+    record: EmbeddingUsageRecord;
     dimensions: number | "any";
     xTitle: string;
     timeoutMs?: number;
@@ -173,6 +174,8 @@ export async function requestEmbeddings(
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
+        cachedTokens: u.cachedTokens,
+        cacheWriteTokens: u.cacheWriteTokens,
         billTo: opts.record.billTo,
         projectId: opts.record.projectId ?? null,
       });
@@ -234,14 +237,14 @@ export function keepVectors(
 
 export async function embedTexts(
   texts: string[],
-  opts?: { timeoutMs?: number; record?: EmbeddingUsageRecord }
+  opts: { timeoutMs?: number; record: EmbeddingUsageRecord }
 ): Promise<(number[] | null)[]> {
   if (texts.length === 0) return [];
 
   // Plan budget (MIN-72): AI feedback is paid by the project owner.
   // Dry budget → null (like a network failure): the post lives without embedding,
   // the time pass will catch up when the budget returns.
-  if (opts?.record?.projectId) {
+  if (opts.record.projectId) {
     if (!(await ownerHasUsageBudget(
       opts.record.projectId,
       "feedback",
@@ -252,7 +255,7 @@ export async function embedTexts(
   }
 
   let billedUserId: string | null = null;
-  const billTo = opts?.record?.billTo;
+  const billTo = opts.record.billTo;
   if (billTo && "userId" in billTo) billedUserId = billTo.userId || null;
   else if (billTo && "projectOwner" in billTo) {
     const { data } = await getServiceClient()
@@ -268,10 +271,10 @@ export async function embedTexts(
     surface: "feedback",
     feature: "embedding",
     billedUserId,
-    record: opts?.record,
+    record: opts.record,
     dimensions: EMBEDDING_DIMENSIONS,
     xTitle: "Feedback",
-    timeoutMs: opts?.timeoutMs,
+    timeoutMs: opts.timeoutMs,
     allowPlatformWithoutUser: true,
   });
   return batch?.vectors ?? texts.map(() => null);
@@ -279,7 +282,7 @@ export async function embedTexts(
 
 export async function embedText(
   text: string,
-  opts?: { timeoutMs?: number; record?: EmbeddingUsageRecord }
+  opts: { timeoutMs?: number; record: EmbeddingUsageRecord }
 ): Promise<number[] | null> {
   const [embedding] = await embedTexts([text], opts);
   return embedding ?? null;

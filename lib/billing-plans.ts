@@ -221,6 +221,8 @@ export const BILLABLE_FEATURES = [
   "numo_wake",
   // Numo's word on the home page (MIN-930).
   "numo_home_brief",
+  // The merge commit message of a pull request merged from minddy (MIN-1001).
+  "merge_message",
 ] as const;
 
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
@@ -297,6 +299,8 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
       "issue_embedding",
       "issue_relation",
       "issue_search",
+      // What minddy writes for a gesture of yours, like the fields above.
+      "merge_message",
     ],
     barClass: "bg-fuchsia-500",
   },

@@ -136,6 +136,7 @@ import {
   cachedVerdict,
   contentFingerprint,
   dismissedCandidates,
+  fingerprintVersion,
   indexVersion,
   lexicalScore,
   rankVectorNeighbours,
@@ -309,6 +310,27 @@ describe("runIssueAiPass", () => {
     expect(h.runDecision).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({ indexed: false, candidates: 1, applied: 0 });
     expect(h.addIssueRelation).not.toHaveBeenCalled();
+  });
+
+  it("reuses the verdict on an unindexed pair while its text holds (MIN-1001)", async () => {
+    h.meta = { issue_indexing: false };
+    issue("c3", "SSO login provider migration", "Switch the sign-in auth provider.");
+    h.decision = { candidate_1: { value: "none", probability: null, confidence: null } };
+    await pass();
+    expect(h.runDecision).toHaveBeenCalledTimes(1);
+
+    // The next save finds the verdict the first pass filed.
+    h.inferences = h.upserts[0];
+    const again = await pass();
+    expect(h.runDecision).toHaveBeenCalledTimes(1);
+    expect(again.decided).toBe(0);
+  });
+
+  it("derives a stable UUID per text for unindexed versions", () => {
+    const one = fingerprintVersion(contentFingerprint("Title", "Body"));
+    expect(one).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(fingerprintVersion(contentFingerprint("Title", "Body"))).toBe(one);
+    expect(fingerprintVersion(contentFingerprint("Title", "Edited"))).not.toBe(one);
   });
 
   it("skips the decision when no candidate exists", async () => {

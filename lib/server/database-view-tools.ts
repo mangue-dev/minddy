@@ -1,4 +1,5 @@
 import "server-only";
+import { withoutUuidPatterns } from "@/lib/server/json-schema-compact";
 
 import { z } from "zod";
 import {
@@ -103,7 +104,7 @@ export const DATABASE_VIEWS_TOOL_SCHEMA = z.object({
 });
 type ViewsInput = z.infer<typeof DATABASE_VIEWS_TOOL_SCHEMA>;
 
-const jsonSchema = z.toJSONSchema(DATABASE_VIEWS_TOOL_SCHEMA);
+const jsonSchema = withoutUuidPatterns(z.toJSONSchema(DATABASE_VIEWS_TOOL_SCHEMA));
 export const DATABASE_VIEWS_TOOL_PARAMETERS: {
   type: "object";
   properties: Record<string, unknown>;

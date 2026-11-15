@@ -572,6 +572,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         completionTokens: u.completionTokens,
         totalTokens: u.totalTokens,
         cost: u.cost,
+        cachedTokens: u.cachedTokens,
+        cacheWriteTokens: u.cacheWriteTokens,
         billTo: { userId: auth.user.id },
         projectId,
       });

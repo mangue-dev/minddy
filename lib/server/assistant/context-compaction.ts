@@ -270,6 +270,9 @@ export async function summarizeForCompaction(input: {
           { role: "user", content: transcript },
         ],
         maxOutputTokens: SUMMARY_MAX_OUTPUT_TOKENS,
+        // A mechanical summary: reasoning would only be cost (MIN-1001).
+        // `fetchAiChat` replays without the field on a model that must reason.
+        reasoning: { enabled: false },
       }),
       "Numo (minddy)",
       "[numo-compaction]",
@@ -291,6 +294,8 @@ export async function summarizeForCompaction(input: {
       completionTokens: usage.completionTokens,
       totalTokens: usage.totalTokens,
       cost: usage.cost,
+      cachedTokens: usage.cachedTokens,
+      cacheWriteTokens: usage.cacheWriteTokens,
     };
     return { summary: summary || null, generation };
   } catch {

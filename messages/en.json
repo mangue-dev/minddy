@@ -491,6 +491,7 @@
     "historyFeatureIssueSearch": "Issue search",
     "historyFeatureNumoWake": "Numo · event screening",
     "historyFeatureNumoHomeBrief": "Numo · home summary",
+    "historyFeatureMergeMessage": "Pull request · merge message",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
     "notOnPlan": "Your plan doesn't include this feature.",
@@ -4271,7 +4272,10 @@
     "watchProposalFailed": "Couldn't set the reminder. Ask Numo to propose it again.",
     "compactingContext": "Compacting the context…",
     "contextCompacted": "Context compacted",
-    "contextCompactionFailed": "Couldn't compact the context"
+    "contextCompactionFailed": "Couldn't compact the context",
+    "loadingTools": "Loading tools…",
+    "toolsLoaded": "{count, plural, one {Loaded # tool} other {Loaded # tools}}",
+    "loadToolsFailed": "Couldn't load tools"
   },
   "PullRequests": {
     "descriptionMoreActions": "Description actions",
@@ -4922,6 +4926,7 @@
         "issue_search": "Issue search",
         "numo_wake": "Numo event screening",
         "numo_home_brief": "Numo home summary",
+        "merge_message": "Merge commit messages",
         "faq_ask": "FAQ question box"
       },
       "loadingCalls": "Loading calls…",

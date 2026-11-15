@@ -301,6 +301,16 @@ beforeEach(() => {
   });
 });
 
+
+/**
+ * The turn's tool pool: what it sends and what it keeps behind search_tools
+ * (MIN-1001). Access rules are about the pool.
+ */
+function poolNames(tools: unknown, context: unknown): string[] {
+  const deferred = (context as { deferredTools?: unknown[] } | undefined)?.deferredTools ?? [];
+  return [...(tools as unknown[]), ...deferred].map((tool) => (tool as { function: { name: string } }).function.name);
+}
+
 describe("durable Numo execution", () => {
   it("resumes after the stored summary and keeps compaction steps out of the history (MIN-954)", async () => {
     h.conversation = {
@@ -375,7 +385,7 @@ describe("durable Numo execution", () => {
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
     const [messages, tools, , context] = h.processChat.mock.calls[0];
     expect(adminGate.live).toHaveBeenCalledWith(h.turn.user_id, adminSession);
-    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toContain("admin_get_instance_models");
+    expect(poolNames(tools, context)).toContain("admin_get_instance_models");
     expect(messages[0].content).toContain("Instance administration");
     expect(context).toMatchObject({ adminGrant: adminSession });
 
@@ -384,7 +394,7 @@ describe("durable Numo execution", () => {
     h.turn = { ...h.turn!, status: "queued" };
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
     const [lostMessages, lostTools, , lostContext] = h.processChat.mock.calls[0];
-    expect(lostTools.map((tool: { function: { name: string } }) => tool.function.name)).not.toContain("admin_get_instance_models");
+    expect(poolNames(lostTools, lostContext)).not.toContain("admin_get_instance_models");
     expect(lostMessages[0].content).not.toContain("Instance administration");
     expect(lostContext).toMatchObject({ adminGrant: null });
   });
@@ -395,7 +405,7 @@ describe("durable Numo execution", () => {
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
     const [messages, tools, , context] = h.processChat.mock.calls[0];
     expect(adminGate.live).not.toHaveBeenCalled();
-    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).not.toContain("admin_get_instance_models");
+    expect(poolNames(tools, context)).not.toContain("admin_get_instance_models");
     expect(messages[0].content).toContain("## Routine occurrence");
     expect(messages[0].content).toContain("Instance administration is never available in a routine.");
     expect(messages[0].content).not.toContain("## Instance administration");
@@ -407,7 +417,7 @@ describe("durable Numo execution", () => {
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
     const [messages, tools, , context] = h.processChat.mock.calls[0];
     expect(adminGate.live).toHaveBeenCalledWith(h.turn.user_id, { background: true });
-    const names = tools.map((tool: { function: { name: string } }) => tool.function.name);
+    const names = poolNames(tools, context);
     expect(names).toContain("admin_get_instance_models");
     expect(names).not.toContain("ask_user");
     expect(messages[0].content).toContain("## Instance administration (background)");
@@ -418,16 +428,17 @@ describe("durable Numo execution", () => {
     h.turn = { ...h.turn!, status: "queued" };
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
     const [lostMessages, lostTools, , lostContext] = h.processChat.mock.calls[0];
-    expect(lostTools.map((tool: { function: { name: string } }) => tool.function.name)).not.toContain("admin_get_instance_models");
+    expect(poolNames(lostTools, lostContext)).not.toContain("admin_get_instance_models");
     expect(lostMessages[0].content).not.toContain("Instance administration");
     expect(lostContext).toMatchObject({ adminGrant: null });
   });
 
   it("never offers the admin tools to a turn without an admin session", async () => {
     await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
-    const [, tools] = h.processChat.mock.calls[0];
+    const [, tools, , context] = h.processChat.mock.calls[0];
     expect(adminGate.live).not.toHaveBeenCalled();
-    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_issue", "get_help", "ask_user", "create_watch", "list_watches", "remember"]);
+    expect(poolNames(tools, context).filter((name) => name !== "search_tools").sort())
+      .toEqual(["ask_user", "create_watch", "get_help", "get_issue", "list_watches", "remember"]);
   });
 
   it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
@@ -558,8 +569,7 @@ describe("durable Numo execution", () => {
       routineId: "routine-1",
     });
     // A routine runs unattended: no tool that waits for the user (MIN-924).
-    const offered = (h.processChat.mock.calls[0][1] as { function: { name: string } }[])
-      .map((tool) => tool.function.name);
+    const offered = poolNames(h.processChat.mock.calls[0][1], h.processChat.mock.calls[0][3]);
     expect(offered).toContain("get_issue");
     expect(offered).not.toContain("ask_user");
   });
@@ -573,8 +583,7 @@ describe("durable Numo execution", () => {
       },
     };
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: runtime });
-    const offered = (h.processChat.mock.calls[0][1] as { function: { name: string } }[])
-      .map((tool) => tool.function.name);
+    const offered = poolNames(h.processChat.mock.calls[0][1], h.processChat.mock.calls[0][3]);
     expect(offered).toEqual(expect.arrayContaining(["get_issue", "list_watches"]));
     expect(offered).not.toContain("ask_user");
     expect(offered).not.toContain("create_watch");
@@ -593,10 +602,11 @@ describe("durable Numo execution", () => {
       },
     };
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: runtime });
-    const offered = (h.processChat.mock.calls[0][1] as { function: { name: string } }[])
-      .map((tool) => tool.function.name);
+    // The prompt is written for the tools the turn SENDS; the deferred ones
+    // get their rules when search_tools loads them (MIN-1001).
+    const sent = (h.processChat.mock.calls[0][1] as { function: { name: string } }[]).map((tool) => tool.function.name);
     expect(h.promptTools).not.toContain("create_watch");
-    expect([...(h.promptTools ?? [])].sort()).toEqual([...offered].sort());
+    expect([...(h.promptTools ?? [])].sort()).toEqual([...sent].sort());
   });
 
   it("runs an occurrence of a recurring reminder under the background guard, with its grants (MIN-953)", async () => {
@@ -617,7 +627,7 @@ describe("durable Numo execution", () => {
       const [messages, tools, , context] = h.processChat.mock.calls[0];
       return {
         prompt: String((messages as Array<{ content: unknown }>)[0].content),
-        names: (tools as { function: { name: string } }[]).map((tool) => tool.function.name),
+        names: poolNames(tools, context),
         context,
       };
     };

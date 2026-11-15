@@ -131,7 +131,12 @@ export type AiFeature =
    * Numo's word on the home page (MIN-930): one short call after a turn that
    * changed the user's journal, billed to that user.
    */
-  | "numo_home_brief";
+  | "numo_home_brief"
+  /**
+   * The merge commit message AI writes when a member merges a pull request
+   * from minddy (MIN-1001), billed to that member.
+   */
+  | "merge_message";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

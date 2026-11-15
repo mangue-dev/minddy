@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 24,
+  "revision": 25,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-15",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 25,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-1001: usage sentence of the Merge with Numo paragraph, source audit against lib/server/agent/pr-state-actions.ts, lib/usage-features.ts, lib/billing-plans.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (fr passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-1001 merge usage sentence translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-15"
   },
   "related": [
     "issues",
@@ -88,7 +88,7 @@
       "src": "/documentation/fr/review-pull-requests-workflow.png",
       "alt": "Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.",
       "caption": "PR de démonstration qui reste ouverte, sans fusion. Le diff supprime les espaces autour du nom et utilise World pour une valeur vide. Cette instance ne peut pas demander l’autorisation utilisateur GitHub ; le libellé de disponibilité ne donne pas le droit de fusionner et ne prouve pas que la CI du fournisseur a réussi.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -155,6 +155,6 @@ Ce qui est écrit sur une pull request ou une merge request liée apparaît auss
 
 Utilisez **Demander une review** pour choisir un reviewer si une seconde revue est nécessaire. Contrôlez l’état brouillon ou prêt pour revue, les discussions ouvertes, les revues demandées et les règles de fusion du fournisseur.
 
-Fusionnez après satisfaction des contrôles et revues applicables, avec un compte fournisseur autorisé. **Fusionner avec Numo** laisse Numo rédiger le titre et la description du commit de fusion à partir de la pull request, puis fusionne dès qu’ils sont prêts. Une action visible peut être refusée par le fournisseur. Si l’état semble ancien, actualisez et vérifiez chez le fournisseur avant de répéter une action. Une prévisualisation liée dépend d’un véritable déploiement chez le fournisseur.
+Fusionnez après satisfaction des contrôles et revues applicables, avec un compte fournisseur autorisé. **Fusionner avec Numo** laisse Numo rédiger le titre et la description du commit de fusion à partir de la pull request, puis fusionne dès qu’ils sont prêts. Ce message compte dans votre usage de l’IA et figure dans votre historique d’usage sous **Pull request · message de fusion**. Quand votre usage de l’IA est épuisé, Numo n’écrit rien et la pull request n’est pas fusionnée : fusionnez-la sans Numo. Une action visible peut être refusée par le fournisseur. Si l’état semble ancien, actualisez et vérifiez chez le fournisseur avant de répéter une action. Une prévisualisation liée dépend d’un véritable déploiement chez le fournisseur.
 
 Faites un clic droit sur une pull request de la liste pour changer son état, la fusionner ou demander une correction sans l’ouvrir. Une pull request ouverte propose **Passer en brouillon** et **Fermer la pull request**, un brouillon propose **Prête pour la review** et **Fermer la pull request**, et une pull request fermée propose **Rouvrir** ; chaque changement demande une confirmation. Une pull request fusionnée ne propose aucun changement d’état. Les actions d’écriture n’apparaissent que si votre compte fournisseur peut écrire dans le dépôt, et restent indisponibles tant que le menu n’a pas relu la pull request. **Fusionner** apparaît lorsque la pull request est ouverte, n’est pas un brouillon et peut être fusionnée ; l’action ouvre la pull request sur sa confirmation de fusion habituelle. **Copier le prompt de correction** et **Corriger avec Numo** apparaissent lorsqu’un contrôle échoue, qu’une conversation n’est pas résolue, ou que la branche est en conflit ou en retard. **Corriger avec Numo** envoie ce prompt à Numo avec la pull request comme contexte. Numo peut lire la pull request, répondre à une conversation de revue qui ne demande aucune modification du code et résoudre les conversations que la branche traite déjà, mais il ne modifie pas le code et ne pousse pas de commits ; pour les modifications du code, utilisez **Copier le prompt de correction** et collez-le dans votre agent de code. Les permissions et la possibilité de fusionner sont de nouveau vérifiées lorsque vous confirmez.

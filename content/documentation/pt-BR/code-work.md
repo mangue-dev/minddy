@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-15",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 26,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-1001: usage sentence of the Merge with Numo paragraph, source audit against lib/server/agent/pr-state-actions.ts, lib/usage-features.ts, lib/billing-plans.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (pt-BR passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-1001 merge usage sentence translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-15"
   },
   "related": [
     "issues",
@@ -88,7 +88,7 @@
       "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
       "alt": "Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.",
       "caption": "PR de demonstração que permanece aberto, sem mesclagem. O diff remove os espaços ao redor do nome e usa World quando o valor é vazio. Esta instância não pode solicitar autorização de usuário do GitHub; a indicação de prontidão não concede permissão de mesclagem nem comprova que a CI do provedor passou.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -155,6 +155,6 @@ O que é escrito em um pull request ou merge request vinculado também aparece n
 
 Use **Solicitar revisão** para escolher um revisor quando precisar de uma segunda revisão. Confira o estado de rascunho ou pronto para revisão, as discussões abertas, as revisões solicitadas e a política de mesclagem do provedor.
 
-Mescle somente depois de satisfazer as verificações e revisões aplicáveis e se sua conta no provedor tiver permissão. **Mesclar com o Numo** deixa o Numo redigir o título e a descrição do commit de mesclagem a partir do pull request e faz a mesclagem assim que eles estiverem prontos. O provedor ainda pode rejeitar uma ação visível. Se o estado exibido estiver desatualizado, atualize e confira no provedor antes de repetir uma ação. Uma prévia vinculada depende de uma implantação real no provedor.
+Mescle somente depois de satisfazer as verificações e revisões aplicáveis e se sua conta no provedor tiver permissão. **Mesclar com o Numo** deixa o Numo redigir o título e a descrição do commit de mesclagem a partir do pull request e faz a mesclagem assim que eles estiverem prontos. A mensagem conta no seu uso de IA e aparece no seu histórico de uso como **Pull request · mensagem de mesclagem**. Quando o seu uso de IA acaba, o Numo não escreve nada e o pull request não é mesclado: mescle-o sem o Numo. O provedor ainda pode rejeitar uma ação visível. Se o estado exibido estiver desatualizado, atualize e confira no provedor antes de repetir uma ação. Uma prévia vinculada depende de uma implantação real no provedor.
 
 Clique com o botão direito em um pull request da lista para mudar o estado, mesclá-lo ou pedir uma correção sem abri-lo. Um pull request aberto oferece **Converter em rascunho** e **Fechar pull request**, um rascunho oferece **Pronto para revisão** e **Fechar pull request**, e um fechado oferece **Reabrir**; cada mudança pede confirmação. Um pull request mesclado não oferece mudança de estado. As ações de escrita só aparecem quando sua conta no provedor pode escrever no repositório e ficam indisponíveis até o menu ler o pull request novamente. **Mesclar** aparece quando o pull request está aberto, não é rascunho e pode ser mesclado; ele abre o pull request na confirmação de mesclagem habitual. **Copiar prompt de correção** e **Corrigir com o Numo** aparecem quando uma verificação falha, uma conversa não está resolvida ou o branch tem conflitos ou está desatualizado. **Corrigir com o Numo** envia esse prompt ao Numo com o pull request como contexto. O Numo pode ler o pull request, responder a uma conversa de revisão que não exige alteração no código e resolver as conversas que o branch já atende, mas não altera o código nem faz push de commits; para as alterações de código, use **Copiar prompt de correção** e cole-o no seu agente de código. As permissões e a possibilidade de mesclagem são verificadas novamente quando você confirma.

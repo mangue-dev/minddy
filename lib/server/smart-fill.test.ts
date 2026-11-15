@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  MAX_CONTEXT_ITEMS,
   buildSmartFillPrompt,
+  fillParameters,
   sanitizeSmartFill,
   smartFillAnswersToRaw,
   resolveSmartFillPayer,
@@ -150,6 +152,18 @@ describe("buildSmartFillPrompt", () => {
     const prompt = buildSmartFillPrompt("Neuf", { categories: [], objectives: [] });
     expect(prompt).toContain("leave category_ids empty");
     expect(prompt).toContain('objective_id must be "none"');
+  });
+});
+
+describe("fillParameters", () => {
+  it("offers only the ids the prompt lists (MIN-1001)", () => {
+    const many = Array.from({ length: MAX_CONTEXT_ITEMS + 15 }, (_, i) => ({ id: `cat-${i}`, name: `Category ${i}` }));
+    const schema = fillParameters({ categories: many, objectives: [] }) as {
+      properties: { category_ids: { items: { enum: string[] } } };
+    };
+    expect(schema.properties.category_ids.items.enum).toHaveLength(MAX_CONTEXT_ITEMS);
+    expect(buildSmartFillPrompt("minddy", { categories: many, objectives: [] }))
+      .not.toContain(`cat-${MAX_CONTEXT_ITEMS}`);
   });
 });
 

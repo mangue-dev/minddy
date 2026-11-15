@@ -91,3 +91,35 @@ describe("Numo chat reasoning stream", () => {
     );
   });
 });
+
+describe("Numo generation usage (MIN-1001)", () => {
+  it("carries the provider's cached tokens to the generation the ledger records", async () => {
+    const encoder = new TextEncoder();
+    const chunks = [
+      { id: "generation", model: "model", choices: [{ delta: { content: "Done." } }] },
+      {
+        id: "generation", model: "model", choices: [],
+        usage: {
+          prompt_tokens: 100, completion_tokens: 5, total_tokens: 105,
+          prompt_tokens_details: { cached_tokens: 80, cache_write_tokens: 15 },
+        },
+      },
+    ];
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        },
+      }), { status: 200 }),
+    });
+    const service = {} as SupabaseClient;
+    const result = await processChat([{ role: "user", content: "Help me" }], [], { emit: () => {} } as never, {
+      model: "model", conversationId: "conversation", projectId: null, userId: "user",
+      supabase: service, service, locale: "en",
+    });
+    expect(result.generations[0]).toMatchObject({ promptTokens: 100, cachedTokens: 80, cacheWriteTokens: 15 });
+  });
+});

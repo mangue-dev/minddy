@@ -1166,6 +1166,15 @@ const TOOL_META: Record<NumoToolName, ToolMeta> & Record<string, ToolMeta | unde
       });
     },
   },
+  // Answered by the loop, not a minddy tool: Numo loads the tools it was
+  // not sent yet (MIN-1001).
+  search_tools: {
+    icon: FileStack,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("loadingTools");
+      return success ? t("toolsLoaded", { count: resultCount(result, "loaded") }) : t("loadToolsFailed");
+    },
+  },
   // Not a tool Numo calls: the server compacts the context (MIN-954) and
   // shows it as a step of the turn.
   compact_context: {
@@ -1301,6 +1310,7 @@ const ACTION_KIND: Record<string, ActionKind> = {
   propose_backlog: "other",
   ask_user: "other",
   compact_context: "other",
+  search_tools: "other",
 };
 
 function actionKind(name: string): ActionKind {

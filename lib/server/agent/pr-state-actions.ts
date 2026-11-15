@@ -5,6 +5,7 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
+import { hasUsageBudget } from "@/lib/server/usage";
 import {
   reducePullRequestReadiness,
   unavailableMergePolicy,
@@ -232,6 +233,12 @@ async function runAiMergeJob(
         ? requestedMethod
         : (policy.preferredMethod ?? "squash");
 
+    // The member who merges pays for the message (MIN-1001): over their
+    // budget, nothing is generated and the manual merge path stands.
+    if (!(await hasUsageBudget(userId))) {
+      console.error("[pr-ai-merge] usage budget exhausted");
+      return;
+    }
     const cfg = await getAppConfigValues(modelConfigKeys("merge_message_model"));
     const model = resolveFromValues("merge_message_model", cfg).model;
 
@@ -295,6 +302,9 @@ async function runAiMergeJob(
         reasoning: "low",
         maxTokens: 2_048,
         timeoutMs: 120_000,
+        // Without it the call ran on the shared anonymous key and was billed
+        // to no one (MIN-1001).
+        record: { feature: "merge_message", billTo: { userId } },
       },
     );
     const commitTitle = typeof args?.title === "string" ? args.title : null;

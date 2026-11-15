@@ -41,10 +41,17 @@ import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
 import type { PromptAttachment } from "@/lib/server/assistant/attachment-parts";
 import {
   buildClockBlock,
+  buildProjectSnapshotBlock,
   buildGlobalSystemPrompt,
   buildPageContextBlock,
   buildSystemPrompt,
 } from "@/lib/server/assistant/prompt";
+import {
+  deferredToolsCatalog,
+  loadedToolNames,
+  searchToolsDefinition,
+  splitToolPool,
+} from "@/lib/server/assistant/tool-loading";
 import { authorizedSkillsNotes } from "@/lib/server/assistant/skills";
 import { commandNote } from "@/lib/server/assistant/commands";
 import { buildDocumentationHelpPrompt } from "@/lib/server/assistant/documentation-help";
@@ -587,6 +594,8 @@ async function buildExecutionInput(input: {
   contextSummary: string | null;
   originOf: (message: ChatMessage) => StoredMessageOrigin | undefined;
   tools: AssistantToolDef[];
+  /** The turn's pool tools kept behind search_tools (MIN-1001). */
+  deferredTools: AssistantToolDef[];
   adminGrant: AdminGrant | null;
   memoryWritable: boolean;
   journalSource: NumoJournalSource | null;
@@ -643,79 +652,6 @@ async function buildExecutionInput(input: {
   const journalScope: JournalScope | null = journalSource === "routine" || journalSource === "mention"
     ? { projectId: intent.projectId }
     : null;
-  // The tools come first: the prompt gives the rules of a tool family only
-  // in a turn that offers it.
-  const tools = offeredTools({ intent, adminGrant, memoryWritable, journalSource, recurringGrants, readerAccess });
-  const offeredToolNames = new Set(tools.map((tool) => tool.function.name));
-
-  let systemPrompt: string;
-  if (intent.documentation) {
-    systemPrompt = await buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId, intent.documentation.selfHosting);
-  } else if (access) {
-    const promptProject = await gatherProjectPromptContext({
-      supabase: readClient,
-      service,
-      project: access.project,
-    });
-    systemPrompt = buildSystemPrompt(promptProject, intent.locale, offeredToolNames, intent.numoDefaultStatus);
-    if (readerAccess) {
-      systemPrompt += `\n## Access
-- The user is a Reader in this project: it is read-only for them${access.canComment ? ", except for comments" : ""}. Do not offer changes to it; tools that would change it are refused.`;
-    }
-    // What guides Smart Fill and Smart Assign is the project's (MIN-988):
-    // Numo reads it here so a stated preference lands there, not in memory.
-    if (access.role !== "reader") {
-      systemPrompt += await loadProjectAiInstructionsPrompt({
-        service, projectId: access.project.id, isOwner: access.isOwner,
-      });
-    }
-  } else {
-    systemPrompt = buildGlobalSystemPrompt(intent.locale, offeredToolNames, intent.numoDefaultStatus);
-  }
-  if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
-  if (adminGrant) {
-    systemPrompt += !("background" in adminGrant) ? ADMIN_PROMPT_BLOCK
-      : recurringGrants ? REMINDER_ADMIN_PROMPT_BLOCK : BACKGROUND_ADMIN_PROMPT_BLOCK;
-  }
-  if (memoryOn) {
-    // An unreadable memory degrades the turn rather than failing it.
-    const memory = await loadNumoMemoryPrompt({
-      service, userId: turn.user_id, projectId: intent.projectId, writable: memoryWritable,
-    }).catch(() => {
-      console.error("[numo-memory] prompt_load_failed");
-      return null;
-    });
-    if (memory) {
-      systemPrompt += memory.block;
-      afterOrNow(() => touchNumoMemories(service, turn.user_id, memory.shownIds));
-    }
-  }
-  if (journalSource) {
-    // An unreadable journal degrades the turn rather than failing it.
-    const journal = await loadNumoJournalPrompt({
-      service, userId: turn.user_id, scope: journalScope ?? undefined,
-    }).catch(() => {
-      console.error("[numo-journal] prompt_load_failed");
-      return null;
-    });
-    if (journal) systemPrompt += journal;
-  }
-  // Background Numo (MIN-929): the rules of a turn nobody watches. Its writes
-  // go through the background guard, set on the tool context below.
-  if (intent.wake) systemPrompt += NUMO_WAKE_PROMPT_BLOCK;
-  if (intent.reminder) systemPrompt += buildNumoReminderPromptBlock(intent.reminder);
-  if (intent.routineId) {
-    const timing = intent.routineOrigin === "scheduled"
-      ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
-      : intent.routineProvenance ? `triggered by ${intent.routineProvenance.subjectType} ${intent.routineProvenance.subjectId} (event ${intent.routineProvenance.eventId})` : "started manually";
-    systemPrompt += `\n## Routine occurrence
-- This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
-- Complete the routine instruction as a Numo conversation, using Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work. You cannot change a repository; when the instruction asks for code work, say so in the occurrence result.
-- ${ROUTINE_ADMIN_LIMIT_PROMPT_LINE}
-- This occurrence runs unattended: nobody can answer a question, so never ask one. When a choice is yours to make, take the reasonable one and state it in your result. When it is not (anything a tool says needs the user's confirmation first, such as trashing or merging, or a fact you cannot find), do not act: leave it to the owner in a note.
-- Nobody is notified when this occurrence ends normally. Call notify_me only when the result asks the owner to act or changes one of their decisions: one or two sentences, linked to the record concerned. When there is nothing worth reading, notify nobody. A failure, a stop or an exhausted budget already notifies the owner, so never send a note for those.`;
-  }
-
   // The history resumes after the stored summary (MIN-954): what it covers
   // reaches the model through the summary, appended to the system prompt.
   const stored = await loadContextSummary(service, turn);
@@ -743,24 +679,118 @@ async function buildExecutionInput(input: {
   // first complete message boundary instead of sending a malformed history.
   const firstCompleteMessage = recentHistory.findIndex((message) => message.role !== "tool");
   const history = firstCompleteMessage < 0 ? [] : recentHistory.slice(firstCompleteMessage);
+
+  // The tools come first: the prompt gives the rules of a tool family only
+  // in a turn that offers it. The turn's pool keeps every filter; it sends
+  // the core tools and those this conversation loaded, and keeps the rest
+  // behind search_tools (MIN-1001).
+  const pool = offeredTools({ intent, adminGrant, memoryWritable, journalSource, recurringGrants, readerAccess });
+  const { active, deferred } = splitToolPool(pool, loadedToolNames(history));
+  const tools = deferred.length > 0 ? [...active, searchToolsDefinition()] : active;
+  const offeredToolNames = new Set(tools.map((tool) => tool.function.name));
+
+  // Two parts (MIN-1001): `systemPrompt` holds what stays identical from one
+  // turn to the next (rules, project structure), so a provider's prompt cache
+  // reuses it; `turnPrompt` holds what this turn alone sees, the clock last.
+  let systemPrompt: string;
+  let turnPrompt = "";
+  if (intent.documentation) {
+    systemPrompt = await buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId, intent.documentation.selfHosting);
+  } else if (access) {
+    const promptProject = await gatherProjectPromptContext({
+      supabase: readClient,
+      service,
+      project: access.project,
+    });
+    systemPrompt = buildSystemPrompt(promptProject, intent.locale, offeredToolNames, intent.numoDefaultStatus);
+    turnPrompt += buildProjectSnapshotBlock(promptProject);
+    if (readerAccess) {
+      turnPrompt += `\n## Access
+- The user is a Reader in this project: it is read-only for them${access.canComment ? ", except for comments" : ""}. Do not offer changes to it; tools that would change it are refused.`;
+    }
+    // What guides Smart Fill and Smart Assign is the project's (MIN-988):
+    // Numo reads it here so a stated preference lands there, not in memory.
+    if (access.role !== "reader") {
+      turnPrompt += await loadProjectAiInstructionsPrompt({
+        service, projectId: access.project.id, isOwner: access.isOwner,
+      });
+    }
+  } else {
+    systemPrompt = buildGlobalSystemPrompt(intent.locale, offeredToolNames, intent.numoDefaultStatus);
+  }
+  // What search_tools can load: part of the stable prompt, so it lists the
+  // whole deferrable pool, loaded or not, and never changes in a conversation
+  // (a catalog that dropped a loaded family missed the cache on the next turn).
+  systemPrompt += deferredToolsCatalog(splitToolPool(pool, []).deferred);
+  if (adminGrant) {
+    turnPrompt += !("background" in adminGrant) ? ADMIN_PROMPT_BLOCK
+      : recurringGrants ? REMINDER_ADMIN_PROMPT_BLOCK : BACKGROUND_ADMIN_PROMPT_BLOCK;
+  }
+  if (memoryOn) {
+    // An unreadable memory degrades the turn rather than failing it.
+    const memory = await loadNumoMemoryPrompt({
+      service, userId: turn.user_id, projectId: intent.projectId, writable: memoryWritable,
+    }).catch(() => {
+      console.error("[numo-memory] prompt_load_failed");
+      return null;
+    });
+    if (memory) {
+      turnPrompt += memory.block;
+      afterOrNow(() => touchNumoMemories(service, turn.user_id, memory.shownIds));
+    }
+  }
+  if (journalSource) {
+    // An unreadable journal degrades the turn rather than failing it.
+    const journal = await loadNumoJournalPrompt({
+      service, userId: turn.user_id, scope: journalScope ?? undefined,
+    }).catch(() => {
+      console.error("[numo-journal] prompt_load_failed");
+      return null;
+    });
+    if (journal) turnPrompt += journal;
+  }
+  // Background Numo (MIN-929): the rules of a turn nobody watches. Its writes
+  // go through the background guard, set on the tool context below.
+  if (intent.wake) turnPrompt += NUMO_WAKE_PROMPT_BLOCK;
+  if (intent.reminder) turnPrompt += buildNumoReminderPromptBlock(intent.reminder);
+  if (intent.routineId) {
+    const timing = intent.routineOrigin === "scheduled"
+      ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
+      : intent.routineProvenance ? `triggered by ${intent.routineProvenance.subjectType} ${intent.routineProvenance.subjectId} (event ${intent.routineProvenance.eventId})` : "started manually";
+    turnPrompt += `\n## Routine occurrence
+- This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
+- Complete the routine instruction as a Numo conversation, using Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work. You cannot change a repository; when the instruction asks for code work, say so in the occurrence result.
+- ${ROUTINE_ADMIN_LIMIT_PROMPT_LINE}
+- This occurrence runs unattended: nobody can answer a question, so never ask one. When a choice is yours to make, take the reasonable one and state it in your result. When it is not (anything a tool says needs the user's confirmation first, such as trashing or merging, or a fact you cannot find), do not act: leave it to the owner in a note.
+- Nobody is notified when this occurrence ends normally. Call notify_me only when the result asks the owner to act or changes one of their decisions: one or two sentences, linked to the record concerned. When there is nothing worth reading, notify nobody. A failure, a stop or an exhausted budget already notifies the owner, so never send a note for those.`;
+  }
+
   // A conversation started on Home opens with the summary Numo wrote there
   // (MIN-933), stored as its first message but written in no turn. Without
   // being told, the model took it for stray journal text and answered a
   // "how so?" as if nothing came before.
   if (history.some((message) => message.role === "assistant"
       && typeof (message.metadata as Record<string, unknown> | null)?.[HOME_BRIEF_MESSAGE_META] === "string")) {
-    systemPrompt += `\n## Opening of this conversation
+    turnPrompt += `\n## Opening of this conversation
 - Your first message above is the summary you wrote for the user's Home page: they started this conversation under it. It is your own message, said to them. When they react without naming what ("what do you mean?", "how so?", "do it"), they are answering that summary: explain or act on it, as the continuation of what you said.`;
   }
 
-  const supportsCache = runtime.provider === "openrouter"
-    && await modelSupportsCaching(runtime.model, runtime.apiKey);
+  // The clock changes every minute: it closes the prompt.
+  if (intent.timezone) turnPrompt += buildClockBlock(intent.timezone);
+  const supportsCache = runtime.provider === "anthropic" || (runtime.provider === "openrouter"
+    && await modelSupportsCaching(runtime.model, runtime.apiKey));
+  // A breakpoint after the stable part: the next turn reads it from cache
+  // even though its counts and clock differ. Providers with automatic prefix
+  // caching (OpenAI, DeepSeek, Gemini) get the same reuse from the order alone.
   const systemMessage: ChatMessage = supportsCache
     ? {
         role: "system",
-        content: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+        content: [
+          { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
+          ...(turnPrompt ? [{ type: "text" as const, text: turnPrompt }] : []),
+        ],
       }
-    : { role: "system", content: systemPrompt };
+    : { role: "system", content: systemPrompt + turnPrompt };
   const messages: ChatMessage[] = [systemMessage];
   const rowAttachments = (
     message: StoredMessage,
@@ -850,7 +880,7 @@ async function buildExecutionInput(input: {
   for (const message of historyMessages) if (message) messages.push(message);
   return {
     messages, contextSummary: stored.summary, originOf: (message) => origins.get(message),
-    tools, adminGrant, memoryWritable, journalSource, journalScope,
+    tools, deferredTools: deferred, adminGrant, memoryWritable, journalSource, journalScope,
   };
 }
 
@@ -1269,6 +1299,7 @@ async function executeClaimedNumoTurn(input: {
       timezone: claimed.intent.timezone,
       numoDefaultStatus: claimed.intent.numoDefaultStatus,
       adminGrant: execution.adminGrant,
+      deferredTools: execution.deferredTools,
       memoryWritable: execution.memoryWritable,
       journalSource: execution.journalSource,
       journalScope: execution.journalScope,
@@ -1400,6 +1431,8 @@ async function executeClaimedNumoTurn(input: {
           promptTokens: generation.promptTokens,
           completionTokens: generation.completionTokens,
           totalTokens: generation.totalTokens,
+          cachedTokens: generation.cachedTokens,
+          cacheWriteTokens: generation.cacheWriteTokens,
           cost: generation.cost,
           billTo: { userId: claimed.user_id },
           projectId: claimed.intent.projectId,
@@ -1420,6 +1453,8 @@ async function executeClaimedNumoTurn(input: {
           promptTokens: generation.promptTokens,
           completionTokens: generation.completionTokens,
           totalTokens: generation.totalTokens,
+          cachedTokens: generation.cachedTokens,
+          cacheWriteTokens: generation.cacheWriteTokens,
           cost: generation.cost,
           billTo: { userId: claimed.user_id },
           projectId: claimed.intent.projectId,

@@ -89,13 +89,12 @@ const PAGE_FILES_DESCRIPTION =
  * Markdown it stores, not only in its replies: the app renders each as a live
  * pill and a mentioned member is notified.
  */
+// Appended to every markdown field (MIN-1001): the types, labels and date
+// forms are in the prompt's Mentions rule, so each copy keeps the format only.
 const MENTIONS_IN_MARKDOWN =
-  " Cite every target whose id you resolved as a typed mention '[@Label](mention:<type>/<id>)' " +
-  "(type issue, objective, project, page, member, pull_request, routine, cycle, mcp or skill; an " +
-  "issue's label is its identifier, a member's id is their user_id; the notebook is " +
-  "'[@Task notebook](mention:scratchpad/notebook)'), and every specific day as a date mention " +
-  "'[@](mention:date/YYYY-MM-DD)' ('?time=HH:MM' for a time); never invent an id, leave what you " +
-  "did not resolve as plain text.";
+  " Cite each record whose id you resolved, and each specific day, as a typed mention " +
+  "('[@Label](mention:<type>/<id>)', '[@](mention:date/YYYY-MM-DD)'; see the Mentions rule). " +
+  "Never invent an id.";
 
 const PAGE_BODY_DESCRIPTION =
   "The page BODY in markdown. Supported: headings (## and ###, since a single " +
@@ -119,7 +118,9 @@ const ISSUE_FIELD_PROPERTIES = {
   plan: {
     type: ["string", "null"],
     description:
-      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets. On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to reword a passage use edit_issue_text, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan." + MENTIONS_IN_MARKDOWN,
+      // When to write a plan and how not to overwrite one: the prompt's Plans
+      // section, present in every conversation (MIN-1001).
+      "Implementation plan, markdown, separate from the description; follow the Plans section. On an issue that already HAS a plan, this field REPLACES it whole (append_to_plan, edit_issue_text and update_plan_tasks change part of it). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan." + MENTIONS_IN_MARKDOWN,
   },
   status: {
     type: "string",
@@ -3277,8 +3278,10 @@ const PERSONAL_PROJECT_ID_DESCRIPTION: Record<string, string> = {
   notify_me: "The project the note is about (use list_projects to resolve one the user names), or null for a personal note about no project, which takes no link. In a personal reminder's turn, pass null.",
 };
 
+// Repeated on every project tool (MIN-1001): the resolution rule lives once,
+// in the prompt's "Action targets" section, so each copy stays short.
 const PROJECT_ID_DESCRIPTION =
-  "The project ID to operate on. Use list_projects to discover available projects — when the user names one (key like 'MIN' or display name), resolve it to its id there first; a key or exact name is also matched as a fallback.";
+  "The project's id. Resolve a project the user names with list_projects (see Action targets).";
 
 const VIEW_PROJECT_ID_DESCRIPTION =
   "Explicit project ID, or null for the user's personal cross-project views.";

@@ -312,9 +312,11 @@ export function buildSmartFillUserMessage(title: string, description: string | n
 
 /**
  * The tool schema, built WITH the context: the possible ids are
- * `enum`, as the member list is for Smart Assign. The model cannot
- * donc pas inventer un id — il peut encore en choisir un mauvais, ce que
- * `sanitizeSmartFill` ne rattrapera pas, mais il ne peut plus en fabriquer.
+ * `enum`, as the member list is for Smart Assign. The model therefore cannot
+ * invent an id: it can still pick a wrong one, which `sanitizeSmartFill` will
+ * not catch, but it can no longer make one up. The enums stop at the same
+ * `MAX_CONTEXT_ITEMS` as the prompt lists (MIN-1001): an id the prompt never
+ * names cannot be chosen on purpose, and each one costs input tokens.
  *
  * ALL fields are `required`. An argument presented as optional is not
  * just not answered by a small model, and Smart-fill turns by
@@ -335,12 +337,12 @@ export function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
       },
       category_ids: {
         type: "array",
-        items: { type: "string", enum: ctx.categories.map((c) => c.id) },
+        items: { type: "string", enum: ctx.categories.slice(0, MAX_CONTEXT_ITEMS).map((c) => c.id) },
         description: `Ids of the matching categories. Empty array when none match.`,
       },
       objective_id: {
         type: "string",
-        enum: [...ctx.objectives.map((o) => o.id), SMART_FILL_NONE],
+        enum: [...ctx.objectives.slice(0, MAX_CONTEXT_ITEMS).map((o) => o.id), SMART_FILL_NONE],
         description: `Id of the objective this issue belongs to, or "${SMART_FILL_NONE}".`,
       },
     },
