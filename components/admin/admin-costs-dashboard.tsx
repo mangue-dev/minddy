@@ -293,6 +293,7 @@ export function AdminCostsDashboard() {
   );
 
   const filtered = filters.group !== "all" || filters.model !== "all";
+  const kpiDays = useMemo(() => view?.dayList.map(dayLabel) ?? [], [view, dayLabel]);
 
   return (
     /* The width and margins come from the shell (`admin-dashboard`). */
@@ -373,6 +374,8 @@ export function AdminCostsDashboard() {
           >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
+                days={kpiDays}
+                format={fmtCost}
                 label={t("costs.kpiSpend")}
                 value={fmtCost(view.totals.costUsd)}
                 trend={dailyValues(view.current, view.dayList, (row) => row.costUsd)}
@@ -381,6 +384,8 @@ export function AdminCostsDashboard() {
                 t={t}
               />
               <KpiCard
+                days={kpiDays}
+                format={compact}
                 label={t("costs.kpiRequests")}
                 value={compact(view.totals.calls)}
                 trend={dailyValues(view.current, view.dayList, (row) => row.calls)}
@@ -389,6 +394,8 @@ export function AdminCostsDashboard() {
                 t={t}
               />
               <KpiCard
+                days={kpiDays}
+                format={compact}
                 label={t("costs.kpiTokens")}
                 value={compact(view.totals.tokens)}
                 trend={dailyValues(view.current, view.dayList, (row) => row.promptTokens + row.completionTokens)}
@@ -397,11 +404,13 @@ export function AdminCostsDashboard() {
                 t={t}
               />
               <KpiCard
+                days={kpiDays}
+                format={fmtCost}
                 label={t("costs.kpiCostPerMillion")}
                 value={view.totals.costPerMillion === null ? "—" : fmtCost(view.totals.costPerMillion)}
                 trend={view.dayList.map((day) => {
                   const rows = view.current.filter((row) => row.day === day);
-                  return costTotals(rows).costPerMillion ?? 0;
+                  return costTotals(rows).costPerMillion;
                 })}
                 tone="text-emerald-500"
                 change={view.hasPrevious ? relativeChange(view.totals.costPerMillion, view.previousTotals.costPerMillion) : null}
@@ -495,25 +504,32 @@ function KpiCard({
   label,
   value,
   trend,
+  days,
+  format,
   tone,
   change,
   t,
 }: {
   label: string;
   value: string;
-  trend: number[];
+  trend: Array<number | null>;
+  /** Display label of each day of `trend`, for its hover tooltips. */
+  days: string[];
+  format: (value: number) => string;
   tone: string;
   change: number | null;
   t: AdminT;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
-      <div className="flex items-start justify-between gap-3">
+    // A size container: below 16rem the sparkline moves under the value
+    // instead of squeezing the label into one word per line.
+    <div className="@container flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-card p-4">
+      <div className="flex flex-col gap-2 @[16rem]:flex-row @[16rem]:items-start @[16rem]:justify-between @[16rem]:gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="text-sm text-muted-foreground">{label}</span>
           <span className="text-2xl font-semibold tabular-nums tracking-tight">{value}</span>
         </div>
-        <Sparkline values={trend} className={cn("shrink-0", tone)} />
+        <Sparkline values={trend} days={days} format={format} className={cn("w-full @[16rem]:w-28 @[16rem]:shrink-0", tone)} />
       </div>
       <ChangeBadge change={change} label={change === null ? t("costs.noPrevious") : t("costs.vsPrevious")} />
     </div>
