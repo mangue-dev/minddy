@@ -3948,7 +3948,8 @@ async function executePageTool(
     case "list_page_database_views":
       return render(await listDatabaseViewsForAgent({ projectId, pageId, actorId }));
     case "update_page_database_views":
-      return render(await updateDatabaseViewsForAgent({ projectId, pageId, actorId, input: args }));
+      return render(await updateDatabaseViewsForAgent({ projectId, pageId, actorId, input: args,
+        locale: ctx.locale }));
     case "update_page":
       return render(
         await updatePageForAgent({
