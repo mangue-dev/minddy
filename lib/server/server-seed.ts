@@ -56,6 +56,7 @@ const ROUTES: { pattern: RegExp; load: () => Promise<RouteModule> }[] = [
   { pattern: /^\/api\/billing$/, load: () => import("@/app/api/billing/route") },
   { pattern: /^\/api\/billing\/usage$/, load: () => import("@/app/api/billing/usage/route") },
   { pattern: /^\/api\/routines$/, load: () => import("@/app/api/routines/route") },
+  { pattern: /^\/api\/home\/brief$/, load: () => import("@/app/api/home/brief/route") },
   { pattern: /^\/api\/admin\/capabilities$/, load: () => import("@/app/api/admin/capabilities/route") },
   { pattern: /^\/api\/admin\/overview$/, load: () => import("@/app/api/admin/overview/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/issues$/, load: () => import("@/app/api/projects/[id]/issues/route") },
@@ -157,6 +158,8 @@ export async function serverSeedPaths(location: string, timeZone: string | null)
     paths.push("/api/me/views", ...(timeZone ? [globalBoardReadPath(timeZone)] : []), DEFERRED_BOARD_ISSUES_PATH);
   }
   if (url.pathname === "/routines") paths.push("/api/routines");
+  // Numo's word, its mentions resolved: Home reveals once it is known.
+  if (url.pathname === "/home") paths.push("/api/home/brief");
   // The route answers non-admins with an error, which is never seeded.
   if (url.pathname === "/admin") paths.push("/api/admin/capabilities", "/api/admin/overview");
   const project = url.pathname.match(/^\/projects\/([^/]+)(?:\/([^/]+)(?:\/([^/]+))?)?$/);

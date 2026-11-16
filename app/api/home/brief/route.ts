@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveNumoBackgroundEnabled } from "@/lib/numo-background";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { readResultForReader } from "@/lib/server/mention-access";
+import { mentionLinks } from "@/lib/mention-link";
+import {
+  MAX_MENTION_REFS,
+  mentionKey,
+  readResultForReader,
+  resolvedMentionsForReader,
+  type MentionRef,
+} from "@/lib/server/mention-access";
 import { scheduleHomeBriefRewrite } from "@/lib/server/numo/home-brief";
 import { getHomeBriefEntryIds, getLatestHomeBrief } from "@/lib/server/numo/home-brief-content";
 import {
@@ -37,6 +44,10 @@ import { aiConsentRefusal } from "@/lib/server/ai-consent";
  *
  * `brief: null` also when background Numo is switched off or Numo has
  * written nothing yet (no AI configured, or no journal entry so far).
+ *
+ * `mentions` answers, for this reader, the mentions the word makes, as
+ * `POST /api/mentions/resolve` would (MIN-1006): Home shows the word with its
+ * pills already named, without a second round trip after this one.
  */
 
 /** A version this recent may still be followed by the rewrite its turn scheduled. */
@@ -68,20 +79,38 @@ export async function GET(request: NextRequest) {
     if (coverage !== "current" && coverage !== "empty" && settled) scheduleHomeBriefRewrite(userId);
     if (coverage === "outdated" || coverage === "empty") return NextResponse.json({ brief: null });
 
+    const [suggestions, mentions] = await Promise.all([
+      // A suggestion fills the composer: its mentions carry the name this
+      // reader may see, so they become pills there (stored without names).
+      readResultForReader(userId, brief.suggestions, service).catch(() => brief.suggestions),
+      resolvedMentionsForReader(userId, wordMentionRefs(brief.content), service).catch(() => []),
+    ]);
     return NextResponse.json({
       brief: {
         id: brief.id,
         content: brief.content,
-        // A suggestion fills the composer: its mentions carry the name this
-        // reader may see, so they become pills there (stored without names).
-        suggestions: await readResultForReader(userId, brief.suggestions, service)
-          .catch(() => brief.suggestions),
+        suggestions,
         generated_at: brief.generated_at,
+        mentions,
       },
     });
   } catch {
     return NextResponse.json({ error: "Could not load Numo's word" }, { status: 503 });
   }
+}
+
+/**
+ * The targets the word mentions, once each, as the pills ask for them: only
+ * a skill keeps its metadata, the project that holds it.
+ */
+function wordMentionRefs(content: string): MentionRef[] {
+  const refs = new Map<string, MentionRef>();
+  for (const { type, id, meta } of mentionLinks(content)) {
+    const ref: MentionRef = type === "skill" && meta?.project ? { type, id, meta: { project: meta.project } } : { type, id };
+    refs.set(mentionKey(ref), ref);
+    if (refs.size >= MAX_MENTION_REFS) break;
+  }
+  return [...refs.values()];
 }
 
 /**

@@ -53,8 +53,12 @@ export function onFirstContent(listener: () => void): () => void {
  * flight and `subscribe` notifies when that may have changed. Returns a stop
  * function; marks at most once.
  */
-/** What the app shows while content loads: skeletons and pending routes. */
-export const LOADING_CONTENT_SELECTOR = "[data-slot=skeleton], [data-pending-route]";
+/**
+ * What the app shows while content loads: skeletons, pending routes, and
+ * content a page holds back until all of it can appear together (Home's
+ * greeting and Numo's word).
+ */
+export const LOADING_CONTENT_SELECTOR = "[data-slot=skeleton], [data-pending-route], [data-pending-content]";
 
 const CONTENT_RECHECK_MS = 100;
 

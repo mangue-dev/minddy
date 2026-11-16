@@ -16,7 +16,7 @@ shell lives with the rest of the web app:
 | | |
 | --- | --- |
 | `capacitor.config.ts` | app id, name, and the folder of bundled pages |
-| `ios/App/App/MinddyViewController.swift` | the WebView on the selected server, the navigation guard, the launch cover, the keyboard without its form bar, its reports of the keyboard's movements, and page drawing at the display's rate (120 Hz on ProMotion) |
+| `ios/App/App/MinddyViewController.swift` | the WebView on the selected server, the navigation guard, the launch cover and its handshake with the page, the keyboard without its form bar, its reports of the keyboard's movements, and page drawing at the display's rate (120 Hz on ProMotion) |
 | `ios/App/App/NavigationBar.swift` | the bottom bar, drawn natively in Liquid Glass |
 | `ios/App/App/MinddyShellPlugin.swift` | the shell's own plugin, `MinddyShell` in JavaScript |
 | `ios/App/App/ServerStore.swift` | the selected server and the rules for a server address |
@@ -55,6 +55,29 @@ Three properties protect that choice:
 Detection on the web side reads the object Capacitor injects
 (`isNativeMobile()` in `lib/mobile/bridge.ts`). The `minddy-mobile/<version>`
 user-agent suffix is for server logs and device labels only.
+
+## The launch screen
+
+The shell keeps the launch screen over the WebView while the first page loads.
+A page of the signed-in app is not finished at that point: the session, the
+first reads, then Home's greeting and Numo's word still arrive. Lifted at the
+load, the launch screen showed the page building itself in several steps.
+
+The signed-in app declares `<meta name="minddy-launch-cover" content="hold">`.
+When the first load ends on such a page, the shell keeps the launch screen,
+its logo crossed by a slow shimmer, until the page calls
+`MinddyShell.contentShown`, then crossfades into the page. The load that
+counts is the entry page's: Capacitor's own first navigation, replaced before
+it answers, ends without a URL and is ignored. The page calls `contentShown` once its first content is painted
+(`lib/mobile/launch-cover.ts`, on top of `lib/first-content.ts`); Home counts
+as loading until its greeting and Numo's word are revealed together, and
+releases the launch screen as soon as they are, without waiting for the
+shell's other startup reads. The `/home` document carries Numo's word, with
+the names of the mentions it makes, so Home waits for neither request. The
+shell stops waiting 4 seconds after the load, so a slow read never keeps
+the app on its launch screen. Sign-in pages, the bundled pages and a server
+older than this handshake carry no meta, and the launch screen lifts at the
+load as before.
 
 ## The native bottom bar
 

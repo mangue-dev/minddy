@@ -129,6 +129,12 @@ export interface MobileShellPlugin {
    */
   setHaptics?(options: { enabled: boolean }): Promise<void>;
   /**
+   * The page has painted its first content: the launch cover, which a page
+   * declaring `LAUNCH_COVER_META` holds, can lift. See
+   * `lib/mobile/launch-cover.ts`. Absent in older shells.
+   */
+  contentShown?(): Promise<void>;
+  /**
    * Describes the page's bottom bar for the shell to draw natively: see
    * `lib/mobile/native-navigation.ts`. Absent in older shells.
    */
@@ -225,6 +231,13 @@ export interface MobileNavigationBarState {
   /** Left out when the buttons have not changed since the last call. */
   items?: MobileNavigationItem[];
 }
+
+/**
+ * The `<meta>` a page carries to hold the launch cover until it calls
+ * `contentShown` (`lib/mobile/launch-cover.ts`). Kept here, free of React, so
+ * the server layout that declares it can import it.
+ */
+export const LAUNCH_COVER_META = { name: "minddy-launch-cover", content: "hold" } as const;
 
 export interface MobileBridge {
   platform: MobilePlatform;
