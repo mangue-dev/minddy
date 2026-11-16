@@ -32,6 +32,8 @@ import {
   updatePageDatabaseView,
 } from "@/lib/server/page-database-views";
 import { getPage, type PageErrorKey } from "@/lib/server/pages";
+import { resolveApplicationLocale } from "@/lib/locale-language";
+import { loadMessages } from "@/i18n/messages";
 import type { PageToolCode, PageToolResult } from "@/lib/server/page-tools";
 
 /**
@@ -146,21 +148,24 @@ export function databaseViewsToolDescriptions(names: DatabaseViewToolNames):
   const board = names.boardViews;
   return {
     list:
-      "The saved VIEWS of a database page, in the order of its view strip: each has view_id, name, position, sort, descending, filters ({ match: \"and\"|\"or\", conditions: [{ property_id, operator, value }] }), hidden_property_ids and calculations (the figure shown under a number column, by property id: sum, average, min, max or count). Views are shared by every project member. When the conversation is about a database page, \"a view\" / \"une vue\" means one of THESE, never an issue board view. An empty list means the database still shows its default view (by position, no filter, every column). " +
+      "The saved VIEWS of a database page, in the order of its view strip: each has view_id, name, position, sort, descending, filters ({ match: \"and\"|\"or\", conditions: [{ property_id, operator, value }] }), hidden_property_ids and calculations (the figure shown under a number column, by property id: sum, average, min, max or count). Views are shared by every project member. When the conversation is about a database page, \"a view\" / \"une vue\" means one of THESE, never an issue board view. An empty list means the database still shows its default view (by position, no filter, every column, no calculation). " +
       `Read this before ${names.updateViews}.` +
       (board ? ` These are NOT the issue views of ${board.list}.` : ""),
     update:
       `Create, reconfigure, delete or reorder the saved VIEWS of a database page — never its schema or entries (${names.updateDatabase}), never the issue board views${board ? ` (${board.create}/${board.update})` : ""}. ` +
-      "When the conversation is about a database page, this is the tool for \"create a view\" / \"crée une vue\", filtering, sorting or hiding columns. " +
+      "When the conversation is about a database page, this is the tool for \"create a view\" / \"crée une vue\", filtering, sorting, hiding columns and the calculation under a number column (sum, average, min, max, count). " +
       `Read ${names.getPage} for the property ids and option ids, and ${names.listViews} for the view ids, first. ` +
-      "operation=create needs name and takes any view field; omitted fields get the default (sort position ascending, no filter, no hidden column); the view is added at the end of the strip. operation=update needs view_id and changes ONLY the fields you pass (name, sort, descending, filters, hidden_property_ids, calculations). filters, hidden_property_ids and calculations each REPLACE the whole current value: resend the conditions, ids and calculations you want to keep. calculations maps the id of a NUMBER property to sum, average, min, max or count; the table shows that figure under the column, computed on the entries the view keeps. A select or multi_select column sorts in the order of its options. operation=delete needs view_id; the last view cannot be deleted. operation=reorder needs order: EVERY view_id of the database exactly once, in the new strip order. sort is \"position\" (manual order), \"title\" or a property id. filters = { match: \"and\" (every condition, the default) or \"or\" (any condition), conditions: up to 10 { property_id, operator, value } }; null or no conditions removes the filter. Operators by property type: text contains, not_contains, eq, neq (case-insensitive); number eq, neq, gt, lt (value a decimal); select eq, neq (value an option ID, never its name); multi_select contains, not_contains (option ID); people contains, not_contains (member user id); date and created_at eq (same day), gt (after), lt (before) with value YYYY-MM-DD; checkbox eq with \"true\" or \"false\"; every type except checkbox also takes empty and not_empty, without a value. " +
+      "operation=create needs name and takes any view field; omitted fields get the default (sort position ascending, no filter, no hidden column); the view is added at the end of the strip. operation=update changes ONLY the fields you pass (name, sort, descending, filters, hidden_property_ids, calculations) on view_id; without view_id it changes the view the table shows first, and on a database with no saved view it saves that default view, as the table does on a person's first change. filters, hidden_property_ids and calculations each REPLACE the whole current value: resend the conditions, ids and calculations you want to keep. " +
+      "CALCULATIONS are the figure shown under a NUMBER column (\"sum\" / \"somme\" / \"total\", \"average\" / \"moyenne\", \"min\", \"max\", \"count\" / \"nombre\"): calculations maps a number property id to sum, average, min, max or count, computed on the entries the view keeps; count counts the entries with a value. To add or change one, send every calculation to keep plus the new one; to remove one, resend the map without it; {} removes them all. Other property types take no calculation. " +
+      "A select or multi_select column sorts in the order of its options. operation=delete needs view_id; the last view cannot be deleted. operation=reorder needs order: EVERY view_id of the database exactly once, in the new strip order. sort is \"position\" (manual order), \"title\" or a property id. filters = { match: \"and\" (every condition, the default) or \"or\" (any condition), conditions: up to 10 { property_id, operator, value } }; null or no conditions removes the filter. Operators by property type: text contains, not_contains, eq, neq (case-insensitive); number eq, neq, gt, lt (value a decimal); select eq, neq (value an option ID, never its name); multi_select contains, not_contains (option ID); people contains, not_contains (member user id); date and created_at eq (same day), gt (after), lt (before) with value YYYY-MM-DD; checkbox eq with \"true\" or \"false\"; every type except checkbox also takes empty and not_empty, without a value. " +
       `Column ORDER is not part of a view: it is the order of the database_schema array, changed with ${names.updateDatabase} operation=schema. The result lists every view after the write.`,
   };
 }
 
 const NO_VIEW_NOTE =
   "This database has no saved view yet: it shows the default view (sorted by " +
-  "position, no filter, every column). Create one to save a configuration.";
+  "position, no filter, every column, no calculation). Change it with " +
+  "operation=update and no view_id to save it, or create another view.";
 
 /** What a value means for each property type, for refusals. */
 const VALUE_HINT: Record<DatabaseProperty["type"], string> = {
@@ -314,12 +319,21 @@ function mergeView(base: DatabaseView, input: ViewsInput, schema: DatabaseProper
   return { ok: true, data: next };
 }
 
+/** The name the table gives the default view when it saves it ("Table"). */
+async function defaultViewName(locale: string | null | undefined): Promise<string> {
+  const messages = await loadMessages(resolveApplicationLocale(locale));
+  const name = (messages.PageDatabase as Record<string, unknown> | undefined)?.defaultView;
+  return typeof name === "string" && name ? name : "Table";
+}
+
 /** Create, reconfigure, delete or reorder the saved views of a database. */
 export async function updateDatabaseViewsForAgent({ projectId, pageId, actorId, input,
-  names = NUMO_DATABASE_VIEW_TOOL_NAMES }: {
+  names = NUMO_DATABASE_VIEW_TOOL_NAMES, locale }: {
   projectId: string; pageId: string; actorId: string; input: unknown;
   /** The surface's tool names, quoted in refusals. */
   names?: DatabaseViewToolNames;
+  /** The actor's interface locale, which names a default view it saves. */
+  locale?: string | null;
 }): Promise<PageToolResult<AgentDatabaseViews>> {
   const parsed = DATABASE_VIEWS_TOOL_SCHEMA.safeParse(input);
   if (!parsed.success)
@@ -332,7 +346,7 @@ export async function updateDatabaseViewsForAgent({ projectId, pageId, actorId, 
   if (!current.ok) return refuse(current.errorKey, names);
   const views = current.page;
   const target = args.view_id ? views.find((view) => view.id === args.view_id) : undefined;
-  if ((args.operation === "update" || args.operation === "delete") && !target)
+  if (args.view_id && !target || args.operation === "delete" && !target)
     return invalid(`view_id must be one of this database's views (${names.listViews}).`);
   const reread = async (view?: SavedDatabaseView): Promise<PageToolResult<AgentDatabaseViews>> => {
     const after = await listPageDatabaseViews(projectId, pageId, actorId);
@@ -352,9 +366,20 @@ export async function updateDatabaseViewsForAgent({ projectId, pageId, actorId, 
       return created.ok ? reread(created.page) : refuse(created.errorKey, names);
     }
     case "update": {
-      const view = mergeView(target!.view, args, schema.data);
+      // Without view_id: the view the table shows first. A database without a
+      // saved view shows the default one; save it, as the table does on the
+      // first change a member makes.
+      const shown = target ?? views[0];
+      if (!shown) {
+        const view = mergeView(DEFAULT_DATABASE_VIEW, args, schema.data);
+        if (!view.ok) return view;
+        const created = await createPageDatabaseView(projectId, pageId, actorId,
+          { name: args.name ?? await defaultViewName(locale), view: view.data });
+        return created.ok ? reread(created.page) : refuse(created.errorKey, names);
+      }
+      const view = mergeView(shown.view, args, schema.data);
       if (!view.ok) return view;
-      const updated = await updatePageDatabaseView(projectId, pageId, target!.id, actorId,
+      const updated = await updatePageDatabaseView(projectId, pageId, shown.id, actorId,
         { ...(args.name !== undefined && { name: args.name }), view: view.data });
       return updated.ok ? reread(updated.page) : refuse(updated.errorKey, names);
     }

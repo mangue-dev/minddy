@@ -211,7 +211,7 @@ export function registerPageTools(server: McpServer): void {
       title: "Get page",
       description:
         "is_database says whether the page IS a database: true even when database_schema is empty and database_revision is 0 — a database with no columns yet, to fill with minddy_update_page_database rather than recreate. " +
-        "Database pages include database_schema, database_revision, database_title_name, and for each entry in subpages its property_values plus what the read-only metadata columns show: created_at, updated_at, created_by and updated_by (member user ids; updated_by is \"minddy\" when an agent made the last edit). A date value written R/YYYY-MM-DD/P1W recurs (P1D daily, P1W weekly, P1M monthly, P1Y yearly) from that date. Use minddy_update_page_database for columns and values; its saved views (sort, filter, hidden columns) are read with minddy_list_page_database_views. " +
+        "Database pages include database_schema, database_revision, database_title_name, and for each entry in subpages its property_values plus what the read-only metadata columns show: created_at, updated_at, created_by and updated_by (member user ids; updated_by is \"minddy\" when an agent made the last edit). A date value written R/YYYY-MM-DD/P1W recurs (P1D daily, P1W weekly, P1M monthly, P1Y yearly) from that date. Use minddy_update_page_database for columns and values; its saved views (sort, filter, hidden columns, and the calculation under each number column: sum, average, min, max or count) are read with minddy_list_page_database_views and changed with minddy_update_page_database_views. " +
         "ONE page in full: its title, its icon, its body in MARKDOWN, its version, " +
         "and its direct subpages (so you can walk down the tree without a second " +
         "listing call). This is what you read before writing: copy passages from " +
@@ -373,7 +373,7 @@ export function registerPageTools(server: McpServer): void {
       title: "Update page database",
       description:
         databaseToolDescription("minddy_get_page", "minddy_create_page") +
-        " Saved views (sort, filter, hidden columns) are not part of the schema: change them with minddy_update_page_database_views.",
+        " Saved views (sort, filter, hidden columns, and the calculation under a number column) are not part of the schema: change them with minddy_update_page_database_views.",
       inputSchema: DATABASE_TOOL_SCHEMA.extend({ project_id: PROJECT_ID }),
       annotations: { ...WRITE, destructiveHint: true },
     },

@@ -18,6 +18,7 @@ const CREATED = "0b0c3d1e-3333-4aaa-8bbb-000000000003";
 const V1 = "0b0c3d1e-5555-4aaa-8bbb-000000000005";
 const V2 = "0b0c3d1e-6666-4aaa-8bbb-000000000006";
 const NEW = "0b0c3d1e-7777-4aaa-8bbb-000000000007";
+const AMOUNT = "0b0c3d1e-9999-4aaa-8bbb-000000000009";
 const OPEN = "0b0c3d1e-8888-4aaa-8bbb-000000000008";
 const CANCELED = "0b0c3d1e-9999-4aaa-8bbb-000000000009";
 const UNKNOWN = "0b0c3d1e-aaaa-4aaa-8bbb-00000000000a";
@@ -97,6 +98,7 @@ beforeEach(() => {
       { id: CANCELED, name: "Canceled", color: "#aa0000" },
     ] },
     { id: CREATED, name: "Created", type: "created_at" },
+    { id: AMOUNT, name: "Amount", type: "number" },
   ] } });
   stored = [view(V1, "All", 1), view(V2, "Open", 2)];
   h.list.mockImplementation(async () => ({ ok: true, page: stored }));
@@ -167,6 +169,28 @@ describe("MCP page database views (MIN-898)", () => {
       name: "Still open",
       view: expect.objectContaining({ sort: CREATED, descending: true }),
     });
+  });
+
+  it("sets the calculation under a number column, and names it in its descriptions (MIN-1012)", async () => {
+    const catalog = mcpToolCatalog();
+    for (const name of ["minddy_update_page_database_views", "minddy_get_page"])
+      expect(catalog.find((tool) => tool.name === name)?.description).toMatch(/number column/);
+    const { result, body } = await write({ operation: "update", view_id: V2,
+      calculations: { [AMOUNT]: "average" } });
+    expect(result.isError).not.toBe(true);
+    expect(body.view).toMatchObject({ view_id: V2, calculations: { [AMOUNT]: "average" } });
+    const refused = await write({ operation: "update", view_id: V2,
+      calculations: { [CREATED]: "sum" } });
+    expect(refused.result.isError).toBe(true);
+  });
+
+  it("saves the default view when a database without one gets a calculation", async () => {
+    stored = [];
+    const { result, body } = await write({ operation: "update", calculations: { [AMOUNT]: "sum" } });
+    expect(result.isError).not.toBe(true);
+    expect(h.create).toHaveBeenCalledWith(PROJECT, DB, expect.any(String), { name: "Table",
+      view: expect.objectContaining({ calculations: { [AMOUNT]: "sum" } }) });
+    expect(body.views).toHaveLength(1);
   });
 
   it("reorders the whole strip", async () => {
