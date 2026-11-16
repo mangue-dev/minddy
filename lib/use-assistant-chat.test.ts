@@ -613,7 +613,12 @@ describe("Numo conversation settings", () => {
       }
       if (String(url).includes("/status")) {
         statusUrls.push(String(url));
-        return Response.json({ status: "running", error_message: null, activity: [] });
+        // The next job runs a tool: the journal carries its call and result.
+        return Response.json({ status: "running", error_message: null, activity: statusUrls.length > 1 ? [] : [
+          { seq: 13, type: "tool_call_start", payload: { id: "call-2", name: "get_issue" } },
+          { seq: 14, type: "tool_result", payload: { id: "call-2", name: "get_issue",
+            result: { id: "MIN-1" }, success: true } },
+        ] });
       }
       return Response.json({ status: "idle", error_message: null });
     });
@@ -624,11 +629,15 @@ describe("Numo conversation settings", () => {
 
     // No error and no "interrupted": the thread keeps working on the server.
     expect(value.state.error).toBeNull();
-    expect(value.state.status).toBe("generating_server");
+    expect(["generating_server", "executing_tool"]).toContain(value.state.status);
     // The journal is read after what the stream showed, so the finished tool
     // card is not replayed back to "running".
     expect(statusUrls[0]).toContain("after=12");
     expect(value.state.toolCallResults.get("call-1")).toMatchObject({ status: "complete" });
+    // A tool the next job ran shows done too, before the turn ends.
+    expect(value.state.toolCallResults.get("call-2")).toMatchObject({
+      status: "complete", result: { id: "MIN-1" }, success: true,
+    });
   });
 
   it("idles the thread instantly on stop and still records the durable stop", async () => {

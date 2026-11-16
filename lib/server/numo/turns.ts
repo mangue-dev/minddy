@@ -337,7 +337,20 @@ const PERSISTED_EVENT_TYPES = new Set([
   "error",
 ]);
 
+/**
+ * Events recorded only for journal readers: the live stream already carries
+ * its own copy, which may show a fresh secret once (MIN-343).
+ */
+const JOURNAL_ONLY_EVENT_TYPES = new Set(["tool_result"]);
+
+/**
+ * Past this size a journaled tool result keeps only its outcome: the card
+ * shows done, and the turn's final reload brings the full result.
+ */
+const JOURNAL_TOOL_RESULT_MAX_CHARS = 32_000;
+
 interface DurableEmitter extends SafeEmitter {
+  journal(event: string, data: unknown): void;
   flush(): Promise<void>;
   /** A last event for the live reader alone: the journal does not record it. */
   finishLive(event: string, data: unknown): void;
@@ -370,7 +383,6 @@ export function createDurableNumoEmitter(
   };
 
   const append = (type: string, payload: unknown) => {
-    if (!PERSISTED_EVENT_TYPES.has(type)) return;
     enqueue(async () => {
       const eventId = randomUUID();
       const clear = payload ?? {};
@@ -448,8 +460,20 @@ export function createDurableNumoEmitter(
       }
       if (event === "reasoning_tick" || event === "tool_result") return;
       flushActivity();
-      append(event, data);
+      if (PERSISTED_EVENT_TYPES.has(event)) append(event, data);
       if (event === "done" || event === "error") terminal = true;
+    },
+    journal(event, data) {
+      if (closed || terminal || !JOURNAL_ONLY_EVENT_TYPES.has(event)) return;
+      flushActivity();
+      const payload = data as Record<string, unknown> | null;
+      if (event === "tool_result" && payload && "result" in payload &&
+          (JSON.stringify(payload.result) ?? "").length > JOURNAL_TOOL_RESULT_MAX_CHARS) {
+        const { result: _result, ...outcome } = payload;
+        append(event, outcome);
+        return;
+      }
+      append(event, data);
     },
     finishLive(event, data) {
       if (closed || terminal) return;

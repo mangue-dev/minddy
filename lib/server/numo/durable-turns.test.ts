@@ -1326,6 +1326,23 @@ describe("durable Numo execution", () => {
     expect(live.emit).toHaveBeenCalledTimes(4);
   });
 
+  it("journals a tool result for readers of the journal, without it reaching the live stream twice (MIN-1010)", async () => {
+    const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
+    const emitter = createDurableNumoEmitter(service, h.turn!.id as string, live);
+    emitter.journal("tool_result", { id: "call-1", name: "get_issue", result: { id: "MIN-1" }, success: true });
+    emitter.journal("tool_result", { id: "call-2", name: "list_issues",
+      result: { issues: "x".repeat(40_000) }, success: true });
+    emitter.journal("content_delta", { delta: "not journal-only" });
+    await emitter.flush();
+
+    expect(live.emit).not.toHaveBeenCalled();
+    expect(h.events.map((event) => [event.p_type, event.p_payload])).toEqual([
+      ["tool_result", { id: "call-1", name: "get_issue", result: { id: "MIN-1" }, success: true }],
+      // Too large to journal: the card still shows done, the final reload fills it.
+      ["tool_result", { id: "call-2", name: "list_issues", success: true }],
+    ]);
+  });
+
   it("batches streamed reasoning snapshots and always re-states the final trace", async () => {
     const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
     const emitter = createDurableNumoEmitter(service, h.turn!.id as string, live);

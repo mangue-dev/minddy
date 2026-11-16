@@ -9,6 +9,7 @@ import {
 } from "./job-deadline";
 
 const sql = canonicalSql(readMigration("20270109200128_numo_turn_handoff.sql"));
+const journalSql = canonicalSql(readMigration("20270109200129_numo_turn_events_tool_result.sql"));
 
 describe("Numo turn handoff between jobs (MIN-1010)", () => {
   it("re-queues only the job's own running claim, due at once", () => {
@@ -28,6 +29,13 @@ describe("Numo turn handoff between jobs (MIN-1010)", () => {
   it("is callable by the service role alone", () => {
     expect(sql).toContain("revoke all on function public.hand_off_numo_turn(uuid, uuid) from public, anon, authenticated");
     expect(sql).toContain("grant execute on function public.hand_off_numo_turn(uuid, uuid) to service_role");
+  });
+
+  it("lets the journal record tool results while keeping every earlier type", () => {
+    expect(journalSql).toContain("'tool_call_complete', 'tool_result', 'message_complete'");
+    for (const type of ["conversation_id", "content_delta", "reasoning_delta", "state", "done", "error"]) {
+      expect(journalSql).toContain(`'${type}'`);
+    }
   });
 
   it("hands off once the time left no longer covers the next step", () => {

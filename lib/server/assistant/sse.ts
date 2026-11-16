@@ -9,6 +9,11 @@ export function sseEncode(event: string, data: unknown): string {
 /** Safe emitter that continues processing even if the client disconnects. */
 export interface SafeEmitter {
   emit(event: string, data: unknown): void;
+  /**
+   * Records an event for readers that follow the turn's journal, without
+   * sending it on the live stream. Only a durable turn's emitter has one.
+   */
+  journal?(event: string, data: unknown): void;
   close(): void;
   readonly isClosed: boolean;
 }

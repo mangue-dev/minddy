@@ -186,6 +186,27 @@ describe("Numo loop handoff at the job deadline (MIN-1010)", () => {
     });
   });
 
+  it("journals each tool result for journal readers, redacted like the stored tool message", async () => {
+    const key = "fresh-key-shown-once";
+    executeTool.mockResolvedValue({ result: { key }, secrets: [key], success: true });
+    fetchOpenRouter
+      .mockResolvedValueOnce({ model: "model", response: stream(toolCalls("call-a")) })
+      .mockResolvedValueOnce({ model: "model", response: stream({ content: "Created." }) });
+    const live: Array<[string, unknown]> = [];
+    const journal: Array<[string, unknown]> = [];
+
+    await processChat([{ role: "user", content: "Create a key" }], [], {
+      emit: (event: string, data: unknown) => live.push([event, data]),
+      journal: (event: string, data: unknown) => journal.push([event, data]),
+    } as never, durableContext({}));
+
+    // The screen shows the fresh key once; the journal never holds it.
+    expect(JSON.stringify(live.find(([event]) => event === "tool_result"))).toContain(key);
+    expect(journal).toEqual([["tool_result", {
+      id: "call-a", name: "noop", result: { key: "[redacted]" }, success: true,
+    }]]);
+  });
+
   it("opens the first generation of a job even when the deadline is already short", async () => {
     fetchOpenRouter.mockResolvedValue({ model: "model", response: stream({ content: "Done." }) });
 

@@ -635,12 +635,14 @@ export async function processChat(
       return null;
     });
     if (messageId) emitter.emit("message_complete", { message_id: messageId });
-    emitter.emit("tool_result", {
+    const compactionResult = {
       id: callId,
       name: COMPACTION_TOOL_NAME,
       result: { status: summary ? "compacted" : "failed" },
       success: !!summary,
-    });
+    };
+    emitter.emit("tool_result", compactionResult);
+    emitter.journal?.("tool_result", compactionResult);
   };
 
   try {
@@ -1131,12 +1133,9 @@ export async function processChat(
           );
 
           const askResult = { status: "awaiting_user_response", questions };
-          emitter.emit("tool_result", {
-            id: acc.id,
-            name: "ask_user",
-            result: askResult,
-            success: true,
-          });
+          const askToolResult = { id: acc.id, name: "ask_user", result: askResult, success: true };
+          emitter.emit("tool_result", askToolResult);
+          emitter.journal?.("tool_result", askToolResult);
 
           if (!alreadyCompleted) {
             await saveToolResultMessage(context, {
@@ -1267,6 +1266,14 @@ export async function processChat(
           id: acc.id,
           name: acc.name,
           result,
+          success,
+        });
+        // A reader following the journal (after a handoff, or a reconnect)
+        // gets the redacted result the tool message stores (MIN-1010).
+        emitter.journal?.("tool_result", {
+          id: acc.id,
+          name: acc.name,
+          result: persistedResult,
           success,
         });
         if (!alreadyCompleted) {

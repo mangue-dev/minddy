@@ -62,7 +62,11 @@ ceiling. The conversation stays `generating`. The job asks
 invocation; the minute clock picks it up if that request is lost. The live
 stream ends with `done { status: "queued", after }`, which the journal does not
 record: the client follows the turn by polling the journal from `after`, the
-last event it already showed. Wake and reminder turns run under the background
+last event it already showed. The journal records each tool result as the tool
+message stores it, redacted (a result over 32,000 characters keeps only its
+outcome), so a reader that follows the journal sees each tool finish rather
+than waiting for the turn's end; the live-only copy, which may show a fresh
+secret once, never enters it. Wake and reminder turns run under the background
 consent guard in every job. The per-turn spend cap is read from the usage
 ledger by turn ID, so it accumulates across jobs, and each model call of a turn
 has its own ledger slot (`numoUsageSeq`) however many rounds it runs.
