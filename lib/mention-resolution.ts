@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { isMentionLinkType, mentionTargetKey, type MentionLinkType, type MentionMeta } from "@/lib/mention-link";
 import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validation";
 import { isPullRequestState, type PullRequestState } from "@/lib/pull-request-contract";
+import { isIssueStatus, type IssueStatus } from "@/lib/issue-constants";
 
 /**
  * What the signed-in reader may see of a typed mention (MIN-734), resolved by
@@ -28,6 +29,8 @@ type Entry = {
   prState?: PullRequestState;
   /** A member's avatar seed, for their portrait (MIN-964). */
   seed?: string;
+  /** An issue's status, for its glyph before any issue list has loaded (MIN-1006). */
+  issueStatus?: IssueStatus;
   at: number;
 };
 
@@ -58,6 +61,7 @@ export interface ResolvedMentionAnswer {
   type: string; id: string; meta?: MentionMeta; label: string | null;
   status?: unknown; service?: unknown; icon?: unknown; database?: unknown; prState?: unknown;
   seed?: unknown;
+  issueStatus?: unknown;
 }
 
 function entryOf(mention: ResolvedMentionAnswer, at: number): Entry {
@@ -70,6 +74,7 @@ function entryOf(mention: ResolvedMentionAnswer, at: number): Entry {
       : {}),
     ...(isPullRequestState(mention.prState) ? { prState: mention.prState } : {}),
     ...(typeof mention.seed === "string" ? { seed: mention.seed } : {}),
+    ...(isIssueStatus(mention.issueStatus) ? { issueStatus: mention.issueStatus } : {}),
     at,
   };
 }
@@ -197,13 +202,13 @@ export function mentionsSettled(): Promise<void> {
  * glyph of its pill (MIN-785), an MCP connection's service for its logo, a
  * page's emoji and database flag for its glyph (MIN-879), a pull request's
  * state for its color (MIN-906), a member's avatar seed for their portrait
- * (MIN-964). `undefined` until
+ * (MIN-964), an issue's status for its glyph (MIN-1006). `undefined` until
  * it is known. It never requests: the label hook beside it does.
  */
 export function useResolvedMentionDetails(
   type: MentionLinkType | null,
   id: string | null,
-): Pick<Entry, "status" | "service" | "page" | "prState" | "seed"> | undefined {
+): Pick<Entry, "status" | "service" | "page" | "prState" | "seed" | "issueStatus"> | undefined {
   const current = useSyncExternalStore(subscribe, () => version, () => -1);
   if (!type || !id || current === -1) return undefined;
   return cache.get(keyOf(type, id));

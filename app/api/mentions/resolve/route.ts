@@ -24,7 +24,8 @@ const RESOLVES_PER_MINUTE = 600;
  * connection of a known service its `service`, for its logo, and a page its
  * `icon` and whether it is a `database`, for its glyph (MIN-879), and a
  * pull request its `prState`, for the color of its pill (MIN-906), and a
- * member the `seed` of their avatar, for their portrait (MIN-964). See
+ * member the `seed` of their avatar, for their portrait (MIN-964), and an
+ * issue its `issueStatus`, for its glyph (MIN-1006). See
  * lib/server/mention-access.ts.
  */
 export async function POST(request: NextRequest) {

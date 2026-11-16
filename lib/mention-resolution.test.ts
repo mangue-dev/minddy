@@ -73,7 +73,7 @@ it("names primed mentions without asking the server", async () => {
   const fetch = vi.fn();
   vi.stubGlobal("fetch", fetch);
   primeResolvedMentions([
-    { type: "issue", id: "issue-primed", label: "MIN-7" },
+    { type: "issue", id: "issue-primed", label: "MIN-7", issueStatus: "in_review" },
     { type: "objective", id: "objective-primed", label: "Launch", status: "in_progress" },
     { type: "not-a-type", id: "x", label: "ignored" },
   ]);
@@ -81,11 +81,12 @@ it("names primed mentions without asking the server", async () => {
     const issue = useResolvedMentionLabel("issue", "issue-primed");
     const objective = useResolvedMentionLabel("objective", "objective-primed");
     const status = useResolvedMentionDetails("objective", "objective-primed")?.status;
-    return createElement("span", null, `${issue} ${objective} ${status}`);
+    const issueStatus = useResolvedMentionDetails("issue", "issue-primed")?.issueStatus;
+    return createElement("span", null, `${issue} ${objective} ${status} ${issueStatus}`);
   }
   await act(() => root.render(createElement(Pills)));
   await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
-  expect(container.textContent).toBe("MIN-7 Launch in_progress");
+  expect(container.textContent).toBe("MIN-7 Launch in_progress in_review");
   expect(fetch).not.toHaveBeenCalled();
   await expect(mentionsSettled()).resolves.toBeUndefined();
 });

@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { displayName } from "@/lib/display-name";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { issueIdentifier, isIssueStatus, type IssueStatus } from "@/lib/issue-constants";
 import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validation";
 import {
   mentionLinks,
@@ -77,6 +77,7 @@ export interface ResolvedMention extends MentionRef {
   database?: boolean;
   prState?: PullRequestState;
   seed?: string;
+  issueStatus?: IssueStatus;
 }
 
 /** Resolve `refs` for `userId` into the pills' answer, in the order given. */
@@ -90,7 +91,8 @@ export async function resolvedMentionsForReader(
   const pages = new Map<string, { icon: string | null; database: boolean }>();
   const prStates = new Map<string, PullRequestState>();
   const seeds = new Map<string, string>();
-  const resolution = await resolveMentionTargets(userId, refs, service, statuses, services, pages, prStates, seeds);
+  const issueStatuses = new Map<string, IssueStatus>();
+  const resolution = await resolveMentionTargets(userId, refs, service, statuses, services, pages, prStates, seeds, issueStatuses);
   return refs.map((ref) => {
     const key = mentionKey(ref);
     const status = statuses.get(key);
@@ -98,6 +100,7 @@ export async function resolvedMentionsForReader(
     const page = pages.get(key);
     const prState = prStates.get(key);
     const seed = seeds.get(key);
+    const issueStatus = issueStatuses.get(key);
     return {
       ...ref,
       label: resolution.get(key) ?? null,
@@ -106,6 +109,7 @@ export async function resolvedMentionsForReader(
       ...(page ? { icon: page.icon, database: page.database } : {}),
       ...(prState ? { prState } : {}),
       ...(seed ? { seed } : {}),
+      ...(issueStatus ? { issueStatus } : {}),
     };
   });
 }
@@ -146,7 +150,9 @@ function rows(result: { data: unknown; error: unknown }, what: string): Row[] {
  of each MCP connection the reader owns, for the logo of its pill, and
  `pageFigures` each visible page's emoji and whether it is a database, for its
  glyph (MIN-879). `pullRequestStates` receives the state of each pull request
- the reader may open, for the color of its pill (MIN-906). */
+ the reader may open, for the color of its pill (MIN-906). `issueStatuses`
+ receives the status of each issue the reader may open, for the glyph of its
+ pill when the surface holds no issue list yet (MIN-1006). */
 export async function resolveMentionTargets(
   userId: string,
   refs: readonly MentionRef[],
@@ -156,6 +162,7 @@ export async function resolveMentionTargets(
   pageFigures?: Map<string, { icon: string | null; database: boolean }>,
   pullRequestStates?: Map<string, PullRequestState>,
   memberSeeds?: Map<string, string>,
+  issueStatuses?: Map<string, IssueStatus>,
 ): Promise<MentionResolution> {
   const resolution: MentionResolution = new Map();
   const unique = new Map<string, MentionRef>();
@@ -183,7 +190,7 @@ export async function resolveMentionTargets(
   ] = await Promise.all([
     // Only clear columns: an issue's label is its identifier.
     idsOf("issue").length
-      ? issueStore(service, userId).select("id, project_id, number, deleted_at").in("id", idsOf("issue"))
+      ? issueStore(service, userId).select("id, project_id, number, status, deleted_at").in("id", idsOf("issue"))
         .then((result) => rows(result, "issue"))
       : none,
     idsOf("objective").length
@@ -252,6 +259,7 @@ export async function resolveMentionTargets(
     const key = keyOf.get(String(row.project_id));
     if (readable(row) && key) {
       resolution.set(`issue:${row.id}`, issueIdentifier(key, Number(row.number)));
+      if (isIssueStatus(row.status)) issueStatuses?.set(`issue:${row.id}`, row.status);
     }
   }
   for (const row of objectives) {

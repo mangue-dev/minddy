@@ -1,7 +1,7 @@
 "use client";
 
 import { PAGE_HEADING_GAP, PAGE_SCROLL, PAGE_TITLE } from "@/components/page-heading";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
@@ -14,6 +14,7 @@ import { AssistantComposerProvider } from "@/lib/assistant-composer-context";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
 import { mentionsSettled } from "@/lib/mention-resolution";
+import { mediaSettled } from "@/lib/media-settled";
 import { markPageContentShown } from "@/lib/mobile/launch-cover";
 import { cn } from "@/lib/utils";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -56,14 +57,15 @@ const REVEAL_CAP_MS = 1500;
  * three or four times in a second: a generic greeting and the fixed
  * suggestions, then the name, then the word with placeholder pills, then
  * the pills' names. The page now waits for all of them, at most
- * `REVEAL_CAP_MS`, and reveals them together. Once shown it stays shown:
+ * `REVEAL_CAP_MS`, and reveals them together, once the images they show
+ * (a mentioned project's icon) are ready to paint. Once shown it stays shown:
  * a later version of the word replaces the old one in place.
  *
  * Until then the intro counts as loading content (`data-pending-content`),
  * so in the mobile app the launch screen stays over Home and crossfades into
  * the finished page while the intro rises (lib/mobile/launch-cover.ts).
  */
-function useHomeReveal(inputsReady: boolean): boolean {
+function useHomeReveal(inputsReady: boolean, intro: RefObject<HTMLElement | null>): boolean {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (ready) return;
@@ -74,17 +76,21 @@ function useHomeReveal(inputsReady: boolean): boolean {
     if (ready || !inputsReady) return;
     let cancelled = false;
     // One frame first: the word's pills mount, still hidden, and queue the
-    // lookup of their names, which `mentionsSettled` then waits for.
+    // lookup of their names, which `mentionsSettled` then waits for, then
+    // the icons those named pills show.
     const frame = requestAnimationFrame(() => {
-      void mentionsSettled().then(() => {
-        if (!cancelled) setReady(true);
-      });
+      void mentionsSettled()
+        .then(() => new Promise<void>((next) => requestAnimationFrame(() => next())))
+        .then(() => (intro.current ? mediaSettled(intro.current) : undefined))
+        .then(() => {
+          if (!cancelled) setReady(true);
+        });
     });
     return () => {
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [inputsReady, ready]);
+  }, [inputsReady, ready, intro]);
   return ready;
 }
 
@@ -152,7 +158,8 @@ function HomeConversation() {
   const blankConversation = !chat.conversationId && chat.messages.length === 0 && !isBusy;
   const aiAvailability = useAiSurfaceAvailability("assistant");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
-  const revealed = useHomeReveal(!!user && greetingSettled && !briefLoading && !aiAvailability.loading);
+  const introRef = useRef<HTMLDivElement>(null);
+  const revealed = useHomeReveal(!!user && greetingSettled && !briefLoading && !aiAvailability.loading, introRef);
   // Complete: the mobile app's launch screen need not wait for the shell's
   // other startup reads (lib/mobile/launch-cover.ts).
   useEffect(() => {
@@ -205,6 +212,7 @@ function HomeConversation() {
           visible={!panelOpen}
           intro={
             <div
+              ref={introRef}
               className={cn("flex flex-col", PAGE_HEADING_GAP)}
               aria-busy={!revealed}
               // Loading content until revealed: the page's first content,
