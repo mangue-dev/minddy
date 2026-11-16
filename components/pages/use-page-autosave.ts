@@ -219,7 +219,10 @@ export function usePageAutosave({
     if (seeded.current === pageId && screen.current) adopt(screen.current);
   }, [pageId, adopt]);
 
-  const reconcileRemote = useCallback(
+  /** The newest server document that arrived while a write was in flight. */
+  const deferredRemote = useRef<Page | null>(null);
+
+  const applyRemote = useCallback(
     (remote: Page) => {
       if (remote.id !== pageId || remote.project_id !== scope.current || remote.version <= 0 ||
           remote.version < base.current.version) return;
@@ -260,6 +263,33 @@ export function usePageAutosave({
     [pageId, adopt, armWrite]
   );
 
+  // MIN-1013: the server broadcasts a write as soon as it commits, and answers
+  // the PATCH only after reading the page back. The refetch that broadcast
+  // triggers can therefore land BEFORE the response, carrying this surface's
+  // own body under the new version while `base` still holds the previous one.
+  // Merged then, the block being typed reads as changed on both sides and the
+  // writer's latest keystrokes lose to their own older text. So a document
+  // that arrives during a write waits for its acknowledgement: by then `base`
+  // carries the acknowledged version, the echo is dropped by its version, and
+  // a genuinely newer document from someone else still merges.
+  const reconcileRemote = useCallback(
+    (remote: Page) => {
+      if (inFlight.current) {
+        const waiting = deferredRemote.current;
+        if (!waiting || remote.version >= waiting.version) deferredRemote.current = remote;
+        return;
+      }
+      applyRemote(remote);
+    },
+    [applyRemote]
+  );
+
+  const drainDeferredRemote = useCallback(() => {
+    const remote = deferredRemote.current;
+    deferredRemote.current = null;
+    if (remote) applyRemote(remote);
+  }, [applyRemote]);
+
   useEffect(() => {
     if (fresh && loaded && page) reconcileRemote(page);
   }, [fresh, loaded, page, reconcileRemote]);
@@ -280,7 +310,7 @@ export function usePageAutosave({
         if (!acquireFresh) throw new FreshPageBasisError("A fresh page read is required before saving");
         const remote = await acquireFresh();
         if (!currentOwner()) return;
-        reconcileRemote(remote);
+        applyRemote(remote);
         if (!basisReady.current) throw new FreshPageBasisError("Fresh page response does not match the accepted document");
       }
       if (!currentOwner()) return;
@@ -326,6 +356,9 @@ export function usePageAutosave({
           }
         }
         if (!currentOwner()) return;
+        // Between two requests: what arrived meanwhile merges now, and rebases
+        // the next queued draft onto it.
+        drainDeferredRemote();
         patch = takePending();
       }
     } catch (err) {
@@ -341,6 +374,9 @@ export function usePageAutosave({
       // request. Hand off once to its live generation, whose ordinary failures
       // stop with an error. Newer input keeps its own debounce timer.
       if (!currentOwner() && surfaceActive.current && pending.current && !timer.current) armWrite();
+      // Last, so its saving state and rebased draft are not overwritten above.
+      if (surfaceActive.current) drainDeferredRemote();
+      else deferredRemote.current = null;
     }
 
     /** The 409: merge, adopt, and say what we have not been able to merge. */
@@ -374,7 +410,7 @@ export function usePageAutosave({
       }
       return { ...rest, content: merged.doc, version: err.page.version };
     }
-  }, [pageId, save, takePending, adopt, onError, acquireFresh, reconcileRemote, armWrite]);
+  }, [pageId, save, takePending, adopt, onError, acquireFresh, applyRemote, drainDeferredRemote, armWrite]);
 
   const writeRef = useRef(write);
   writeRef.current = write;
