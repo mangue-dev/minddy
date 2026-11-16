@@ -40,6 +40,37 @@ same scope.
 The checkpoint records the safe round boundary used to continue. It contains no credentials. Live-only tool secrets are not written to
 the activity journal and remain subject to the existing message redaction.
 
+## Handoff between jobs
+
+A turn is not bound to the function that runs it. Every route that executes a
+turn has `maxDuration = 300`, and `lib/server/numo/job-deadline.ts` derives the
+job's deadline from it. At the two durable boundaries of the loop, before a
+generation and before a tool that has not run yet, `processChat` asks whether
+the time left covers that step (105 s for a generation, 90 s for a tool). If
+not, it returns a `handoff` suspension: the checkpoint written at that boundary
+already describes the next step, so no tool is ever cut in the middle and no
+mutation becomes `reconciling` because of the time limit. A job always runs at
+least one step before it may hand off. Handoff is armed only on Vercel with
+`CRON_SECRET` set, where a new job can take the turn over; a self-hosted server
+keeps running the turn to the end in-process.
+
+The executor then calls `hand_off_numo_turn`, which moves the turn from
+`running` back to `queued`, due at once, clears the claim and returns the
+attempt the claim took: changing jobs never counts toward the three-attempt
+ceiling. The conversation stays `generating`. The job asks
+`/api/cron/numo-turns?turn=<id>` (with `CRON_SECRET`) to run the turn in a new
+invocation; the minute clock picks it up if that request is lost. The live
+stream ends with `done { status: "queued", after }`, which the journal does not
+record: the client follows the turn by polling the journal from `after`, the
+last event it already showed. The journal records each tool result as the tool
+message stores it, redacted (a result over 32,000 characters keeps only its
+outcome), so a reader that follows the journal sees each tool finish rather
+than waiting for the turn's end; the live-only copy, which may show a fresh
+secret once, never enters it. Wake and reminder turns run under the background
+consent guard in every job. The per-turn spend cap is read from the usage
+ledger by turn ID, so it accumulates across jobs, and each model call of a turn
+has its own ledger slot (`numoUsageSeq`) however many rounds it runs.
+
 ## Retired worker continuation
 
 Until MIN-721, a successful code-worker launch moved the parent to a

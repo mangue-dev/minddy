@@ -51,6 +51,7 @@ import { MAX_SELECTED_SKILL_BYTES } from "@/lib/repository-skills";
 import type { RepositorySkill } from "@/lib/repository-skills";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { beginNumoTurn, executeNumoTurn } from "@/lib/server/numo/turns";
+import { numoJobDeadline } from "@/lib/server/numo/job-deadline";
 import { openConversationWithHomeBrief } from "@/lib/server/numo/home-brief-opening";
 import { routineContinuationForConversation } from "@/lib/server/routine-occurrences";
 import { ensureNumoRequestConversation } from "@/lib/server/numo/request-conversation";
@@ -321,6 +322,9 @@ export async function POST(request: NextRequest) {
   const consentRefusal = await aiConsentRefusal();
   if (consentRefusal) return consentRefusal;
   const requestStartedAt = performance.now();
+  // Admission eats into this function's 300 s: the turn hands itself to a
+  // new job before the limit (MIN-1010).
+  const turnDeadlineAt = numoJobDeadline();
   // getAuthedUser rather than a direct getUser(): it is he who carries the gate
   // Global MFA (aal2) and 503 “instance unreachable” — a protected account
   // by TOTP should not be able to talk to the assistant in aal1 (MIN-118).
@@ -765,6 +769,7 @@ export async function POST(request: NextRequest) {
           readClient: supabase,
           liveEmitter: emitter,
           aiRuntime: configuration.runtime,
+          deadlineAt: turnDeadlineAt,
         });
         let finalStatus = result.status === "not_claimed" ? turn.status : result.status;
         if (result.status === "not_claimed") {

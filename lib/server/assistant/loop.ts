@@ -97,7 +97,12 @@ export interface ProcessChatResult {
 }
 
 export type ProcessChatSuspension =
-  | { kind: "input" };
+  | { kind: "input" }
+  /**
+   * The job ran out of time before the next step (MIN-1010). The durable
+   * checkpoint already describes that step: a new job resumes from it.
+   */
+  | { kind: "handoff" };
 
 export interface ProcessChatCheckpoint {
   phase: "model" | "tools";
@@ -313,6 +318,13 @@ export interface ProcessChatContext extends ToolContext {
    * including pending provider reads and cancellable database reads.
    */
   onStopSignal?: (notify: () => void) => () => void;
+  /**
+   * Asked at the two durable boundaries, before a generation and before a
+   * tool that has not run yet: true when the job's time left does not cover
+   * that step (MIN-1010). The loop then stops with a `handoff` suspension.
+   * It is never asked before the job has run one step of its own.
+   */
+  shouldHandOff?: (step: "generation" | "tool") => boolean;
   /** Budget gate immediately before every provider generation. */
   beforeGeneration?: (roundCount: number) => Promise<void>;
   /** Persist one generation before any tool it requested can launch work. */
@@ -527,6 +539,15 @@ export async function processChat(
   // what a round 3 `list_integrations` would rewrite.
   const redactor = new SecretRedactor();
   let suspension: ProcessChatSuspension | null = null;
+  // Generations and tools this job ran. A job always takes one step before it
+  // may hand off, so a job started late cannot hand off forever.
+  let stepsRun = 0;
+  let handingOff = false;
+  const handOffBefore = (step: "generation" | "tool") => {
+    if (stepsRun === 0 || !context.shouldHandOff?.(step)) return false;
+    handingOff = true;
+    return true;
+  };
   let resumeCheckpoint = context.resumeCheckpoint ?? null;
   let completionRepairs = Math.min(MAX_COMPLETION_REPAIRS,
     Math.max(0, Math.floor(resumeCheckpoint?.completionRepairs ?? 0)));
@@ -614,12 +635,14 @@ export async function processChat(
       return null;
     });
     if (messageId) emitter.emit("message_complete", { message_id: messageId });
-    emitter.emit("tool_result", {
+    const compactionResult = {
       id: callId,
       name: COMPACTION_TOOL_NAME,
       result: { status: summary ? "compacted" : "failed" },
       success: !!summary,
-    });
+    };
+    emitter.emit("tool_result", compactionResult);
+    emitter.journal?.("tool_result", compactionResult);
   };
 
   try {
@@ -632,6 +655,9 @@ export async function processChat(
         ?? "the bounded correction attempts were exhausted");
     }
     const resumingTools = resumeCheckpoint?.phase === "tools";
+    // The checkpoint written before this point is `model` (or the turn's
+    // first): the next job opens this same round.
+    if (!resumingTools && handOffBefore("generation")) break;
     roundCount = resumingTools
       ? Math.max(roundCount, resumeCheckpoint?.roundCount ?? 1)
       : roundCount + 1;
@@ -936,6 +962,7 @@ export async function processChat(
         cacheWriteTokens: usageInfo?.prompt_tokens_details?.cache_write_tokens ?? null,
       };
       generations.push(generation);
+      stepsRun++;
       await context.onGeneration?.(generation, roundCount);
       if (stopObserved) {
         // The stop was requested while this round streamed: hand the turn back
@@ -1106,12 +1133,9 @@ export async function processChat(
           );
 
           const askResult = { status: "awaiting_user_response", questions };
-          emitter.emit("tool_result", {
-            id: acc.id,
-            name: "ask_user",
-            result: askResult,
-            success: true,
-          });
+          const askToolResult = { id: acc.id, name: "ask_user", result: askResult, success: true };
+          emitter.emit("tool_result", askToolResult);
+          emitter.journal?.("tool_result", askToolResult);
 
           if (!alreadyCompleted) {
             await saveToolResultMessage(context, {
@@ -1157,6 +1181,9 @@ export async function processChat(
         // Answered by the loop: pure, so it runs again on a resumed round
         // rather than going through the durable ledger.
         const local = localToolExecution(acc.name, args);
+        // The `tools` checkpoint lists the calls done so far: the next job
+        // runs this one and those after it.
+        if (!local && !alreadyCompleted && handOffBefore("tool")) break;
         const ledgerClaim = local
           ? { action: "local" as const }
           : context.toolLedger
@@ -1170,6 +1197,7 @@ export async function processChat(
         if (ledgerClaim.action === "reconcile") {
           throw new AmbiguousToolExecutionError(acc.name, acc.id);
         }
+        if (ledgerClaim.action === "execute") stepsRun++;
         if (ledgerClaim.action === "lost_claim") {
           throw new Error("Numo turn execution claim was lost");
         }
@@ -1240,6 +1268,14 @@ export async function processChat(
           result,
           success,
         });
+        // A reader following the journal (after a handoff, or a reconnect)
+        // gets the redacted result the tool message stores (MIN-1010).
+        emitter.journal?.("tool_result", {
+          id: acc.id,
+          name: acc.name,
+          result: persistedResult,
+          success,
+        });
         if (!alreadyCompleted) {
           await saveToolResultMessage(context, {
             conversation_id: context.conversationId,
@@ -1284,7 +1320,7 @@ export async function processChat(
       // - ask_user, or a tool that hands the turn back: stop and wait for user
       // - other tools: continue with tools enabled; minddy tools chain
       //   legitimately (create issue → set categories → comment)
-      if (!hasAskUser && !pausedByTool && !stopObserved) {
+      if (!hasAskUser && !pausedByTool && !stopObserved && !handingOff) {
         await context.persistCheckpoint?.({ phase: "model", roundCount, completionRepairs });
         continueLoop = true;
       }
@@ -1301,7 +1337,7 @@ export async function processChat(
     finalReasoning,
     allToolCalls,
     generations,
-    suspension,
+    suspension: handingOff ? { kind: "handoff" } : suspension,
   };
   } finally {
     executionClosed = true;

@@ -1,6 +1,6 @@
 import { withEventActor, withRoutineCause } from "@/lib/server/supabase-fetch";
 import "server-only";
-import { assertAiAllowedInBackground, assertAiConsent } from "@/lib/server/ai-consent";
+import { assertAiAllowedInBackground, assertAiConsent, runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 import { markdownForReader } from "@/lib/server/mention-access";
 
 import { randomUUID } from "node:crypto";
@@ -110,6 +110,8 @@ import {
 } from "./surface-projection";
 import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { numoJobDeadline, numoTurnHandoffAvailable, numoTurnShouldHandOff } from "./job-deadline";
 import { loadNumoMemoryPrompt } from "./memory-prompt";
 import { loadProjectAiInstructionsPrompt } from "./project-instructions-prompt";
 import { touchNumoMemories } from "./memory-content";
@@ -335,8 +337,23 @@ const PERSISTED_EVENT_TYPES = new Set([
   "error",
 ]);
 
+/**
+ * Events recorded only for journal readers: the live stream already carries
+ * its own copy, which may show a fresh secret once (MIN-343).
+ */
+const JOURNAL_ONLY_EVENT_TYPES = new Set(["tool_result"]);
+
+/**
+ * Past this size a journaled tool result keeps only its outcome: the card
+ * shows done, and the turn's final reload brings the full result.
+ */
+const JOURNAL_TOOL_RESULT_MAX_CHARS = 32_000;
+
 interface DurableEmitter extends SafeEmitter {
+  journal(event: string, data: unknown): void;
   flush(): Promise<void>;
+  /** A last event for the live reader alone: the journal does not record it. */
+  finishLive(event: string, data: unknown): void;
 }
 
 const DURABLE_ACTIVITY_FLUSH_MS = 250;
@@ -366,7 +383,6 @@ export function createDurableNumoEmitter(
   };
 
   const append = (type: string, payload: unknown) => {
-    if (!PERSISTED_EVENT_TYPES.has(type)) return;
     enqueue(async () => {
       const eventId = randomUUID();
       const clear = payload ?? {};
@@ -444,8 +460,26 @@ export function createDurableNumoEmitter(
       }
       if (event === "reasoning_tick" || event === "tool_result") return;
       flushActivity();
-      append(event, data);
+      if (PERSISTED_EVENT_TYPES.has(event)) append(event, data);
       if (event === "done" || event === "error") terminal = true;
+    },
+    journal(event, data) {
+      if (closed || terminal || !JOURNAL_ONLY_EVENT_TYPES.has(event)) return;
+      flushActivity();
+      const payload = data as Record<string, unknown> | null;
+      if (event === "tool_result" && payload && "result" in payload &&
+          (JSON.stringify(payload.result) ?? "").length > JOURNAL_TOOL_RESULT_MAX_CHARS) {
+        const { result: _result, ...outcome } = payload;
+        append(event, outcome);
+        return;
+      }
+      append(event, data);
+    },
+    finishLive(event, data) {
+      if (closed || terminal) return;
+      flushActivity();
+      live?.emit(event, data);
+      terminal = true;
     },
     close() {
       if (closed) return;
@@ -1152,6 +1186,7 @@ async function executeNumoTurnCore(input: {
   liveEmitter?: SafeEmitter;
   aiRuntime?: ResolvedAiRuntime;
   allowRetryable?: boolean;
+  deadlineAt: number;
 }): Promise<ExecuteNumoTurnResult> {
   const service = getServiceClient();
   const claimToken = randomUUID();
@@ -1172,7 +1207,7 @@ async function executeNumoTurnCore(input: {
   const signalLocalStop = () => { localStopRequested = true; };
   turnStopSignals.set(claimed.id, signalLocalStop);
   try {
-    return await executeClaimedNumoTurn({
+    const execute = () => executeClaimedNumoTurn({
       turnId: input.turnId,
       turn: claimed,
       claimToken,
@@ -1180,9 +1215,16 @@ async function executeNumoTurnCore(input: {
       liveEmitter: input.liveEmitter,
       aiRuntime: input.aiRuntime,
       allowRetryable: input.allowRetryable === true,
+      deadlineAt: input.deadlineAt,
       isStopRequestedLocally: () => localStopRequested,
       signalLocalStop,
     });
+    // A wake or a reminder is Numo acting on its own: it follows the account's
+    // AI answer in whichever job runs it, including a job a handoff started
+    // (MIN-1010), not only in the lanes that admit it.
+    return claimed.intent.wake || claimed.intent.reminder
+      ? await runAsBackgroundAiWork(execute)
+      : await execute();
   } finally {
     turnStopSignals.delete(claimed.id);
   }
@@ -1196,6 +1238,7 @@ async function executeClaimedNumoTurn(input: {
   liveEmitter?: SafeEmitter;
   aiRuntime?: ResolvedAiRuntime;
   allowRetryable?: boolean;
+  deadlineAt: number;
   isStopRequestedLocally: () => boolean;
   signalLocalStop: () => void;
 }): Promise<ExecuteNumoTurnResult> {
@@ -1378,6 +1421,11 @@ async function executeClaimedNumoTurn(input: {
       },
       toolLedger: createToolLedger(service, claimed.id, claimToken,
         claimed.user_id),
+      // A turn outlives the job that runs it (MIN-1010): it hands itself to a
+      // new job at a durable boundary instead of being killed mid-step.
+      ...(numoTurnHandoffAvailable()
+        ? { shouldHandOff: (step: "generation" | "tool") => numoTurnShouldHandOff(input.deadlineAt, step) }
+        : {}),
       shouldStop: async () =>
         input.isStopRequestedLocally() || await stopRequested(service, claimed.id, claimToken),
       onStopSignal: (notify) => {
@@ -1418,11 +1466,10 @@ async function executeClaimedNumoTurn(input: {
           }).eq("id", claimed.conversation_id);
           if (error) throw new Error(error.message);
         },
-        // A summary call is part of the turn: same run, its own ledger slot
-        // (the turn's generations use the first 50 of each attempt's 100).
+        // A summary call is part of the turn: same run, its own ledger slot.
         recordUsage: (generation, roundCount) => recordAiUsage({
           runId: claimed.run_id,
-          seq: Math.max(0, claimed.attempts - 1) * 100 + 50 + roundCount,
+          seq: numoUsageSeq(claimed.attempts, roundCount, "compaction"),
           feature: claimed.intent.routineId ? "routine_code" : "numo_chat",
           provider: runtime.provider,
           keyMode: runtime.mode,
@@ -1444,7 +1491,7 @@ async function executeClaimedNumoTurn(input: {
       onGeneration: async (generation, roundCount) => {
         await recordAiUsage({
           runId: claimed.run_id,
-          seq: Math.max(0, claimed.attempts - 1) * 100 + roundCount,
+          seq: numoUsageSeq(claimed.attempts, roundCount, "generation"),
           feature: claimed.intent.routineId ? "routine_code" : "numo_chat",
           provider: runtime.provider,
           keyMode: runtime.mode,
@@ -1479,6 +1526,21 @@ async function executeClaimedNumoTurn(input: {
       });
       emitter.emit("done", { status: "stopped" });
       await emitter.flush();
+      emitter.close();
+      return { status: turn.status, turn };
+    }
+
+    if (result.suspension?.kind === "handoff") {
+      // This job's activity is in the journal before another job may add to it.
+      await emitter.flush();
+      const turn = await handOffNumoTurn(service, claimed, claimToken);
+      relayNumoTurn(turn.id);
+      // The browser reads `queued` as "still running on the server" and
+      // follows the turn by polling from `after`, the journal position it has
+      // already seen: no error, no "interrupted" card, no replay. The journal
+      // does not record this event, so it can never land among the next
+      // job's events.
+      emitter.finishLive("done", { status: turn.status, after: turn.last_event_seq });
       emitter.close();
       return { status: turn.status, turn };
     }
@@ -1679,6 +1741,77 @@ async function executeClaimedNumoTurn(input: {
   }
 }
 
+/**
+ * The usage ledger slot of one model call of a turn: its idempotency key when
+ * the provider gives no generation id. A turn has no round limit (MIN-1008)
+ * and runs on across jobs (MIN-1010), so each attempt gets 100,000 slots and
+ * the summary calls the odd ones: a long turn never reuses a slot, which
+ * would drop a real charge as a duplicate. The `integer` column holds
+ * thousands of attempts.
+ */
+export function numoUsageSeq(
+  attempts: number,
+  roundCount: number,
+  call: "generation" | "compaction",
+): number {
+  return Math.max(0, attempts - 1) * 100_000 + roundCount * 2 + (call === "compaction" ? 1 : 0);
+}
+
+/**
+ * Give the turn back to the queue at a durable boundary (MIN-1010). The
+ * checkpoint the loop wrote before stopping is kept as it is, the turn is due
+ * at once, and the attempt this claim took is returned: changing jobs is not
+ * a failure, so it never moves the turn toward its three-attempt ceiling.
+ */
+async function handOffNumoTurn(
+  service: SupabaseClient,
+  claimed: NumoTurn,
+  claimToken: string,
+): Promise<NumoTurn> {
+  const { data, error } = await service.rpc("hand_off_numo_turn", {
+    p_turn_id: claimed.id,
+    p_claim_token: claimToken,
+  });
+  if (error) throw new Error(error.message);
+  const row = compositeRow<NumoTurn>(data);
+  if (!row) throw new NumoClaimLostError();
+  console.info("[numo-turn] handed off", { turnId: claimed.id, attempts: row.attempts });
+  return hydrateNumoTurn(row, claimed.user_id);
+}
+
+/**
+ * Start a new job for a handed-off turn right away, instead of waiting for
+ * the next minute of the Numo turns clock. The clock stays the safety net when
+ * this request is lost: the turn is already `queued` and due.
+ */
+function relayNumoTurn(turnId: string): void {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return;
+  afterOrNow(async () => {
+    const url = new URL("/api/cron/numo-turns", canonicalAppOrigin());
+    url.searchParams.set("turn", turnId);
+    const headers: Record<string, string> = { authorization: `Bearer ${secret}` };
+    // A protected preview deployment answers its own requests with a login page.
+    const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    if (bypass) headers["x-vercel-protection-bypass"] = bypass;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        console.error("[numo-turn] relay refused", { turnId, status: response.status });
+      }
+    } catch (error) {
+      console.error("[numo-turn] relay failed", {
+        turnId,
+        error: error instanceof Error ? error.name : typeof error,
+      });
+    }
+  });
+}
+
 /** Execute one durable turn and keep any shared comment projection in sync. */
 export async function executeNumoTurn(input: {
   turnId: string;
@@ -1686,11 +1819,18 @@ export async function executeNumoTurn(input: {
   liveEmitter?: SafeEmitter;
   aiRuntime?: ResolvedAiRuntime;
   allowRetryable?: boolean;
+  /**
+   * When the job running the turn must stop working (`numoJobDeadline`).
+   * Defaults to a full job starting now; a route passes its request's own
+   * start so the time its admission took is counted.
+   */
+  deadlineAt?: number;
 }): Promise<ExecuteNumoTurnResult> {
   const service = getServiceClient();
   try {
     const result = await executeNumoTurnCore({
       ...input,
+      deadlineAt: input.deadlineAt ?? numoJobDeadline(),
       liveEmitter: await withNumoSurfaceEmitter(
         service,
         input.turnId,
@@ -1834,7 +1974,7 @@ export async function retryNumoTurn(conversationId: string, userId: string) {
   return turn ? hydrateNumoTurn(turn, userId) : null;
 }
 
-export async function drainNumoTurns(options?: { limit?: number }) {
+export async function drainNumoTurns(options?: { limit?: number; deadlineAt?: number }) {
   const service = getServiceClient();
   const { recoverPendingRoutineOccurrences } = await import(
     "@/lib/server/routine-occurrences"
@@ -1851,29 +1991,75 @@ export async function drainNumoTurns(options?: { limit?: number }) {
     .limit(options?.limit ?? 10);
   if (error) throw new Error(error.message);
   let claimed = 0;
-  // A background wake (MIN-929) whose user switched it off since admission
-  // is stopped instead of run.
-  const { stopIfBackgroundOff, wakeTurnIds } = await import("./wake");
-  const wakes = await wakeTurnIds(service, (data ?? []).map((row) => row.id as string));
-  for (const row of data ?? []) {
-    if (wakes.has(row.id as string) && await stopIfBackgroundOff(service, row as {
-      user_id: string; conversation_id: string; request_id: string;
-    })) continue;
-    // A `retryable` turn carries a checkpoint and waits on nobody: for a turn
-    // started server-side (PR review, routine, automation) there is no
-    // interactive client to press "Retry", so the drain is the only thing
-    // that can resume it. The service client is passed as the read client on
-    // purpose: without it, `executeNumoTurnCore` treats any resume as an
-    // interrupted request and flips the turn straight back to
-    // `retryable` without ever running it, leaving the claim to churn every
-    // tick with `attempts` unbounded. The attempt ceiling still bounds a
-    // poisoned turn once the real execution path records its failures.
-    const result = await executeNumoTurn({
-      turnId: row.id as string,
-      readClient: service,
-      ...(row.status === "retryable" ? { allowRetryable: true } : {}),
-    });
-    if (result.status !== "not_claimed") claimed++;
+  const rows = (data ?? []) as QueuedNumoTurnRow[];
+  const { wakeTurnIds } = await import("./wake");
+  const wakes = await wakeTurnIds(service, rows.map((row) => row.id));
+  for (const row of rows) {
+    if (await runQueuedNumoTurn(service, row, wakes.has(row.id), options?.deadlineAt)) claimed++;
   }
   return { claimed };
+}
+
+interface QueuedNumoTurnRow {
+  id: string;
+  status: string;
+  user_id: string;
+  conversation_id: string;
+  request_id: string;
+}
+
+/** Run one waiting turn from a background job. True when this job claimed it. */
+async function runQueuedNumoTurn(
+  service: SupabaseClient,
+  row: QueuedNumoTurnRow,
+  isWake: boolean,
+  deadlineAt?: number,
+): Promise<boolean> {
+  // A background wake (MIN-929) whose user switched it off since admission
+  // is stopped instead of run.
+  if (isWake) {
+    const { stopIfBackgroundOff } = await import("./wake");
+    if (await stopIfBackgroundOff(service, row)) return false;
+  }
+  // A `retryable` turn carries a checkpoint and waits on nobody: for a turn
+  // started server-side (PR review, routine, automation) there is no
+  // interactive client to press "Retry", so the drain is the only thing
+  // that can resume it. The service client is passed as the read client on
+  // purpose: without it, `executeNumoTurnCore` treats any resume as an
+  // interrupted request and flips the turn straight back to
+  // `retryable` without ever running it, leaving the claim to churn every
+  // tick with `attempts` unbounded. The attempt ceiling still bounds a
+  // poisoned turn once the real execution path records its failures.
+  const result = await executeNumoTurn({
+    turnId: row.id,
+    readClient: service,
+    ...(row.status === "retryable" ? { allowRetryable: true } : {}),
+    ...(deadlineAt !== undefined ? { deadlineAt } : {}),
+  });
+  return result.status !== "not_claimed";
+}
+
+/**
+ * Run the one turn a previous job handed off (MIN-1010), in this new job.
+ * A turn that is no longer waiting, or that the minute clock claimed first,
+ * is left alone.
+ */
+export async function runHandedOffNumoTurn(
+  turnId: string,
+  options?: { deadlineAt?: number },
+): Promise<{ claimed: boolean }> {
+  const service = getServiceClient();
+  const { data, error } = await service.from("numo_assistant_turns")
+    .select("id, status, user_id, conversation_id, request_id")
+    .eq("id", turnId)
+    .eq("status", "queued")
+    // No `not_before` filter: the handoff stamped it with the database clock,
+    // which `claim_numo_turn` checks. This function's clock may lag behind.
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return { claimed: false };
+  const row = data as QueuedNumoTurnRow;
+  const { wakeTurnIds } = await import("./wake");
+  const wakes = await wakeTurnIds(service, [row.id]);
+  return { claimed: await runQueuedNumoTurn(service, row, wakes.has(row.id), options?.deadlineAt) };
 }

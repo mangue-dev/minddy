@@ -697,7 +697,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     (
       conversationId: string,
       projectId: string | null,
-      options?: { quiet?: boolean },
+      options?: { quiet?: boolean; after?: number },
     ) => {
       stopPolling();
       const pollGeneration = pollGenerationRef.current;
@@ -706,7 +706,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       // as busy: the optimistic idle pasted by the stop must not be undone
       // unless the authoritative status says the turn is still working.
       if (!options?.quiet) dispatch({ type: "GENERATING_SERVER" });
-      let after = -1;
+      // A turn handed to a new job (MIN-1010) says how much of its journal
+      // this stream already showed: the poll follows on from there instead
+      // of replaying it over the tool cards on screen.
+      let after = options?.after ?? -1;
       // The turn died (claim ceiling reached) and waits for the drain to re-run
       // it from its checkpoint — history reloaded once on entering that wait.
       let reloadedRetryable = false;
@@ -1015,11 +1018,13 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         }
 
         let finalServerStatus: ConversationStatus | NumoTurnStatus | null = null;
+        let handoffAfter: number | undefined;
         const eventStream = createAssistantEventStream((eventType, data) => {
           if (controller.signal.aborted) return;
           if (eventType === "tool_call_start") toolCalls += 1;
           if ((eventType === "done" || eventType === "error") && typeof data.status === "string") {
             finalServerStatus = data.status as ConversationStatus | NumoTurnStatus;
+            if (typeof data.after === "number") handoffAfter = data.after;
             if (activeSendRef.current === sending && !ACTIVE_NUMO_TURN_STATUSES.has(data.status)) {
               activeTurnRef.current = null;
             }
@@ -1079,7 +1084,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           || finalServerStatus === "retryable") {
           const conversationId = liveConvRef.current.id ?? state.conversationId;
           if (conversationId) {
-            startPolling(conversationId, liveConvRef.current.projectId);
+            startPolling(conversationId, liveConvRef.current.projectId,
+              handoffAfter === undefined ? undefined : { after: handoffAfter });
           }
         }
 
