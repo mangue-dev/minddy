@@ -30,10 +30,15 @@ const h = vi.hoisted(() => ({
   recordAiUsage: vi.fn(),
   onHandoff: null as (() => void) | null,
   getUserById: vi.fn(),
+  recovered: [] as Array<Record<string, unknown>>,
+  stuckTurns: [] as Array<Record<string, unknown>>,
+  notifyRoutine: vi.fn(),
+  capture: vi.fn(),
 }));
 
 function queryFor(table: string) {
   let inserted: Record<string, unknown> | null = null;
+  let stuckRead = false;
   const filters: Record<string, unknown> = {};
   const query = {
     select: () => query,
@@ -59,6 +64,8 @@ function queryFor(table: string) {
     not: () => query,
     in: () => query,
     lte: () => query,
+    // Only the stuck-turn report reads turns older than a cutoff.
+    lt: () => { stuckRead = true; return query; },
     contains: () => query,
     gt: () => query,
     order: () => query,
@@ -75,7 +82,7 @@ function queryFor(table: string) {
       data: table === "assistant_messages"
         ? h.messages
         : table === "numo_assistant_turns"
-          ? h.queuedTurns
+          ? stuckRead ? h.stuckTurns : h.queuedTurns
           : [],
       error: null,
     }).then(resolve),
@@ -139,7 +146,7 @@ const service = {
       return { data: h.turn?.claim_token === args.p_claim_token
         && ["running", "stopping"].includes(String(h.turn?.status)), error: null };
     }
-    if (name === "recover_stale_numo_turns") return { data: 0, error: null };
+    if (name === "recover_stale_numo_turns") return { data: h.recovered, error: null };
     if (name === "hand_off_numo_turn") {
       h.onHandoff?.();
       if (h.turn?.claim_token !== args.p_claim_token || h.turn?.status !== "running") {
@@ -207,6 +214,11 @@ vi.mock("@/lib/managed-services", () => ({
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
 vi.mock("./watch-clock", () => ({ notifyReminderOfNumoTurn: vi.fn() }));
+vi.mock("@/lib/server/routine-hooks", () => ({ notifyRoutineOfNumoTurn: h.notifyRoutine }));
+vi.mock("@/lib/server/ai-provider-errors", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/ai-provider-errors")>(),
+  captureBackgroundException: h.capture,
+}));
 // A typed mention reaches the model named for the conversation's user.
 vi.mock("@/lib/server/mention-access", async () => {
   const { relabelMentions } = await import("@/lib/mention-link");
@@ -282,6 +294,10 @@ beforeEach(() => {
   h.checkpoints.length = 0;
   h.messages.length = 0;
   h.queuedTurns.length = 0;
+  h.recovered.length = 0;
+  h.stuckTurns.length = 0;
+  h.notifyRoutine.mockReset();
+  h.capture.mockReset();
   h.claims.length = 0;
   h.turnUpdates.length = 0;
   h.conversation = null;
@@ -803,6 +819,61 @@ describe("durable Numo execution", () => {
     await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
     expect(h.claims.at(-1)).toMatchObject({ p_allow_retryable: true });
     expect(h.processChat).toHaveBeenCalled();
+  });
+
+  // MIN-1011: no turn waits on a job that no longer exists.
+  describe("turns with no job left", () => {
+    it("ends a turn whose attempts are spent instead of resuming it again", async () => {
+      h.turn = { ...h.turn, status: "retryable", attempts: 3 };
+      h.queuedTurns.push({ id: h.turn.id, status: "retryable" });
+
+      await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
+
+      expect(h.processChat).not.toHaveBeenCalled();
+      expect(h.checkpoints.at(-1)).toMatchObject({
+        p_status: "failed",
+        p_error_message: "Numo was interrupted several times while answering and stopped. Send your request again.",
+      });
+      expect(h.notifyRoutine).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "failed" }), expect.anything());
+    });
+
+    it("still runs a turn on its last attempt", async () => {
+      h.turn = { ...h.turn, status: "retryable", attempts: 2 };
+      h.queuedTurns.push({ id: h.turn.id, status: "retryable" });
+
+      await drainNumoTurns({ limit: 1 });
+
+      expect(h.processChat).toHaveBeenCalled();
+    });
+
+    it("runs the after-turn hooks for a turn the recovery ended", async () => {
+      h.recovered.push({
+        ...turn(), status: "stopped",
+        intent: { ...turn().intent, routineId: "routine" },
+      });
+
+      await drainNumoTurns({ limit: 1 });
+
+      expect(h.notifyRoutine).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "stopped", intent: expect.objectContaining({ routineId: "routine" }) }),
+        { usageExhausted: false },
+      );
+    });
+
+    it("reports a turn stranded past the threshold", async () => {
+      h.stuckTurns.push({
+        id: "stuck-turn", status: "retryable",
+        updated_at: new Date(Date.now() - 45 * 60_000).toISOString(),
+      });
+
+      await drainNumoTurns({ limit: 1 });
+
+      expect(h.capture).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "NumoTurnStuckError" }),
+        expect.objectContaining({ surface: "numo_turn", turn_status: "retryable", age_minutes: 45 }),
+      );
+    });
   });
 
   describe("handing a turn to a new job before the 300 s limit (MIN-1010)", () => {

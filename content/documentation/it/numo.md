@@ -24,7 +24,7 @@
   "revision": 43,
   "sourceRevision": 43,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -418,7 +418,7 @@ L’intenzione viene registrata in un turno duraturo con UUID e messaggio. Il tu
 
 ### Gestire modifiche incerte {#mutations}
 
-Prima di una modifica, il sistema registra l’operazione e il relativo checkpoint; riutilizza i risultati già completati. Una lettura interrotta può essere ripetuta, mentre una modifica con esito incerto entra in `reconciling` senza un nuovo tentativo automatico. Controlla la destinazione prima di scrivere ancora. Le routine rispettano proprietà, budget e protezioni di costo; un altro membro non eredita la precedente connessione MCP personale.
+Prima di una modifica, il sistema registra l’operazione e il relativo checkpoint; riutilizza i risultati già completati. Una lettura interrotta viene rieseguita; uno strumento MCP esterno conta come lettura solo se si dichiara di sola lettura. Una modifica con esito incerto non viene mai ripetuta: Numo viene avvisato che l’esito è incerto, controlla lo stato attuale e prosegue. Controlla la destinazione prima di scrivere ancora. Le routine rispettano proprietà, budget e protezioni di costo; un altro membro non eredita la precedente connessione MCP personale.
 
 Arrestare Numo termina il suo turno. Un’azione esterna già inviata può comunque terminare. Una conversazione che attendeva lavoro sul codice di una versione precedente viene arrestata automaticamente e torna inattiva.
 

@@ -157,6 +157,37 @@ export function listMcpToolPage(client: Client, cursor?: string) {
   );
 }
 
+/**
+ * Whether the remote tool `call_mcp_tool` names declares itself read-only
+ * (`readOnlyHint`). The hint comes from the server itself and only decides
+ * whether an interrupted call to that same server runs again (MIN-1011). Any
+ * doubt (unknown tool, connection off, network error) answers false: the call
+ * is then treated as a write and never replayed.
+ */
+export async function mcpToolIsReadOnly(
+  userId: string,
+  args: Record<string, unknown>,
+): Promise<boolean> {
+  if (typeof args.tool !== "string" || !args.tool) return false;
+  try {
+    const connection = await getMcpConnection(userId, String(args.connection_id ?? ""));
+    if (!connection?.enabled) return false;
+    return await withMcpClient(connection, async (client) => {
+      let cursor: string | undefined;
+      for (let page = 0; page < 10; page++) {
+        const result = await listMcpToolPage(client, cursor);
+        const tool = result.tools.find((candidate) => candidate.name === args.tool);
+        if (tool) return tool.annotations?.readOnlyHint === true;
+        if (!result.nextCursor) return false;
+        cursor = result.nextCursor;
+      }
+      return false;
+    });
+  } catch {
+    return false;
+  }
+}
+
 export async function executeMcpTool(
   userId: string,
   name: string,

@@ -12,6 +12,7 @@ import { parseAskUserQuestions } from "@/lib/ask-user";
 import type { SafeEmitter } from "./sse";
 import {
   executeTool,
+  toolCallSafeToReplay,
   type ToolContext,
   type ToolExecution,
 } from "./execute-tool";
@@ -169,7 +170,12 @@ function malformedNativeCalls(calls: Iterable<{ id: string; name: string; argume
 }
 
 export interface ToolLedgerClaim {
-  action: "execute" | "reuse" | "reconcile" | "lost_claim";
+  /**
+   * `resolve`: an earlier job started this call and stopped before recording
+   * its result. The caller now holds it and settles it (MIN-1011).
+   * `reconcile` is what a ledger without that resolution answers.
+   */
+  action: "execute" | "reuse" | "resolve" | "reconcile" | "lost_claim";
   execution?: ToolExecution;
 }
 
@@ -189,6 +195,18 @@ export interface ToolExecutionLedger {
     pause: boolean;
   }): Promise<void>;
 }
+
+/**
+ * What the model reads for a write whose job stopped before its result was
+ * recorded: it may have happened or not, and replaying it could do it twice.
+ */
+export const INTERRUPTED_TOOL_EXECUTION: ToolExecution = {
+  success: false,
+  result: {
+    error: "This call was interrupted before its result was recorded: it may or may not have taken effect. Check the current state before calling it again.",
+    outcome: "unknown",
+  },
+};
 
 export class AmbiguousToolExecutionError extends Error {
   constructor(readonly toolName: string, readonly toolCallId: string) {
@@ -1197,7 +1215,18 @@ export async function processChat(
         if (ledgerClaim.action === "reconcile") {
           throw new AmbiguousToolExecutionError(acc.name, acc.id);
         }
-        if (ledgerClaim.action === "execute") stepsRun++;
+        // The job that ran this call stopped before recording its result
+        // (MIN-1011). A read runs again; a write is never replayed: the model
+        // learns the outcome is unknown and checks before acting again.
+        const interrupted = ledgerClaim.action === "resolve"
+          && !await toolCallSafeToReplay(acc.name, args, context);
+        if (ledgerClaim.action === "resolve") {
+          console.warn("[numo-turn] interrupted tool call resumed", {
+            turnId: context.turnId ?? null, tool: acc.name, replayed: !interrupted,
+          });
+        }
+        const holdsCall = ledgerClaim.action === "execute" || ledgerClaim.action === "resolve";
+        if (holdsCall) stepsRun++;
         if (ledgerClaim.action === "lost_claim") {
           throw new Error("Numo turn execution claim was lost");
         }
@@ -1205,6 +1234,8 @@ export async function processChat(
           execution = local;
         } else if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
           execution = ledgerClaim.execution;
+        } else if (interrupted) {
+          execution = INTERRUPTED_TOOL_EXECUTION;
         } else {
           if (stopObserved || await context.shouldStop?.()) {
             observeStop();
@@ -1250,7 +1281,7 @@ export async function processChat(
         // `content` carries only what the model needs.
         const forModel = redactDeep(modelResult ?? result, redactor.redact);
         const persistedResult = redactDeep(result, redactor.redact);
-        if (ledgerClaim.action === "execute") {
+        if (holdsCall) {
           await context.toolLedger?.complete({
             toolCallId: acc.id,
             success,

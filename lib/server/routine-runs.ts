@@ -81,9 +81,9 @@ const RUN_STATUS_FOR_TURN: Record<NumoTurnStatus, RoutineRunSummary["status"]> =
   stopping: "running",
   completed: "completed",
   failed: "failed",
-  // A tool may have acted without a recorded result: the run does not resume
-  // on its own and needs the owner's review.
-  reconciling: "failed",
+  // A run parked on an interrupted tool call before MIN-1011: the drain
+  // resumes it within a minute, like a retryable turn.
+  reconciling: "queued",
   stopped: "canceled",
 };
 

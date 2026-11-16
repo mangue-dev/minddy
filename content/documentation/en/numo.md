@@ -24,7 +24,7 @@
   "revision": 43,
   "sourceRevision": 43,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -417,7 +417,7 @@ A user intent is persisted as a durable turn with its request UUID and message. 
 
 ### Treat uncertain mutations explicitly {#mutations}
 
-Before mutation, the system records the operation and checkpoint. Completed results are reused. An interrupted read can retry, but a mutation whose outcome is unknown enters `reconciling` rather than automatically repeating. Inspect the actual destination before retrying an external write. Routine owner connections and budget remain subject to ownership and cost guards; another member cannot borrow the previous owner’s personal MCP credentials.
+Before mutation, the system records the operation and checkpoint. Completed results are reused. An interrupted read runs again; an external MCP tool counts as a read only when it declares itself read-only. A write whose outcome is unknown is never repeated: Numo is told the outcome is unknown, checks the current state, and carries on. Inspect the actual destination before retrying an external write. Routine owner connections and budget remain subject to ownership and cost guards; another member cannot borrow the previous owner’s personal MCP credentials.
 
 Stopping Numo ends its turn. An external action already sent may still complete. A conversation that was waiting on code work from an earlier version is stopped automatically and returns to idle.
 

@@ -24,7 +24,7 @@
   "revision": 43,
   "sourceRevision": 43,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -418,7 +418,7 @@ A intenção é registrada em um turno durável com UUID e mensagem. O turno pas
 
 ### Tratar alterações incertas {#mutations}
 
-Antes de uma alteração, o sistema registra a operação e seu checkpoint; ele reutiliza resultados já concluídos. Uma leitura interrompida pode ser repetida, enquanto uma alteração com resultado incerto entra em `reconciling` sem nova tentativa automática. Confira o destino antes de gravar novamente. As rotinas respeitam propriedade, orçamento e proteções de custo; outro membro não herda a conexão MCP pessoal anterior.
+Antes de uma alteração, o sistema registra a operação e seu checkpoint; ele reutiliza resultados já concluídos. Uma leitura interrompida é executada de novo; uma ferramenta MCP externa só conta como leitura quando se declara somente leitura. Uma alteração com resultado incerto nunca é repetida: o Numo é avisado de que o resultado é incerto, confere o estado atual e continua. Confira o destino antes de gravar novamente. As rotinas respeitam propriedade, orçamento e proteções de custo; outro membro não herda a conexão MCP pessoal anterior.
 
 Interromper o Numo encerra seu turno. Uma ação externa já enviada ainda pode terminar. Uma conversa que aguardava trabalho de código de uma versão anterior é interrompida automaticamente e volta ao estado inativo.
 
