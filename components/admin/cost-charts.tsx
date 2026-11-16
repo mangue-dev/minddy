@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useFormatter } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,28 +14,91 @@ import type { StackedSeries } from "@/lib/admin-costs";
  * legend and its tooltip names each value.
  */
 
-/** A trend line without axes, for a summary card. */
+/**
+ * A trend line without axes, for a summary card. It stretches to the box its
+ * class gives it, so a narrow card can lay it across its full width.
+ *
+ * Given `days` and `format`, each day is a hover target, as in
+ * `StackedBarChart`: its tooltip names the day and its value, and a dot marks
+ * the point on the line. A `null` value is a day without data and reads "—".
+ */
 export function Sparkline({
   values,
+  days,
+  format,
   className,
 }: {
-  values: number[];
+  values: Array<number | null>;
+  /** Display label of each day, aligned with `values`. */
+  days?: string[];
+  format?: (value: number) => string;
   className?: string;
 }) {
-  const max = Math.max(...values, 0);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const numbers = values.map((value) => value ?? 0);
+  const max = Math.max(...numbers, 0);
   if (values.length < 2 || max === 0) {
     return <div className={cn("h-10 w-28 border-b border-dashed border-border", className)} aria-hidden />;
   }
   const width = 112;
   const height = 40;
-  const step = width / (values.length - 1);
-  const points = values
-    .map((value, index) => `${(index * step).toFixed(1)},${(height - 2 - (value / max) * (height - 4)).toFixed(1)}`)
-    .join(" ");
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={cn("h-10 w-28 overflow-visible", className)} aria-hidden>
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
+  // Each point sits at the center of its day's hover column.
+  const step = width / values.length;
+  const x = (index: number) => (index + 0.5) * step;
+  const y = (value: number) => height - 2 - (value / max) * (height - 4);
+  const points = numbers.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(" ");
+  const line = (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className="pointer-events-none relative size-full overflow-visible"
+      aria-hidden
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
+  );
+  const interactive = days && format && days.length === values.length;
+  return (
+    <div className={cn("relative h-10 w-28", className)}>
+      {interactive ? (
+        <div className="absolute inset-0 flex" onPointerLeave={() => setHovered(null)}>
+          {values.map((value, index) => (
+            <Tooltip key={days[index]}>
+              <TooltipTrigger asChild>
+                <div
+                  className="h-full min-w-0 flex-1 rounded-sm hover:bg-muted/60"
+                  onPointerEnter={() => setHovered(index)}
+                >
+                  <span className="sr-only">{`${days[index]}: ${value === null ? "—" : format(value)}`}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <span className="flex justify-between gap-4">
+                  <span className="font-medium">{days[index]}</span>
+                  <span className="tabular-nums">{value === null ? "—" : format(value)}</span>
+                </span>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+      ) : null}
+      {line}
+      {interactive && hovered !== null ? (
+        <span
+          className="pointer-events-none absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current ring-2 ring-card"
+          style={{ left: `${(x(hovered) / width) * 100}%`, top: `${(y(numbers[hovered]) / height) * 100}%` }}
+          aria-hidden
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -54,7 +117,9 @@ function niceCeiling(value: number): number {
 
 /**
  * One stacked column per day. The hover target is the whole column, and its
- * tooltip lists every series of that day with the total.
+ * tooltip lists every series of that day with the total. Columns have no
+ * minimum width and the gap narrows on long ranges, so 90 days fit a
+ * half-width card without pushing the page sideways.
  */
 export function StackedBarChart({
   series,
@@ -80,6 +145,7 @@ export function StackedBarChart({
   }
   const ticks = [ceiling, ceiling / 2, 0];
   const labelEvery = Math.max(1, Math.ceil(series.days.length / 6));
+  const gap = series.days.length > 45 ? "gap-px" : "gap-[3px]";
 
   return (
     <div className="flex flex-col gap-3">
@@ -90,13 +156,13 @@ export function StackedBarChart({
           ))}
         </div>
         <div className="min-w-0 flex-1">
-          <div className={cn("relative flex items-end gap-[3px] border-b border-border", height)}>
+          <div className={cn("relative flex items-end border-b border-border", gap, height)}>
             <div className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-border/70" aria-hidden />
             <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-border/70" aria-hidden />
             {series.days.map((day, index) => (
               <Tooltip key={day.day}>
                 <TooltipTrigger asChild>
-                  <div className="relative flex h-full min-w-[3px] flex-1 flex-col-reverse rounded-sm hover:bg-muted/60">
+                  <div className="relative flex h-full min-w-0 flex-1 flex-col-reverse rounded-sm hover:bg-muted/60">
                     {series.keys.map((key) => {
                       const value = day.values[key] ?? 0;
                       if (value <= 0) return null;
@@ -132,9 +198,9 @@ export function StackedBarChart({
               </Tooltip>
             ))}
           </div>
-          <div className="mt-1.5 flex gap-[3px] text-[0.6875rem] tabular-nums text-muted-foreground">
+          <div className={cn("mt-1.5 flex overflow-hidden text-[0.6875rem] tabular-nums text-muted-foreground", gap)}>
             {series.days.map((day, index) => (
-              <span key={day.day} className="min-w-[3px] flex-1 overflow-visible whitespace-nowrap">
+              <span key={day.day} className="min-w-0 flex-1 overflow-visible whitespace-nowrap">
                 {index % labelEvery === 0 ? dayLabel(day.day) : ""}
               </span>
             ))}
@@ -165,8 +231,8 @@ export function ChangeBadge({ change, label }: { change: number | null; label: s
   if (change === null) return <span className="text-xs text-muted-foreground">{label}</span>;
   const up = change > 0;
   return (
-    <span className="flex items-center gap-2 text-xs">
-      <span className={cn("font-medium tabular-nums", up ? "text-orange-600 dark:text-orange-400" : "text-emerald-600 dark:text-emerald-400")}>
+    <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+      <span className={cn("whitespace-nowrap font-medium tabular-nums", up ? "text-orange-600 dark:text-orange-400" : "text-emerald-600 dark:text-emerald-400")}>
         {up ? "↑" : "↓"} {format.number(Math.abs(change), { style: "percent", maximumFractionDigits: 1 })}
       </span>
       <span className="text-muted-foreground">{label}</span>

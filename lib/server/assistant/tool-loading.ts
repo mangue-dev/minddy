@@ -70,7 +70,7 @@ export const TOOL_FAMILIES: readonly ToolFamily[] = [
     tools: ["get_cycle", "fill_cycle", "add_issues_to_cycle", "move_issues", "remove_issues_from_cycle"] },
   { name: "Task notebook", summary: "tick, rewrite or replace tasks of the user's notebook",
     tools: ["update_scratchpad_tasks", "set_scratchpad", "edit_scratchpad_text"] },
-  { name: "Pages and databases", summary: "create and edit wiki pages, databases, their entries and views",
+  { name: "Pages and databases", summary: "create and edit wiki pages, databases, their entries and views, and the calculations under their number columns",
     tools: ["create_page", "create_page_database", "update_page", "append_to_page", "edit_page_text",
       "update_page_database", "update_page_database_views", "list_page_database_views"] },
   { name: "Feedback", summary: "the public feedback board: read posts, answer, link, promote and configure it",

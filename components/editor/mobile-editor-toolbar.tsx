@@ -67,6 +67,7 @@ import { mentionAttrsFromOption } from "@/lib/mention-attributes";
 import { isMentionLinkType } from "@/lib/mention-link";
 import { primeMentionLabel } from "@/lib/mention-resolution";
 import { dateMentionOptions, datesFirst, requestDatePicker } from "@/lib/mention-date";
+import { withDateMentions } from "@/lib/mention-menu";
 import {
   PAGE_COLORS,
   activePageColor,
@@ -370,7 +371,7 @@ export function MobileEditorToolbar({
       if (sheet !== "mentions" || !mentionItems) return sectionedMentions([]).sections;
       const found = filterMentions(mentionItems(), query);
       const dates = dateMentionOptions(query, locale, new Date(), tPicker("mentionPickDate"), weekStart);
-      return sectionedMentions(datesFirst(query, locale) ? [...dates, ...found] : [...found, ...dates]).sections;
+      return sectionedMentions(withDateMentions(found, dates, datesFirst(query, locale))).sections;
     },
     [sheet, mentionItems, query, locale, tPicker, weekStart],
   );

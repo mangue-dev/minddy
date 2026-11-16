@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/it.json; agent review, not human acceptance)",
-    "language": "agent:claude-code (it translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/it.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance)",
+    "language": "agent:claude-code (it translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-16"
   },
   "related": [
     "pages"
@@ -100,7 +100,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con un campo di ricerca, testo, numero, selezioni, data, persone, casella di controllo e i quattro tipi in sola lettura.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -134,7 +134,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +182,7 @@
       "src": "/documentation/it/database-options.png",
       "alt": "Anteprima del componente Modifica opzioni con stati in italiano, maniglie di trascinamento, cestini e la spiegazione dell’eliminazione.",
       "caption": "Modifica insieme nomi, colori e ordine delle opzioni. Trascina una maniglia per riordinare; il cestino rimuove un’opzione dalla bozza; Salva applica le modifiche. Sono mostrati dati dimostrativi.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/it/database-date-time.png",
       "alt": "Anteprima del selettore di data con il 24 luglio 2026 selezionato, Aggiungi un orario attivo e Orario impostato su 02:00 AM.",
       "caption": "Attiva Aggiungi un orario per inserire un orario. Questa anteprima del componente usa dati dimostrativi e il fuso orario del dispositivo.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +282,7 @@ Da quel menu, il proprietario o un Membro può scegliere **Promuovi a ticket** p
 
 ### Viste del database {#database-display}
 
-Un database mostra le sue voci attraverso viste, elencate sopra la tabella. Ogni vista conserva il proprio ordinamento, il proprio filtro e le proprie colonne nascoste, e tutti i membri del progetto vedono le stesse viste. Il proprietario o un Membro aggiunge una vista con **Nuova vista** (+), che parte dalla vista mostrata, fa clic destro su una vista per scegliere **Rinomina vista** o **Elimina vista**, e trascina le viste per riordinarle. Le modifiche a ordinamento, filtro e colonne vengono salvate nella vista attiva per tutti. Un database conserva almeno una vista; prima della sua prima modifica mostra la vista predefinita **Tabella**. I lettori passano da una vista all’altra e possono regolarne una per sé finché non lasciano la pagina. Il browser ricorda l’ultima vista aperta; la ricerca non viene mai salvata. L’ordine manuale è condiviso con l’albero delle pagine. Scorri orizzontalmente con un gesto del trackpad, Shift e rotella del mouse o la barra di scorrimento in fondo all’area dei contenuti, che compare mentre la tabella scorre. Uno schermo touch non mostra questa barra: scorri la tabella con il dito. Un’anteprima tagliata non accorcia il testo salvato. Le voci con valori di colonne si possono riordinare nel proprio database, ma non spostare fuori. Numo può elencare le viste di un database e, su tua richiesta, crearle, rinominarle, riordinarle o eliminarle (mai l’ultima), oppure cambiarne ordinamento, filtri (tutti o almeno uno) e colonne nascoste. Nella pagina di un database, Numo intende «una vista» come una vista del database, non della bacheca dei ticket. L’ordine delle colonne non fa parte di una vista: appartiene allo schema del database. I client minddy MCP non possono gestire le viste.
+Un database mostra le sue voci attraverso viste, elencate sopra la tabella. Ogni vista conserva il proprio ordinamento, il proprio filtro e le proprie colonne nascoste, e tutti i membri del progetto vedono le stesse viste. Il proprietario o un Membro aggiunge una vista con **Nuova vista** (+), che parte dalla vista mostrata, fa clic destro su una vista per scegliere **Rinomina vista** o **Elimina vista**, e trascina le viste per riordinarle. Le modifiche a ordinamento, filtro e colonne vengono salvate nella vista attiva per tutti. Un database conserva almeno una vista; prima della sua prima modifica mostra la vista predefinita **Tabella**. I lettori passano da una vista all’altra e possono regolarne una per sé finché non lasciano la pagina. Il browser ricorda l’ultima vista aperta; la ricerca non viene mai salvata. L’ordine manuale è condiviso con l’albero delle pagine. Scorri orizzontalmente con un gesto del trackpad, Shift e rotella del mouse o la barra di scorrimento in fondo all’area dei contenuti, che compare mentre la tabella scorre. Uno schermo touch non mostra questa barra: scorri la tabella con il dito. Un’anteprima tagliata non accorcia il testo salvato. Le voci con valori di colonne si possono riordinare nel proprio database, ma non spostare fuori. Numo può elencare le viste di un database e, su tua richiesta, crearle, rinominarle, riordinarle o eliminarle (mai l’ultima), oppure cambiarne ordinamento, filtri (tutti o almeno uno), colonne nascoste e calcoli sotto le colonne Numero. Se il database non ha ancora una vista salvata, questa modifica salva la vista predefinita, come fa la tua prima modifica. Nella pagina di un database, Numo intende «una vista» come una vista del database, non della bacheca dei ticket. L’ordine delle colonne non fa parte di una vista: appartiene allo schema del database. I client minddy MCP possono gestire le viste allo stesso modo.
 
 Apri **Ordina per** per scegliere una colonna, poi una direzione formulata in base a ciò che la colonna contiene: **Dalla A alla Z** o **Dalla Z alla A** per testo e persone, **Prima opzione per prima** o **Ultima opzione per prima** per una colonna Selezione o Selezione multipla, che viene ordinata secondo l’ordine delle sue opzioni, **Dal più piccolo** o **Dal più grande** per un numero, **Dal meno recente** o **Dal più recente** per una data, **Non selezionate prima** o **Selezionate prima** per una casella di controllo, e **Dall’alto in basso** o **Dal basso in alto** per l’ordine manuale. Gli elenchi di colonne di **Ordina per** e **Filtra** mostrano l’icona del tipo di ciascuna colonna.
 

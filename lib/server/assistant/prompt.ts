@@ -821,8 +821,8 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
     );
     if (ctx.pageIsDatabase) {
       lines.push(
-        `- This page IS A DATABASE: its entries are its subpages, its columns are the properties of database_schema (get_page), and it has SAVED VIEWS — named sorts, filters and hidden columns shown as tabs above its table, shared by the project.`,
-        `Here, "a view", "une vue", "filtre", "trie", "cache la colonne" mean THIS database's views: read them with list_page_database_views and create or change them with update_page_database_views, both with page_id ${ctx.pageId}. Never use list_views, create_view or update_view for them: those are the issue board's kanban views, which have nothing to do with this database.`,
+        `- This page IS A DATABASE: its entries are its subpages, its columns are the properties of database_schema (get_page), and it has SAVED VIEWS — named sorts, filters, hidden columns and the calculation under each number column (sum, average, min, max, count), shown as tabs above its table and shared by the project.`,
+        `Here, "a view", "une vue", "filtre", "trie", "cache la colonne", "fais la somme", "ajoute une moyenne", "un total sous la colonne" mean THIS database's views: read them with list_page_database_views and create or change them with update_page_database_views, both with page_id ${ctx.pageId}. Never use list_views, create_view or update_view for them: those are the issue board's kanban views, which have nothing to do with this database.`,
       );
     }
   } else if (ctx.routineId) {

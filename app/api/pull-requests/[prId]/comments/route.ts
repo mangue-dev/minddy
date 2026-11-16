@@ -14,7 +14,9 @@ import { createPrCommentResponse, prCommentsResponse, updatePrCommentResponse } 
 
 type RouteContext = { params: Promise<{ prId: string }> };
 
-export const maxDuration = 60;
+// An `@numo` comment runs a whole Numo turn after the response (MIN-1010):
+// the turn plans its handoff on this function's 300 s.
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;

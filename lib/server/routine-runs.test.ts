@@ -163,7 +163,8 @@ describe("Numo routine run reads", () => {
     expect(routineRunStatus("stopping")).toBe("running");
     expect(routineRunStatus("completed")).toBe("completed");
     expect(routineRunStatus("failed")).toBe("failed");
-    expect(routineRunStatus("reconciling")).toBe("failed");
+    // Resumed by the drain since MIN-1011.
+    expect(routineRunStatus("reconciling")).toBe("queued");
     expect(routineRunStatus("stopped")).toBe("canceled");
   });
 

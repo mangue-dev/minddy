@@ -59,13 +59,14 @@ describe("reads a page load carries (MIN-880)", () => {
     expect(await pageReads("/projects/aur-9e3d0c35/triage/82a6b365")).toEqual([]);
   });
 
-  it("names the routines and admin reads", async () => {
+  it("names the routines, Home and admin reads", async () => {
     expect(await pageReads("/routines")).toEqual(["/api/routines"]);
+    expect(await pageReads("/home")).toEqual(["/api/home/brief"]);
     expect(await pageReads("/admin")).toEqual(["/api/admin/capabilities", "/api/admin/overview"]);
   });
 
   it("has a route for every read it names", async () => {
-    const locations = ["/all", "/routines", "/admin", "/projects/aur-9e3d0c35", "/projects/aur-9e3d0c35/objectives",
+    const locations = ["/all", "/routines", "/home", "/admin", "/projects/aur-9e3d0c35", "/projects/aur-9e3d0c35/objectives",
       "/projects/aur-9e3d0c35/feedback", "/projects/aur-9e3d0c35/triage", "/projects/aur-9e3d0c35/settings",
       "/projects/aur-9e3d0c35/pages/82a6b365"];
     for (const location of locations) {

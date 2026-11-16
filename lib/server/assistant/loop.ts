@@ -12,6 +12,7 @@ import { parseAskUserQuestions } from "@/lib/ask-user";
 import type { SafeEmitter } from "./sse";
 import {
   executeTool,
+  toolCallSafeToReplay,
   type ToolContext,
   type ToolExecution,
 } from "./execute-tool";
@@ -97,7 +98,12 @@ export interface ProcessChatResult {
 }
 
 export type ProcessChatSuspension =
-  | { kind: "input" };
+  | { kind: "input" }
+  /**
+   * The job ran out of time before the next step (MIN-1010). The durable
+   * checkpoint already describes that step: a new job resumes from it.
+   */
+  | { kind: "handoff" };
 
 export interface ProcessChatCheckpoint {
   phase: "model" | "tools";
@@ -111,6 +117,11 @@ export interface ProcessChatCheckpoint {
   completionRepairs?: number;
   completionRepairPending?: boolean;
   completionRepairExhausted?: boolean;
+  /**
+   * What the last rejected reply got wrong. A resumed or retried turn that
+   * finds the bound exhausted reports it, rather than a generic message.
+   */
+  completionProblem?: string;
   /** Empty replies need a visible-answer repair, including after a durable resume. */
   emptyAnswerRepair?: boolean;
 }
@@ -159,7 +170,12 @@ function malformedNativeCalls(calls: Iterable<{ id: string; name: string; argume
 }
 
 export interface ToolLedgerClaim {
-  action: "execute" | "reuse" | "reconcile" | "lost_claim";
+  /**
+   * `resolve`: an earlier job started this call and stopped before recording
+   * its result. The caller now holds it and settles it (MIN-1011).
+   * `reconcile` is what a ledger without that resolution answers.
+   */
+  action: "execute" | "reuse" | "resolve" | "reconcile" | "lost_claim";
   execution?: ToolExecution;
 }
 
@@ -179,6 +195,18 @@ export interface ToolExecutionLedger {
     pause: boolean;
   }): Promise<void>;
 }
+
+/**
+ * What the model reads for a write whose job stopped before its result was
+ * recorded: it may have happened or not, and replaying it could do it twice.
+ */
+export const INTERRUPTED_TOOL_EXECUTION: ToolExecution = {
+  success: false,
+  result: {
+    error: "This call was interrupted before its result was recorded: it may or may not have taken effect. Check the current state before calling it again.",
+    outcome: "unknown",
+  },
+};
 
 export class AmbiguousToolExecutionError extends Error {
   constructor(readonly toolName: string, readonly toolCallId: string) {
@@ -308,6 +336,13 @@ export interface ProcessChatContext extends ToolContext {
    * including pending provider reads and cancellable database reads.
    */
   onStopSignal?: (notify: () => void) => () => void;
+  /**
+   * Asked at the two durable boundaries, before a generation and before a
+   * tool that has not run yet: true when the job's time left does not cover
+   * that step (MIN-1010). The loop then stops with a `handoff` suspension.
+   * It is never asked before the job has run one step of its own.
+   */
+  shouldHandOff?: (step: "generation" | "tool") => boolean;
   /** Budget gate immediately before every provider generation. */
   beforeGeneration?: (roundCount: number) => Promise<void>;
   /** Persist one generation before any tool it requested can launch work. */
@@ -512,20 +547,32 @@ export async function processChat(
   // The template sent, including routing suffix (MIN-263) — it may lose its
   // suffix being looped if OpenRouter refuses it.
   let requestModel = context.model;
-  const MAX_TOOL_EXECUTION_ROUNDS = 12;
+  // A turn has no tool round limit (MIN-1008): it ends when the model answers,
+  // the user stops it, or a spend budget runs out (the routine cap per turn,
+  // the account's included usage). `roundCount` still numbers the rounds for
+  // the usage ledger and the checkpoints.
   const reasoningLevel = context.reasoningLevel ?? DEFAULT_REASONING_LEVEL;
   // Living IDs seen during the tour (MIN-343). The register is
   // CUMULATIVE on purpose: a key returned in round 1 must remain substituted in
   // what a round 3 `list_integrations` would rewrite.
   const redactor = new SecretRedactor();
   let suspension: ProcessChatSuspension | null = null;
+  // Generations and tools this job ran. A job always takes one step before it
+  // may hand off, so a job started late cannot hand off forever.
+  let stepsRun = 0;
+  let handingOff = false;
+  const handOffBefore = (step: "generation" | "tool") => {
+    if (stepsRun === 0 || !context.shouldHandOff?.(step)) return false;
+    handingOff = true;
+    return true;
+  };
   let resumeCheckpoint = context.resumeCheckpoint ?? null;
   let completionRepairs = Math.min(MAX_COMPLETION_REPAIRS,
     Math.max(0, Math.floor(resumeCheckpoint?.completionRepairs ?? 0)));
   let emptyAnswerRepair = resumeCheckpoint?.emptyAnswerRepair === true;
   if (resumeCheckpoint?.phase === "model" && resumeCheckpoint.completionRepairPending) {
     messages.push({ role: "user", content: completionRepairPrompt(emptyAnswerRepair,
-      tools.length > 0 && roundCount < MAX_TOOL_EXECUTION_ROUNDS) });
+      tools.length > 0) });
   }
   // True as soon as a stop was observed anywhere in the round (mid-stream or
   // between tools): the loop stops handing the turn back with no persisted
@@ -606,12 +653,14 @@ export async function processChat(
       return null;
     });
     if (messageId) emitter.emit("message_complete", { message_id: messageId });
-    emitter.emit("tool_result", {
+    const compactionResult = {
       id: callId,
       name: COMPACTION_TOOL_NAME,
       result: { status: summary ? "compacted" : "failed" },
       success: !!summary,
-    });
+    };
+    emitter.emit("tool_result", compactionResult);
+    emitter.journal?.("tool_result", compactionResult);
   };
 
   try {
@@ -620,15 +669,16 @@ export async function processChat(
     if (await context.shouldStop?.()) observeStop();
     if (stopObserved) break;
     if (resumeCheckpoint?.completionRepairExhausted) {
-      throw new NumoCompletionError("the bounded correction attempts were exhausted");
+      throw new NumoCompletionError(resumeCheckpoint.completionProblem
+        ?? "the bounded correction attempts were exhausted");
     }
     const resumingTools = resumeCheckpoint?.phase === "tools";
+    // The checkpoint written before this point is `model` (or the turn's
+    // first): the next job opens this same round.
+    if (!resumingTools && handOffBefore("generation")) break;
     roundCount = resumingTools
       ? Math.max(roundCount, resumeCheckpoint?.roundCount ?? 1)
       : roundCount + 1;
-    // Always reserve one text-only round after the tool budget. Previously the
-    // sixth tool round ended the stream silently, with no final assistant reply.
-    const forceConclusion = roundCount > MAX_TOOL_EXECUTION_ROUNDS;
     // At most one compaction per model call, before the call opens.
     if (!resumingTools) {
       await compactIfNeeded();
@@ -664,7 +714,6 @@ export async function processChat(
       : null;
 
     if (resumingTools) {
-      if (forceConclusion) throw new NumoCompletionError("a resumed tool round exceeded the execution round limit");
       for (const [index, call] of (resumeCheckpoint?.pendingToolCalls ?? []).entries()) {
         toolCallAccumulators.set(index, {
           id: call?.id,
@@ -745,7 +794,7 @@ export async function processChat(
             stream: true,
             maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
             reasoning: repairWithoutReasoning ? { enabled: false } : { effort: reasoningLevel },
-            ...(roundTools.length > 0 && !forceConclusion ? { tools: roundTools } : {}),
+            ...(roundTools.length > 0 ? { tools: roundTools } : {}),
           }),
           "Numo (minddy)",
           "[assistant]",
@@ -931,6 +980,7 @@ export async function processChat(
         cacheWriteTokens: usageInfo?.prompt_tokens_details?.cache_write_tokens ?? null,
       };
       generations.push(generation);
+      stepsRun++;
       await context.onGeneration?.(generation, roundCount);
       if (stopObserved) {
         // The stop was requested while this round streamed: hand the turn back
@@ -949,9 +999,7 @@ export async function processChat(
       const missingNativeCalls = (terminalFinish === "tool_calls" || terminalFinish === "function_call")
         && toolCallAccumulators.size === 0;
       const invalidNativeCall = malformedToolDelta || malformedNativeCalls(toolCallAccumulators.values());
-      const toolCapExceeded = forceConclusion && toolCallAccumulators.size > 0;
-      const completionProblem = toolCapExceeded ? "a tool call exceeded the execution round limit"
-        : serializedCall ? "a tool call was returned as text"
+      const completionProblem = serializedCall ? "a tool call was returned as text"
         : truncated ? "the response reached its token limit"
         : invalidFinish ? "the provider did not report a successful finish"
         : incompleteTransport ? "the stream closed before a terminal response"
@@ -963,24 +1011,19 @@ export async function processChat(
       if (completionProblem) {
         if (await context.shouldStop?.()) observeStop();
         if (stopObserved) break;
-        // Action/protocol correction needs real tools. Do not silently turn a
-        // repair into a text-only conclusion when the existing round cap is hit.
-        const actionRepairUnavailable = toolCapExceeded || (
-          (serializedCall || pendingAction || missingNativeCalls || invalidNativeCall)
-          && tools.length > 0 && roundCount >= MAX_TOOL_EXECUTION_ROUNDS
-        );
-        const exhausted = completionRepairs >= MAX_COMPLETION_REPAIRS || actionRepairUnavailable;
+        const exhausted = completionRepairs >= MAX_COMPLETION_REPAIRS;
         if (completionProblem === "the response was empty") emptyAnswerRepair = true;
         if (!exhausted) completionRepairs++;
         await context.persistCheckpoint?.({
           phase: "model", roundCount, completionRepairs,
           completionRepairPending: !exhausted,
           completionRepairExhausted: exhausted,
+          ...(exhausted ? { completionProblem } : {}),
           ...(emptyAnswerRepair ? { emptyAnswerRepair: true } : {}),
         });
         if (exhausted) throw new NumoCompletionError(completionProblem);
         messages.push({ role: "user", content: completionRepairPrompt(emptyAnswerRepair,
-          tools.length > 0 && roundCount < MAX_TOOL_EXECUTION_ROUNDS) });
+          tools.length > 0) });
         continueLoop = true;
         continue;
       }
@@ -1108,12 +1151,9 @@ export async function processChat(
           );
 
           const askResult = { status: "awaiting_user_response", questions };
-          emitter.emit("tool_result", {
-            id: acc.id,
-            name: "ask_user",
-            result: askResult,
-            success: true,
-          });
+          const askToolResult = { id: acc.id, name: "ask_user", result: askResult, success: true };
+          emitter.emit("tool_result", askToolResult);
+          emitter.journal?.("tool_result", askToolResult);
 
           if (!alreadyCompleted) {
             await saveToolResultMessage(context, {
@@ -1159,6 +1199,9 @@ export async function processChat(
         // Answered by the loop: pure, so it runs again on a resumed round
         // rather than going through the durable ledger.
         const local = localToolExecution(acc.name, args);
+        // The `tools` checkpoint lists the calls done so far: the next job
+        // runs this one and those after it.
+        if (!local && !alreadyCompleted && handOffBefore("tool")) break;
         const ledgerClaim = local
           ? { action: "local" as const }
           : context.toolLedger
@@ -1172,6 +1215,18 @@ export async function processChat(
         if (ledgerClaim.action === "reconcile") {
           throw new AmbiguousToolExecutionError(acc.name, acc.id);
         }
+        // The job that ran this call stopped before recording its result
+        // (MIN-1011). A read runs again; a write is never replayed: the model
+        // learns the outcome is unknown and checks before acting again.
+        const interrupted = ledgerClaim.action === "resolve"
+          && !await toolCallSafeToReplay(acc.name, args, context);
+        if (ledgerClaim.action === "resolve") {
+          console.warn("[numo-turn] interrupted tool call resumed", {
+            turnId: context.turnId ?? null, tool: acc.name, replayed: !interrupted,
+          });
+        }
+        const holdsCall = ledgerClaim.action === "execute" || ledgerClaim.action === "resolve";
+        if (holdsCall) stepsRun++;
         if (ledgerClaim.action === "lost_claim") {
           throw new Error("Numo turn execution claim was lost");
         }
@@ -1179,6 +1234,8 @@ export async function processChat(
           execution = local;
         } else if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
           execution = ledgerClaim.execution;
+        } else if (interrupted) {
+          execution = INTERRUPTED_TOOL_EXECUTION;
         } else {
           if (stopObserved || await context.shouldStop?.()) {
             observeStop();
@@ -1224,7 +1281,7 @@ export async function processChat(
         // `content` carries only what the model needs.
         const forModel = redactDeep(modelResult ?? result, redactor.redact);
         const persistedResult = redactDeep(result, redactor.redact);
-        if (ledgerClaim.action === "execute") {
+        if (holdsCall) {
           await context.toolLedger?.complete({
             toolCallId: acc.id,
             success,
@@ -1240,6 +1297,14 @@ export async function processChat(
           id: acc.id,
           name: acc.name,
           result,
+          success,
+        });
+        // A reader following the journal (after a handoff, or a reconnect)
+        // gets the redacted result the tool message stores (MIN-1010).
+        emitter.journal?.("tool_result", {
+          id: acc.id,
+          name: acc.name,
+          result: persistedResult,
           success,
         });
         if (!alreadyCompleted) {
@@ -1284,9 +1349,9 @@ export async function processChat(
 
       // Continue rules:
       // - ask_user, or a tool that hands the turn back: stop and wait for user
-      // - other tools: continue normally with tools enabled (round cap only —
-      //   minddy tools chain legitimately: create issue → set categories → comment)
-      if (!hasAskUser && !pausedByTool && !stopObserved && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
+      // - other tools: continue with tools enabled; minddy tools chain
+      //   legitimately (create issue → set categories → comment)
+      if (!hasAskUser && !pausedByTool && !stopObserved && !handingOff) {
         await context.persistCheckpoint?.({ phase: "model", roundCount, completionRepairs });
         continueLoop = true;
       }
@@ -1303,7 +1368,7 @@ export async function processChat(
     finalReasoning,
     allToolCalls,
     generations,
-    suspension,
+    suspension: handingOff ? { kind: "handoff" } : suspension,
   };
   } finally {
     executionClosed = true;

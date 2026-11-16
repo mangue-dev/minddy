@@ -4,8 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 vi.mock("server-only", () => ({}));
 
 const executeTool = vi.fn();
+const toolCallSafeToReplay = vi.fn();
 vi.mock("./execute-tool", () => ({
   executeTool: (...args: unknown[]) => executeTool(...args),
+  toolCallSafeToReplay: (...args: unknown[]) => toolCallSafeToReplay(...args),
 }));
 
 const fetchOpenRouter = vi.fn();
@@ -52,14 +54,15 @@ describe("Numo chat loop resilience", () => {
     executeTool.mockResolvedValue({ result: { ok: true }, success: true });
   });
 
-  it("reserves a final text reply after twelve tool rounds", async () => {
+  // MIN-1008: tools stay available on every round; only the answer ends the loop.
+  it("keeps tools available for as many rounds as the work needs", async () => {
     let round = 0;
     fetchOpenRouter.mockImplementation(async () => {
       round++;
       return {
         model: "model",
         response:
-          round <= 12
+          round <= 30
             ? stream({
                 tool_calls: [
                   {
@@ -98,16 +101,15 @@ describe("Numo chat loop resilience", () => {
       },
     );
 
-    expect(fetchOpenRouter).toHaveBeenCalledTimes(13);
-    expect(executeTool).toHaveBeenCalledTimes(12);
+    expect(fetchOpenRouter).toHaveBeenCalledTimes(31);
+    expect(executeTool).toHaveBeenCalledTimes(30);
     expect(result.fullContent).toBe("Work completed.");
 
     const requestBodies = fetchOpenRouter.mock.calls.map((call) => {
       const buildRequest = call[2] as (model: string) => RequestInit;
       return JSON.parse(buildRequest("model").body as string) as Record<string, unknown>;
     });
-    expect(requestBodies.slice(0, 12).every((body) => Array.isArray(body.tools))).toBe(true);
-    expect(requestBodies[12]).not.toHaveProperty("tools");
+    expect(requestBodies.every((body) => Array.isArray(body.tools))).toBe(true);
     expect(requestBodies[0]).toMatchObject({
       max_completion_tokens: 6144,
       reasoning: { effort: "medium", exclude: false },
@@ -146,6 +148,73 @@ describe("Numo chat loop resilience", () => {
       },
     )).rejects.toThrow("may have completed");
     expect(executeTool).not.toHaveBeenCalled();
+  });
+
+  // MIN-1011: a job that stopped during a call left it unrecorded. The next
+  // job settles it and the turn goes on, instead of parking in reconciling.
+  describe("a call whose job stopped before recording its result", () => {
+    function interruptedCall(name: string, args: Record<string, unknown>) {
+      let round = 0;
+      fetchOpenRouter.mockImplementation(async () => ({
+        model: "model",
+        response: ++round === 1
+          ? stream({ tool_calls: [{ index: 0, id: "call-interrupted",
+              function: { name, arguments: JSON.stringify(args) } }] })
+          : stream({ content: "Checked and done." }),
+      }));
+    }
+    async function resume() {
+      const service = fakeService();
+      const complete = vi.fn();
+      const result = await processChat(
+        [{ role: "user", content: "Do it" }],
+        [],
+        { emit: vi.fn() } as never,
+        {
+          model: "model", conversationId: "conversation", projectId: "project",
+          userId: "user", supabase: service, service, locale: "en",
+          toolLedger: { claim: async () => ({ action: "resolve" }), complete },
+        },
+      );
+      return { result, complete };
+    }
+
+    it("never replays a write: the model reads an unknown outcome and the turn continues", async () => {
+      toolCallSafeToReplay.mockResolvedValue(false);
+      interruptedCall("create_issue", { title: "Only once" });
+
+      const { result, complete } = await resume();
+
+      expect(executeTool).not.toHaveBeenCalled();
+      expect(complete).toHaveBeenCalledWith(expect.objectContaining({
+        toolCallId: "call-interrupted",
+        success: false,
+        result: expect.objectContaining({ outcome: "unknown" }),
+      }));
+      const buildRequest = fetchOpenRouter.mock.calls[1][2] as (model: string) => RequestInit;
+      const secondRound = JSON.parse(buildRequest("model").body as string);
+      const toolMessage = secondRound.messages.find(
+        (message: { role: string }) => message.role === "tool");
+      expect(toolMessage.content).toContain("may or may not have taken effect");
+      expect(result.fullContent).toBe("Checked and done.");
+      expect(result.suspension).toBeNull();
+    });
+
+    it("runs a read-only call again and records its result", async () => {
+      toolCallSafeToReplay.mockResolvedValue(true);
+      executeTool.mockResolvedValue({ result: { rows: 3 }, success: true });
+      interruptedCall("call_mcp_tool", { connection_id: "c", tool: "query", arguments: {} });
+
+      const { result, complete } = await resume();
+
+      expect(toolCallSafeToReplay).toHaveBeenCalledWith(
+        "call_mcp_tool", expect.objectContaining({ tool: "query" }), expect.anything());
+      expect(executeTool).toHaveBeenCalledOnce();
+      expect(complete).toHaveBeenCalledWith(expect.objectContaining({
+        toolCallId: "call-interrupted", success: true, result: { rows: 3 },
+      }));
+      expect(result.fullContent).toBe("Checked and done.");
+    });
   });
 
   it("preserves a completed tool's suspension when its durable result is reused", async () => {

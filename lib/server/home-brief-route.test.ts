@@ -45,8 +45,13 @@ vi.mock("@/lib/server/numo/journal-content", () => ({
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
 }));
 vi.mock("@/lib/server/mention-access", () => ({
+  MAX_MENTION_REFS: 200,
+  mentionKey: (ref: { type: string; id: string }) => `${ref.type}:${ref.id}`,
   readResultForReader: async (_user: string, value: unknown) =>
     JSON.parse(JSON.stringify(value).replaceAll("[@](mention:issue/i1)", "[@MIN-42](mention:issue/i1)")),
+  // The reader may see i1 only.
+  resolvedMentionsForReader: async (_user: string, refs: Array<{ type: string; id: string }>) =>
+    refs.map((ref) => ({ ...ref, label: ref.id === "i1" ? "MIN-42" : null })),
 }));
 vi.mock("@/lib/server/numo/home-brief", () => ({
   scheduleHomeBriefRewrite: mocks.scheduleHomeBriefRewrite,
@@ -89,8 +94,17 @@ describe("/api/home/brief", () => {
       id: BRIEF, content: "MIN-42 waits for your review.",
       suggestions: [{ label: "Review", prompt: "Review [@MIN-42](mention:issue/i1)" }],
       generated_at: OLD,
+      mentions: [],
     } });
     expect(mocks.scheduleHomeBriefRewrite).not.toHaveBeenCalled();
+  });
+
+  it("resolves the word's mentions for the reader, each target once (MIN-1006)", async () => {
+    mocks.brief!.content = "[@](mention:issue/i1) waits, and so does [@](mention:issue/i1); [@](mention:page/p9) changed.";
+    expect((await get()).brief.mentions).toEqual([
+      { type: "issue", id: "i1", label: "MIN-42" },
+      { type: "page", id: "p9", label: null },
+    ]);
   });
 
   it("shows nothing once every covered entry is settled and seen, or when Numo wrote nothing", async () => {

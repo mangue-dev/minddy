@@ -83,6 +83,7 @@ import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import {
   filterMentionItems,
   findActiveMentionQuery,
+  withDateMentions,
 } from "@/lib/mention-menu";
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
 import { stepSuggestion } from "@/lib/suggestion-menu";
@@ -820,7 +821,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             const cited = new Set(found.flatMap((option) => (option.type === "date" ? [dateOptionKey(option)] : [])));
             const dates = dateMentionOptions(mentionQuery, locale, new Date(), undefined, weekStart)
               .filter((option) => !cited.has(dateOptionKey(option)));
-            return datesFirst(mentionQuery, locale) ? [...dates, ...found] : [...found, ...dates];
+            return withDateMentions(found, dates, datesFirst(mentionQuery, locale));
           })(),
       [mentionQuery, mentionables, skillMentionables, locale, weekStart],
     );
