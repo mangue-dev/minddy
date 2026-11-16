@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, Activity, createElement, StrictMode, useEffect, useRef } from "react";
+import { act, Activity, createElement, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { Editor, JSONContent } from "@tiptap/react";
@@ -711,5 +711,59 @@ describe("cached Page display and fresh write authority", () => {
     await act(async () => { reading.resolve(page(6)); expect(await departure).toBe(true); });
     expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Local text", "Latest remote"), version: 7 }, expect.any(Function));
     expect(h.onError).not.toHaveBeenCalled();
+  });
+});
+
+describe("server documents that arrive during a write (MIN-1013)", () => {
+  async function mountLive(save: (id: string, input: UpdatePageInput) => Promise<Page>) {
+    let autosave!: PageAutosave;
+    let show!: (next: Page) => void;
+    const onError = vi.fn();
+    function Surface() {
+      const [current, setCurrent] = useState(page(5, doc("Draft")));
+      show = setCurrent;
+      autosave = usePageAutosave({ pageId: "cached-page", page: current, fresh: true,
+        save, onError, editorRef: { current: null }, delayMs: 60_000 });
+      return null;
+    }
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => root!.render(createElement(Surface)));
+    return { get autosave() { return autosave; }, show: (next: Page) => act(async () => show(next)), onError };
+  }
+
+  it("does not report the echo of its own write as a colleague's edit", async () => {
+    const first = deferred<Page>();
+    const save = vi.fn()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementation(async (_id: string, input: UpdatePageInput) => page(7, input.content as PageDocJSON));
+    const h = await mountLive(save);
+    let writing!: Promise<void>;
+    await act(async () => { h.autosave.schedule({ content: doc("Draft typed") }); writing = h.autosave.flush(); });
+    // Typing goes on, and the refetch triggered by this write's broadcast lands
+    // before its PATCH response, carrying this surface's own body.
+    await act(async () => h.autosave.schedule({ content: doc("Draft typed further") }));
+    await h.show(page(6, doc("Draft typed")));
+    await act(async () => { first.resolve(page(6, doc("Draft typed"))); await writing; });
+    expect(h.autosave.conflicts).toEqual([]);
+    await act(async () => { expect(await h.autosave.flushBeforeNavigation()).toBe(true); });
+    expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Draft typed further"), version: 6 }, expect.any(Function));
+    expect(h.onError).not.toHaveBeenCalled();
+  });
+
+  it("still merges a colleague's newer version once its own write is acknowledged", async () => {
+    const first = deferred<Page>();
+    const save = vi.fn()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementation(async (_id: string, input: UpdatePageInput) => page(8, input.content as PageDocJSON));
+    const h = await mountLive(save);
+    let writing!: Promise<void>;
+    await act(async () => { h.autosave.schedule({ content: doc("Draft typed") }); writing = h.autosave.flush(); });
+    await act(async () => h.autosave.schedule({ content: doc("Draft typed further") }));
+    await h.show(page(7, doc("Draft typed", "Colleague's line")));
+    await act(async () => { first.resolve(page(6, doc("Draft typed"))); await writing; });
+    expect(h.autosave.conflicts).toEqual([]);
+    await act(async () => { expect(await h.autosave.flushBeforeNavigation()).toBe(true); });
+    expect(save).toHaveBeenLastCalledWith("cached-page",
+      { content: doc("Draft typed further", "Colleague's line"), version: 7 }, expect.any(Function));
   });
 });

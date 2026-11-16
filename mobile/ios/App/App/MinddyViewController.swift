@@ -12,6 +12,7 @@ final class MinddyViewController: CAPBridgeViewController {
     private var navigationGuard: NavigationGuard?
     private var loadingObservation: NSKeyValueObservation?
     private weak var launchCover: UIView?
+    private var coverLifting = false
     private let navigationBar = NavigationBar()
     private weak var shellPlugin: MinddyShellPlugin?
     private var offsetObservation: NSKeyValueObservation?
@@ -552,8 +553,22 @@ final class MinddyViewController: CAPBridgeViewController {
 
     // MARK: - Launch
 
+    /// The longest the cover waits, once the first load has ended, for a page
+    /// that asked to hold it: a slow read never keeps the app on its launch
+    /// screen.
+    static let launchCoverHoldLimit: TimeInterval = 4
+
     /// Keeps the launch screen up until the first page has loaded or failed,
     /// so the app opens on the brand and not on an empty WebView.
+    ///
+    /// A page of the signed-in app declares
+    /// `<meta name="minddy-launch-cover" content="hold">`: its content still
+    /// arrives after the load (the session, the reads, Home's greeting and
+    /// Numo's word), and lifting the cover at the load showed it building
+    /// itself piece by piece. For such a page the cover stays until it calls
+    /// `contentShown`, or `launchCoverHoldLimit` after the load, and the page
+    /// appears in one step. Any other page (sign-in, the bundled pages, a
+    /// server older than the handshake) lifts it at the load, as before.
     private func coverUntilFirstLoad() {
         guard let webView,
               let cover = UIStoryboard(name: "LaunchScreen", bundle: nil).instantiateInitialViewController()?.view
@@ -562,21 +577,100 @@ final class MinddyViewController: CAPBridgeViewController {
         cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(cover)
         launchCover = cover
+        cover.layoutIfNeeded()
+        if let logo = Self.firstImageView(in: cover) { Self.shimmer(logo) }
 
         var started = false
         loadingObservation = webView.observe(\.isLoading, options: [.initial, .new]) { [weak self] webView, _ in
             if webView.isLoading {
                 started = true
-            } else if started {
+            } else if started, webView.url != nil {
+                // Without a URL, the load that ended is Capacitor's own, which
+                // `viewDidLoad` replaced before it answered: the entry page is
+                // still to come.
+                self?.loadingObservation = nil
+                self?.uncoverWhenContentShows()
+            }
+        }
+    }
+
+    /// The launch screen's logo, the only image on it.
+    private static func firstImageView(in view: UIView) -> UIImageView? {
+        if let image = view as? UIImageView { return image }
+        for subview in view.subviews {
+            if let image = firstImageView(in: subview) { return image }
+        }
+        return nil
+    }
+
+    /// While the launch screen waits for the page, a soft band of light
+    /// crosses the logo, again and again: the app is working, not frozen.
+    /// None when the system asks to reduce motion.
+    private static func shimmer(_ logo: UIImageView) {
+        // A mask without a size would hide the logo entirely.
+        guard !UIAccessibility.isReduceMotionEnabled, !logo.bounds.isEmpty else { return }
+        let band = CAGradientLayer()
+        band.frame = logo.bounds.insetBy(dx: -logo.bounds.width, dy: -logo.bounds.height)
+        band.startPoint = CGPoint(x: 0, y: 0.35)
+        band.endPoint = CGPoint(x: 1, y: 0.65)
+        // A mask: opaque keeps the logo as drawn, the dimmer band lightens it.
+        band.colors = [UIColor.black, UIColor.black.withAlphaComponent(0.3), UIColor.black].map(\.cgColor)
+        band.locations = [0.35, 0.42, 0.49]
+        logo.layer.mask = band
+
+        let sweep = CABasicAnimation(keyPath: "locations")
+        sweep.fromValue = [0.28, 0.35, 0.42]
+        sweep.toValue = [0.58, 0.65, 0.72]
+        sweep.duration = 1.1
+        sweep.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        let cycle = CAAnimationGroup()
+        cycle.animations = [sweep]
+        // A pause between two passes keeps it calm.
+        cycle.duration = 1.6
+        cycle.repeatCount = .infinity
+        band.add(cycle, forKey: "shimmer")
+    }
+
+    /// The first load has ended: lifts the cover now, unless the page holds it.
+    private func uncoverWhenContentShows() {
+        guard launchCover != nil, let webView, !showsLocalPage else {
+            uncover()
+            return
+        }
+        let query = "document.querySelector('meta[name=\"minddy-launch-cover\"][content=\"hold\"]') !== null"
+        webView.evaluateJavaScript(query) { [weak self] result, _ in
+            guard let self else { return }
+            guard (result as? Bool) == true else {
+                self.uncover()
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.launchCoverHoldLimit) { [weak self] in
                 self?.uncover()
             }
         }
     }
 
+    /// The page reports that its first content is on screen
+    /// (`MinddyShell.contentShown`).
+    func contentShown() {
+        uncover()
+    }
+
+    /// Crossfades from the launch screen to the page, once. The page's own
+    /// entrance (Home's greeting rises as it fades in) plays under it.
     private func uncover() {
         loadingObservation = nil
-        guard let cover = launchCover else { return }
-        UIView.animate(withDuration: 0.2, animations: { cover.alpha = 0 }, completion: { _ in cover.removeFromSuperview() })
+        // The cover stays referenced while it fades, so a bar placed meanwhile
+        // still goes under it.
+        guard let cover = launchCover, !coverLifting else { return }
+        coverLifting = true
+        UIView.animate(
+            withDuration: 0.24,
+            delay: 0,
+            options: [.curveEaseOut, .beginFromCurrentState, .allowUserInteraction],
+            animations: { cover.alpha = 0 },
+            completion: { _ in cover.removeFromSuperview() }
+        )
     }
 }
 

@@ -4,6 +4,7 @@ import {
   findActiveMentionQuery,
   findActiveTriggerQuery,
   orderMentionItems,
+  withDateMentions,
 } from "@/lib/mention-menu";
 import { groupBySection, mentionSection } from "@/lib/suggestion-menu";
 
@@ -142,5 +143,52 @@ describe("contextual mention sections", () => {
   it("files a lifted option under its own section, not its type's", () => {
     const { sections } = groupBySection(orderMentionItems(items), mentionSection as (item: typeof items[number]) => string | null);
     expect(sections.map((section) => section.id)).toEqual(["relations", "subpages", "people", "issues"]);
+  });
+});
+
+describe("tickets last, pull requests under them (MIN-1009)", () => {
+  const items = [
+    { type: "pull_request", label: "#12 Release notes" },
+    { type: "issue", label: "MIN-7", keywords: ["Release checklist"], status: "todo" },
+    { type: "routine", label: "Release digest" },
+    { type: "mcp", label: "Release server" },
+    { type: "skill", label: "release-notes" },
+    { type: "page", label: "Release guide" },
+    { type: "cycle", label: "Release cycle" },
+  ];
+
+  it("lists every other target before the tickets, and pull requests after them", () => {
+    expect(filterMentionItems(items, "release").map((item) => item.type)).toEqual([
+      "routine", "mcp", "skill", "page", "cycle", "issue", "pull_request",
+    ]);
+  });
+
+  it("files the sections in that order", () => {
+    const { sections } = groupBySection(
+      orderMentionItems(items),
+      mentionSection as (item: typeof items[number]) => string | null,
+    );
+    expect(sections.map((section) => section.id).slice(-2)).toEqual(["issues", "pullRequests"]);
+  });
+
+  it("adds suggested dates above the tickets, or first when the query is a date", () => {
+    const ordered = orderMentionItems(items);
+    const dates = [{ type: "date", label: "Tomorrow" }];
+    expect(withDateMentions(ordered, dates, false).map((item) => item.type).slice(-3)).toEqual([
+      "date", "issue", "pull_request",
+    ]);
+    expect(withDateMentions(ordered, dates, true)[0].type).toBe("date");
+    expect(withDateMentions([{ type: "page", label: "Guide" }], dates, false).map((item) => item.type)).toEqual([
+      "page", "date",
+    ]);
+  });
+
+  it("keeps a contextual issue at the top when dates are added", () => {
+    const withContext = [{ type: "issue", label: "MIN-2", section: "relations" }, ...items];
+    const merged = withDateMentions(orderMentionItems(withContext), [{ type: "date", label: "Today" }], false);
+    expect(merged[0].label).toBe("MIN-2");
+    expect(merged.findIndex((item) => item.type === "date")).toBe(
+      merged.findIndex((item) => item.label === "MIN-7") - 1,
+    );
   });
 });

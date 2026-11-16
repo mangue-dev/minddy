@@ -90,8 +90,8 @@ const { markdownForReader, readResultForReader, resolveMentionTargets } = await 
 beforeEach(() => {
   h.tables = {
     issues: [
-      { id: ISSUE_OK, project_id: ALLOWED, number: 42, deleted_at: null },
-      { id: ISSUE_HIDDEN, project_id: HIDDEN, number: 7, deleted_at: null },
+      { id: ISSUE_OK, project_id: ALLOWED, number: 42, status: "in_review", deleted_at: null },
+      { id: ISSUE_HIDDEN, project_id: HIDDEN, number: 7, status: "todo", deleted_at: null },
     ],
     projects: [
       { id: ALLOWED, key: "MIN", name: "Minddy", deleted_at: null, owner_id: OWNER },
@@ -181,6 +181,15 @@ describe("resolving mention targets", () => {
       [`member:${OWNER}`]: "Someone",
       "issue:not-a-uuid": null,
     });
+  });
+
+  it("gives the status of an issue the reader can open, and nothing of a hidden one (MIN-1006)", async () => {
+    const statuses = new Map<string, string>();
+    await resolveMentionTargets("reader", [
+      { type: "issue", id: ISSUE_OK },
+      { type: "issue", id: ISSUE_HIDDEN },
+    ], undefined, undefined, undefined, undefined, undefined, undefined, statuses as never);
+    expect(Object.fromEntries(statuses)).toEqual({ [`issue:${ISSUE_OK}`]: "in_review" });
   });
 
   it("gives the avatar seed of the members the reader can see, not their id", async () => {

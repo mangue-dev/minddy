@@ -63,7 +63,7 @@ independent gates:
 | Server (handled preference read, settings) | `captureServerException` from `GET /api/account/numo-preferences` | The same read failure behind the AI settings alert, answered with a 503 |
 | Server (background) | `enableExceptionAutocapture` on the shared `posthog-node` client | Uncaught exceptions and unhandled rejections outside requests (crons, agent code) |
 | Server (AI providers) | `reportProviderError` in `lib/server/ai-provider-errors.ts`, called by `fetchAiChat` and the direct OpenRouter callers (web search, FAQ answer, demo dictation) | Every final non-OK provider response and in-stream provider error, after the documented replays |
-| Server (Numo turns) | `captureBackgroundException` from `lib/server/numo/turns.ts` | A turn that ends `failed` or `retryable` for a reason other than a provider rejection (completion repairs exhausted, idle stream, internal error) |
+| Server (Numo turns) | `captureBackgroundException` from `lib/server/numo/turns.ts` | A turn that ends `failed` or `retryable` for a reason other than a provider rejection (completion repairs exhausted, idle stream, internal error), and a turn stranded more than 30 minutes in a status that has a deadline (`NumoTurnStuckError`, MIN-1011) |
 
 Server exception context carries template facts: `route_path` (the route
 template, never the concrete URL or query), `route_type`, `http_method`, and
@@ -78,7 +78,8 @@ Provider failures (MIN-826) carry `surface`, `provider`, `model`,
 (`anthropic 400 invalid_request_error for claude-opus-5-5`); the provider's
 own message may quote request content, so it stays in the server log
 (`[ai-provider] request_failed`) and in the user's encrypted turn error. Numo
-turn failures carry `surface: numo_turn`, `turn_status` and `model`.
+turn failures carry `surface: numo_turn`, `turn_status` and `model`; a stranded
+turn carries `surface: numo_turn`, `turn_status` and `age_minutes`.
 Background captures attach to no distinct id and create no person profile.
 A client that leaves mid-response (`AbortError`, Next.js `ResponseAborted`, or
 React's generic `The destination stream closed early.`) is not reported: it is

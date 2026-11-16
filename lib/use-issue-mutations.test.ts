@@ -142,7 +142,14 @@ describe("issue updates", () => {
   });
 
   it("mirrors the server side effects of starting an issue and sending it to triage", async () => {
+    // Both caches hold the issue in its cycle: `findIssueAnywhere` reads the
+    // freshest one, and two writes in the same millisecond tie on freshness.
     client.setQueryData(["issues", "project"], [issue({ cycle_id: "cycle" })]);
+    client.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, {
+      issues: [issue({ cycle_id: "cycle" })],
+      relations: [],
+      objectives: {},
+    } as unknown as GlobalBoardResponse);
     mocks.updateIssue.mockImplementation(async (id: string, patch: Partial<Issue>) => issue({ id, ...patch }));
     const { updateIssue } = writers();
     void updateIssue("issue", { status: "in_progress" });

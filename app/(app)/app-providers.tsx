@@ -49,6 +49,7 @@ import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
 import { RememberTimeZone } from "@/components/server-seed";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAfterFirstContent, watchFirstContent } from "@/lib/first-content";
+import { releaseLaunchCoverOnFirstContent } from "@/lib/mobile/launch-cover";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 
@@ -79,6 +80,8 @@ function FirstContentWatch() {
     isFetching: () => client.isFetching(),
     subscribe: (notify) => client.getQueryCache().subscribe(notify),
   }), [client]);
+  // The mobile app's launch screen lifts once that content is painted.
+  useEffect(() => releaseLaunchCoverOnFirstContent(), []);
   return null;
 }
 

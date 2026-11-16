@@ -5,12 +5,16 @@ import { readFileSync } from "node:fs";
 const h = vi.hoisted(() => ({
   getServiceClient: vi.fn(),
   drainNumoTurns: vi.fn(),
+  runHandedOffNumoTurn: vi.fn(),
   drainNumoWakeTurns: vi.fn(),
   drainNumoWatchTurns: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: h.getServiceClient }));
-vi.mock("@/lib/server/numo/turns", () => ({ drainNumoTurns: h.drainNumoTurns }));
+vi.mock("@/lib/server/numo/turns", () => ({
+  drainNumoTurns: h.drainNumoTurns,
+  runHandedOffNumoTurn: h.runHandedOffNumoTurn,
+}));
 vi.mock("@/lib/server/numo/wake", () => ({ drainNumoWakeTurns: h.drainNumoWakeTurns }));
 vi.mock("@/lib/server/numo/watch-clock", () => ({ drainNumoWatchTurns: h.drainNumoWatchTurns }));
 
@@ -21,6 +25,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
   h.getServiceClient.mockReset();
   h.drainNumoTurns.mockReset();
+  h.runHandedOffNumoTurn.mockReset();
 });
 
 describe("optional scheduler", () => {
@@ -78,7 +83,45 @@ describe("optional scheduler", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, claimed: 1, wakes: 2, reminders: 3 });
-    expect(h.drainNumoTurns).toHaveBeenCalledWith({ limit: 1 });
+    // The turn hands itself to a new job before this request's limit (MIN-1010).
+    expect(h.drainNumoTurns).toHaveBeenCalledWith({ limit: 1, deadlineAt: expect.any(Number) });
+  });
+
+  it("runs only the handed-off turn a previous job asked it to take (MIN-1010)", async () => {
+    vi.stubEnv("CRON_SECRET", "x".repeat(32));
+    h.runHandedOffNumoTurn.mockResolvedValue({ claimed: true });
+    const turnId = "51600000-0000-4000-8000-000000000001";
+    const startedAt = Date.now();
+
+    const response = await GET_NUMO(
+      new NextRequest(`http://localhost/api/cron/numo-turns?turn=${turnId}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${"x".repeat(32)}` },
+      }),
+    );
+
+    expect(response.status).toBe(202);
+    await vi.waitFor(() => expect(h.runHandedOffNumoTurn).toHaveBeenCalledTimes(1));
+    const [id, options] = h.runHandedOffNumoTurn.mock.calls[0] as [string, { deadlineAt: number }];
+    expect(id).toBe(turnId);
+    expect(options.deadlineAt).toBeGreaterThan(startedAt + 240_000);
+    expect(h.drainNumoTurns).not.toHaveBeenCalled();
+  });
+
+  it("refuses a handoff request without the cron secret or with a malformed turn", async () => {
+    const unsigned = await GET_NUMO(new NextRequest(
+      "http://localhost/api/cron/numo-turns?turn=51600000-0000-4000-8000-000000000001",
+      { method: "POST" },
+    ));
+    expect(unsigned.status).toBe(401);
+
+    vi.stubEnv("CRON_SECRET", "x".repeat(32));
+    const malformed = await GET_NUMO(new NextRequest(
+      "http://localhost/api/cron/numo-turns?turn=not-a-turn",
+      { method: "POST", headers: { authorization: `Bearer ${"x".repeat(32)}` } },
+    ));
+    expect(malformed.status).toBe(400);
+    expect(h.runHandedOffNumoTurn).not.toHaveBeenCalled();
   });
 
   it("keeps draining continuations when the background wakes and reminders fail (MIN-929, MIN-923)", async () => {
