@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertOfficialSupabaseImages,
   assertOfficialSupabaseRelease,
+  assertPostgresPatched,
   assertStorageS3ProtocolMitigation,
 } from "./release-lib.mjs";
 
@@ -128,7 +129,9 @@ export async function validate({ checkPlatforms = true } = {}) {
       fetchPinnedFile(upstream.commit, "docker/.env.example", upstream.environmentTemplateSha256),
     ]);
     assertOfficialSupabaseImages(upstreamCompose);
-    assertStorageS3ProtocolMitigation(upstreamCompose, await readFile(join(deployDirectory, "compose.full.yml"), "utf8"));
+    const overlayCompose = await readFile(join(deployDirectory, "compose.full.yml"), "utf8");
+    assertStorageS3ProtocolMitigation(upstreamCompose, overlayCompose);
+    assertPostgresPatched(upstreamCompose, overlayCompose);
     const upstreamDirectory = join(temporaryDirectory, "supabase/docker");
     await mkdir(upstreamDirectory, { recursive: true });
     await writeFile(join(upstreamDirectory, "docker-compose.yml"), upstreamCompose);

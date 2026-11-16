@@ -92,7 +92,12 @@ release ships the fix yet, apply the advisory's workaround in
 `compose.full.yml` and guard it in the validator, as
 `assertStorageS3ProtocolMitigation` does for GHSA-2p28-q2vx-mw6w: it refuses a
 pinned Storage image below `STORAGE_S3_PROTOCOL_PATCHED` unless the overlay
-sets `S3_PROTOCOL_ENABLED: "false"` on `storage`. Rows published
+sets `S3_PROTOCOL_ENABLED: "false"` on `storage`. A fix that only a newer
+image of one service carries is pinned by digest on that service in the
+overlay instead: `assertPostgresPatched` refuses an effective `db` image (the
+overlay's, else upstream's) below the PostgreSQL minor of
+`POSTGRES_PATCHED_MINORS` (CVE-2026-6460), and `compose.full.yml` pins
+`supabase/postgres:17.12.0.000` until an official release ships it. Rows published
 before a floor existed stay unchanged; their operators move to the first
 release that clears it. The floor for GHSA-fgvp-cqg6-q8h2
 (`self-hosted/v0.8.4`, Storage 1.89.9) was raised after v0.30.1, so

@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-16",
   "compatibility": {
-    "version": "0.30.1 (MIN-936 Storage role none advisory)",
+    "version": "0.30.1 (MIN-986 PostgreSQL CVE-2026-6460)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-891: GHSA-2p28-q2vx-mw6w ranges read on the GitHub advisory, storage-api v1.81.0 read in the pinned self-hosted/v0.8.3 Compose file, S3_PROTOCOL_ENABLED merge checked with docker compose config against the overlay; no operator rehearsal; no screenshot in scope); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-936: GHSA-fgvp-cqg6-q8h2 range and fix read on the GitHub advisory, storage-api v1.81.0 in self-hosted/v0.8.3 and v1.89.12 in self-hosted/v0.8.4 read in the upstream Compose files, token issuers checked in the installer, the overlays and the code that writes auth users; check commands not run on a self-hosted instance; no operator rehearsal; no screenshot in scope)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-891 changed passage; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-936 changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-08"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-891: GHSA-2p28-q2vx-mw6w ranges read on the GitHub advisory, storage-api v1.81.0 read in the pinned self-hosted/v0.8.3 Compose file, S3_PROTOCOL_ENABLED merge checked with docker compose config against the overlay; no operator rehearsal; no screenshot in scope); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-936: GHSA-fgvp-cqg6-q8h2 range and fix read on the GitHub advisory, storage-api v1.81.0 in self-hosted/v0.8.3 and v1.89.12 in self-hosted/v0.8.4 read in the upstream Compose files, token issuers checked in the installer, the overlays and the code that writes auth users; check commands not run on a self-hosted instance; no operator rehearsal; no screenshot in scope); agent:claude-code (MIN-986: CVE-2026-6460 fixed minors read in the PostgreSQL announcement, supabase/postgres:17.6.1.136 read in the self-hosted/v0.8.3 and v0.8.4 Compose files, 17.12.0.000 index digest and amd64/arm64 manifests read on Docker Hub; a 17.6.1.136 data volume restarted on 17.12.0.000 on a local Docker host, data kept and supabase_vault updated with the documented command; full profile not reinstalled; no operator rehearsal; no screenshot in scope)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-891 changed passage; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-936 changed passage; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-986 changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-16"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/de/update-an-instance-flow.svg",
       "alt": "Diagramm: Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
       "caption": "Lies die Schritte in dieser Reihenfolge. Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -191,6 +191,22 @@ Die Storage-Version in `self-hosted/v0.8.3` ist außerdem von GHSA-fgvp-cqg6-q8h
 compose exec auth env | grep GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN || echo "no access-token hook"
 compose exec db psql -U postgres -Atc "select coalesce(role, '<null>'), count(*) from auth.users group by 1"
 ```
+
+Offizielle Supabase-Releases bis einschließlich `self-hosted/v0.8.4` liefern PostgreSQL 17.6, das von CVE-2026-6460 betroffen ist: Eine Datenbankrolle, die Objekte anlegen kann, kann Code auf dem Datenbankserver ausführen. Releases nach v0.30.1 pinnen im full-Profil das korrigierte Image `supabase/postgres:17.12.0.000` auf `db`. Es bleibt bei PostgreSQL 17, daher starten die vorhandenen Daten unverändert, ohne Konvertierung. Auf v0.30.1 oder älter erstellst du ein versiegeltes Backup, fügst die `image`-Zeile unten unter `db` in die `compose.full.yml` deines aktuellen Release-Verzeichnisses ein und führst dann `compose up -d --wait` aus.
+
+```yaml
+services:
+  db:
+    image: supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de
+```
+
+```bash
+compose exec db psql -U postgres -Atc "show server_version"
+compose exec db psql -U postgres -Atc "select e.extname from pg_extension e join pg_available_extensions a on a.name = e.extname where a.default_version <> e.extversion"
+compose exec db psql -U postgres -Atc "alter extension supabase_vault update"
+```
+
+Der erste Befehl muss 17.12 oder neuer ausgeben. Der zweite listet die zu aktualisierenden Erweiterungen; von 17.6 aus ist das `supabase_vault`, das der dritte Befehl aktualisiert. Wenn du für das managed-Profil dein eigenes Supabase betreibst, stelle PostgreSQL auf 17.12 oder neuer um (15.20 bei PostgreSQL 15). Ein Supabase-Cloud-Projekt wird über sein Dashboard aktualisiert, sobald Supabase 17.12 anbietet.
 
 ## Managed- und Quellcodebetrieb unterscheiden {#managed-source}
 

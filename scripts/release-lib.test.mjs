@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   assertOfficialSupabaseImages,
+  assertPostgresPatched,
   assertReleaseCompatibility,
   assertStorageS3ProtocolMitigation,
   assertVersion,
@@ -143,6 +144,26 @@ test("a pinned Storage image below the S3 replay fix requires the overlay to dis
     ),
     /S3_PROTOCOL_ENABLED/,
   );
+});
+
+test("the complete profile must run a PostgreSQL image past CVE-2026-6460", () => {
+  const upstream = (tag) => `services:\n  db:\n    image: supabase/postgres:${tag}\n    restart: unless-stopped\n`;
+  const overlay = (image) => `services:\n  db:\n    image: ${image}\n    ports: !reset []\n\n  minddy:\n    image: x\n`;
+  const digest = `@sha256:${"a".repeat(64)}`;
+  const patched = `supabase/postgres:17.12.0.000${digest}`;
+  assert.equal(assertPostgresPatched(upstream("17.6.1.136"), overlay(patched)), patched);
+  assert.doesNotThrow(() => assertPostgresPatched(upstream("17.12.0.000"), "services:\n  db:\n    ports: !reset []\n"));
+  assert.doesNotThrow(() => assertPostgresPatched(upstream("15.20.0.000"), "services:\n"));
+  // The 17.6.1.x series ran up to 17.11 under its old prefix: still refused.
+  assert.throws(() => assertPostgresPatched(upstream("17.6.1.136"), "services:\n"), /17\.6\.1\.136; CVE-2026-6460/);
+  assert.throws(() => assertPostgresPatched(upstream("17.12.0.000"), overlay("supabase/postgres:17.11.0.019")), /17\.11\.0\.019/);
+  assert.throws(() => assertPostgresPatched(upstream("15.19.0.019"), "services:\n"), /CVE-2026-6460/);
+  // An image on another service, or a foreign repository on db, does not count.
+  assert.throws(
+    () => assertPostgresPatched(upstream("17.6.1.136"), `services:\n  minddy:\n    image: ${patched}\n`),
+    /17\.6\.1\.136/,
+  );
+  assert.throws(() => assertPostgresPatched(upstream("17.12.0.000"), overlay("postgres:17.12")), /postgres:17\.12;/);
 });
 
 test("sets the iOS app's version from the release, in numbers only", async () => {
