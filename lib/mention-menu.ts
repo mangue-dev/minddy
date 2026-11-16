@@ -68,15 +68,14 @@ export function findActiveTriggerQuery(
 
 /**
  * Stable ordering: put what the surface is tied to first (its contextual
- * sections), then Numo, preserve source order, and place tickets last.
+ * sections), then Numo, preserve source order, and place tickets last, with
+ * only the pull requests under them (MIN-1009). Tickets far outnumber every
+ * other target, so a query aimed at a routine or an MCP server must not find
+ * it below a screen of tickets that happen to match.
  * Among tickets, the issue search order applies (MIN-726): work under way
  * first, closed and triage tickets last, and the ticket whose identifier is
  * the query before all.
  */
-/** The targets MIN-872 added, listed after the issues: people, projects,
-    objectives, pages and issues stay what a mention is most often for. */
-const FEATURE_TYPES: ReadonlySet<string> = new Set(["scratchpad", "cycle", "routine", "skill", "mcp", "pull_request"]);
-
 export function orderMentionItems<T extends MentionSearchItem>(
   items: readonly T[],
   query = "",
@@ -85,12 +84,12 @@ export function orderMentionItems<T extends MentionSearchItem>(
   const numo: T[] = [];
   const other: T[] = [];
   const issues: T[] = [];
-  const features: T[] = [];
+  const pullRequests: T[] = [];
   for (const item of items) {
     (item.section ? pinned
       : item.type === "numo" ? numo
       : item.type === "issue" ? issues
-      : FEATURE_TYPES.has(item.type) ? features
+      : item.type === "pull_request" ? pullRequests
       : other).push(item);
   }
   const orderedIssues = orderIssuesForSearch(
@@ -98,7 +97,25 @@ export function orderMentionItems<T extends MentionSearchItem>(
     (item) => item.status,
     (item) => isExactIssueQuery(query, item.label),
   );
-  return [...pinned, ...numo, ...other, ...orderedIssues, ...features];
+  return [...pinned, ...numo, ...other, ...orderedIssues, ...pullRequests];
+}
+
+/**
+ * Adds the dates a query suggests to an ordered list: first when the query
+ * clearly is a date, otherwise just above the tickets and pull requests, which
+ * stay at the bottom of the menu (MIN-1009).
+ */
+export function withDateMentions<T extends MentionSearchItem>(
+  ordered: readonly T[],
+  dates: readonly T[],
+  first: boolean,
+): T[] {
+  if (first) return [...dates, ...ordered];
+  const tail = ordered.findIndex(
+    (item) => !item.section && (item.type === "issue" || item.type === "pull_request"),
+  );
+  if (tail < 0) return [...ordered, ...dates];
+  return [...ordered.slice(0, tail), ...dates, ...ordered.slice(tail)];
 }
 
 /** Matches a mention query without imposing an artificial result limit. */
