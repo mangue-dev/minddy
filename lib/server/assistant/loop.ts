@@ -111,6 +111,11 @@ export interface ProcessChatCheckpoint {
   completionRepairs?: number;
   completionRepairPending?: boolean;
   completionRepairExhausted?: boolean;
+  /**
+   * What the last rejected reply got wrong. A resumed or retried turn that
+   * finds the bound exhausted reports it, rather than a generic message.
+   */
+  completionProblem?: string;
   /** Empty replies need a visible-answer repair, including after a durable resume. */
   emptyAnswerRepair?: boolean;
 }
@@ -512,7 +517,10 @@ export async function processChat(
   // The template sent, including routing suffix (MIN-263) — it may lose its
   // suffix being looped if OpenRouter refuses it.
   let requestModel = context.model;
-  const MAX_TOOL_EXECUTION_ROUNDS = 12;
+  // A turn has no tool round limit (MIN-1008): it ends when the model answers,
+  // the user stops it, or a spend budget runs out (the routine cap per turn,
+  // the account's included usage). `roundCount` still numbers the rounds for
+  // the usage ledger and the checkpoints.
   const reasoningLevel = context.reasoningLevel ?? DEFAULT_REASONING_LEVEL;
   // Living IDs seen during the tour (MIN-343). The register is
   // CUMULATIVE on purpose: a key returned in round 1 must remain substituted in
@@ -525,7 +533,7 @@ export async function processChat(
   let emptyAnswerRepair = resumeCheckpoint?.emptyAnswerRepair === true;
   if (resumeCheckpoint?.phase === "model" && resumeCheckpoint.completionRepairPending) {
     messages.push({ role: "user", content: completionRepairPrompt(emptyAnswerRepair,
-      tools.length > 0 && roundCount < MAX_TOOL_EXECUTION_ROUNDS) });
+      tools.length > 0) });
   }
   // True as soon as a stop was observed anywhere in the round (mid-stream or
   // between tools): the loop stops handing the turn back with no persisted
@@ -620,15 +628,13 @@ export async function processChat(
     if (await context.shouldStop?.()) observeStop();
     if (stopObserved) break;
     if (resumeCheckpoint?.completionRepairExhausted) {
-      throw new NumoCompletionError("the bounded correction attempts were exhausted");
+      throw new NumoCompletionError(resumeCheckpoint.completionProblem
+        ?? "the bounded correction attempts were exhausted");
     }
     const resumingTools = resumeCheckpoint?.phase === "tools";
     roundCount = resumingTools
       ? Math.max(roundCount, resumeCheckpoint?.roundCount ?? 1)
       : roundCount + 1;
-    // Always reserve one text-only round after the tool budget. Previously the
-    // sixth tool round ended the stream silently, with no final assistant reply.
-    const forceConclusion = roundCount > MAX_TOOL_EXECUTION_ROUNDS;
     // At most one compaction per model call, before the call opens.
     if (!resumingTools) {
       await compactIfNeeded();
@@ -664,7 +670,6 @@ export async function processChat(
       : null;
 
     if (resumingTools) {
-      if (forceConclusion) throw new NumoCompletionError("a resumed tool round exceeded the execution round limit");
       for (const [index, call] of (resumeCheckpoint?.pendingToolCalls ?? []).entries()) {
         toolCallAccumulators.set(index, {
           id: call?.id,
@@ -745,7 +750,7 @@ export async function processChat(
             stream: true,
             maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
             reasoning: repairWithoutReasoning ? { enabled: false } : { effort: reasoningLevel },
-            ...(roundTools.length > 0 && !forceConclusion ? { tools: roundTools } : {}),
+            ...(roundTools.length > 0 ? { tools: roundTools } : {}),
           }),
           "Numo (minddy)",
           "[assistant]",
@@ -949,9 +954,7 @@ export async function processChat(
       const missingNativeCalls = (terminalFinish === "tool_calls" || terminalFinish === "function_call")
         && toolCallAccumulators.size === 0;
       const invalidNativeCall = malformedToolDelta || malformedNativeCalls(toolCallAccumulators.values());
-      const toolCapExceeded = forceConclusion && toolCallAccumulators.size > 0;
-      const completionProblem = toolCapExceeded ? "a tool call exceeded the execution round limit"
-        : serializedCall ? "a tool call was returned as text"
+      const completionProblem = serializedCall ? "a tool call was returned as text"
         : truncated ? "the response reached its token limit"
         : invalidFinish ? "the provider did not report a successful finish"
         : incompleteTransport ? "the stream closed before a terminal response"
@@ -963,24 +966,19 @@ export async function processChat(
       if (completionProblem) {
         if (await context.shouldStop?.()) observeStop();
         if (stopObserved) break;
-        // Action/protocol correction needs real tools. Do not silently turn a
-        // repair into a text-only conclusion when the existing round cap is hit.
-        const actionRepairUnavailable = toolCapExceeded || (
-          (serializedCall || pendingAction || missingNativeCalls || invalidNativeCall)
-          && tools.length > 0 && roundCount >= MAX_TOOL_EXECUTION_ROUNDS
-        );
-        const exhausted = completionRepairs >= MAX_COMPLETION_REPAIRS || actionRepairUnavailable;
+        const exhausted = completionRepairs >= MAX_COMPLETION_REPAIRS;
         if (completionProblem === "the response was empty") emptyAnswerRepair = true;
         if (!exhausted) completionRepairs++;
         await context.persistCheckpoint?.({
           phase: "model", roundCount, completionRepairs,
           completionRepairPending: !exhausted,
           completionRepairExhausted: exhausted,
+          ...(exhausted ? { completionProblem } : {}),
           ...(emptyAnswerRepair ? { emptyAnswerRepair: true } : {}),
         });
         if (exhausted) throw new NumoCompletionError(completionProblem);
         messages.push({ role: "user", content: completionRepairPrompt(emptyAnswerRepair,
-          tools.length > 0 && roundCount < MAX_TOOL_EXECUTION_ROUNDS) });
+          tools.length > 0) });
         continueLoop = true;
         continue;
       }
@@ -1284,9 +1282,9 @@ export async function processChat(
 
       // Continue rules:
       // - ask_user, or a tool that hands the turn back: stop and wait for user
-      // - other tools: continue normally with tools enabled (round cap only —
-      //   minddy tools chain legitimately: create issue → set categories → comment)
-      if (!hasAskUser && !pausedByTool && !stopObserved && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
+      // - other tools: continue with tools enabled; minddy tools chain
+      //   legitimately (create issue → set categories → comment)
+      if (!hasAskUser && !pausedByTool && !stopObserved) {
         await context.persistCheckpoint?.({ phase: "model", roundCount, completionRepairs });
         continueLoop = true;
       }
