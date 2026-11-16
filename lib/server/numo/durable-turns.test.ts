@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProviderRequestError } from "@/lib/server/ai-provider-errors";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 
@@ -28,6 +28,8 @@ const h = vi.hoisted(() => ({
   processChat: vi.fn(),
   fetchModelIndex: vi.fn(),
   recordAiUsage: vi.fn(),
+  onHandoff: null as (() => void) | null,
+  getUserById: vi.fn(),
 }));
 
 function queryFor(table: string) {
@@ -82,6 +84,7 @@ function queryFor(table: string) {
 }
 
 const service = {
+  auth: { admin: { getUserById: (...args: unknown[]) => h.getUserById(...args) } },
   from: (table: string) => queryFor(table),
   rpc: async (name: string, args: Record<string, unknown> = {}) => {
     if (name === "claim_numo_turn") {
@@ -137,6 +140,21 @@ const service = {
         && ["running", "stopping"].includes(String(h.turn?.status)), error: null };
     }
     if (name === "recover_stale_numo_turns") return { data: 0, error: null };
+    if (name === "hand_off_numo_turn") {
+      h.onHandoff?.();
+      if (h.turn?.claim_token !== args.p_claim_token || h.turn?.status !== "running") {
+        return { data: [], error: null };
+      }
+      h.turn = {
+        ...h.turn,
+        status: "queued",
+        claim_token: null,
+        claimed_at: null,
+        attempts: Math.max(0, Number(h.turn.attempts) - 1),
+        last_event_seq: 7,
+      };
+      return { data: [h.turn], error: null };
+    }
     return { data: true, error: null };
   },
 } as unknown as SupabaseClient;
@@ -213,7 +231,9 @@ vi.mock("@/lib/server/assistant/admin-tools", () => ({
 }));
 
 
-const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
+const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn, numoUsageSeq, runHandedOffNumoTurn } =
+  await import("./turns");
+const { aiDeclinedInBackground } = await import("@/lib/server/ai-consent");
 const { NumoCompletionError } = await import("@/lib/server/assistant/loop");
 const { supabaseServerFetch } = await import("@/lib/server/supabase-fetch");
 
@@ -287,6 +307,8 @@ beforeEach(() => {
     context: null,
   });
   h.processChat.mockReset();
+  h.onHandoff = null;
+  h.getUserById.mockReset().mockResolvedValue({ data: null, error: { message: "unreadable" } });
   h.fetchModelIndex.mockReset();
   h.fetchModelIndex.mockRejectedValue(new Error("Catalog unavailable"));
   h.recordAiUsage.mockReset();
@@ -781,6 +803,195 @@ describe("durable Numo execution", () => {
     await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
     expect(h.claims.at(-1)).toMatchObject({ p_allow_retryable: true });
     expect(h.processChat).toHaveBeenCalled();
+  });
+
+  describe("handing a turn to a new job before the 300 s limit (MIN-1010)", () => {
+    const relay = vi.fn();
+    beforeEach(() => {
+      relay.mockReset().mockResolvedValue(new Response(null, { status: 202 }));
+      vi.stubGlobal("fetch", relay);
+      vi.stubEnv("CRON_SECRET", "cron-secret");
+      vi.stubEnv("VERCEL", "1");
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    });
+
+    it("hands off between steps without an error, a failed attempt or a lost checkpoint", async () => {
+      const toolsCheckpoint = {
+        phase: "tools",
+        assistantMessageId: "assistant-tool-round",
+        pendingToolCalls: [{ id: "call-a" }, { id: "call-b" }],
+        completedToolCallIds: ["call-a"],
+        roundCount: 3,
+      };
+      h.processChat.mockImplementationOnce(async (...args: unknown[]) => {
+        const context = args[3] as {
+          shouldHandOff: (step: "generation" | "tool") => boolean;
+          persistCheckpoint: (checkpoint: Record<string, unknown>) => Promise<void>;
+        };
+        // The job has 80 s left: enough for neither a generation nor a tool.
+        expect(context.shouldHandOff("generation")).toBe(true);
+        expect(context.shouldHandOff("tool")).toBe(true);
+        await context.persistCheckpoint(toolsCheckpoint);
+        return { fullContent: "", finalReasoning: null, allToolCalls: [], generations: [],
+          suspension: { kind: "handoff" } };
+      });
+
+      const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
+      const result = await executeNumoTurn({
+        turnId: h.turn!.id as string,
+        readClient: service,
+        aiRuntime: runtime,
+        liveEmitter: live,
+        deadlineAt: Date.now() + 80_000,
+      });
+
+      expect(result.status).toBe("queued");
+      expect(h.turn).toMatchObject({ status: "queued", claim_token: null, attempts: 0 });
+      // The only checkpoint written is the loop's own durable boundary.
+      expect(h.checkpoints.map((call) => call.p_status)).toEqual(["running"]);
+      expect(h.turn!.checkpoint).toEqual(toolsCheckpoint);
+      // The reader is told where the journal stood, to follow on from there;
+      // the journal itself records neither an error nor a terminal event.
+      expect(live.emit).toHaveBeenLastCalledWith("done", { status: "queued", after: 7 });
+      const types = h.events.map((event) => event.p_type);
+      expect(types).not.toContain("error");
+      expect(types).not.toContain("done");
+      // A new job starts at once rather than on the next minute of the clock.
+      await vi.waitFor(() => expect(relay).toHaveBeenCalledTimes(1));
+      const [url, init] = relay.mock.calls[0] as [URL, RequestInit];
+      expect(url.pathname).toBe("/api/cron/numo-turns");
+      expect(url.searchParams.get("turn")).toBe(h.turn!.id);
+      expect(init).toMatchObject({ method: "POST", headers: { authorization: "Bearer cron-secret" } });
+
+      // The next job resumes from that checkpoint and finishes the turn.
+      h.processChat.mockImplementationOnce(async (...args: unknown[]) => {
+        const context = args[3] as { resumeCheckpoint: unknown };
+        expect(context.resumeCheckpoint).toEqual(toolsCheckpoint);
+        return { fullContent: "All done.", finalReasoning: null, allToolCalls: [], generations: [],
+          suspension: null };
+      });
+      h.queuedTurns.push({ ...h.turn });
+      await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
+      expect(h.turn).toMatchObject({ status: "completed", attempts: 1 });
+    });
+
+    it("leaves a full job's time to the turn when it starts", async () => {
+      h.processChat.mockImplementationOnce(async (...args: unknown[]) => {
+        const context = args[3] as { shouldHandOff: (step: "generation" | "tool") => boolean };
+        expect(context.shouldHandOff("generation")).toBe(false);
+        expect(context.shouldHandOff("tool")).toBe(false);
+        return { fullContent: "Answer.", finalReasoning: null, allToolCalls: [], generations: [],
+          suspension: null };
+      });
+
+      const result = await executeNumoTurn({
+        turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime,
+      });
+
+      expect(result.status).toBe("completed");
+      expect(relay).not.toHaveBeenCalled();
+    });
+
+    it("runs the turn to its end where no new job could take it over", async () => {
+      vi.stubEnv("VERCEL", "");
+      h.processChat.mockImplementationOnce(async (...args: unknown[]) => {
+        expect((args[3] as { shouldHandOff?: unknown }).shouldHandOff).toBeUndefined();
+        return { fullContent: "Answer.", finalReasoning: null, allToolCalls: [], generations: [],
+          suspension: null };
+      });
+
+      const result = await executeNumoTurn({
+        turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime, deadlineAt: Date.now(),
+      });
+
+      expect(result.status).toBe("completed");
+    });
+
+    it("leaves a turn stopped when the stop lands between the stop check and the handoff", async () => {
+      h.processChat.mockResolvedValueOnce({ fullContent: "", finalReasoning: null, allToolCalls: [],
+        generations: [], suspension: { kind: "handoff" } });
+      // Stop retires the turn and its claim (`requestNumoRequestStop`).
+      h.onHandoff = () => { h.turn = { ...h.turn, status: "stopped", claim_token: null }; };
+
+      const result = await executeNumoTurn({
+        turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime, deadlineAt: Date.now(),
+      });
+
+      expect(result.status).toBe("stopped");
+      expect(h.turn).toMatchObject({ status: "stopped" });
+      expect(relay).not.toHaveBeenCalled();
+    });
+
+    it("runs a handed-off turn in the job the relay started, with that job's deadline", async () => {
+      h.turn = { ...turn({ phase: "model", roundCount: 4 }), status: "queued" };
+      h.processChat.mockImplementationOnce(async (...args: unknown[]) => {
+        const context = args[3] as { shouldHandOff: (step: "generation" | "tool") => boolean };
+        expect(context.shouldHandOff("generation")).toBe(true);
+        return { fullContent: "All done.", finalReasoning: null, allToolCalls: [], generations: [],
+          suspension: null };
+      });
+
+      await expect(runHandedOffNumoTurn(h.turn.id as string, { deadlineAt: Date.now() }))
+        .resolves.toEqual({ claimed: true });
+      expect(h.turn).toMatchObject({ status: "completed" });
+
+      h.turn = null;
+      h.processChat.mockClear();
+      await expect(runHandedOffNumoTurn("51600000-0000-4000-8000-000000000001"))
+        .resolves.toEqual({ claimed: false });
+      expect(h.processChat).not.toHaveBeenCalled();
+    });
+
+    it("gives every model call of a long turn its own usage slot", () => {
+      const slots = new Set<number>();
+      for (const attempts of [1, 2]) {
+        for (let round = 1; round <= 500; round++) {
+          slots.add(numoUsageSeq(attempts, round, "generation"));
+          slots.add(numoUsageSeq(attempts, round, "compaction"));
+        }
+      }
+      expect(slots.size).toBe(2 * 500 * 2);
+      expect(numoUsageSeq(1_000, 49_999, "compaction")).toBeLessThan(2 ** 31);
+    });
+
+    it("runs a reminder or a wake under the background guard in any job", async () => {
+      const probe = async (intent: Record<string, unknown>, userId: string) => {
+        h.turn = { ...turn(), intent: { ...turn().intent, ...intent } };
+        h.processChat.mockImplementationOnce(async () => {
+          await aiDeclinedInBackground(userId);
+          return { fullContent: "Done.", finalReasoning: null, allToolCalls: [], generations: [],
+            suspension: null };
+        });
+        h.getUserById.mockClear();
+        await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: runtime });
+        return h.getUserById.mock.calls.length > 0;
+      };
+
+      // The guard reads the account's answer only inside background work.
+      expect(await probe({ wake: { batchId: "batch-1" } }, "probe-wake")).toBe(true);
+      expect(await probe({ reminder: { watchId: "watch-1", projectId: null, targetType: "date",
+        targetId: null } }, "probe-reminder")).toBe(true);
+      expect(await probe({}, "probe-chat")).toBe(false);
+    });
+
+    it("stops a turn whose stop landed during the handoff instead of re-queuing it", async () => {
+      h.processChat.mockImplementationOnce(async () => {
+        h.turn = { ...h.turn, status: "stopping" };
+        return { fullContent: "", finalReasoning: null, allToolCalls: [], generations: [],
+          suspension: { kind: "handoff" } };
+      });
+
+      const result = await executeNumoTurn({
+        turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime,
+        deadlineAt: Date.now(),
+      });
+
+      expect(result.status).toBe("stopped");
+      expect(relay).not.toHaveBeenCalled();
+    });
   });
 
   it("preserves the latest tool checkpoint when execution fails", async () => {

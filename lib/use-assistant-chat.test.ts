@@ -600,6 +600,37 @@ describe("Numo conversation settings", () => {
     expect(value.state.messages.at(-1)?.id).toBe("final");
   });
 
+  it("follows a turn handed to a new job from where its stream stopped (MIN-1010)", async () => {
+    const statusUrls: string[] = [];
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (String(url).includes("/api/assistant/chat")) {
+        return new Response(
+          'event: tool_call_start\ndata: {"id":"call-1","name":"list_issues"}\n\n'
+            + 'event: tool_result\ndata: {"id":"call-1","name":"list_issues","result":{"issues":[]},"success":true}\n\n'
+            + 'event: done\ndata: {"status":"queued","after":12}\n\n',
+          { headers: { "X-Numo-Conversation-Id": conversationId } },
+        );
+      }
+      if (String(url).includes("/status")) {
+        statusUrls.push(String(url));
+        return Response.json({ status: "running", error_message: null, activity: [] });
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Hello"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+
+    // No error and no "interrupted": the thread keeps working on the server.
+    expect(value.state.error).toBeNull();
+    expect(value.state.status).toBe("generating_server");
+    // The journal is read after what the stream showed, so the finished tool
+    // card is not replayed back to "running".
+    expect(statusUrls[0]).toContain("after=12");
+    expect(value.state.toolCallResults.get("call-1")).toMatchObject({ status: "complete" });
+  });
+
   it("idles the thread instantly on stop and still records the durable stop", async () => {
     // Reference experience: pressing stop must freeze the thread at once,
     // not keep a busy presentation until polling confirms. The durable stop
