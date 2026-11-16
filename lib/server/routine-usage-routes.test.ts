@@ -55,13 +55,13 @@ describe("routine occurrence usage consumers", () => {
     expect(runs[0].usage_percent).toBeCloseTo(15.7);
   });
 
-  it("reads a turn that needs reconciliation as failed rather than running", async () => {
+  it("reads a turn parked on an interrupted tool call as queued: the drain resumes it", async () => {
     const turns = h.turns;
     h.turns = [{ id: "turn-3", conversation_id: "conversation", status: "reconciling", cost_usd: 0.01 }];
     try {
       const { GET } = await import("@/app/api/routines/[id]/runs/route");
       const response = await GET({} as never, { params: Promise.resolve({ id: "routine" }) });
-      expect((await response.json()).runs[0]).toMatchObject({ status: "failed", numo_status: "reconciling" });
+      expect((await response.json()).runs[0]).toMatchObject({ status: "queued", numo_status: "reconciling" });
     } finally {
       h.turns = turns;
     }

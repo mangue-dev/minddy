@@ -24,7 +24,7 @@
   "revision": 43,
   "sourceRevision": 43,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -417,7 +417,7 @@ La intención se guarda como un turno duradero con el UUID de petición y su men
 
 ### Tratar cambios inciertos {#mutations}
 
-Antes de modificar datos, el sistema registra la operación y su checkpoint. Reutiliza los resultados completados. Una lectura interrumpida puede repetirse; una modificación con resultado desconocido pasa a `reconciling`, sin repetición automática. Comprueba el destino antes de volver a escribir externamente. Las conexiones y el presupuesto de las rutinas siguen sujetos a la propiedad y a las protecciones de coste; otro miembro no puede usar las credenciales MCP personales del propietario anterior.
+Antes de modificar datos, el sistema registra la operación y su checkpoint. Reutiliza los resultados completados. Una lectura interrumpida se vuelve a ejecutar; una herramienta MCP externa solo cuenta como lectura si se declara de solo lectura. Una modificación con resultado desconocido nunca se repite: Numo recibe el aviso de que el resultado es desconocido, comprueba el estado actual y continúa. Comprueba el destino antes de volver a escribir externamente. Las conexiones y el presupuesto de las rutinas siguen sujetos a la propiedad y a las protecciones de coste; otro miembro no puede usar las credenciales MCP personales del propietario anterior.
 
 Detener Numo termina su turno. Una acción externa ya enviada todavía puede finalizar. Una conversación que esperaba trabajo de código de una versión anterior se detiene automáticamente y vuelve a quedar inactiva.
 

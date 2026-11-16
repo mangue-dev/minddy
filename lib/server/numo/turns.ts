@@ -109,6 +109,7 @@ import {
   withNumoSurfaceEmitter,
 } from "./surface-projection";
 import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
+import { NUMO_TURN_STATUSES_WITH_DEADLINE } from "./turn-lifecycle";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import { numoJobDeadline, numoTurnHandoffAvailable, numoTurnShouldHandOff } from "./job-deadline";
@@ -937,15 +938,19 @@ function createToolLedger(
             p_arguments_version: encoded!.version,
             p_arguments_digest: await numoToolArgumentsDigest(userId, input.args),
             p_replay_policy: input.replayPolicy,
+            p_resolve_ambiguous: true,
           })
         : await service.rpc("claim_numo_tool_operation", {
             p_turn_id: turnId, p_claim_token: claimToken,
             p_tool_call_id: input.toolCallId, p_tool_name: input.toolName,
             p_arguments: input.args, p_replay_policy: input.replayPolicy,
+            // An interrupted call is settled by this job (MIN-1011), never
+            // left to park the turn in `reconciling`.
+            p_resolve_ambiguous: true,
           });
       if (error) throw new Error(error.message);
       const result = data as {
-        action?: "execute" | "reuse" | "reconcile" | "lost_claim";
+        action?: "execute" | "reuse" | "resolve" | "reconcile" | "lost_claim";
         success?: boolean;
         result?: unknown;
         model_result?: unknown;
@@ -1180,6 +1185,11 @@ async function ensureNumoOperationBudget(
   });
 }
 
+/** Jobs a turn may use before it fails; a handoff (MIN-1010) does not count. */
+export const NUMO_TURN_MAX_ATTEMPTS = 3;
+export const NUMO_TURN_ATTEMPTS_SPENT_MESSAGE =
+  "Numo was interrupted several times while answering and stopped. Send your request again.";
+
 async function executeNumoTurnCore(input: {
   turnId: string;
   readClient?: SupabaseClient;
@@ -1283,6 +1293,26 @@ async function executeClaimedNumoTurn(input: {
     });
     emitter.emit("message_complete", { message_id: savedFinal.id });
     emitter.emit("done", { status: "completed" });
+    await emitter.flush();
+    emitter.close();
+    return { status: turn.status, turn };
+  }
+  // Each claim spends an attempt, and a failure retries while attempts
+  // remain. A claim past the last attempt means the jobs before it stopped
+  // without recording anything (MIN-1011): end the turn instead of
+  // resuming it forever.
+  if (claimed.attempts > NUMO_TURN_MAX_ATTEMPTS) {
+    const turn = await checkpointTurn({
+      service,
+      turnId: claimed.id,
+      claimToken,
+      status: "failed",
+      checkpoint: checkpointRecord(claimed.checkpoint),
+      errorMessage: NUMO_TURN_ATTEMPTS_SPENT_MESSAGE,
+      userId: claimed.user_id,
+    });
+    console.error("[numo-turn] attempts spent", { turnId: claimed.id, attempts: claimed.attempts });
+    emitter.emit("error", { message: NUMO_TURN_ATTEMPTS_SPENT_MESSAGE, status: turn.status });
     await emitter.flush();
     emitter.close();
     return { status: turn.status, turn };
@@ -1665,7 +1695,7 @@ async function executeClaimedNumoTurn(input: {
     const status: "retryable" | "failed" = error instanceof NumoCompletionError
       || error instanceof ChosenProviderUnavailableError
       || (providerError && !providerError.retryable)
-      ? "failed" : claimed.attempts < 3 ? "retryable" : "failed";
+      ? "failed" : claimed.attempts < NUMO_TURN_MAX_ATTEMPTS ? "retryable" : "failed";
     if (!providerError) {
       // Provider rejections were already reported by the transport.
       console.error("[numo-turn] failed", {
@@ -1838,20 +1868,32 @@ export async function executeNumoTurn(input: {
       ),
     });
     if (result.status !== "not_claimed") {
-      await projectNumoSurfaceTurn(service, result.turn);
-      notifyRoutineOfNumoTurn(result.turn, {
+      await settleNumoTurn(service, result.turn, {
         usageExhausted: result.usageExhausted === true,
       });
-      if (result.turn.intent.reminder) {
-        // A reminder turn that did not finish tells the user (MIN-923).
-        const { notifyReminderOfNumoTurn } = await import("./watch-clock");
-        notifyReminderOfNumoTurn(result.turn, { usageExhausted: result.usageExhausted === true });
-      }
     }
     return result;
   } catch (error) {
     await failNumoSurfaceProjection(service, input.turnId);
     throw error;
+  }
+}
+
+/**
+ * What follows a turn's new state, whoever set it: the job that ran it, or
+ * the recovery that ended it without a job (MIN-1011).
+ */
+async function settleNumoTurn(
+  service: SupabaseClient,
+  turn: NumoTurn,
+  options: { usageExhausted?: boolean } = {},
+): Promise<void> {
+  await projectNumoSurfaceTurn(service, turn);
+  notifyRoutineOfNumoTurn(turn, { usageExhausted: options.usageExhausted === true });
+  if (turn.intent.reminder) {
+    // A reminder turn that did not finish tells the user (MIN-923).
+    const { notifyReminderOfNumoTurn } = await import("./watch-clock");
+    notifyReminderOfNumoTurn(turn, { usageExhausted: options.usageExhausted === true });
   }
 }
 
@@ -1980,8 +2022,21 @@ export async function drainNumoTurns(options?: { limit?: number; deadlineAt?: nu
     "@/lib/server/routine-occurrences"
   );
   await recoverPendingRoutineOccurrences(options?.limit ?? 10);
-  const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
+  const { data: recovered, error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);
+  // The recovery returns the turns it ended without a job (a stale stop, a
+  // question nobody will answer): they get the hooks a job would have run.
+  for (const row of recoveredTurnRows(recovered)) {
+    try {
+      await settleNumoTurn(service, await hydrateNumoTurn(row));
+    } catch (settleError) {
+      console.error("[numo-turn] recovered turn settlement failed", {
+        turnId: row.id,
+        error: settleError instanceof Error ? settleError.name : typeof settleError,
+      });
+    }
+  }
+  await reportStuckNumoTurns(service);
   const { data, error } = await service.from("numo_assistant_turns")
     .select("id, status, user_id, conversation_id, request_id")
     .in("status", ["queued", "retryable"])
@@ -1998,6 +2053,49 @@ export async function drainNumoTurns(options?: { limit?: number; deadlineAt?: nu
     if (await runQueuedNumoTurn(service, row, wakes.has(row.id), options?.deadlineAt)) claimed++;
   }
   return { claimed };
+}
+
+function recoveredTurnRows(data: unknown): NumoTurn[] {
+  // The previous database release answered a count.
+  return Array.isArray(data) ? data as NumoTurn[] : [];
+}
+
+/**
+ * A non-terminal turn nothing has moved for this long is a stranded turn
+ * (MIN-1011): every status has an automatic exit well within it.
+ */
+export const NUMO_TURN_STUCK_AFTER_MS = 30 * 60_000;
+
+/** Reports the turns stranded past the threshold, before a user notices. */
+async function reportStuckNumoTurns(service: SupabaseClient): Promise<void> {
+  const cutoff = new Date(Date.now() - NUMO_TURN_STUCK_AFTER_MS).toISOString();
+  const { data, error } = await service.from("numo_assistant_turns")
+    .select("id, status, updated_at")
+    .in("status", NUMO_TURN_STATUSES_WITH_DEADLINE)
+    .lt("updated_at", cutoff)
+    .lt("not_before", cutoff)
+    .order("updated_at", { ascending: true })
+    .limit(20);
+  if (error) {
+    console.error("[numo-turn] stuck turn check failed", { code: error.code });
+    return;
+  }
+  for (const turn of (data ?? []) as Array<{ id: string; status: string; updated_at: string }>) {
+    const ageMinutes = Math.round((Date.now() - Date.parse(turn.updated_at)) / 60_000);
+    console.error("[numo-turn] stuck", { turnId: turn.id, status: turn.status, ageMinutes });
+    captureBackgroundException(new NumoTurnStuckError(turn.status), {
+      surface: "numo_turn",
+      turn_status: turn.status,
+      age_minutes: ageMinutes,
+    });
+  }
+}
+
+class NumoTurnStuckError extends Error {
+  constructor(status: string) {
+    super(`A Numo turn has stayed ${status} past the stuck threshold`);
+    this.name = "NumoTurnStuckError";
+  }
 }
 
 interface QueuedNumoTurnRow {

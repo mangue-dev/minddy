@@ -24,7 +24,7 @@
   "revision": 43,
   "sourceRevision": 43,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -417,7 +417,7 @@ Eine Absicht wird mit Anfrage-UUID und Nachricht als dauerhafter Turn gespeicher
 
 ### Unklare Änderungen behandeln {#mutations}
 
-Vor Mutation speichert das System Vorgang und Checkpoint. Abgeschlossene Ergebnisse werden wiederverwendet. Unterbrochene Lesevorgänge dürfen wiederholt werden; Mutationen mit unklarem Ausgang gehen nach `reconciling` ohne automatische Wiederholung. Prüfe das echte Ziel vor erneutem externem Schreiben. Routineverbindungen und Budget unterliegen Eigentum und Kostenschutz; andere Mitglieder können keine persönlichen MCP-Zugänge des bisherigen Eigentümers ausleihen.
+Vor Mutation speichert das System Vorgang und Checkpoint. Abgeschlossene Ergebnisse werden wiederverwendet. Unterbrochene Lesevorgänge laufen erneut; ein externes MCP-Tool gilt nur als Lesevorgang, wenn es sich als schreibgeschützt ausweist. Mutationen mit unklarem Ausgang werden nie wiederholt: Numo erfährt, dass der Ausgang unklar ist, prüft den aktuellen Stand und macht weiter. Prüfe das echte Ziel vor erneutem externem Schreiben. Routineverbindungen und Budget unterliegen Eigentum und Kostenschutz; andere Mitglieder können keine persönlichen MCP-Zugänge des bisherigen Eigentümers ausleihen.
 
 Wenn du Numo stoppst, endet sein Turn. Eine bereits gesendete externe Aktion kann noch abgeschlossen werden. Ein Gespräch, das auf Code-Arbeit aus einer früheren Version wartete, wird automatisch gestoppt und kehrt in den Ruhezustand zurück.
 
