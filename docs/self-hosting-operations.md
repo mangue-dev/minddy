@@ -290,6 +290,41 @@ backup with the previous release and its saved upstream commit. The existing
 environment needs no new upstream variable, and the overlay removes the
 gateway's host port, so `API_GW_HTTP_PORT` has no effect.
 
+### PostgreSQL CVE-2026-6460
+
+Official releases up to `self-hosted/v0.8.4` run `supabase/postgres:17.6.1.136`
+(PostgreSQL 17.6). Below 17.12, a role that can create objects can run code as
+the operating-system user of the database server. Releases after v0.30.1 pin the
+patched image on `db` in `compose.full.yml`. It stays on major 17, so the data
+directory starts as is with no `pg_upgrade`, and the image ships its C
+extensions built against 17.12. The release update
+sequence picks it up; it is not an individual service upgrade, since the
+override belongs to the minddy release and the validator checks it.
+
+On v0.30.1 and earlier, take the sealed backup, add this block to the current
+release's `compose.full.yml`, then restart the database and the services that
+depend on it:
+
+```yaml
+services:
+  db:
+    image: supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de
+```
+
+```bash
+compose up -d --wait
+compose exec db psql -U postgres -Atc "show server_version"
+compose exec db psql -U postgres -Atc \
+  "select e.extname, e.extversion, a.default_version from pg_extension e
+   join pg_available_extensions a on a.name = e.extname
+   where a.default_version <> e.extversion"
+```
+
+The first query must print 17.12 or later. The second lists extensions whose
+SQL objects lag their new library; from 17.6.1.136 it lists `supabase_vault`
+(0.3.1 to 0.3.2). Run `ALTER EXTENSION <name> UPDATE` for each, as `postgres`,
+before reopening the instance.
+
 ## Restore the full profile to a blank target
 
 Restore with the release that made the backup and its saved upstream commit.

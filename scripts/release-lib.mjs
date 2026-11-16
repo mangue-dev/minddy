@@ -125,6 +125,37 @@ export function assertStorageS3ProtocolMitigation(upstreamCompose, overlayCompos
   }
 }
 
+// First PostgreSQL minor of each major that fixes CVE-2026-6460 (type confusion
+// letting a role that can create objects run code as the server's OS user).
+export const POSTGRES_PATCHED_MINORS = { 14: 25, 15: 20, 16: 16, 17: 12, 18: 7 };
+
+// Supabase tags read `<major>.<minor>.<patch>.<build>`. The older `17.6.1.x`
+// series shipped later PostgreSQL minors under the same prefix, but every one
+// of its tags predates 17.12, so reading its prefix as 17.6 refuses it as it should.
+export function postgresImageVersion(reference) {
+  const match = /^supabase\/postgres:(\d+)\.(\d+)(?:\.[0-9A-Za-z.-]*)?(?:@sha256:[0-9a-f]{64})?$/.exec(reference ?? "");
+  return match ? { major: Number(match[1]), minor: Number(match[2]) } : null;
+}
+
+function serviceImage(compose, service) {
+  return /^\s+image:\s*["']?([^"'\s]+)["']?\s*$/m.exec(serviceBlock(compose, service))?.[1] ?? null;
+}
+
+/** The `db` image the complete profile runs: the overlay's when it sets one, else upstream's. */
+export function assertPostgresPatched(upstreamCompose, overlayCompose) {
+  const image = serviceImage(overlayCompose, "db") ?? serviceImage(upstreamCompose, "db");
+  const version = postgresImageVersion(image);
+  const floor = version ? POSTGRES_PATCHED_MINORS[version.major] : undefined;
+  if (!version || floor === undefined || version.minor < floor) {
+    const required = Object.entries(POSTGRES_PATCHED_MINORS).map(([major, minor]) => `${major}.${minor}`).join(", ");
+    throw new Error(
+      `the complete profile runs ${image ?? "no db image"}; CVE-2026-6460 requires PostgreSQL ${required} or later ` +
+        "on its major, so compose.full.yml must pin a patched supabase/postgres image on db",
+    );
+  }
+  return image;
+}
+
 export function assertReleaseCompatibility(compatibility, version) {
   const tag = `v${assertVersion(version)}`;
   if (compatibility?.schemaVersion !== 1 || !Array.isArray(compatibility.entries)) {

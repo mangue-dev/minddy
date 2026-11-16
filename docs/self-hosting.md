@@ -84,6 +84,21 @@ must not enable an access-token hook or another issuer that can sign
 `role: "none"`; [the operations reference](self-hosting-operations.md#storage-role-none-advisory)
 gives the check for an existing instance.
 
+PostgreSQL before 17.12 (and 14.25, 15.20, 16.16, 18.7 on the other majors)
+lets a database role that can create objects run code as the operating-system
+user of the server (CVE-2026-6460). Official releases up to
+`self-hosted/v0.8.4` ship `supabase/postgres:17.6.1.136`, which runs 17.6, so
+the full profile pins `supabase/postgres:17.12.0.000` by digest on `db`, and
+`validate-self-hosted-compose` refuses an effective `db` image below the
+patched minor (`assertPostgresPatched` in `scripts/release-lib.mjs`). The
+migration `20270109200131_revoke_schema_create_from_api_roles.sql` also denies
+`anon`, `authenticated`, `authenticator` and `service_role` CREATE on the
+`public` and `graphql_public` schemas and on the database. An operator-run
+Supabase behind the managed profile needs the patched minor of its major. A
+Supabase Cloud project is upgraded from its dashboard once Supabase offers
+17.12; [the operations reference](self-hosting-operations.md#postgresql-cve-2026-6460)
+gives the steps for an existing instance.
+
 GitHub integration targets `github.com` and GitLab integration targets
 `gitlab.com`. GitHub Enterprise Server and self-managed GitLab are not silently
 substituted and are currently unsupported by these adapters.

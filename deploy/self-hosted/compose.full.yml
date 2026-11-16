@@ -16,7 +16,13 @@ services:
   supavisor:
     ports: !reset []
 
+  # Official releases up to self-hosted/v0.8.4 still ship supabase/postgres
+  # 17.6.1.136, below PostgreSQL 17.12 (CVE-2026-6460). Same major, so the
+  # existing data directory starts as is; validate-self-hosted-compose refuses
+  # an effective db image below the patched minor. Drop this line once the
+  # pinned upstream release ships 17.12 or later.
   db:
+    image: supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de
     ports: !reset []
 
   # minddy never uses the Storage S3 protocol. Storage up to 1.84.13 replays
