@@ -76,6 +76,28 @@ describe("first content", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("waits for content a page holds back until it can show all of it", () => {
+    // Home's intro carries `data-pending-content` until it is revealed.
+    let homePending = true;
+    vi.stubGlobal("document", {
+      querySelector: (selector: string) =>
+        homePending && selector.split(",").map((part) => part.trim()).includes("[data-pending-content]") ? {} : null,
+    });
+    try {
+      const client = reads();
+      watchFirstContent({ ...client, target: undefined });
+      client.set(1);
+      client.set(0);
+      vi.advanceTimersByTime(300);
+      expect(hasReachedFirstContent()).toBe(false);
+      homePending = false;
+      vi.advanceTimersByTime(100);
+      expect(hasReachedFirstContent()).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("runs a late listener at once and lets a pending one cancel", () => {
     const early = vi.fn();
     const cancel = onFirstContent(early);

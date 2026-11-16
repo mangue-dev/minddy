@@ -2,7 +2,13 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { mentionsSettled, refreshResolvedMention, useResolvedMentionLabel } from "./mention-resolution";
+import {
+  mentionsSettled,
+  primeResolvedMentions,
+  refreshResolvedMention,
+  useResolvedMentionDetails,
+  useResolvedMentionLabel,
+} from "./mention-resolution";
 
 let root: Root;
 let container: HTMLDivElement;
@@ -59,4 +65,27 @@ it("asks again for a member who renamed themselves, keeping the old name meanwhi
   await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
   expect(fetch).toHaveBeenCalledTimes(2);
   expect(container.textContent).toBe("Titeuf");
+});
+
+// MIN-1006: Home's word arrives with its mentions resolved; its pills show
+// their names at once and ask the server nothing.
+it("names primed mentions without asking the server", async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  primeResolvedMentions([
+    { type: "issue", id: "issue-primed", label: "MIN-7" },
+    { type: "objective", id: "objective-primed", label: "Launch", status: "in_progress" },
+    { type: "not-a-type", id: "x", label: "ignored" },
+  ]);
+  function Pills() {
+    const issue = useResolvedMentionLabel("issue", "issue-primed");
+    const objective = useResolvedMentionLabel("objective", "objective-primed");
+    const status = useResolvedMentionDetails("objective", "objective-primed")?.status;
+    return createElement("span", null, `${issue} ${objective} ${status}`);
+  }
+  await act(() => root.render(createElement(Pills)));
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+  expect(container.textContent).toBe("MIN-7 Launch in_progress");
+  expect(fetch).not.toHaveBeenCalled();
+  await expect(mentionsSettled()).resolves.toBeUndefined();
 });

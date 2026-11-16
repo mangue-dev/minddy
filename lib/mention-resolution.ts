@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { mentionTargetKey, type MentionLinkType, type MentionMeta } from "@/lib/mention-link";
+import { isMentionLinkType, mentionTargetKey, type MentionLinkType, type MentionMeta } from "@/lib/mention-link";
 import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validation";
 import { isPullRequestState, type PullRequestState } from "@/lib/pull-request-contract";
 
@@ -53,6 +53,42 @@ function notify() {
   for (const listener of listeners) listener();
 }
 
+/** One mention as the server answers it (`POST /api/mentions/resolve`). */
+export interface ResolvedMentionAnswer {
+  type: string; id: string; meta?: MentionMeta; label: string | null;
+  status?: unknown; service?: unknown; icon?: unknown; database?: unknown; prState?: unknown;
+  seed?: unknown;
+}
+
+function entryOf(mention: ResolvedMentionAnswer, at: number): Entry {
+  return {
+    label: mention.label,
+    ...(isObjectiveStatus(mention.status) ? { status: mention.status } : {}),
+    ...(typeof mention.service === "string" ? { service: mention.service } : {}),
+    ...(typeof mention.database === "boolean"
+      ? { page: { icon: typeof mention.icon === "string" ? mention.icon : null, database: mention.database } }
+      : {}),
+    ...(isPullRequestState(mention.prState) ? { prState: mention.prState } : {}),
+    ...(typeof mention.seed === "string" ? { seed: mention.seed } : {}),
+    at,
+  };
+}
+
+/**
+ * Record mentions the server already resolved for this reader alongside
+ * another answer (Home's word, MIN-1006): their pills appear named at once
+ * instead of asking. Entries of an unknown type are ignored.
+ */
+export function primeResolvedMentions(mentions: readonly ResolvedMentionAnswer[]): void {
+  if (mentions.length === 0) return;
+  const now = Date.now();
+  for (const mention of mentions) {
+    if (!isMentionLinkType(mention.type) || typeof mention.id !== "string") continue;
+    cache.set(keyOf(mention.type, mention.id, mention.meta), entryOf(mention, now));
+  }
+  notify();
+}
+
 async function flush() {
   timer = null;
   const keys = [...queued];
@@ -68,26 +104,10 @@ async function flush() {
       });
       const now = Date.now();
       if (response.ok) {
-        const { mentions } = (await response.json()) as {
-          mentions: Array<{
-            type: string; id: string; label: string | null;
-            status?: unknown; service?: unknown; icon?: unknown; database?: unknown; prState?: unknown;
-            seed?: unknown;
-          }>;
-        };
+        const { mentions } = (await response.json()) as { mentions: ResolvedMentionAnswer[] };
         for (const [index, mention] of mentions.entries()) {
           // The answer follows the request's order: its key is the request's.
-          cache.set(chunk[index] ?? `${mention.type}:${mention.id}`, {
-            label: mention.label,
-            ...(isObjectiveStatus(mention.status) ? { status: mention.status } : {}),
-            ...(typeof mention.service === "string" ? { service: mention.service } : {}),
-            ...(typeof mention.database === "boolean"
-              ? { page: { icon: typeof mention.icon === "string" ? mention.icon : null, database: mention.database } }
-              : {}),
-            ...(isPullRequestState(mention.prState) ? { prState: mention.prState } : {}),
-            ...(typeof mention.seed === "string" ? { seed: mention.seed } : {}),
-            at: now,
-          });
+          cache.set(chunk[index] ?? `${mention.type}:${mention.id}`, entryOf(mention, now));
         }
       } else {
         // Not resolved is not resolvable: stay neutral, retry after the TTL.

@@ -65,6 +65,51 @@ export type MentionResolution = Map<string, string | null>;
 
 export const mentionKey = (ref: MentionRef) => mentionTargetKey(ref.type, ref.id, ref.meta);
 
+/**
+ * One mention as the app's pills receive it (`POST /api/mentions/resolve`):
+ * the label this reader may see, or `null`, and the figures its pill draws.
+ */
+export interface ResolvedMention extends MentionRef {
+  label: string | null;
+  status?: ObjectiveStatus;
+  service?: string;
+  icon?: string | null;
+  database?: boolean;
+  prState?: PullRequestState;
+  seed?: string;
+}
+
+/** Resolve `refs` for `userId` into the pills' answer, in the order given. */
+export async function resolvedMentionsForReader(
+  userId: string,
+  refs: readonly MentionRef[],
+  service: SupabaseClient = getServiceClient(),
+): Promise<ResolvedMention[]> {
+  const statuses = new Map<string, ObjectiveStatus>();
+  const services = new Map<string, string>();
+  const pages = new Map<string, { icon: string | null; database: boolean }>();
+  const prStates = new Map<string, PullRequestState>();
+  const seeds = new Map<string, string>();
+  const resolution = await resolveMentionTargets(userId, refs, service, statuses, services, pages, prStates, seeds);
+  return refs.map((ref) => {
+    const key = mentionKey(ref);
+    const status = statuses.get(key);
+    const mcpService = services.get(key);
+    const page = pages.get(key);
+    const prState = prStates.get(key);
+    const seed = seeds.get(key);
+    return {
+      ...ref,
+      label: resolution.get(key) ?? null,
+      ...(status ? { status } : {}),
+      ...(mcpService ? { service: mcpService } : {}),
+      ...(page ? { icon: page.icon, database: page.database } : {}),
+      ...(prState ? { prState } : {}),
+      ...(seed ? { seed } : {}),
+    };
+  });
+}
+
 /** The label of the task notebook's mention, as agents read it. */
 export const SCRATCHPAD_MENTION_LABEL = "Task notebook";
 

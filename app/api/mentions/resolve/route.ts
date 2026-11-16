@@ -4,12 +4,9 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { boundedText } from "@/lib/server/bounded-body";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { isMentionLinkType } from "@/lib/mention-link";
-import type { ObjectiveStatus } from "@/lib/objective-validation";
-import type { PullRequestState } from "@/lib/pull-request-contract";
 import {
   MAX_MENTION_REFS,
-  mentionKey,
-  resolveMentionTargets,
+  resolvedMentionsForReader,
   type MentionRef,
 } from "@/lib/server/mention-access";
 
@@ -57,28 +54,7 @@ export async function POST(request: NextRequest) {
     }
     refs.push(typeof project === "string" ? { type, id, meta: { project } } : { type, id });
   }
-  const statuses = new Map<string, ObjectiveStatus>();
-  const services = new Map<string, string>();
-  const pages = new Map<string, { icon: string | null; database: boolean }>();
-  const prStates = new Map<string, PullRequestState>();
-  const seeds = new Map<string, string>();
-  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses, services, pages, prStates, seeds);
   return NextResponse.json({
-    mentions: refs.map((ref) => {
-      const status = statuses.get(mentionKey(ref));
-      const service = services.get(mentionKey(ref));
-      const page = pages.get(mentionKey(ref));
-      const prState = prStates.get(mentionKey(ref));
-      const seed = seeds.get(mentionKey(ref));
-      return {
-        ...ref,
-        label: resolution.get(mentionKey(ref)) ?? null,
-        ...(status ? { status } : {}),
-        ...(service ? { service } : {}),
-        ...(page ? { icon: page.icon, database: page.database } : {}),
-        ...(prState ? { prState } : {}),
-        ...(seed ? { seed } : {}),
-      };
-    }),
+    mentions: await resolvedMentionsForReader(auth.user.id, refs),
   }, { headers: NO_STORE });
 }

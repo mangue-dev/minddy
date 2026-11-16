@@ -14,6 +14,7 @@ import { AssistantComposerProvider } from "@/lib/assistant-composer-context";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
 import { mentionsSettled } from "@/lib/mention-resolution";
+import { markPageContentShown } from "@/lib/mobile/launch-cover";
 import { cn } from "@/lib/utils";
 import { AppContentHeader } from "@/components/app-content-header";
 import { AssistantShell, type AssistantShellHandle } from "@/components/assistant/assistant-shell";
@@ -57,6 +58,10 @@ const REVEAL_CAP_MS = 1500;
  * the pills' names. The page now waits for all of them, at most
  * `REVEAL_CAP_MS`, and reveals them together. Once shown it stays shown:
  * a later version of the word replaces the old one in place.
+ *
+ * Until then the intro counts as loading content (`data-pending-content`),
+ * so in the mobile app the launch screen stays over Home and crossfades into
+ * the finished page while the intro rises (lib/mobile/launch-cover.ts).
  */
 function useHomeReveal(inputsReady: boolean): boolean {
   const [ready, setReady] = useState(false);
@@ -83,7 +88,11 @@ function useHomeReveal(inputsReady: boolean): boolean {
   return ready;
 }
 
-/** The same fade, blur and rise as the suggestion rows above the composer. */
+/**
+ * The same fade, blur and rise as the suggestion rows above the composer,
+ * applied to the whole page at once: greeting, Numo's word, suggestions and
+ * composer enter together.
+ */
 const REVEAL_CLASS =
   "transition-[opacity,filter,translate] duration-200 ease-out motion-reduce:transition-none motion-reduce:blur-none motion-reduce:translate-y-0";
 
@@ -144,7 +153,13 @@ function HomeConversation() {
   const aiAvailability = useAiSurfaceAvailability("assistant");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
   const revealed = useHomeReveal(!!user && greetingSettled && !briefLoading && !aiAvailability.loading);
-  const reveal = cn(REVEAL_CLASS, revealed ? "opacity-100" : "translate-y-1.5 opacity-0 blur-[6px]");
+  // Complete: the mobile app's launch screen need not wait for the shell's
+  // other startup reads (lib/mobile/launch-cover.ts).
+  useEffect(() => {
+    if (revealed) markPageContentShown();
+  }, [revealed]);
+  // Hidden, the page takes no tap either: the composer is already there.
+  const reveal = cn(REVEAL_CLASS, revealed ? "opacity-100" : "pointer-events-none translate-y-1.5 opacity-0 blur-[6px]");
 
   // Left-aligned, like the composer and the messages below it. The page's
   // heading is the greeting, kept for screen readers whatever is shown.
@@ -176,7 +191,10 @@ function HomeConversation() {
         </Tooltip>
         )}
       </AppContentHeader>
-      <div className="min-h-0 flex-1">
+      {/* One entrance for the whole page: shown as each part lands, the
+          composer and the suggestions used to arrive before the greeting
+          and Numo's word (MIN-1006). */}
+      <div className={cn("min-h-0 flex-1", reveal)}>
         <AssistantShell
           ref={shellRef}
           projectId={null}
@@ -186,7 +204,13 @@ function HomeConversation() {
           displayMode="expanded"
           visible={!panelOpen}
           intro={
-            <div className={cn("flex flex-col", PAGE_HEADING_GAP, reveal)} aria-busy={!revealed}>
+            <div
+              className={cn("flex flex-col", PAGE_HEADING_GAP)}
+              aria-busy={!revealed}
+              // Loading content until revealed: the page's first content,
+              // and the mobile app's launch cover, wait for it.
+              data-pending-content={revealed ? undefined : ""}
+            >
               {welcome}
               {/* Until Numo has a word of its own, it introduces itself. */}
               {brief ? <HomeNumoBrief brief={brief} /> : briefLoading ? null : <NumoIntro />}
@@ -202,13 +226,17 @@ function HomeConversation() {
           // What the word cites leads the "@" menu (MIN-969).
           citedByNumo={brief?.content ?? null}
           starterItems={brief ? brief.suggestions : null}
-          // The suggestions come in with the rest of the page.
-          startersPending={briefLoading || !revealed}
+          // Until Numo's word is known, its suggestions are not: the rows
+          // wait for it, under the page's entrance.
+          startersPending={briefLoading}
           // On a phone the rows give their room to the keyboard while you write.
           hideStartersWhileComposing
           unavailableFallback={
             <div className="scrollbar-pane-inset h-full overflow-y-auto">
-              <div className={cn("mx-auto box-content flex max-w-content min-w-0 flex-col", PAGE_SCROLL, PAGE_HEADING_GAP, reveal)}>
+              <div
+                className={cn("mx-auto box-content flex max-w-content min-w-0 flex-col", PAGE_SCROLL, PAGE_HEADING_GAP)}
+                data-pending-content={revealed ? undefined : ""}
+              >
                 {welcome}
                 <div className="flex flex-col gap-3">
                   <PendingInvitationsBanner />

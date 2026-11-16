@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FullCatalogMessages } from "@/components/full-catalog-messages";
+import { LAUNCH_COVER_META } from "@/lib/mobile/bridge";
 import { AppProviders } from "./app-providers";
 import { ServerSeed } from "./server-seed";
 
@@ -15,9 +16,15 @@ import { ServerSeed } from "./server-seed";
  * even been reached — by an external link, a URL pasted somewhere, or a
  * robot that ignores robots.txt. Same rule as `app/(app)/admin/layout.tsx`, which
  * already had it for himself.
+ *
+ * It also declares `minddy-launch-cover` for the mobile app
+ * (lib/mobile/launch-cover.ts, LAUNCH_COVER_META in lib/mobile/bridge.ts).
  */
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
+  // The mobile app keeps its launch screen up until the page reports its
+  // first content, so the app appears in one step (MIN-1006).
+  other: { [LAUNCH_COVER_META.name]: LAUNCH_COVER_META.content },
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

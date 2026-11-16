@@ -78,7 +78,8 @@ are rendered, into that document only, which is dynamic and not cached. The
 reads are the shell's and those each page needs before its first content: a
 project's issues, members, objectives, categories, relations, views and
 integrations, its page list and the opened page document, the default
-feedback list, the routines list, and for administrators the admin overview
+feedback list, the routines list, Numo's home word with the labels of the
+mentions it makes, as the reader may see them, and for administrators the admin overview
 (a non-administrator's request is refused by the route and carries nothing). The
 browser keeps each response in memory until the first read of that exact path
 for the account the server read for, then drops it, and drops them all at
