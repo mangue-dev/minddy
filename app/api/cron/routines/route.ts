@@ -11,18 +11,20 @@ import {
   type RoutineErrorCode,
 } from "@/lib/server/routines";
 import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
-import { executeNumoTurn } from "@/lib/server/numo/turns";
 import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
-import { getServiceClient } from "@/lib/supabase-service";
 import { drainNumoEventBatches } from "@/lib/server/numo/event-batches";
 import { triageNumoEventBatch } from "@/lib/server/numo/wake-triage";
 import { runNumoWatchClock } from "@/lib/server/numo/watch-clock";
 import { aiDeclinedInBackground, runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 
 /**
- * The routines clock (MIN-185). Every five minutes it claims due schedules,
- * reserves one durable Numo conversation per due timestamp, and starts the
- * first turn in series so concurrent work cannot overwhelm one invocation.
+ * The routines clock (MIN-185). Every five minutes it claims due schedules
+ * and reserves one durable Numo conversation per due timestamp. It only
+ * queues each occurrence's turn: `/api/cron/numo-turns` runs it in an
+ * invocation of its own, as it does for event routines. Running the turns
+ * here, one after the other, left the second routine of a busy tick with
+ * whatever time the first one had not used, and the 300-second limit killed
+ * it in the middle of a tool call (MIN-1008).
  *
  * `claimRoutine` advances the schedule before admission. A missed occurrence
  * is recorded but never replayed in a burst, preserving the existing cadence
@@ -30,7 +32,7 @@ import { aiDeclinedInBackground, runAsBackgroundAiWork } from "@/lib/server/ai-c
  */
 
 export const runtime = "nodejs";
-// The initial Numo turn may execute tools before the response.
+// The journal, reminders and Numo batches below share this budget.
 export const maxDuration = 300;
 
 /** The next five-minute tick handles anything beyond this batch. */
@@ -76,11 +78,7 @@ async function runRoutine(routine: Routine): Promise<{ id: string; outcome: stri
       scheduledFor,
     });
     await stampRoutineError(routine.id, null);
-    const result = await executeNumoTurn({
-      turnId: started.turn.id,
-      readClient: getServiceClient(),
-    });
-    return { id: routine.id, outcome: result.status };
+    return { id: routine.id, outcome: started.turn.status };
   } catch (error) {
     const code = typeof (error as { code?: unknown }).code === "string"
       ? (error as { code: string }).code

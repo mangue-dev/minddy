@@ -80,7 +80,17 @@ describe("Numo completion contract", () => {
     expect(h.executeTool).not.toHaveBeenCalled();
     expect(ctx.onGeneration).toHaveBeenCalledTimes(3);
     expect(ctx.persistCheckpoint).toHaveBeenLastCalledWith({ phase: "model", roundCount: 3,
-      completionRepairs: 2, completionRepairPending: false, completionRepairExhausted: true });
+      completionRepairs: 2, completionRepairPending: false, completionRepairExhausted: true,
+      completionProblem: "a tool call was returned as text" });
+  });
+
+  it("reports the recorded problem when a retry finds the corrections exhausted", async () => {
+    const ctx = context({ resumeCheckpoint: { phase: "model", roundCount: 13,
+      completionRepairs: 2, completionRepairExhausted: true,
+      completionProblem: "the response was empty" } });
+    await expect(run(ctx)).rejects.toThrow(
+      "The model did not complete the requested work: the response was empty.");
+    expect(h.fetchModel).not.toHaveBeenCalled();
   });
 
   it("does not restart exhausted corrections after a durable retry", async () => {
@@ -329,12 +339,13 @@ describe("Numo completion contract", () => {
     expect(h.executeTool).not.toHaveBeenCalled();
   });
 
-  it("does not hide the existing tool cap by running a tools-disabled protocol repair", async () => {
-    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse(INCIDENT_TEXT) });
-    await expect(run(context({ resumeCheckpoint: { phase: "model", roundCount: 11 } })))
-      .rejects.toThrow(NumoCompletionError);
-    expect(h.fetchModel).toHaveBeenCalledTimes(1);
-    expect(h.executeTool).not.toHaveBeenCalled();
+  it("repairs a protocol error with the tools still offered, however long the turn", async () => {
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse(INCIDENT_TEXT) })
+      .mockResolvedValueOnce({ model: "model", response: textResponse("The issue was created.") });
+    const result = await run(context({ resumeCheckpoint: { phase: "model", roundCount: 40 } }));
+    expect(h.fetchModel).toHaveBeenCalledTimes(2);
+    expect(h.fetchModel.mock.calls[1][2]("model").tools).toEqual([TOOL]);
+    expect(result.fullContent).toBe("The issue was created.");
   });
 
   it("observes Stop before a corrective generation", async () => {
@@ -358,19 +369,28 @@ describe("Numo completion contract", () => {
     expect(h.executeTool).not.toHaveBeenCalled();
   });
 
-  it("does not execute unsolicited native calls after the execution round limit", async () => {
+  // MIN-1008: a turn has no tool round limit; spend budgets and Stop end it.
+  it("keeps executing tool calls long after the former twelve-round limit", async () => {
     h.fetchModel.mockResolvedValueOnce({ model: "model", response: response([
       { delta: { tool_calls: [CALL] }, finish_reason: "tool_calls" },
-    ]) });
-    await expect(run(context({ resumeCheckpoint: { phase: "model", roundCount: 12 } })))
-      .rejects.toThrow("execution round limit");
-    expect(h.fetchModel).toHaveBeenCalledTimes(1);
-    expect(h.executeTool).not.toHaveBeenCalled();
+    ]) }).mockResolvedValueOnce({ model: "model", response: textResponse("Two issues were created.") });
+    const ctx = context({ resumeCheckpoint: { phase: "model", roundCount: 40 } });
+    const result = await run(ctx);
+    expect(h.executeTool).toHaveBeenCalledTimes(1);
+    expect(h.fetchModel.mock.calls[0][2]("model").tools).toEqual([TOOL]);
+    expect(ctx.persistCheckpoint).toHaveBeenCalledWith(expect.objectContaining({ phase: "model", roundCount: 41 }));
+    expect(result.fullContent).toBe("Two issues were created.");
+  });
+
+  it("resumes a pending tool round whatever its number", async () => {
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse("The issue was created.") });
+    const result = await run(context({ resumeCheckpoint: { phase: "tools", roundCount: 40,
+      assistantMessageId: "tool-round", pendingToolCalls: [{ id: CALL.id, type: "function", function: CALL.function }] } }));
+    expect(h.executeTool).toHaveBeenCalledTimes(1);
+    expect(result.fullContent).toBe("The issue was created.");
   });
 
   it.each([
-    ["round cap", { phase: "tools", roundCount: 13,
-      pendingToolCalls: [{ id: CALL.id, type: "function", function: CALL.function }] }],
     ["malformed arguments", { phase: "tools", roundCount: 2,
       pendingToolCalls: [{ id: CALL.id, type: "function", function: { ...CALL.function, arguments: "{" } }] }],
     ["missing tool calls", { phase: "tools", roundCount: 2, pendingToolCalls: [] }],

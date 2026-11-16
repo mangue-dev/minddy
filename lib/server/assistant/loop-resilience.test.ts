@@ -52,14 +52,15 @@ describe("Numo chat loop resilience", () => {
     executeTool.mockResolvedValue({ result: { ok: true }, success: true });
   });
 
-  it("reserves a final text reply after twelve tool rounds", async () => {
+  // MIN-1008: tools stay available on every round; only the answer ends the loop.
+  it("keeps tools available for as many rounds as the work needs", async () => {
     let round = 0;
     fetchOpenRouter.mockImplementation(async () => {
       round++;
       return {
         model: "model",
         response:
-          round <= 12
+          round <= 30
             ? stream({
                 tool_calls: [
                   {
@@ -98,16 +99,15 @@ describe("Numo chat loop resilience", () => {
       },
     );
 
-    expect(fetchOpenRouter).toHaveBeenCalledTimes(13);
-    expect(executeTool).toHaveBeenCalledTimes(12);
+    expect(fetchOpenRouter).toHaveBeenCalledTimes(31);
+    expect(executeTool).toHaveBeenCalledTimes(30);
     expect(result.fullContent).toBe("Work completed.");
 
     const requestBodies = fetchOpenRouter.mock.calls.map((call) => {
       const buildRequest = call[2] as (model: string) => RequestInit;
       return JSON.parse(buildRequest("model").body as string) as Record<string, unknown>;
     });
-    expect(requestBodies.slice(0, 12).every((body) => Array.isArray(body.tools))).toBe(true);
-    expect(requestBodies[12]).not.toHaveProperty("tools");
+    expect(requestBodies.every((body) => Array.isArray(body.tools))).toBe(true);
     expect(requestBodies[0]).toMatchObject({
       max_completion_tokens: 6144,
       reasoning: { effort: "medium", exclude: false },
