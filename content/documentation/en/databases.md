@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (MIN-990: number calculations and formats, read-only Last edited, Created by and Last edited by columns, recurring dates, option reordering by handle, entry handle menu, sort direction labels, author filters, undo and redo checked against lib/page-database-number.ts, lib/page-databases.ts, lib/page-database-filters.ts, lib/use-page-database.ts, lib/undo/undo-context.tsx and components/pages/page-database-view.tsx, and exercised in the running app against the preview database; agent review, not human acceptance)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "revision": 21,
+    "fact": "agent:claude-code (MIN-990: number calculations and formats, read-only Last edited, Created by and Last edited by columns, recurring dates, option reordering by handle, entry handle menu, sort direction labels, author filters, undo and redo checked against lib/page-database-number.ts, lib/page-databases.ts, lib/page-database-filters.ts, lib/use-page-database.ts, lib/undo/undo-context.tsx and components/pages/page-database-view.tsx, and exercised in the running app against the preview database; agent review, not human acceptance); agent:claude-code (MIN-1012: Numo and MCP view changes, calculations under Number columns and saving the default view checked against lib/server/database-view-tools.ts, lib/server/assistant/execute-tool.ts and lib/server/mcp/page-tools.ts; the former claim that MCP clients cannot manage views corrected; no figure affected; agent review, not human acceptance)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1012 views paragraph; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-16"
   },
   "related": [
     "pages"
@@ -100,7 +100,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database column type picker with a search field, then text, number, selections, date, people, checkbox and the four read-only types.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -134,7 +134,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +182,7 @@
       "src": "/documentation/en/database-options.png",
       "alt": "Component preview of Edit options with localized status options, drag handles, trash buttons and the deletion explanation.",
       "caption": "Edit option names, colors and order together. Drag a handle to reorder; the trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/en/database-date-time.png",
       "alt": "Component preview of the date picker with July 24, 2026 selected, Add a time enabled and Time set to 02:00 AM.",
       "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +282,7 @@ From that menu, the owner or a Member can choose **Promote to issue** to have Nu
 
 ### Database views {#database-display}
 
-A database shows its entries through views, listed above the table. Each view keeps its own sort, filter and hidden columns, and every project member sees the same views. The owner or a Member adds a view with **New view** (+), which starts from the view on screen, right-clicks a view to choose **Rename view** or **Delete view**, and drags views to reorder them. Sort, filter and column changes are saved to the active view for everyone. A database keeps at least one view; before its first change it shows the default **Table** view. Readers switch between views and can adjust one for themselves until they leave the page. Your browser remembers the view you last opened; search is never saved. Manual order is shared with the page tree. Scroll horizontally with a trackpad gesture, Shift plus mouse wheel or the scrollbar at the bottom of the content area, which shows while the table scrolls. A touch screen shows no such scrollbar: swipe the table instead. A clipped text preview does not shorten the stored value. Entries with column values can be reordered within their database but cannot be moved outside it. Numo can list a database's views and, when you ask, create, rename, reorder or delete them (never the last one), or change their sort, filters (combined with all or any) and hidden columns. On a database page, Numo takes “a view” to mean the database's views, not the issue board's. Column order is not part of a view: it belongs to the database schema. minddy MCP clients cannot manage views.
+A database shows its entries through views, listed above the table. Each view keeps its own sort, filter and hidden columns, and every project member sees the same views. The owner or a Member adds a view with **New view** (+), which starts from the view on screen, right-clicks a view to choose **Rename view** or **Delete view**, and drags views to reorder them. Sort, filter and column changes are saved to the active view for everyone. A database keeps at least one view; before its first change it shows the default **Table** view. Readers switch between views and can adjust one for themselves until they leave the page. Your browser remembers the view you last opened; search is never saved. Manual order is shared with the page tree. Scroll horizontally with a trackpad gesture, Shift plus mouse wheel or the scrollbar at the bottom of the content area, which shows while the table scrolls. A touch screen shows no such scrollbar: swipe the table instead. A clipped text preview does not shorten the stored value. Entries with column values can be reordered within their database but cannot be moved outside it. Numo can list a database's views and, when you ask, create, rename, reorder or delete them (never the last one), or change their sort, filters (combined with all or any), hidden columns and the calculations under Number columns. If the database has no saved view yet, such a change saves its default view, as your own first change does. On a database page, Numo takes “a view” to mean the database's views, not the issue board's. Column order is not part of a view: it belongs to the database schema. minddy MCP clients can manage views the same way.
 
 Open **Sort by** to choose a column, then a direction worded for what the column holds: **A to Z** or **Z to A** for text and people, **First option first** or **Last option first** for a Select or Multi-select column, which sorts in the order of its options, **Smallest first** or **Largest first** for a number, **Oldest first** or **Newest first** for a date, **Unchecked first** or **Checked first** for a checkbox, and **Top to bottom** or **Bottom to top** for the manual order. The column lists of **Sort by** and **Filter** show each column's type icon.
 

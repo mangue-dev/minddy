@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 20,
+  "revision": 23,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-16",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/de.json; agent review, not human acceptance)",
-    "language": "agent:claude-code (de translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/de.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance)",
+    "language": "agent:claude-code (de translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-16"
   },
   "related": [
     "pages"
@@ -100,7 +100,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wähle Numo oder Import, oder schließe die Karten, um manuell fortzufahren.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen, Kontrollkästchen und den vier schreibgeschützten Typen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -134,7 +134,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +182,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Ziehgriffen, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Ziehe einen Griff, um die Reihenfolge zu ändern; der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 24. Juli 2026, aktivierter Uhrzeit und Zeit auf 02:00 AM.",
       "caption": "Aktiviere „Uhrzeit hinzufügen“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +282,7 @@ In diesem Menü kann der Eigentümer oder ein Mitglied **In ein Ticket umwandeln
 
 ### Datenbankansichten {#database-display}
 
-Eine Datenbank zeigt ihre Einträge in Ansichten, die über der Tabelle aufgelistet sind. Jede Ansicht hat ihre eigene Sortierung, ihren Filter und ihre ausgeblendeten Spalten, und alle Projektmitglieder sehen dieselben Ansichten. Der Projektinhaber oder ein Mitglied fügt mit **Neue Ansicht** (+) eine Ansicht hinzu, die von der angezeigten Ansicht ausgeht, benennt eine Ansicht per Rechtsklick mit **Ansicht umbenennen** um oder löscht sie mit **Ansicht löschen** und ordnet Ansichten per Ziehen neu an. Änderungen an Sortierung, Filter und Spalten werden für alle in der aktiven Ansicht gespeichert. Eine Datenbank behält mindestens eine Ansicht; vor ihrer ersten Änderung zeigt sie die Standardansicht **Tabelle**. Leser wechseln zwischen Ansichten und können eine Ansicht für sich anpassen, bis sie die Seite verlassen. Dein Browser merkt sich die zuletzt geöffnete Ansicht; die Suche wird nie gespeichert. Die manuelle Reihenfolge wird mit dem Seitenbaum geteilt. Scrolle horizontal per Trackpad-Geste, Shift und Mausrad oder mit der Bildlaufleiste am unteren Rand des Inhaltsbereichs, die beim Scrollen der Tabelle erscheint. Ein Touchscreen zeigt diese Leiste nicht: Wische dort über die Tabelle. Eine abgeschnittene Textvorschau kürzt den gespeicherten Wert nicht. Einträge mit Spaltenwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Numo kann die Ansichten einer Datenbank auflisten und sie auf deine Bitte erstellen, umbenennen, umordnen oder löschen (nie die letzte) oder ihre Sortierung, ihre Filter (alle oder mindestens einer) und ihre ausgeblendeten Spalten ändern. Auf einer Datenbankseite versteht Numo unter „einer Ansicht“ die Ansichten der Datenbank, nicht die des Ticketboards. Die Spaltenreihenfolge gehört nicht zu einer Ansicht, sondern zum Datenbankschema. minddy-MCP-Clients können keine Ansichten verwalten.
+Eine Datenbank zeigt ihre Einträge in Ansichten, die über der Tabelle aufgelistet sind. Jede Ansicht hat ihre eigene Sortierung, ihren Filter und ihre ausgeblendeten Spalten, und alle Projektmitglieder sehen dieselben Ansichten. Der Projektinhaber oder ein Mitglied fügt mit **Neue Ansicht** (+) eine Ansicht hinzu, die von der angezeigten Ansicht ausgeht, benennt eine Ansicht per Rechtsklick mit **Ansicht umbenennen** um oder löscht sie mit **Ansicht löschen** und ordnet Ansichten per Ziehen neu an. Änderungen an Sortierung, Filter und Spalten werden für alle in der aktiven Ansicht gespeichert. Eine Datenbank behält mindestens eine Ansicht; vor ihrer ersten Änderung zeigt sie die Standardansicht **Tabelle**. Leser wechseln zwischen Ansichten und können eine Ansicht für sich anpassen, bis sie die Seite verlassen. Dein Browser merkt sich die zuletzt geöffnete Ansicht; die Suche wird nie gespeichert. Die manuelle Reihenfolge wird mit dem Seitenbaum geteilt. Scrolle horizontal per Trackpad-Geste, Shift und Mausrad oder mit der Bildlaufleiste am unteren Rand des Inhaltsbereichs, die beim Scrollen der Tabelle erscheint. Ein Touchscreen zeigt diese Leiste nicht: Wische dort über die Tabelle. Eine abgeschnittene Textvorschau kürzt den gespeicherten Wert nicht. Einträge mit Spaltenwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Numo kann die Ansichten einer Datenbank auflisten und sie auf deine Bitte erstellen, umbenennen, umordnen oder löschen (nie die letzte) oder ihre Sortierung, ihre Filter (alle oder mindestens einer), ihre ausgeblendeten Spalten und die Berechnungen unter Zahl-Spalten ändern. Hat die Datenbank noch keine gespeicherte Ansicht, speichert eine solche Änderung ihre Standardansicht, so wie deine erste eigene Änderung. Auf einer Datenbankseite versteht Numo unter „einer Ansicht“ die Ansichten der Datenbank, nicht die des Ticketboards. Die Spaltenreihenfolge gehört nicht zu einer Ansicht, sondern zum Datenbankschema. minddy-MCP-Clients können Ansichten auf dieselbe Weise verwalten.
 
 Öffne **Sortieren nach**, um eine Spalte zu wählen und dann eine Richtung, die nach dem Inhalt der Spalte benannt ist: **A bis Z** oder **Z bis A** für Text und Personen, **Erste Option zuerst** oder **Letzte Option zuerst** für eine Spalte vom Typ Auswahl oder Mehrfachauswahl, die in der Reihenfolge ihrer Optionen sortiert, **Kleinste zuerst** oder **Größte zuerst** für eine Zahl, **Älteste zuerst** oder **Neueste zuerst** für ein Datum, **Deaktivierte zuerst** oder **Aktivierte zuerst** für ein Kontrollkästchen und **Von oben nach unten** oder **Von unten nach oben** für die manuelle Reihenfolge. Die Spaltenlisten von **Sortieren nach** und **Filtern** zeigen das Typsymbol jeder Spalte.
 

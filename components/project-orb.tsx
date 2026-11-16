@@ -11,8 +11,8 @@ function CachedProjectOrb({ seed, iconUrl, className }: {
   iconUrl: string;
   className?: string;
 }) {
-  const { data, isError } = useProjectIcon(iconUrl);
-  return <ProjectOrb seed={seed} iconUrl={isError ? null : data} className={className} />;
+  const { data, isError, isPending } = useProjectIcon(iconUrl);
+  return <ProjectOrb seed={seed} iconUrl={isError ? null : data} className={className} pending={isPending} />;
 }
 
 /**
@@ -46,10 +46,14 @@ export function ProjectOrb({
   seed,
   iconUrl,
   className,
+  pending = false,
 }: {
   seed: string;
   iconUrl?: string | null;
   className?: string;
+  /** The icon is still loading: the orb stands in, marked `data-media-pending`
+      so a view revealing in one step can wait for it (lib/media-settled.ts). */
+  pending?: boolean;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const queryClient = useContext(QueryClientContext);
@@ -90,6 +94,7 @@ export function ProjectOrb({
   return (
     <span
       aria-hidden
+      data-media-pending={pending ? "" : undefined}
       className={cn(
         "relative block size-5 shrink-0 overflow-hidden rounded-[5px]",
         className,

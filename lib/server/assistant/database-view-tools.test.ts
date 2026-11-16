@@ -10,6 +10,8 @@ const V1 = "0b0c3d1e-5555-4aaa-8bbb-000000000005";
 const V2 = "0b0c3d1e-6666-4aaa-8bbb-000000000006";
 const OTHER = "0b0c3d1e-7777-4aaa-8bbb-000000000007";
 const OPEN = "0b0c3d1e-8888-4aaa-8bbb-000000000008";
+const AMOUNT = "0b0c3d1e-9999-4aaa-8bbb-000000000009";
+const HOURS = "0b0c3d1e-aaaa-4aaa-8bbb-00000000000a";
 const NO_FILTER = { match: "and", conditions: [] };
 
 const h = vi.hoisted(() => ({
@@ -52,6 +54,8 @@ beforeEach(() => {
     { id: STATUS, name: "Status", type: "select", options: [{ id: OPEN, name: "Open", color: "#00aa00" }] },
     { id: DONE, name: "Done", type: "checkbox" },
     { id: DUE, name: "Due", type: "date" },
+    { id: AMOUNT, name: "Amount", type: "number" },
+    { id: HOURS, name: "Hours", type: "number" },
   ] } });
   stored = [view(V1, "All", 1), view(V2, "Open", 2, { filter: STATUS, filterValue: "Open", hidden: [DUE] })];
   h.list.mockImplementation(async () => ({ ok: true, page: stored }));
@@ -201,5 +205,63 @@ describe("Numo database view tools", () => {
     expect(h.update).not.toHaveBeenCalled();
     expect(await executeTool("list_page_database_views", { project_id: "project", page_id: DB }, ctx))
       .toMatchObject({ success: true });
+  });
+});
+
+describe("Numo column calculations (MIN-1012)", () => {
+  it("routes a sum or an average under a column to the view tool", () => {
+    const writeTool = CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "update_page_database_views");
+    expect(writeTool?.function.description).toMatch(/calculation under a number column/);
+    const getPage = CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "get_page");
+    expect(getPage?.function.description).toMatch(/calculation under each number column/);
+  });
+
+  it("sets, replaces and clears the calculations of a view", async () => {
+    await write({ operation: "update", view_id: V1, calculations: { [AMOUNT]: "sum" } });
+    expect(stored[0].view.calculations).toEqual({ [AMOUNT]: "sum" });
+    const result = await write({ operation: "update", view_id: V1,
+      calculations: { [AMOUNT]: "average", [HOURS]: "max" } });
+    expect(result).toMatchObject({ success: true, result: { view: { view_id: V1,
+      calculations: { [AMOUNT]: "average", [HOURS]: "max" } } } });
+    // Other fields of the view stay as they were.
+    expect(stored[0].view).toMatchObject({ sort: "position", hidden: [] });
+    await write({ operation: "update", view_id: V1, calculations: {} });
+    expect(stored[0].view.calculations).toEqual({});
+  });
+
+  it("refuses a calculation on a column that is not a number", async () => {
+    const result = await write({ operation: "update", view_id: V1, calculations: { [DUE]: "sum" } });
+    expect(result).toMatchObject({ success: false });
+    expect(JSON.stringify(result)).toContain(DUE);
+    expect(h.update).not.toHaveBeenCalled();
+  });
+
+  it("refuses a calculation kind the table does not know", async () => {
+    expect(await write({ operation: "update", view_id: V1, calculations: { [AMOUNT]: "median" } }))
+      .toMatchObject({ success: false });
+    expect(h.update).not.toHaveBeenCalled();
+  });
+
+  it("changes the view shown first when no view_id is given", async () => {
+    await write({ operation: "update", calculations: { [AMOUNT]: "count" } });
+    expect(h.update).toHaveBeenCalledWith("project", DB, V1, "actor",
+      { view: expect.objectContaining({ calculations: { [AMOUNT]: "count" } }) });
+    expect(h.create).not.toHaveBeenCalled();
+  });
+
+  it("saves the default view, named in the user's language, on a database without one", async () => {
+    stored = [];
+    const result = await write({ operation: "update", calculations: { [AMOUNT]: "sum" } },
+      { ...ctx, locale: "fr" } as ToolContext);
+    expect(h.create).toHaveBeenCalledWith("project", DB, "actor", { name: "Tableau",
+      view: expect.objectContaining({ sort: "position", hidden: [], calculations: { [AMOUNT]: "sum" } }) });
+    expect(result).toMatchObject({ success: true, result: { views: [{ name: "Tableau" }] } });
+  });
+
+  it("still refuses a view_id the database does not have", async () => {
+    expect(await write({ operation: "update", view_id: OTHER, calculations: { [AMOUNT]: "sum" } }))
+      .toMatchObject({ success: false });
+    expect(h.update).not.toHaveBeenCalled();
+    expect(h.create).not.toHaveBeenCalled();
   });
 });

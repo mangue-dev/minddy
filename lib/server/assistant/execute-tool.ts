@@ -25,7 +25,7 @@ import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 
-import { executeMcpTool } from "@/lib/server/mcp-client";
+import { executeMcpTool, mcpToolIsReadOnly } from "@/lib/server/mcp-client";
 import { executeMcpSetupTool } from "@/lib/server/mcp-setup";
 
 import { resolveApplicationLocale } from "@/lib/locale-language";
@@ -445,6 +445,21 @@ interface WebSearchTurn {
   runId: string;
   /** Searches already made this turn: the cap's count and the ledger `seq`. */
   used: number;
+}
+
+/**
+ * Whether a call whose job stopped before its result was recorded may run
+ * again (MIN-1011). Reads the ledger replays on its own never get here, so
+ * this answers for the calls it reconciles: an external MCP tool that
+ * declares `readOnlyHint` runs again; anything else is treated as a write.
+ */
+export async function toolCallSafeToReplay(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: Pick<ToolContext, "userId">,
+): Promise<boolean> {
+  if (toolName === "call_mcp_tool") return mcpToolIsReadOnly(ctx.userId, args);
+  return false;
 }
 
 export interface ToolExecution {
@@ -3933,7 +3948,8 @@ async function executePageTool(
     case "list_page_database_views":
       return render(await listDatabaseViewsForAgent({ projectId, pageId, actorId }));
     case "update_page_database_views":
-      return render(await updateDatabaseViewsForAgent({ projectId, pageId, actorId, input: args }));
+      return render(await updateDatabaseViewsForAgent({ projectId, pageId, actorId, input: args,
+        locale: ctx.locale }));
     case "update_page":
       return render(
         await updatePageForAgent({

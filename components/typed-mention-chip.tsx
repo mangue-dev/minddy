@@ -132,14 +132,18 @@ export function TypedMentionChip({
   // An objective's status (MIN-785), an MCP service, a page's figure: one
   // read of what the resolution returned beside the label.
   const details = useResolvedMentionDetails(
-    type === "objective" || type === "mcp" || type === "page" || type === "pull_request" || type === "member" ? type : null, id);
+    type === "objective" || type === "mcp" || type === "page" || type === "pull_request" || type === "member" || type === "issue"
+      ? type : null, id);
   const mcpService = type === "mcp" ? details?.service : undefined;
   const pageFigure = type === "page" ? details?.page : undefined;
   // From the sources on screen, else from the server resolution — without
   // it the pill falls back to the target.
   const resolvedStatus = type === "objective" ? details?.status : undefined;
+  // An issue's status from the server too (MIN-1006): Home's word is shown
+  // before the issue index arrives, and the glyph must not change after.
   const status = mentionStatus(links, type, id)
-    ?? (resolvedStatus ? OBJECTIVE_STATUS_MAP[resolvedStatus].issueStatus : undefined);
+    ?? (resolvedStatus ? OBJECTIVE_STATUS_MAP[resolvedStatus].issueStatus : undefined)
+    ?? (type === "issue" ? details?.issueStatus : undefined);
   // A copy of this pill carries what it shows, never its stored label.
   useEffect(() => {
     if (label !== undefined) rememberShownMention(type, id, label);

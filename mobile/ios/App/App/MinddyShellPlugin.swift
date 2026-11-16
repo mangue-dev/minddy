@@ -31,7 +31,8 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "pushPermission", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "registerForPushNotifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "unregisterForPushNotifications", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "openNotificationSettings", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "openNotificationSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "contentShown", returnType: CAPPluginReturnPromise)
     ]
 
     weak var controller: MinddyViewController?
@@ -160,6 +161,15 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         let enabled = call.getBool("enabled") ?? true
         DispatchQueue.main.async { [weak self] in
             self?.controller?.hapticsEnabled = enabled
+            call.resolve()
+        }
+    }
+
+    /// The page has painted its first content: the launch cover, held for it,
+    /// can lift. Harmless once the cover is gone. See `coverUntilFirstLoad`.
+    @objc func contentShown(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { [weak self] in
+            self?.controller?.contentShown()
             call.resolve()
         }
     }
