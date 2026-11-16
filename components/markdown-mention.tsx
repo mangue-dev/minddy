@@ -56,6 +56,7 @@ import {
   suggestionPlaceholder,
 } from "@/components/editor/suggestion-chip";
 import { stepSuggestion } from "@/lib/suggestion-menu";
+import { withDateMentions } from "@/lib/mention-menu";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
@@ -504,7 +505,7 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
           const dates = options.dates?.(query) ?? [];
           // A query that clearly is a date (`@date`, `@demain`) lists its dates
           // first, so Enter picks one rather than a page that happens to match.
-          return options.datesFirst?.(query) ? [...dates, ...found] : [...found, ...dates];
+          return withDateMentions(found, dates, options.datesFirst?.(query) ?? false);
         },
         command: ({ editor, range, props }) => {
           // The reader just picked it, so they can see it: its pill shows at
