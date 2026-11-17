@@ -3,7 +3,7 @@
   "id": "projects",
   "locale": "fr",
   "title": "Projets et membres",
-  "summary": "Configurez un projet, invitez des collaborateurs, choisissez leurs rôles et transférez la propriété.",
+  "summary": "Configurez un projet minddy, invitez des collaborateurs, choisissez ce que peuvent faire son propriétaire, ses membres et ses lecteurs, et transférez sa propriété.",
   "topic": "Premiers pas",
   "type": "guide",
   "audiences": [
@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -78,10 +78,10 @@
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (fr changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (fr changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "issues",
@@ -105,7 +105,7 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -122,7 +122,7 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +139,7 @@
       "src": "/documentation/fr/project-statistics.png",
       "alt": "Sections Élan, Où en sont les tickets et Contributeurs d’un projet d’environ mille tickets : barres hebdomadaires des tickets créés et terminés, barre des statuts, compteurs de santé et une barre de statuts par personne.",
       "caption": "L’élan compare les quatre dernières semaines aux quatre précédentes ; les tickets en retard et au point mort signalent le travail à regarder.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -156,7 +156,7 @@
       "src": "/documentation/fr/project-issue-graph.png",
       "alt": "Graphe des tickets ouverts regroupés dans des bulles colorées par objectif autour de carrés d’ancrage, avec des flèches grises du parent vers le sous-ticket, des flèches rouges de blocage, des liens « Lié à » en pointillés, des traits gris entre objectifs, la légende, l’interrupteur Inclure les tickets et objectifs fermés et le bouton Agrandir le graphe en haut à droite.",
       "caption": "Survolez un point pour lire son ticket et mettre ses liens en évidence ; sélectionnez-le pour ouvrir le ticket dans le panneau latéral.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [

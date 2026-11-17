@@ -164,6 +164,21 @@ describe("localized slug redirects in next.config.mjs", () => {
     }
   });
 
+  it("redirects the retired Jira comparison to the home page of its locale", async () => {
+    const redirects = await nextConfig.redirects!();
+    const home = PUBLIC_ROUTES.find(route => route.key === "home")!;
+    const linear = PUBLIC_ROUTES.find(route => route.key === "alternativeLinear")!;
+    for (const locale of locales) {
+      const destination = publicPathForLocale(home, locale);
+      const sources = new Set([publicPathForLocale(linear, locale).replace(/linear$/, "jira")]);
+      if (locale !== "en") sources.add(`${destination}/alternatives/jira`);
+      for (const source of sources) {
+        expect(redirects).toContainEqual({ source, destination, permanent: true });
+        expect(routeByPath(source)).toBeNull();
+      }
+    }
+  });
+
   /** Same reason: the list is used to set the CDN cache header. */
   it("lists exactly the public URLs for the CDN cache header", () => {
     expect([...CONFIG_PUBLIC_ROUTE_PATHS].sort()).toEqual(

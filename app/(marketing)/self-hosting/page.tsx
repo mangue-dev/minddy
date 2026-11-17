@@ -16,6 +16,7 @@ import { SectionHeading } from "@/components/marketing/section-heading";
 import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { getPublishedDocumentation } from "@/lib/server/documentation";
+import { PageStructuredData } from "@/components/marketing/structured-data";
 
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "selfHosting", locale: (await getLocale()) as Locale });
@@ -43,6 +44,7 @@ export default async function SelfHostingPage() {
 
   return (
     <>
+      <PageStructuredData routeKey="selfHosting" breadcrumbName={(await getTranslations("Landing"))("navMenu_selfHosting_title")} />
       <section className="px-4 pt-24 pb-12 sm:px-6 sm:pt-32 sm:pb-16">
         <div className="mx-auto max-w-6xl">
           <header className="mb-12 max-w-3xl sm:mb-16">

@@ -16,7 +16,6 @@ import { getChangelogIndex, getChangelogRelease } from "@/lib/server/changelog";
 import {
   COMPARISONS,
   COMPARISON_FEATURES,
-  COMPARISON_REVIEWED_AT,
   COMPARISON_POINTS,
   COMPARISON_ROWS,
   type Comparison,
@@ -480,7 +479,7 @@ async function renderComparison(
     getTranslations({ locale, namespace: "Alternatives" }),
     getTranslations({ locale, namespace: comparison.namespace }),
   ]);
-  const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${COMPARISON_REVIEWED_AT}T12:00:00Z`));
+  const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${comparison.reviewedAt}T12:00:00Z`));
   const page = (key: PublicRouteKey) => `${SITE_URL}${publicPathForLocale(routeByKey(key), locale)}`;
   const guides = comparisonGuides(locale);
   const cell = (row: (typeof COMPARISON_ROWS)[number]) => [

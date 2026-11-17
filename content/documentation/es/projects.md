@@ -3,7 +3,7 @@
   "id": "projects",
   "locale": "es",
   "title": "Proyectos y miembros",
-  "summary": "Configura un proyecto, invita a colaboradores, elige sus roles y transfiere la propiedad.",
+  "summary": "Configura un proyecto de minddy, invita a colaboradores, elige qué pueden hacer su propietario, sus miembros y sus lectores, y transfiere la propiedad.",
   "topic": "Primeros pasos",
   "type": "guide",
   "audiences": [
@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 21,
+  "revision": 25,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -78,10 +78,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (es changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "revision": 25,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (es changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "issues",
@@ -105,7 +105,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Cabecera del proyecto con el icono y su distintivo de edición, el nombre, la clave y las cifras Incidencias, Miembros, Objetivos, Categorías y Creado.",
       "caption": "Selecciona el icono, el nombre o la clave para cambiarlos ahí mismo; mover el proyecto a la papelera sigue siendo una acción aparte, más abajo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -122,7 +122,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Tarjeta «Invitar a personas» sobre la tarjeta Miembros, que lista tres miembros de demostración con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +139,7 @@
       "src": "/documentation/es/project-statistics.png",
       "alt": "Secciones Ritmo, Estado actual y Colaboradores de un proyecto con unas mil incidencias: barras semanales de incidencias creadas y hechas, una barra de estados, indicadores de salud y una barra de estados por persona.",
       "caption": "El ritmo compara las últimas cuatro semanas con las cuatro anteriores; las incidencias vencidas y estancadas señalan el trabajo que conviene revisar.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -156,7 +156,7 @@
       "src": "/documentation/es/project-issue-graph.png",
       "alt": "Grafo de las incidencias abiertas agrupadas en burbujas de color por objetivo alrededor de anclas cuadradas, con flechas grises de la incidencia principal a la subincidencia, flechas rojas de bloqueo, vínculos Relacionada en discontinuo, líneas grises entre objetivos, la leyenda, el interruptor Incluir incidencias y objetivos cerrados y el botón Ampliar el grafo arriba a la derecha.",
       "caption": "Pasa el cursor sobre un punto para leer su incidencia y resaltar sus vínculos; selecciónalo para abrir la incidencia en el panel lateral.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [

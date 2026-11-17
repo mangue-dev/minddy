@@ -3,7 +3,7 @@
   "id": "databases",
   "locale": "en",
   "title": "Databases",
-  "summary": "Create a database, edit values and entry pages, change its schema and import a complete database safely.",
+  "summary": "Create a database in a minddy project, edit its values and entry pages, change its schema safely and import a complete database.",
   "topic": "Pages and databases",
   "type": "guide",
   "audiences": [
@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-16",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (MIN-990: number calculations and formats, read-only Last edited, Created by and Last edited by columns, recurring dates, option reordering by handle, entry handle menu, sort direction labels, author filters, undo and redo checked against lib/page-database-number.ts, lib/page-databases.ts, lib/page-database-filters.ts, lib/use-page-database.ts, lib/undo/undo-context.tsx and components/pages/page-database-view.tsx, and exercised in the running app against the preview database; agent review, not human acceptance); agent:claude-code (MIN-1012: Numo and MCP view changes, calculations under Number columns and saving the default view checked against lib/server/database-view-tools.ts, lib/server/assistant/execute-tool.ts and lib/server/mcp/page-tools.ts; the former claim that MCP clients cannot manage views corrected; no figure affected; agent review, not human acceptance)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1012 views paragraph; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-16"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-990: number calculations and formats, read-only Last edited, Created by and Last edited by columns, recurring dates, option reordering by handle, entry handle menu, sort direction labels, author filters, undo and redo checked against lib/page-database-number.ts, lib/page-databases.ts, lib/page-database-filters.ts, lib/use-page-database.ts, lib/undo/undo-context.tsx and components/pages/page-database-view.tsx, and exercised in the running app against the preview database; agent review, not human acceptance); agent:claude-code (MIN-1012: Numo and MCP view changes, calculations under Number columns and saving the default view checked against lib/server/database-view-tools.ts, lib/server/assistant/execute-tool.ts and lib/server/mcp/page-tools.ts; the former claim that MCP clients cannot manage views corrected; no figure affected; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1012 views paragraph; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "pages"
@@ -100,7 +100,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database column type picker with a search field, then text, number, selections, date, people, checkbox and the four read-only types.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -134,7 +134,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +182,7 @@
       "src": "/documentation/en/database-options.png",
       "alt": "Component preview of Edit options with localized status options, drag handles, trash buttons and the deletion explanation.",
       "caption": "Edit option names, colors and order together. Drag a handle to reorder; the trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/en/database-date-time.png",
       "alt": "Component preview of the date picker with July 24, 2026 selected, Add a time enabled and Time set to 02:00 AM.",
       "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
