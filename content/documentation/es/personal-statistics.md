@@ -3,7 +3,7 @@
   "id": "personal-statistics",
   "locale": "es",
   "title": "Estadísticas personales",
-  "summary": "Compara la actividad completada y las mediciones de tiempo dentro de su alcance real.",
+  "summary": "Encuentra tus estadísticas en tu perfil de minddy, compara trabajo completado y mediciones de tiempo dentro de su alcance real e interpreta datos escasos o modificados.",
   "topic": "Planificar y encontrar trabajo",
   "type": "explanation",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of personal-statistics-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of personal-statistics-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/es/personal-statistics-workflow.png",
       "alt": "Estadísticas del perfil con la franja de cifras, la cuadrícula de actividad de 12 meses, los desgloses por proyecto y categoría y el ritmo de trabajo.",
       "caption": "Historial real de la cuenta de demostración: seis incidencias completadas en dos proyectos, treinta incidencias creadas y ninguna tarea del cuaderno marcada.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

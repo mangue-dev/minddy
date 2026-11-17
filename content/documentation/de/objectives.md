@@ -3,7 +3,7 @@
   "id": "objectives",
   "locale": "de",
   "title": "Ziele",
-  "summary": "Definiere ein Projektergebnis, ordne Arbeit zu und interpretiere Fortschritt, Abhängigkeiten und Momentum.",
+  "summary": "Bündle die Tickets eines minddy-Projekts mit einem Ziel um ein Ergebnis, lies Fortschritt, Abhängigkeiten und Momentum und verknüpfe das Ziel mit Feedback.",
   "topic": "Projekte und Tickets",
   "type": "guide",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 25,
+  "revision": 28,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-13",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -72,10 +72,10 @@
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
-    "language": "agent:claude-code (de translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
-    "date": "2026-11-13"
+    "revision": 28,
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (de translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "issues",
@@ -96,7 +96,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

@@ -3,7 +3,7 @@
   "id": "personal-statistics",
   "locale": "de",
   "title": "Persönliche Statistiken",
-  "summary": "Vergleiche Abschlüsse und Zeitmessungen innerhalb ihres tatsächlichen Geltungsbereichs.",
+  "summary": "Finde deine Statistiken im minddy-Profil, vergleiche Abschlüsse und Zeitmessungen in ihrem tatsächlichen Geltungsbereich und deute lückenhafte oder geänderte Daten.",
   "topic": "Arbeit planen und finden",
   "type": "explanation",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 10,
+  "revision": 13,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 13,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/de/personal-statistics-workflow.png",
       "alt": "Profilstatistik mit Kennzahlenleiste, Aktivitätsraster über 12 Monate, Aufschlüsselung nach Projekt und Kategorie sowie Arbeitsrhythmus.",
       "caption": "Echter Verlauf des Demokontos: sechs abgeschlossene Tickets in zwei Projekten, dreißig erstellte Tickets, keine abgehakte Notizbuchaufgabe.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

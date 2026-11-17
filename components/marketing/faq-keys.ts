@@ -11,9 +11,17 @@
  * namespace `Landing` for the former and `Pricing` for the latter.
  */
 
-/** Questions asked before registration (MIN-73): what the agent sees, where
- the data lives, how usage billing works. */
+/**
+ * Questions asked before registration (MIN-73): what the agent sees, where
+ * the data lives, how usage billing works.
+ *
+ * `what` and `openSource` come first (MIN-673): they are what a visitor, a
+ * search engine or an assistant asks before anything else, and each answer
+ * states it in full so it can be quoted without the rest of the page.
+ */
 export const FAQ_KEYS = [
+  "what",
+  "openSource",
   "agents",
   "byok",
   "usage",

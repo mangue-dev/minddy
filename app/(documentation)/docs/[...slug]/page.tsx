@@ -6,6 +6,7 @@ import { documentationPath } from "@/lib/documentation-core.mjs";
 import { getVisibleDocumentation, getLegacyDocumentationRoute, isDocumentationPreview } from "@/lib/server/documentation";
 import { documentationOgImageUrl, socialMetadata } from "@/lib/seo";
 import { DocumentationArticleView } from "@/components/documentation/documentation-article";
+import { DocumentationStructuredData } from "@/components/marketing/structured-data";
 import { DocumentationLegacyLocation } from "@/components/documentation/documentation-legacy-location";
 
 type Props = { params: Promise<{ slug: string[] }> };
@@ -34,6 +35,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function ArticlePage(props: Props) {
   const { article, legacyId, route } = await resolveArticle(props);
   return <>
+    {/* Only the canonical, published URL describes itself to search engines. */}
+    {legacyId === article.id && !isDocumentationPreview() && <DocumentationStructuredData article={article} />}
     {route && legacyId !== article.id && <DocumentationLegacyLocation id={legacyId} locale={article.locale} route={route} />}
     <DocumentationArticleView article={article} articles={getVisibleDocumentation(article.locale)} />
   </>;

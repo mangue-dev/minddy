@@ -134,7 +134,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/autoalojamiento/instalar",
     },
     namespace: "SelfHostingInstall",
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-17",
     priority: 0.5,
   },
   // Platform hub for the native desktop apps and installable mobile PWA.
@@ -183,10 +183,9 @@ export const PUBLIC_ROUTES = [
     lastModified: CHANGELOG_LAST_MODIFIED,
     priority: 0.6,
   },
-  // A comparison = an entry, like any page (MIN-93). THE
-  // slugs are the same in both languages: `alternatives` is written
-  // the same, and the competitor's name is a proper noun. See
-  // `lib/comparisons.ts` for choosing these three.
+  // A comparison = an entry, like any page (MIN-93). The competitor's name is a
+  // proper noun, so only the `alternatives` segment is translated. See
+  // `lib/comparisons.ts` for the catalog.
   {
     key: "alternativeLinear",
     en: "/alternatives/linear",
@@ -198,20 +197,6 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/linear",
     },
     namespace: "AlternativeLinear",
-    lastModified: "2026-11-17",
-    priority: 0.7,
-  },
-  {
-    key: "alternativeJira",
-    en: "/alternatives/jira",
-    fr: "/fr/alternatives/jira",
-    localized: {
-      de: "/de/alternativen/jira",
-      "pt-BR": "/pt-br/alternativas/jira",
-      it: "/it/alternative/jira",
-      es: "/es/alternativas/jira",
-    },
-    namespace: "AlternativeJira",
     lastModified: "2026-11-17",
     priority: 0.7,
   },
@@ -230,6 +215,48 @@ export const PUBLIC_ROUTES = [
     priority: 0.7,
   },
   {
+    key: "alternativePlane",
+    en: "/alternatives/plane",
+    fr: "/fr/alternatives/plane",
+    localized: {
+      de: "/de/alternativen/plane",
+      "pt-BR": "/pt-br/alternativas/plane",
+      it: "/it/alternative/plane",
+      es: "/es/alternativas/plane",
+    },
+    namespace: "AlternativePlane",
+    lastModified: "2026-11-17",
+    priority: 0.7,
+  },
+  {
+    key: "alternativeOpenProject",
+    en: "/alternatives/openproject",
+    fr: "/fr/alternatives/openproject",
+    localized: {
+      de: "/de/alternativen/openproject",
+      "pt-BR": "/pt-br/alternativas/openproject",
+      it: "/it/alternative/openproject",
+      es: "/es/alternativas/openproject",
+    },
+    namespace: "AlternativeOpenProject",
+    lastModified: "2026-11-17",
+    priority: 0.7,
+  },
+  {
+    key: "alternativeTaiga",
+    en: "/alternatives/taiga",
+    fr: "/fr/alternatives/taiga",
+    localized: {
+      de: "/de/alternativen/taiga",
+      "pt-BR": "/pt-br/alternativas/taiga",
+      it: "/it/alternative/taiga",
+      es: "/es/alternativas/taiga",
+    },
+    namespace: "AlternativeTaiga",
+    lastModified: "2026-11-17",
+    priority: 0.7,
+  },
+  {
     key: "legal",
     en: "/legal",
     fr: "/fr/mentions-legales",
@@ -240,7 +267,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/aviso-legal",
     },
     namespace: "Legal",
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-17",
     priority: 0.3,
   },
   {
@@ -254,7 +281,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/terminos",
     },
     namespace: "Terms",
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-17",
     priority: 0.3,
   },
   {
@@ -268,7 +295,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/privacidad",
     },
     namespace: "Privacy",
-    lastModified: "2026-11-08",
+    lastModified: "2026-11-17",
     priority: 0.3,
   },
   {
@@ -282,7 +309,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/cookies",
     },
     namespace: "Cookies",
-    lastModified: "2026-11-01",
+    lastModified: "2026-11-17",
     priority: 0.3,
   },
 ] as const satisfies ReadonlyArray<PublicRoute>;

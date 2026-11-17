@@ -3,7 +3,7 @@
   "id": "views",
   "locale": "fr",
   "title": "Vues et filtres",
-  "summary": "Enregistrez une vue filtrée du travail accessible, partagez-la en lecture seule et révoquez l’accès public au besoin.",
+  "summary": "Enregistrez une vue filtrée des tickets qui vous sont accessibles dans minddy, partagez une vue de projet par un lien public en lecture seule et révoquez-le au besoin.",
   "topic": "Planifier et retrouver le travail",
   "type": "guide",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (fr figure alt text and caption with catalog UI labels; agent self-review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (fr figure alt text and caption with catalog UI labels; agent self-review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "navigation",
@@ -71,7 +71,7 @@
       "src": "/documentation/fr/work-view-filters.png",
       "alt": "Menu Filtres avec son champ de recherche, Créer avec Numo, les sous-menus des propriétés et Trier.",
       "caption": "Recherchez une valeur de filtre, ouvrez le sous-menu d’une propriété ou choisissez un ordre. Créer avec Numo vous permet plutôt de décrire les filtres voulus.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/fr/work-share-view.png",
       "alt": "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
       "caption": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

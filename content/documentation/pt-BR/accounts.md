@@ -3,7 +3,7 @@
   "id": "accounts",
   "locale": "pt-BR",
   "title": "Contas",
-  "summary": "Crie e proteja sua conta, recupere o acesso, altere suas preferências e entenda a exclusão da conta.",
+  "summary": "Crie sua conta do minddy, proteja-a com a autenticação de dois fatores, recupere o acesso, altere suas preferências e veja o que a exclusão da conta implica.",
   "topic": "Primeiros passos",
   "type": "guide",
   "audiences": [
@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 21,
+  "revision": 24,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-13",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -85,10 +85,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-973: Self-host minddy in the iOS app and the Mobile app card of Preferences; checked against components/auth/auth-chrome.tsx and components/settings/account-mobile-section.tsx; no figure affected); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 single sign-in and sign-up screen, first-run profile page and phone getting-started tour: checked against components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx, lib/auth-entry.ts, app/api/auth/lookup/route.ts, components/first-run/first-run-gate.tsx, components/first-run/profile-setup-screen.tsx, components/first-run/onboarding-screen.tsx, lib/first-run.ts and messages/*.json; no browser walkthrough; existing figures do not show these screens and were kept); agent:claude-code (MIN-907 tour follow-up: skip confirmation, final screen with confetti, Home after the tour and the issue step completed on creation, checked against components/first-run/onboarding-screen.tsx, lib/use-onboarding.ts and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-907 four-step tour: the cycles step left the getting-started steps (lib/onboarding.ts ONBOARDING_STEPS, components/sidebar-onboarding.tsx); the phone tour's Back and Skip row, Back from the first step returning to the profile page, and the skip confirmation checked against components/first-run/onboarding-screen.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-964 tour on every platform: the full-screen getting-started steps now also run on a computer, their actions open dialogs, the issue step offers the CSV import to a project owner on a computer, and the sidebar checklist is gone; checked against components/first-run/first-run-gate.tsx, components/first-run/onboarding-screen.tsx, components/app-sidebar.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept)",
-    "language": "agent:claude-code (pt-BR MIN-973 iOS app sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 account-access section rewritten for the single sign-in and sign-up screen and the first-run screens, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 tour follow-up tour passage with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 four-step tour passage with Back and Skip, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-964 changed passages on the tour on every platform, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-13"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-973: Self-host minddy in the iOS app and the Mobile app card of Preferences; checked against components/auth/auth-chrome.tsx and components/settings/account-mobile-section.tsx; no figure affected); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 single sign-in and sign-up screen, first-run profile page and phone getting-started tour: checked against components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx, lib/auth-entry.ts, app/api/auth/lookup/route.ts, components/first-run/first-run-gate.tsx, components/first-run/profile-setup-screen.tsx, components/first-run/onboarding-screen.tsx, lib/first-run.ts and messages/*.json; no browser walkthrough; existing figures do not show these screens and were kept); agent:claude-code (MIN-907 tour follow-up: skip confirmation, final screen with confetti, Home after the tour and the issue step completed on creation, checked against components/first-run/onboarding-screen.tsx, lib/use-onboarding.ts and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-907 four-step tour: the cycles step left the getting-started steps (lib/onboarding.ts ONBOARDING_STEPS, components/sidebar-onboarding.tsx); the phone tour's Back and Skip row, Back from the first step returning to the profile page, and the skip confirmation checked against components/first-run/onboarding-screen.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-964 tour on every platform: the full-screen getting-started steps now also run on a computer, their actions open dialogs, the issue step offers the CSV import to a project owner on a computer, and the sidebar checklist is gone; checked against components/first-run/first-run-gate.tsx, components/first-run/onboarding-screen.tsx, components/app-sidebar.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (pt-BR MIN-973 iOS app sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 account-access section rewritten for the single sign-in and sign-up screen and the first-run screens, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 tour follow-up tour passage with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 four-step tour passage with Back and Skip, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-964 changed passages on the tour on every platform, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "choose-an-instance",
@@ -120,7 +120,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -137,7 +137,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Cabeçalho do perfil com o avatar e seu selo de edição, o nome e o email somente leitura.",
       "caption": "Selecione o avatar para gerar ou enviar um, ou o nome para alterá-lo; o endereço de email continua somente leitura.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -154,7 +154,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -171,7 +171,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

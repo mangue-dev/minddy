@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
-import { COMPARISONS, COMPARISON_FEATURES, COMPARISON_POINTS, COMPARISON_ROWS, COMPARISON_REVIEWED_AT, comparisonBySlug } from "@/lib/comparisons";
+import { COMPARISONS, COMPARISON_FEATURES, COMPARISON_POINTS, COMPARISON_ROWS, comparisonBySlug } from "@/lib/comparisons";
 import { localizedHref } from "@/lib/locale-href";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { SectionHeading } from "@/components/marketing/section-heading";
@@ -24,6 +24,7 @@ import { Github } from "@/components/git/provider-icons";
 import { AppIcon } from "@/components/icon";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 import { comparisonGuides } from "@/lib/server/comparison-guides";
+import { PageStructuredData } from "@/components/marketing/structured-data";
 
 /** The features shown with the landing's illustrations; the others are told in text. */
 const ILLUSTRATED = [
@@ -56,12 +57,13 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
   if (!comparison) notFound();
   const locale = (await getLocale()) as Locale;
   const [t, tc] = await Promise.all([getTranslations("Alternatives"), getTranslations(comparison.namespace)]);
-  const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${COMPARISON_REVIEWED_AT}T12:00:00Z`));
+  const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${comparison.reviewedAt}T12:00:00Z`));
   const downloadHref = localizedHref("/download", locale);
   const guides = comparisonGuides(locale);
 
   return (
     <>
+      <PageStructuredData routeKey={comparison.routeKey} breadcrumbName={tc("heroTitle")} />
       <section className="px-4 pt-24 pb-12 sm:px-6 sm:pt-32 sm:pb-16">
         <div className="mx-auto max-w-6xl">
           <nav aria-label={t("compareNavLabel")} className="mb-8 flex flex-wrap gap-2">

@@ -3,18 +3,21 @@ import type { Namespace } from "@/lib/i18n-keys";
 import type { PublicRouteKey } from "@/lib/public-routes";
 
 /**
- * The public comparison catalog for Linear, Jira, and Notion.
+ * The public comparison catalog: two closed-source products (Linear, Notion)
+ * and three open-source ones (Plane, OpenProject, Taiga).
  * Compare documented workflows and billing models, acknowledge each product's
  * strengths, and keep current Minddy capabilities separate from competitor claims.
- * Refresh the review date only after checking the linked official sources.
+ * Each entry carries its own review date; refresh it only after checking that
+ * entry's linked official sources.
  */
-export const COMPARISON_REVIEWED_AT = "2026-09-05";
 
 export interface Comparison {
   /** URL segment for `/alternatives/<slug>`. */
   slug: string;
   /** Proper name of the competitor — never translated, never in the i18n catalog. */
   name: string;
+  /** Day its official sources were last checked, in short ISO. */
+  reviewedAt: string;
   /** `lib/public-routes.ts` entry that serves this page. */
   routeKey: PublicRouteKey;
   /** Namespace i18n of texts specific to this comparison. */
@@ -31,6 +34,7 @@ export const COMPARISONS = [
   {
     slug: "linear",
     name: "Linear",
+    reviewedAt: "2026-09-05",
     routeKey: "alternativeLinear",
     namespace: "AlternativeLinear",
     pricingUrl: "https://linear.app/pricing",
@@ -45,24 +49,9 @@ export const COMPARISONS = [
     },
   },
   {
-    slug: "jira",
-    name: "Jira",
-    routeKey: "alternativeJira",
-    namespace: "AlternativeJira",
-    pricingUrl: "https://www.atlassian.com/software/jira/pricing",
-    docsUrl: "https://support.atlassian.com/jira-software-cloud/",
-    sources: {
-      teammate: "https://support.atlassian.com/subscriptions-and-billing/docs/manage-users-and-user-tiers/",
-      agents: "https://www.atlassian.com/platform/rovo-mcp",
-      pages: "https://support.atlassian.com/confluence-cloud/docs/create-and-edit-content/",
-      feedback: "https://support.atlassian.com/jira-product-discovery/docs/create-and-manage-insights/",
-      hosting: "https://www.atlassian.com/licensing/data-center-end-of-life",
-      setup: "https://support.atlassian.com/jira-software-cloud/docs/what-are-jira-workflows/",
-    },
-  },
-  {
     slug: "notion",
     name: "Notion",
+    reviewedAt: "2026-09-05",
     routeKey: "alternativeNotion",
     namespace: "AlternativeNotion",
     pricingUrl: "https://www.notion.com/pricing",
@@ -73,6 +62,62 @@ export const COMPARISONS = [
       pages: "https://www.notion.com/help/guides/getting-started-with-projects-and-tasks",
       feedback: "https://www.notion.com/pricing",
       setup: "https://www.notion.com/help/guides/getting-started-with-projects-and-tasks",
+    },
+  },
+  {
+    slug: "plane",
+    name: "Plane",
+    reviewedAt: "2026-11-17",
+    routeKey: "alternativePlane",
+    namespace: "AlternativePlane",
+    pricingUrl: "https://plane.so/pricing",
+    docsUrl: "https://docs.plane.so",
+    sources: {
+      source: "https://developers.plane.so/self-hosting/editions-and-versions",
+      teammate: "https://plane.so/pricing",
+      agents: "https://docs.plane.so/ai/agents/overview",
+      pages: "https://plane.so/pricing",
+      feedback: "https://docs.plane.so/intake/overview",
+      hosting: "https://developers.plane.so/self-hosting/editions-and-versions",
+      setup: "https://docs.plane.so/introduction/core-concepts",
+    },
+  },
+  {
+    slug: "openproject",
+    name: "OpenProject",
+    reviewedAt: "2026-11-17",
+    routeKey: "alternativeOpenProject",
+    namespace: "AlternativeOpenProject",
+    pricingUrl: "https://www.openproject.org/pricing/",
+    docsUrl: "https://www.openproject.org/docs/",
+    sources: {
+      source: "https://www.openproject.org/docs/enterprise-guide/",
+      teammate: "https://www.openproject.org/pricing/",
+      agents: "https://www.openproject.org/docs/system-admin-guide/integrations/mcp-server/",
+      pages: "https://www.openproject.org/docs/user-guide/",
+      feedback: "https://www.openproject.org/docs/user-guide/forums/",
+      hosting: "https://www.openproject.org/docs/installation-and-operations/installation/",
+      setup: "https://www.openproject.org/docs/system-admin-guide/manage-work-packages/",
+      builtFor: "https://www.openproject.org/",
+    },
+  },
+  {
+    slug: "taiga",
+    name: "Taiga",
+    reviewedAt: "2026-11-17",
+    routeKey: "alternativeTaiga",
+    namespace: "AlternativeTaiga",
+    pricingUrl: "https://taiga.io/deployment-pricing-options/",
+    docsUrl: "https://docs.taiga.io/",
+    sources: {
+      source: "https://github.com/taigaio/taiga-back",
+      teammate: "https://taiga.io/deployment-pricing-options/",
+      agents: "https://docs.taiga.io/",
+      pages: "https://taiga.io/",
+      feedback: "https://taiga.io/",
+      hosting: "https://docs.taiga.io/setup-production.html",
+      setup: "https://taiga.io/",
+      builtFor: "https://taiga.io/",
     },
   },
 ] as const satisfies ReadonlyArray<Comparison>;

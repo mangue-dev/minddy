@@ -3,7 +3,7 @@
   "id": "objectives",
   "locale": "pt-BR",
   "title": "Objetivos",
-  "summary": "Defina o resultado de um projeto, vincule o trabalho e interprete o progresso, as dependências e o ritmo.",
+  "summary": "Agrupe os tickets de um projeto do minddy em torno de um resultado com um objetivo, leia o progresso, as dependências e o ritmo e vincule-o ao feedback.",
   "topic": "Projetos e tickets",
   "type": "guide",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 25,
+  "revision": 26,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-13",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -72,10 +72,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
-    "language": "agent:claude-code (pt-BR translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
-    "date": "2026-11-13"
+    "revision": 26,
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (pt-BR translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "issues",
@@ -96,7 +96,7 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada no projeto Aurora com um nome de resultado de exemplo e o botão Criar objetivo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

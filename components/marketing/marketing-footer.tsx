@@ -55,15 +55,21 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       // site resource which is really one, and the internal link which must
       // be seen from all pages — a crawler counts incoming links.
       { href: "/mcp", labelKey: "navMenu_mcp_title" },
-      { href: "/self-hosting/install", labelKey: "navMenu_selfHosting_title" },
+      // The guide, not the installation wizard (MIN-673): it is the page that
+      // explains self-hosting and the one engines should rank, and it was
+      // linked from nowhere else in the navigation. Its first button opens
+      // the wizard.
+      { href: "/self-hosting", labelKey: "navMenu_selfHosting_title" },
       { href: MINDDY_REPOSITORY_URL, labelKey: "footerRepository", external: true },
       { href: "/changelog", labelKey: "footerChangelog" },
       // Comparisons (MIN-93). They are NOWHERE else in the
-      // navigation: without these three links, each page would only have the sitemap
+      // navigation: without these links, each page would only have the sitemap
       // to be discovered, and an internal link is worth more than a line of XML.
       { href: "/alternatives/linear", labelKey: "footerAltLinear" },
-      { href: "/alternatives/jira", labelKey: "footerAltJira" },
       { href: "/alternatives/notion", labelKey: "footerAltNotion" },
+      { href: "/alternatives/plane", labelKey: "footerAltPlane" },
+      { href: "/alternatives/openproject", labelKey: "footerAltOpenProject" },
+      { href: "/alternatives/taiga", labelKey: "footerAltTaiga" },
       { href: "/#faq", labelKey: "navFaq" },
       { href: "/login", labelKey: "navSignIn" },
       // Absolute on preview, whose sign-ups are closed (MIN-766).

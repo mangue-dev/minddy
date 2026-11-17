@@ -3,7 +3,7 @@
   "id": "projects",
   "locale": "en",
   "title": "Projects and members",
-  "summary": "Configure a project, invite collaborators, choose their roles and transfer ownership.",
+  "summary": "Configure a minddy project, invite collaborators, choose what its owner, members and readers can do, and transfer its ownership.",
   "topic": "Get started",
   "type": "guide",
   "audiences": [
@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -78,10 +78,10 @@
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "issues",
@@ -105,7 +105,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
       "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -122,7 +122,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Invite people card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +139,7 @@
       "src": "/documentation/en/project-statistics.png",
       "alt": "Momentum, Where things stand and Contributors sections of a project with about a thousand issues: weekly created and completed bars, a status bar, health counts and one status bar per person.",
       "caption": "The momentum compares the last four weeks with the four before; overdue and stalled counts flag the work to look at.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -156,7 +156,7 @@
       "src": "/documentation/en/project-issue-graph.png",
       "alt": "Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend, the Include closed issues and objectives switch and the Enlarge the graph button at the top right.",
       "caption": "Hover over a dot to read its issue and highlight its links; select it to open the issue in the side panel.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [

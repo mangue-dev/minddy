@@ -3,7 +3,7 @@
   "id": "databases",
   "locale": "pt-BR",
   "title": "Bancos de dados",
-  "summary": "Crie um banco de dados, edite valores e páginas de registros, altere o esquema e importe um banco completo com as verificações necessárias.",
+  "summary": "Crie um banco de dados em um projeto do minddy, edite valores e páginas de registros, altere o esquema com cuidado e importe um banco completo.",
   "topic": "Páginas e bancos de dados",
   "type": "guide",
   "audiences": [
@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-16",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/pt-BR.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance)",
-    "language": "agent:claude-code (pt-BR translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-16"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/pt-BR.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (pt-BR translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "pages"
@@ -100,7 +100,7 @@
       "src": "/documentation/pt-BR/database-setup-cards.png",
       "alt": "Prévia do componente com cartões para configurar uma nova base de dados com Numo ou importar uma existente.",
       "caption": "Sugestões para uma nova base com dados de demonstração. Escolha Numo ou importação, ou feche os cartões para continuar manualmente.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com um campo de busca, texto, número, seleções, data, pessoas, caixa de seleção e os quatro tipos somente leitura.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -134,7 +134,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +182,7 @@
       "src": "/documentation/pt-BR/database-options.png",
       "alt": "Prévia do componente Editar opções com status em português, alças de arraste, lixeiras e a explicação da exclusão.",
       "caption": "Edite nomes, cores e ordem das opções em conjunto. Arraste uma alça para reordenar; a lixeira remove uma opção do rascunho; Salvar aplica as alterações. São exibidos dados de demonstração.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/pt-BR/database-date-time.png",
       "alt": "Prévia do seletor de data com 24 de julho de 2026 selecionado, Adicione um horário ativado e Hora definida como 02:00 AM.",
       "caption": "Ative Adicione um horário para inserir um horário. Esta prévia do componente usa dados de demonstração e o fuso horário do dispositivo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

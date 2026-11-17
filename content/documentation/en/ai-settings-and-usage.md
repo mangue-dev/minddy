@@ -3,7 +3,7 @@
   "id": "ai-settings-and-usage",
   "locale": "en",
   "title": "AI settings and usage",
-  "summary": "Configure personal AI keys and model defaults, and understand Cloud plan limits and usage accounting.",
+  "summary": "Configure personal AI keys and model defaults, dictate text, and understand how minddy Cloud plans limit and account for AI usage.",
   "topic": "Account and apps",
   "type": "guide",
   "audiences": [
@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 29,
-  "sourceRevision": 29,
+  "revision": 30,
+  "sourceRevision": 30,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -72,10 +72,10 @@
     ]
   },
   "review": {
-    "revision": 29,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-980: Decisions paragraph of #ai-keys-and-models, source audit against components/settings/account-ai-keys-section.tsx, lib/server/decisions/engine.ts and app/api/account/ai-decisions/route.ts; no browser walkthrough; no figure shows this row; existing figures kept, not recaptured); agent:claude-code (MIN-979: one sentence in #ai-keys-and-models on model lists limited to callable models and the save-time check of a key's embedding and speech-to-text models, source audit against lib/server/agent/models-catalog.ts, lib/byok-model-catalog.ts and app/api/account/ai-keys/route.ts; no browser walkthrough; no figure shows this; existing figures kept, not recaptured); agent:claude-code (MIN-996: #models paragraph on retired local providers, source audit against components/settings/byok-connect-panel.tsx, app/api/account/ai-keys/route.ts and lib/agent-providers.ts; no browser walkthrough; no figure shows the provider list; existing figures kept, not recaptured); agent:claude-code (MIN-1001: sentence on Smart Fill and the decision model in the Decisions row, source audit against lib/server/decisions/runner.ts and lib/server/decisions/llm.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-946 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-996 local-provider passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1001 Smart Fill decision passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-15"
+    "revision": 30,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-980: Decisions paragraph of #ai-keys-and-models, source audit against components/settings/account-ai-keys-section.tsx, lib/server/decisions/engine.ts and app/api/account/ai-decisions/route.ts; no browser walkthrough; no figure shows this row; existing figures kept, not recaptured); agent:claude-code (MIN-979: one sentence in #ai-keys-and-models on model lists limited to callable models and the save-time check of a key's embedding and speech-to-text models, source audit against lib/server/agent/models-catalog.ts, lib/byok-model-catalog.ts and app/api/account/ai-keys/route.ts; no browser walkthrough; no figure shows this; existing figures kept, not recaptured); agent:claude-code (MIN-996: #models paragraph on retired local providers, source audit against components/settings/byok-connect-panel.tsx, app/api/account/ai-keys/route.ts and lib/agent-providers.ts; no browser walkthrough; no figure shows the provider list; existing figures kept, not recaptured); agent:claude-code (MIN-1001: sentence on Smart Fill and the decision model in the Decisions row, source audit against lib/server/decisions/runner.ts and lib/server/decisions/llm.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-946 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-996 local-provider passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1001 Smart Fill decision passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "scheduled-routines"
@@ -96,7 +96,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, a provider per kind of model, and the language model are separate settings.",
       "caption": "Each kind of model runs on minddy Cloud or a connected provider. On minddy Cloud the instance sets the language model; on a personal key, its model is saved per provider and a conversation can choose its own.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [

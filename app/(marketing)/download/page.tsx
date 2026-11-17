@@ -7,6 +7,7 @@ import type { Locale } from "@/i18n/config";
 import { publicPathForLocale, routeByKey } from "@/lib/public-routes";
 import { desktopFeedBaseUrl, dmgEntry, formatBytes, linuxPackageEntry, parseLatestLinuxFeed, parseLatestMacFeed } from "@/lib/desktop/update-feed";
 import { SectionCta } from "@/components/marketing/section-cta";
+import { PageStructuredData } from "@/components/marketing/structured-data";
 import { DownloadPlatformCards } from "@/components/marketing/download-platform-cards";
 import { MobilePwaInstallGuide } from "@/components/marketing/mobile-pwa-install-guide";
 import { mobileInstallGuideCopy } from "@/components/marketing/mobile-install-guide-copy";
@@ -63,6 +64,7 @@ export default async function DownloadPage() {
 
   return (
     <>
+      <PageStructuredData routeKey="download" breadcrumbName={t("heroTitle")} />
       <section className="px-4 pt-24 pb-12 sm:px-6 sm:pt-32 sm:pb-16">
         <div className="mx-auto max-w-6xl">
           <header className="mb-12 max-w-3xl sm:mb-16">

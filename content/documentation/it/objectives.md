@@ -3,7 +3,7 @@
   "id": "objectives",
   "locale": "it",
   "title": "Obiettivi",
-  "summary": "Definisci il risultato di un progetto, collega il lavoro e interpreta avanzamento, dipendenze e slancio.",
+  "summary": "Raggruppa i ticket di un progetto minddy attorno a un risultato con un obiettivo, poi leggi avanzamento, dipendenze e slancio e collegalo ai feedback.",
   "topic": "Progetti e ticket",
   "type": "guide",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 25,
+  "revision": 26,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-13",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -72,10 +72,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
-    "language": "agent:claude-code (it translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
-    "date": "2026-11-13"
+    "revision": 26,
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (it translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance); agent:claude-code (it MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "issues",
@@ -96,7 +96,7 @@
       "src": "/documentation/it/reader-objectives.png",
       "alt": "Finestra di creazione obiettivo non inviata nel progetto Aurora con un nome di risultato d’esempio e il pulsante Crea obiettivo.",
       "caption": "Definisci il risultato prima di scegliere responsabile, data limite e stato. Questa finestra non ha creato un secondo obiettivo.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

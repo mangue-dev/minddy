@@ -3,7 +3,7 @@
   "id": "views",
   "locale": "de",
   "title": "Ansichten und Filter",
-  "summary": "Speichere eine gefilterte Ansicht zugänglicher Arbeit, teile sie schreibgeschützt und widerrufe bei Bedarf den öffentlichen Zugriff.",
+  "summary": "Speichere eine gefilterte Ansicht deiner zugänglichen minddy-Tickets, teile eine Projektansicht per schreibgeschütztem öffentlichem Link und widerrufe ihn bei Bedarf.",
   "topic": "Arbeit planen und finden",
   "type": "guide",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 12,
+  "revision": 14,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (de figure alt text and caption with catalog UI labels; agent self-review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 14,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (de figure alt text and caption with catalog UI labels; agent self-review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "navigation",
@@ -71,7 +71,7 @@
       "src": "/documentation/de/work-view-filters.png",
       "alt": "Menü Filter mit Suchfeld, Mit Numo erstellen, den Untermenüs der Eigenschaften und Reihenfolge.",
       "caption": "Suche einen Filterwert, öffne das Untermenü einer Eigenschaft oder wähle eine Reihenfolge. Mit „Mit Numo erstellen“ beschreibst du stattdessen die gewünschten Filter.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [

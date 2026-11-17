@@ -9,6 +9,10 @@ import type { Locale } from "@/i18n/config";
 import { FAQ_KEYS, MCP_FAQ_KEYS, PRICING_FAQ_KEYS } from "./faq-keys";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { MINDDY_LICENSE_URL, MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
+import { breadcrumbList, serializeJsonLd } from "@/lib/structured-data";
+import { documentationPath } from "@/lib/documentation-core.mjs";
+import type { DocumentationArticle } from "@/lib/documentation";
+import { documentationOgImageUrl } from "@/lib/seo";
 
 /**
  * Structured data from the public site (schema.org, JSON-LD).
@@ -39,6 +43,11 @@ import { MINDDY_LICENSE_URL, MINDDY_REPOSITORY_URL } from "@/lib/brand-constants
  * The `FAQPage` is built from the same keys as the accordion
  * (`faq-keys.ts`): a question declared here but absent from the page is a
  * Rich Results Test error, and this is the only way to avoid introducing it.
+ *
+ * Every page below the home page also declares a `BreadcrumbList` (MIN-673):
+ * it is the structured data Google still turns into a visible result feature
+ * for any site, and it tells an engine where the page sits without guessing
+ * from the URL.
  */
 
 /** The six areas of the product, as the nav already names them — same order. */
@@ -59,6 +68,27 @@ const VARIANT_ROUTE: Record<StructuredDataVariant, PublicRouteKey> = {
 };
 
 type StructuredDataVariant = "landing" | "pricing" | "mcp";
+
+function organizationNode() {
+  return {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+    name: "minddy",
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.svg`,
+    email: CONTACT_EMAIL,
+    sameAs: [MINDDY_REPOSITORY_URL],
+  };
+}
+
+/** The first breadcrumb level of every page: the home page of the locale. */
+function homeCrumb(locale: Locale) {
+  return { name: "minddy", url: `${SITE_URL}${publicPathForLocale(routeByKey("home"), locale)}` };
+}
+
+function JsonLd({ graph }: { graph: readonly unknown[] }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(graph) }} />;
+}
 
 export async function StructuredData({
   variant = "landing",
@@ -149,15 +179,12 @@ export async function StructuredData({
     })),
   };
 
-  const organization = {
-    "@type": "Organization",
-    "@id": `${SITE_URL}/#organization`,
-    name: "minddy",
-    url: SITE_URL,
-    logo: `${SITE_URL}/logo.svg`,
-    email: CONTACT_EMAIL,
-    sameAs: [MINDDY_REPOSITORY_URL],
-  };
+  const organization = organizationNode();
+  // The landing is the root of the trail and declares none.
+  const breadcrumb = breadcrumbList(pageUrl, [
+    homeCrumb(locale),
+    { name: variant === "mcp" ? t("navMenu_mcp_title") : tp("heroTitle"), url: pageUrl },
+  ]);
 
   /**
  * `/mcp`: a `TechArticle` which has the software as its subject, and a
@@ -193,6 +220,7 @@ export async function StructuredData({
     },
     software,
     faq,
+    breadcrumb,
   ];
 
   const graph =
@@ -214,6 +242,7 @@ export async function StructuredData({
             mainEntity: software,
           },
           faq,
+          breadcrumb,
         ]
       : [
           organization,
@@ -236,20 +265,7 @@ export async function StructuredData({
           faq,
         ];
 
-  return (
-    <script
-      type="application/ld+json"
-      // The strings come from the translation files, but a `<` followed by
-      // `/script>` would close the tag: we therefore replace all `<` with its
-      // Unicode escape, which JSON.parse rereads as the original character.
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@graph": graph,
-        }).replaceAll("<", "\\u003c"),
-      }}
-    />
-  );
+  return <JsonLd graph={graph} />;
 }
 
 const DOWNLOAD_PLATFORM_SCHEMA = {
@@ -272,19 +288,11 @@ export async function DownloadPlatformStructuredData({
 }) {
   const locale = (await getLocale()) as Locale;
   const route = routeByKey(routeKey);
-  const t = await getTranslations(route.namespace);
+  const [t, td] = await Promise.all([getTranslations(route.namespace), getTranslations("Download")]);
   const pageUrl = `${SITE_URL}${publicPathForLocale(route, locale)}`;
   const platform = DOWNLOAD_PLATFORM_SCHEMA[routeKey];
   const graph = [
-    {
-      "@type": "Organization",
-      "@id": `${SITE_URL}/#organization`,
-      name: "minddy",
-      url: SITE_URL,
-      logo: `${SITE_URL}/logo.svg`,
-      email: CONTACT_EMAIL,
-      sameAs: [MINDDY_REPOSITORY_URL],
-    },
+    organizationNode(),
     {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,
@@ -317,17 +325,88 @@ export async function DownloadPlatformStructuredData({
       isAccessibleForFree: true,
       publisher: { "@id": `${SITE_URL}/#organization` },
     },
+    breadcrumbList(pageUrl, [
+      homeCrumb(locale),
+      { name: td("heroTitle"), url: `${SITE_URL}${publicPathForLocale(routeByKey("download"), locale)}` },
+      { name: t("heroTitle"), url: pageUrl },
+    ]),
   ];
 
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@graph": graph,
-        }).replaceAll("<", "\\u003c"),
-      }}
-    />
-  );
+  return <JsonLd graph={graph} />;
+}
+
+/**
+ * Page entity and breadcrumb for a public page that has no richer graph of
+ * its own: comparisons, the self-hosting guide, the download hub, the
+ * changelog and the documentation home.
+ *
+ * `dateModified` is the hand-held date of the route table, the same one the
+ * sitemap publishes: two dates for one page would contradict each other.
+ */
+export async function PageStructuredData({
+  routeKey,
+  breadcrumbName,
+}: {
+  routeKey: PublicRouteKey;
+  /** Short visible name of the page, when its metadata title is a sentence. */
+  breadcrumbName?: string;
+}) {
+  const locale = (await getLocale()) as Locale;
+  const route = routeByKey(routeKey);
+  const t = await getTranslations(route.namespace);
+  const pageUrl = `${SITE_URL}${publicPathForLocale(route, locale)}`;
+  const graph = [
+    organizationNode(),
+    {
+      "@type": "WebPage",
+      "@id": `${pageUrl}#webpage`,
+      url: pageUrl,
+      name: t("metaTitle"),
+      description: t("metaDescription"),
+      inLanguage: LANG_TAG[locale],
+      dateModified: route.lastModified,
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      about: { "@id": `${SITE_URL}/#software` },
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+    },
+    breadcrumbList(pageUrl, [homeCrumb(locale), { name: breadcrumbName ?? t("metaTitle"), url: pageUrl }]),
+  ];
+
+  return <JsonLd graph={graph} />;
+}
+
+/**
+ * A published guide of the manual, as a `TechArticle` under the documentation
+ * home. Its date is the article's own `updatedAt`, which the sitemap reads too.
+ */
+export async function DocumentationStructuredData({ article }: { article: DocumentationArticle }) {
+  const locale = article.locale;
+  const t = await getTranslations({ locale, namespace: "Documentation" });
+  const pageUrl = `${SITE_URL}${documentationPath(article.id, locale)}`;
+  const rootUrl = `${SITE_URL}${documentationPath(null, locale)}`;
+  const graph = [
+    organizationNode(),
+    {
+      "@type": "TechArticle",
+      "@id": `${pageUrl}#article`,
+      url: pageUrl,
+      headline: article.title,
+      description: article.summary,
+      inLanguage: LANG_TAG[locale],
+      dateModified: article.updatedAt,
+      image: documentationOgImageUrl(article.id, locale),
+      about: { "@id": `${SITE_URL}/#software` },
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      author: { "@id": `${SITE_URL}/#organization` },
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    breadcrumbList(pageUrl, [
+      homeCrumb(locale),
+      { name: t("title"), url: rootUrl },
+      { name: article.title, url: pageUrl },
+    ]),
+  ];
+
+  return <JsonLd graph={graph} />;
 }

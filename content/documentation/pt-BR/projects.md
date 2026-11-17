@@ -3,7 +3,7 @@
   "id": "projects",
   "locale": "pt-BR",
   "title": "Projetos e membros",
-  "summary": "Configure um projeto, convide colaboradores, escolha os papéis deles e transfira a propriedade.",
+  "summary": "Configure um projeto do minddy, convide colaboradores, escolha o que o proprietário, os membros e os leitores podem fazer e transfira a propriedade.",
   "topic": "Primeiros passos",
   "type": "guide",
   "audiences": [
@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-17",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -78,10 +78,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (pt-BR changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "language": "agent:claude-code (pt-BR changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "issues",
@@ -105,7 +105,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
       "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -122,7 +122,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Cartão “Convidar pessoas” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +139,7 @@
       "src": "/documentation/pt-BR/project-statistics.png",
       "alt": "Seções Ritmo, Situação atual e Colaboradores de um projeto com cerca de mil tickets: barras semanais de tickets criados e concluídos, uma barra de status, indicadores de saúde e uma barra de status por pessoa.",
       "caption": "O ritmo compara as últimas quatro semanas com as quatro anteriores; os tickets atrasados e parados apontam o trabalho a observar.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -156,7 +156,7 @@
       "src": "/documentation/pt-BR/project-issue-graph.png",
       "alt": "Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda, o interruptor Incluir tickets e objetivos fechados e o botão Ampliar o grafo no canto superior direito.",
       "caption": "Passe o cursor sobre um ponto para ler o ticket e destacar suas ligações; selecione-o para abrir o ticket no painel lateral.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
