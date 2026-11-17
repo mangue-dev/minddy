@@ -30,7 +30,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-14",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -144,9 +144,9 @@
   },
   "review": {
     "revision": 54,
-    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
+    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (es changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "date": "2026-11-17"
   },
   "related": [
     "feedback",

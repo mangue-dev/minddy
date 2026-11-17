@@ -4795,7 +4795,7 @@
       "saved": "Plan actualizado."
     },
     "title": "Modelos de IA",
-    "subtitle": "Cada tarjeta tiene un modelo predeterminado; abre «Modelos por tarea» para dar a una tarea su propio modelo. Cada elección se aplica al momento.",
+    "subtitle": "Cada tarjeta fija el modelo de una función, para toda la instancia. Cada elección se aplica al momento.",
     "loadError": "No se pudo cargar la configuración.",
     "saved": "Ajuste guardado",
     "fieldDefault": "Modelo predeterminado",

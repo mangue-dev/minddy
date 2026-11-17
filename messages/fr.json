@@ -4795,7 +4795,7 @@
       "saved": "Plan mis à jour."
     },
     "title": "Modèles IA",
-    "subtitle": "Chaque carte a un modèle par défaut ; ouvrez « Modèles par tâche » pour donner son propre modèle à une tâche. Chaque choix s’applique tout de suite.",
+    "subtitle": "Chaque carte fixe le modèle d’un rôle, pour toute l’instance. Chaque choix s’applique tout de suite.",
     "loadError": "Impossible de charger la configuration.",
     "saved": "Réglage enregistré",
     "fieldDefault": "Modèle par défaut",

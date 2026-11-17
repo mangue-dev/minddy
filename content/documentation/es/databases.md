@@ -22,7 +22,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-17",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -74,7 +74,7 @@
   },
   "review": {
     "revision": 23,
-    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/es.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/es.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (es translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-17"
   },

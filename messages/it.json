@@ -4795,7 +4795,7 @@
       "saved": "Piano aggiornato."
     },
     "title": "Modelli di IA",
-    "subtitle": "Ogni scheda ha un modello predefinito; apri «Modelli per attività» per dare a un’attività un modello proprio. Ogni scelta si applica subito.",
+    "subtitle": "Ogni scheda imposta il modello di un ruolo, per tutta l’istanza. Ogni scelta si applica subito.",
     "loadError": "Impossibile caricare la configurazione.",
     "saved": "Impostazione salvata",
     "fieldDefault": "Modello predefinito",

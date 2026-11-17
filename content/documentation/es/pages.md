@@ -26,7 +26,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-01",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -115,9 +115,9 @@
   },
   "review": {
     "revision": 25,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures)",
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
     "language": "agent:claude (es sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (es context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-04"
+    "date": "2026-11-17"
   },
   "related": [
     "notifications-and-inbox",

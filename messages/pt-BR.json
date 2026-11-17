@@ -4795,7 +4795,7 @@
       "saved": "Plano atualizado."
     },
     "title": "Modelos de IA",
-    "subtitle": "Cada cartão tem um modelo padrão; abra “Modelos por tarefa” para dar a uma tarefa seu próprio modelo. Cada escolha vale na hora.",
+    "subtitle": "Cada cartão define o modelo de uma função, para toda a instância. Cada escolha vale na hora.",
     "loadError": "Não foi possível carregar a configuração.",
     "saved": "Configuração salva",
     "fieldDefault": "Modelo padrão",

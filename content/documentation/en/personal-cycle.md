@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-17",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta; correction applied: English alternative text of the cycle figure rewritten for the recaptured Nov 9 – 22 cycle; 1 screenshot(s) recaptured on 2026-11-17 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-970 changed passage; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-17"
   },
   "related": [
@@ -61,11 +61,11 @@
       "id": "personal-cycle-steps",
       "kind": "screenshot",
       "src": "/documentation/en/reader-cycle.png",
-      "alt": "Personal cycle for Oct 12 – 25 with an empty Backlog and Aurora and Beacon issues in Todo and In progress.",
+      "alt": "Personal cycle for Nov 9 – 22 with Lumen, Aurora and Beacon issues from Backlog to In review.",
       "caption": "The cycle gathers issues assigned to you across projects. Adding an issue assigns it to the cycle owner without changing its status.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
-      "capturedAt": "2026-11-04",
+      "capturedAt": "2026-11-17",
       "viewport": [
         1314,
         1046
@@ -89,7 +89,7 @@ Choose a duration of one or two weeks, the starting weekday, one to four upcomin
 
 The current cycle is filled automatically once from eligible work. To add an issue manually, use its menu’s cycle action and choose the current or next period when available. Adding an issue assigns it to the cycle owner without changing its status. Triage, done, canceled and duplicate issues cannot be added through this action. Inspect the assignee and blockers after adding work; removing an issue from the cycle keeps the issue in its project.
 
-![Personal cycle for Oct 12 – 25 with an empty Backlog and Aurora and Beacon issues in Todo and In progress.](/documentation/en/reader-cycle.png)
+![Personal cycle for Nov 9 – 22 with Lumen, Aurora and Beacon issues from Backlog to In review.](/documentation/en/reader-cycle.png)
 
 ## Finish or adjust the period {#cycle-results}
 
