@@ -48,6 +48,10 @@
 	<string>minddy uses the microphone when you dictate text.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>minddy reads the photos you choose to attach to an issue, a page or a message.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>minddy saves the images you choose to add to your photos.</string>
+	<key>MinddyPreferDisplayRate</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

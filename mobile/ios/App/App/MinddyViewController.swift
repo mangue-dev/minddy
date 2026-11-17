@@ -45,22 +45,58 @@ final class MinddyViewController: CAPBridgeViewController {
     /// 120 Hz: every animation of the product looked uneven next to it.
     /// WebKit offers no public setting for it; this turns the flag off
     /// through `WKPreferences`'s private feature list, the one behind Safari's
-    /// "Prefer Page Rendering Updates near 60fps". A WebKit without the flag
-    /// is left as it is. `CADisableMinimumFrameDurationOnPhone` in Info.plist
-    /// lets the app ask for more than 60 Hz at all.
+    /// "Prefer Page Rendering Updates near 60fps". `CADisableMinimumFrameDurationOnPhone`
+    /// in Info.plist lets the app ask for more than 60 Hz at all.
+    ///
+    /// It is the only private call the shell makes for looks alone (App Store
+    /// guideline 2.5.1; mobile/README.md, "App Store review"), so it is kept
+    /// as narrow as it can be:
+    /// - `MinddyPreferDisplayRate` in Info.plist turns it on. Set to false, or
+    ///   removed, the build never makes the call, without a code change.
+    /// - It runs only on a display faster than 60 Hz, where it changes
+    ///   something.
+    /// - It calls the setter only when the setter still takes a BOOL and an
+    ///   object and returns nothing, so a WebKit that changed it is left as it
+    ///   is rather than crashing. A WebKit without the flag is left alone too.
     private static func drawAtDisplayRate(_ preferences: WKPreferences) {
+        guard Bundle.main.object(forInfoDictionaryKey: "MinddyPreferDisplayRate") as? Bool == true,
+              maximumDisplayRate > 60 else { return }
         let featuresSelector = NSSelectorFromString(["_", "features"].joined())
         let setSelector = NSSelectorFromString(["_setEnabled", ":forFeature:"].joined())
         guard WKPreferences.responds(to: featuresSelector),
               preferences.responds(to: setSelector),
+              let method = class_getInstanceMethod(WKPreferences.self, setSelector),
+              takesBoolAndObject(method),
               let features = WKPreferences.perform(featuresSelector)?.takeUnretainedValue() as? [NSObject],
               let feature = features.first(where: {
                   ($0.value(forKey: "key") as? String) == "PreferPageRenderingUpdatesNear60FPSEnabled"
-              }),
-              let method = class_getInstanceMethod(WKPreferences.self, setSelector) else { return }
+              }) else { return }
         typealias SetEnabled = @convention(c) (AnyObject, Selector, Bool, AnyObject) -> Void
         let setEnabled = unsafeBitCast(method_getImplementation(method), to: SetEnabled.self)
         setEnabled(preferences, setSelector, false, feature)
+    }
+
+    /// The highest refresh rate of the screens the app is on, 0 before a
+    /// scene is connected.
+    private static var maximumDisplayRate: Int {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.screen.maximumFramesPerSecond }
+            .max() ?? 0
+    }
+
+    /// Whether `method` is `- (void)name:(BOOL)value name:(id)object`, the
+    /// shape the call in `drawAtDisplayRate` is cast to.
+    private static func takesBoolAndObject(_ method: Method) -> Bool {
+        guard method_getNumberOfArguments(method) == 4 else { return false }
+        func type(_ copy: UnsafeMutablePointer<CChar>?) -> String? {
+            guard let copy else { return nil }
+            defer { free(copy) }
+            return String(cString: copy)
+        }
+        // BOOL is `B` on arm64 and `c` where it is a signed char.
+        return type(method_copyReturnType(method)) == "v"
+            && ["B", "c"].contains(type(method_copyArgumentType(method, 2)))
+            && type(method_copyArgumentType(method, 3)) == "@"
     }
 
     override func capacitorDidLoad() {
@@ -237,19 +273,16 @@ final class MinddyViewController: CAPBridgeViewController {
     }
 
     /// The radius of the corners of the screen showing the app, in points, or
-    /// 0 when the system does not say. UIKit has no public reading of it; the
-    /// screen answers a private key, asked for only when it responds to it.
-    /// The page uses it to round what it slides or raises to the shape of the
-    /// device.
+    /// 0 when the system does not say. The page uses it to round what it
+    /// slides or raises to the shape of the device.
     ///
-    /// The screen is the window's, not `UIScreen.main`: iPhone Duo has two
-    /// displays with corners of their own, and `UIScreen.main` does not say
-    /// which one the app is on.
+    /// It is the largest of the corners `screenCornerRadii` reads, through
+    /// public UIKit from iOS 26 on. Before iOS 26 UIKit has no public reading
+    /// of it, and the page keeps its own defaults (App Store guideline 2.5.1:
+    /// no private API). The largest, because iPhone Duo's outer display is a
+    /// D whose square corners say 0.
     var screenCornerRadius: CGFloat {
-        guard let screen = view.window?.windowScene?.screen else { return 0 }
-        let key = ["_display", "Corner", "Radius"].joined()
-        guard screen.responds(to: NSSelectorFromString(key)) else { return 0 }
-        return screen.value(forKey: key) as? CGFloat ?? 0
+        CGFloat(screenCornerRadii?.values.max() ?? 0)
     }
 
     /// A view over the whole window whose corners follow its container's,
