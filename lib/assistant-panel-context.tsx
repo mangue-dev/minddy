@@ -13,7 +13,6 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import type {
-  AssistantCommandId,
   AssistantMention,
   NumoIntent,
   AssistantPageContext,
@@ -35,13 +34,11 @@ export interface OpenAssistantOptions {
   /** Auto-send a one-shot message right after opening. */
   prompt?: string;
   /**
- * What the "@" and "/" of the original composer set in `prompt`.
- * Home opens its own composer, mentions and command included: without
- * these two, the text would arrive at Numo but stripped of what it
- * designates — a mention becomes text again, a command with no effect.
+ * What the "@" of the original composer set in `prompt`. Home opens its own
+ * composer, mentions included: without them, the text would arrive at Numo
+ * stripped of what it designates — a mention becomes text again.
  */
   mentions?: AssistantMention[];
-  command?: AssistantCommandId;
   /**
  * Attachments from the original composer, ALREADY uploaded: `ResourceInput`
  * only carries a storage path, not a file. The reception can therefore en
@@ -239,7 +236,6 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
         prompt: intent.prompt,
         pageContext: intent.pageContext,
         mentions: intent.mentions,
-        command: intent.command,
         attachments: intent.attachments,
         intent: { source: intent.source, action: intent.action },
         displayMode: opts?.displayMode,

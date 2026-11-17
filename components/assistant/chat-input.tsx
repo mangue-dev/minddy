@@ -58,8 +58,7 @@ import {
   SlashMenu,
   filterSlashOptions,
   repositorySkillOptions,
-  type SlashCommandOption,
-  type SlashMenuOption,
+  type SlashSkillOption,
 } from "@/components/assistant/slash-menu";
 import { SkillChip } from "@/components/assistant/skill-chip";
 import { SkillPreviewDialog } from "@/components/assistant/skill-preview-dialog";
@@ -101,7 +100,6 @@ import {
 } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
 import type {
-  AssistantCommandId,
   AssistantMention,
   AssistantPinnedContext,
 } from "@/lib/assistant-types";
@@ -136,16 +134,6 @@ const COMPOSER_TEXT_FADE_PX = 20;
 const MENTION_SLOT_CLASS = "inline-block max-w-full align-baseline";
 const SKILL_SLOT_CLASS = MENTION_SLOT_CLASS;
 
-/** The pill of a “/” command placed at the top of the message: same geometry as
- the pill of mention, without a figure — the “/” is enough to say what it is.
- It carries its text directly (no portal: nothing to re-render).
-
- It keeps the background NEUTRAL (the fallback of `--mention-chip`, cf. globals.css) there
- where the mentions are now colored by type: a command does not cite anything,
- it therefore has no color to follow. */
-const COMMAND_PILL_CLASS =
-  "mx-0.5 inline-block whitespace-nowrap rounded-[5px] bg-(--mention-chip) px-1.5 py-px align-baseline text-[0.95em] font-medium leading-4 text-primary";
-
 /** What an envelope can say about itself: enough to return it without anything
  other than the DOM (a ⌘Z cancellation can return it well after the fact).
  Every typed target can be mentioned here, as in any editor (MIN-872). */
@@ -153,7 +141,6 @@ const MENTION_TYPES: ReadonlySet<string> = new Set(LINK_MENTION_TYPES);
 
 type ActiveSlashQuery = ActiveComposerMenuQuery & {
   node: Text;
-  commandsAllowed: boolean;
 };
 
 /** Reads a composer pill back into its option (exported for tests). */
@@ -193,7 +180,7 @@ export function mentionFromNode(node: HTMLElement): MentionOption | null {
 /**
  * The message a composer's content sends (exported for tests): its text, a
  * typed mention as its link without a name (MIN-872), Numo and a forge login
- * as "@Name", a command and a skill as "/name".
+ * as "@Name", a skill as "/name".
  */
 export function composerText(root: HTMLElement): string {
   const parts: string[] = [];
@@ -215,14 +202,6 @@ export function composerText(root: HTMLElement): string {
       }
       if (element.dataset.mentionLabel) {
         parts.push(`@${element.dataset.mentionLabel}`);
-        return;
-      }
-
-      // A command is written “/label” — the text that the pill shows
-      // already, but read from its data: the rendering can evolve without changing
-      // what goes into the message.
-      if (element.dataset.commandLabel) {
-        parts.push(`/${element.dataset.commandLabel}`);
         return;
       }
 
@@ -384,8 +363,6 @@ export interface ChatInputProps {
     message: string,
     attachments: ResourceInput[],
     mentions: AssistantMention[],
-    /** The “/” command placed at the top of the message, when there is one. */
-    command?: AssistantCommandId,
     /** Repository skills explicitly attached to this message. */
     skills?: RepositorySkillSummary[],
   ) => void | boolean;
@@ -439,13 +416,10 @@ export interface ChatInputProps {
    * left-side add button combines this flat picker with file upload. */
   onAddContext?: (item: AssistantPinnedContext) => void;
   /**
-   * The “/” commands offered when the message STARTS with a slash.
-   * Empty/absent = no slash menu at all (composers outside the Numo shell).
-   * Choose a command and place it as a non-editable pill at the top of the message;
-   * its canonical id leaves with the sending (4th argument of `onSend`).
+   * Agent Skills discovered in the active project's linked repository, offered
+   * by the “/” menu. Absent = no slash menu at all (composers outside the Numo
+   * shell).
    */
-  commands?: SlashCommandOption[];
-  /** Agent Skills discovered in the active project's linked repository. */
   skills?: RepositorySkillSummary[];
   /** Loads the selected skill instructions only when its badge is opened. */
   loadSkill?: (
@@ -524,7 +498,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       mentionables,
       onMentionQuery,
       onAddContext,
-      commands,
       skills,
       loadSkill,
       initialValue,
@@ -986,7 +959,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         filterSlashOptions(
           repositorySkillOptions(availableSkills),
           addMenuQuery,
-        ).filter((option) => option.kind === "skill"),
+        ),
       [addMenuQuery, availableSkills],
     );
 
@@ -1061,14 +1034,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return selected;
     }, []);
 
-    // ── Commands and inline skills “/” ──────────────────────────────
+    // ── Inline skills “/” ───────────────────────────────────────────
     // Skills follow the mention contract: read the query in the text node under
-    // the caret and replace only that fragment. Commands remain start-only.
+    // the caret and replace only that fragment.
     const [slashQuery, setSlashQuery] = useState<ActiveSlashQuery | null>(null);
     const [slashIndex, setSlashIndex] = useState(0);
 
     const readSlash = useCallback((): ActiveSlashQuery | null => {
-      if (!commands?.length && skills === undefined) return null;
+      if (skills === undefined) return null;
       const el = editorRef.current;
       const selection = window.getSelection();
       if (!el || !selection || !selection.isCollapsed) return null;
@@ -1078,18 +1051,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const before = (node.textContent ?? "").slice(0, end);
       const trigger = findActiveComposerMenuQuery(before);
       if (!trigger) return null;
-      const editorNodes = [...el.childNodes];
-      const last = editorNodes[editorNodes.length - 1];
-      if (last instanceof HTMLElement && last.tagName === "BR") editorNodes.pop();
-      const commandsAllowed =
-        trigger.prefix === "/" &&
-        trigger.start === 0 &&
-        editorNodes.length === 1 &&
-        node === editorNodes[0] &&
-        end === (node.textContent ?? "").length;
-      if (!commandsAllowed && skills === undefined) return null;
-      return { ...trigger, node: node as Text, commandsAllowed };
-    }, [commands, skills]);
+      return { ...trigger, node: node as Text };
+    }, [skills]);
 
     // Reread on typing only: Escape closes the menu, and it does not reopen
     // only at the next character typed — not at the slightest movement of the caret.
@@ -1100,8 +1063,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         prev?.prefix === next?.prefix &&
         prev?.query === next?.query &&
         prev?.start === next?.start &&
-        prev?.end === next?.end &&
-        prev?.commandsAllowed === next?.commandsAllowed
+        prev?.end === next?.end
           ? prev
           : next,
       );
@@ -1112,15 +1074,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         slashQuery === null
           ? []
           : filterSlashOptions(
-              !slashQuery.commandsAllowed
-                ? repositorySkillOptions(availableSkills)
-                : [
-                    ...(commands ?? []),
-                    ...repositorySkillOptions(availableSkills),
-                  ],
+              repositorySkillOptions(availableSkills),
               slashQuery.query,
             ),
-      [slashQuery, commands, availableSkills],
+      [slashQuery, availableSkills],
     );
     const slashOpen = slashOptions.length > 0;
     // Escape in an open menu closes that menu, never the panel around the
@@ -1281,58 +1238,16 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       Math.max(0, slashOptions.length - 1),
     );
 
-    // The query changes → we start from the first command.
+    // The query changes → we start from the first skill.
     useEffect(() => setSlashIndex(0), [slashQuery]);
 
-    const insertCommand = useCallback((option: SlashCommandOption) => {
-      const el = editorRef.current;
-      if (!el) return;
-      // The composer only contains “/request” (condition for opening the
-      // menu): everything is replaced by the pill, followed by the non-breaking space
-      // which makes a node editable with caret — same gesture as the mentions.
-      el.replaceChildren();
-      const pill = document.createElement("span");
-      pill.contentEditable = "false";
-      pill.dataset.commandId = option.id;
-      pill.dataset.commandLabel = option.label;
-      pill.className = COMMAND_PILL_CLASS;
-      pill.textContent = `/${option.label}`;
-      el.appendChild(pill);
-      const space = document.createTextNode(" ");
-      pill.after(space);
-
-      const sel = window.getSelection();
-      if (sel) {
-        const after = document.createRange();
-        after.setStart(space, 1);
-        after.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(after);
-      }
-      el.focus();
-      setSlashQuery(null);
-      setIsEmpty(false);
-      publishDraft();
-    }, [publishDraft]);
-
     const insertSlashOption = useCallback(
-      (option: SlashMenuOption) => {
-        if (option.kind === "skill") {
-          const activeQuery = readSlash();
-          if (activeQuery) placeSkill(option.skill, activeQuery);
-        } else {
-          insertCommand(option);
-        }
+      (option: SlashSkillOption) => {
+        const activeQuery = readSlash();
+        if (activeQuery) placeSkill(option.skill, activeQuery);
       },
-      [insertCommand, placeSkill, readSlash],
+      [placeSkill, readSlash],
     );
-
-    /** The command actually placed at the top of the message, if there is one. */
-    const collectCommand = useCallback((): AssistantCommandId | undefined => {
-      const node =
-        editorRef.current?.querySelector<HTMLElement>("[data-command-id]");
-      return (node?.dataset.commandId as AssistantCommandId | undefined) ?? undefined;
-    }, []);
 
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
@@ -1345,7 +1260,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         uploads.inputs,
         // Mentions travel in the text as typed links (MIN-872).
         [],
-        collectCommand(),
         collectSkills(),
       );
       if (accepted === false) return;
@@ -1372,7 +1286,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       sendDisabled,
       clearEditor,
       uploads,
-      collectCommand,
       collectSkills,
     ]);
 
@@ -1880,12 +1793,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             style={menuPlacement("16rem")}
           />
         )}
-        {/* The command/skill menu shares the mention list's floating position.
-        Skills open for “/” or “$” at the caret; commands require “/” at the start. */}
+        {/* The skill menu shares the mention list's floating position and
+        opens for “/” at the caret. */}
         {slashOpen && (
           <SlashMenu
             options={slashOptions}
-            prefix={slashQuery?.prefix ?? "/"}
             activeIndex={activeSlash}
             onPick={insertSlashOption}
             onHover={setSlashIndex}
@@ -1902,8 +1814,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             {mergedContext}
           </div>
         ) : null}
-        {/* One radius at every height: half the compact row (52px, or 54px
-        under a finger, whose 16px text sets a taller line), so a taller
+        {/* One radius at every height: half the compact row (52px, 54px
+        under a finger, whose 16px text sets a taller line, and 60px in the
+        phone layout, whose icon buttons grow to 40px), so a taller
         composer never rounds further than the pill it grows from. The rows
         inside take their gutter from it: a `rounded-md` pill behind
         `radius - radius-md` stays concentric with the surface, as the 32px
@@ -1911,7 +1824,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         <AgentBeam
           active={!!beam}
           keepMounted
-          className="relative z-10 rounded-(--composer-radius) [--composer-gutter:calc(var(--composer-radius)_-_var(--radius-md))] [--composer-radius:26px] pointer-coarse:[--composer-radius:27px]"
+          className="relative z-10 rounded-(--composer-radius) [--composer-gutter:calc(var(--composer-radius)_-_var(--radius-md))] [--composer-radius:26px] pointer-coarse:[--composer-radius:27px] app-mobile:[--composer-radius:30px]"
         >
         <div
           data-composer-layout={expandedLayout ? "expanded" : "compact"}

@@ -43,6 +43,7 @@ import {
 } from "@/components/editor/suggestion-chip";
 import { caretMenuPosition, editorMenuBand } from "@/lib/visible-band";
 import { haptic } from "@/lib/mobile/haptics";
+import { foldSearchText } from "@/lib/search-fold";
 
 /** The section an entry is listed under, with its translated header. */
 export interface PageSlashSection {
@@ -114,12 +115,12 @@ export function filterSlashItems(
   items: PageSlashItem[],
   query: string
 ): PageSlashItem[] {
-  const q = query.toLowerCase().trim();
+  const q = foldSearchText(query.trim());
   if (!q) return items;
   return items.filter(
     (item) =>
-      item.label.toLowerCase().includes(q) ||
-      item.keywords.some((k) => k.toLowerCase().includes(q))
+      foldSearchText(item.label).includes(q) ||
+      item.keywords.some((k) => foldSearchText(k).includes(q))
   );
 }
 

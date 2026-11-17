@@ -1,5 +1,6 @@
 /**
- * workflowIssue — the creation modal, populated with AUR-2, before the click.
+ * workflowIssue — the creation modal with Smart Fill on and AUR-2's description,
+ * before the click.
  *
  * See `intent.md`: this capture replaced the Plan tab
  * (`shots/issue-plan`), which showed the agent's work under a caption
@@ -29,41 +30,23 @@ const AURORA = auroraProjectId(CAPTURE.baseUrl);
 const VIEWPORT = { width: 1447, height: 1085 };
 
 /**
- * The ticket entered is AUR-2, verbatim: the agent run and the pull request
+ * The description entered is AUR-2's, verbatim: the agent run and the pull request
  * photographed in the following two times carry the SAME ticket. These are
  * also data — therefore identical in French and English, and as such
  * the only verification anchors that do not break every other variation.
  */
 const ISSUE = {
-  title: "Add keyboard shortcuts to the command palette",
   description:
     "Power users live in the palette but still reach for the mouse to run an action. " +
     "Show the shortcut next to each row, and make it work from anywhere in the app.",
-  category: "Feature",
-  effort: "M",
 };
 
-/**
- * Accessible labels of the property row, and the only option label
- * that is translated (the priority — the efforts are letters, the categories
- * data). The S/P/E/L keyboard shortcuts would have avoided this table, but
- * they are filtered as long as the focus is in the title or description.
- */
-const fieldButton = (field) =>
-  new RegExp(`^${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s?:`);
-
+/** The translated labels the script looks for. */
 async function uiLabels(locale) {
   const messages = await catalog(locale);
   return {
     dialog: messages.IssueUI.newIssueTitle,
-    // Field buttons announce their value since MIN-783 ("Priority: None"),
-    // with the French space before the colon.
-    priority: fieldButton(messages.Field.priority),
-    effort: fieldButton(messages.Field.effort),
-    categories: fieldButton(messages.Field.categories),
-    highPriority: messages.Priority.high,
     smartFill: messages.IssueUI.smartFillChip,
-    title: messages.Field.title,
   };
 }
 
@@ -111,66 +94,21 @@ async function capture({ locale, theme }) {
     const dialog = page.getByRole("dialog", { name: words.dialog, exact: true });
     await dialog.waitFor({ state: "visible", timeout: 10_000 });
 
-    // Smart Fill first: since MIN-813 the form hides the title while Smart
-    // Fill writes it, so the title only appears once Smart Fill is off.
+    // Smart Fill stays ON: it is the feature this image shows. Since MIN-813
+    // the form hides the title while Smart Fill writes it, and the properties
+    // it fills (priority, effort, categories, objective) leave the row. The
+    // user writes two sentences; Smart Fill does the rest after the click.
     const smartFill = dialog.getByRole("button", { name: words.smartFill });
     await smartFill.waitFor({ state: "visible", timeout: 10_000 });
-    if ((await smartFill.getAttribute("aria-pressed")) === "true") {
+    if ((await smartFill.getAttribute("aria-pressed")) !== "true") {
       await smartFill.click();
     }
-    const titleField = dialog.getByLabel(words.title, { exact: true });
-    await titleField.waitFor({ state: "visible", timeout: 10_000 });
-    await titleField.click();
-    await page.keyboard.type(ISSUE.title, { delay: 6 });
 
     // The description is a ProseMirror editor, not a textarea: we enter
-    // on click, otherwise the typing continues to arrive in the title.
+    // on click so the typing lands in the editor.
     const editor = dialog.locator('[contenteditable="true"]').first();
     await editor.click();
     await page.keyboard.type(ISSUE.description, { delay: 3 });
-
-    // ── Smart-fill: cut it, otherwise there is nothing to fill ───────────────
-    // MIN-260 has Smart-fill armed by DEFAULT, and when active the row does not
-    // keeps only the three properties it does not touch (status, assigned,
-    // deadline): priority, effort, categories and objective are REMOVED from the DOM,
-    // not grayed out. The script therefore no longer found them.
-    //
-    // The caption of the landing says “One title, two sentences, one priority”:
-    // This is the entire row that the image should show. We therefore cut the
-    // rocker — punctual gesture, rested at each opening, which does not change any
-    // account setting.
-    // Smart Fill was switched off before typing the title (see above).
-    await dialog
-      .getByRole("button", { name: words.priority })
-      .waitFor({ state: "visible", timeout: 10_000 });
-
-    // ── Properties ─────────────────────────── ───────────────────────────
-    // The list is rebuilt by cmdk when it opens: click on
-    // the option as soon as it appears falls every other time on a node already
-    // detached. So we wait for the list, THEN the option.
-    const pick = async (trigger, option) => {
-      await dialog.getByRole("button", { name: trigger }).click();
-      const list = page.getByRole("listbox").last();
-      await list.waitFor({ state: "visible", timeout: 10_000 });
-      const item = list.getByRole("option", { name: option, exact: true });
-      await item.waitFor({ state: "visible", timeout: 10_000 });
-      await item.click();
-    };
-
-    // The categories FIRST: it is a multi-select, it remains open after the
-    // selection and must be closed by hand. The next two close
-    // alone, so nothing is left behind when taken.
-    await pick(words.categories, ISSUE.category);
-    await page.keyboard.press("Escape");
-    if (!(await dialog.isVisible())) {
-      throw new Error(
-        `${locale}/${theme} — l'Échap qui devait fermer le sélecteur de catégories ` +
-          `a fermé la modale. Le popover n'était donc pas ouvert au moment de la touche.`,
-      );
-    }
-
-    await pick(words.priority, words.highPriority);
-    await pick(words.effort, ISSUE.effort);
 
     // ── Turn off anything that floats ──────────────────── ─────────────────────
     // Two overlays compete for the middle of the modal, and order matters.
@@ -190,17 +128,16 @@ async function capture({ locale, theme }) {
     await settleOverlays(page);
 
     // ── Controls ───────────────────────────── ──────────────────────────────
-    const check = await dialog.evaluate((el, { title, description, category }) => {
+    const check = await dialog.evaluate((el, { description }) => {
       const text = el.textContent || "";
-      const titleField = el.querySelector("textarea");
+      const smartFillChip = el.querySelector('button[aria-pressed="true"]');
       const submit = [...el.querySelectorAll("button")].find(
         (b) => b.type === "submit",
       );
       return {
         // The first sentence is enough: ProseMirror can intersect nodes.
-        hasTitle: (titleField?.value || "").includes(title),
+        smartFillOn: !!smartFillChip,
         hasDescription: text.includes(description.split(". ")[0]),
-        hasCategory: text.includes(category),
         // Open selector or surviving tooltip: both
         // would photograph over the modal.
         floating: [
@@ -212,22 +149,16 @@ async function capture({ locale, theme }) {
       };
     }, ISSUE);
 
-    if (!check.hasTitle) {
+    if (!check.smartFillOn) {
       throw new Error(
-        `${locale}/${theme} — le titre n'est pas dans le champ. La frappe est ` +
-          `partie ailleurs : la modale n'avait pas le focus, ou elle n'était pas ouverte.`,
+        `${locale}/${theme} — Smart Fill is off. The image must show it armed: ` +
+          `it is the feature this capture exists for.`,
       );
     }
     if (!check.hasDescription) {
       throw new Error(
         `${locale}/${theme} — la description est absente. Le clic dans l'éditeur ` +
           `ProseMirror n'a pas pris, la frappe est restée dans le titre.`,
-      );
-    }
-    if (!check.hasCategory) {
-      throw new Error(
-        `${locale}/${theme} — la catégorie « ${ISSUE.category} » n'apparaît pas. ` +
-          `Les catégories du projet de démo ne sont plus en anglais ?`,
       );
     }
     if (check.floating.length > 0) {
@@ -256,7 +187,7 @@ async function capture({ locale, theme }) {
 const results = [];
 for (const variant of VARIANTS) {
   const r = await capture(variant);
-  console.log(`  ${r.locale}/${r.theme} → ${r.path} · titre + 2 phrases · haute / M / Feature`);
+  console.log(`  ${r.locale}/${r.theme} → ${r.path} · 2 sentences · Smart Fill on`);
   results.push(r);
 }
 

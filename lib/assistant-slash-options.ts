@@ -1,3 +1,5 @@
+import { foldSearchText } from "./search-fold";
+
 export interface SlashSearchOption {
   label: string;
   description: string;
@@ -60,11 +62,11 @@ export function filterSlashOptions<T extends SlashSearchOption>(
   options: readonly T[],
   query: string,
 ): T[] {
-  const normalized = query.trim().toLowerCase();
+  const normalized = foldSearchText(query.trim());
   return options.filter((option) =>
     normalized
       ? [option.label, option.description, ...(option.keywords ?? [])].some((term) =>
-          term.toLowerCase().includes(normalized),
+          foldSearchText(term).includes(normalized),
         )
       : true,
   );

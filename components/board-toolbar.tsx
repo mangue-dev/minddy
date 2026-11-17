@@ -77,6 +77,7 @@ import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { displayName } from "@/lib/display-name";
+import { isOpenObjectiveStatus } from "@/lib/objective-order";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import type {
   Category,
@@ -242,14 +243,23 @@ function FiltersPopover({
     () => buildFacetOptions(categories, groupFacetsByName, (c) => c.color),
     [categories, groupFacetsByName]
   );
-  const objectiveOptions = useMemo(
-    () => buildFacetOptions(objectives, groupFacetsByName, (o) => o.color),
-    [objectives, groupFacetsByName]
-  );
   const objectiveStatusById = useMemo(
     () => new Map(objectives.map((o) => [o.id, o.status])),
     [objectives]
   );
+  // Open objectives first, done and canceled ones below, as in every
+  // objective picker (MIN-785). The sort is stable: a list the caller has
+  // already ordered keeps its order inside each group. The global board
+  // hands its objectives unordered, so this is where they get their order.
+  const objectiveOptions = useMemo(() => {
+    const options = buildFacetOptions(objectives, groupFacetsByName, (o) => o.color);
+    const open = (option: FacetOption) =>
+      option.ids.some((id) => {
+        const status = objectiveStatusById.get(id);
+        return !status || isOpenObjectiveStatus(status);
+      });
+    return options.sort((a, b) => Number(open(b)) - Number(open(a)));
+  }, [objectives, groupFacetsByName, objectiveStatusById]);
   const integrationOptions = useMemo(
     () => buildFacetOptions(integrations, groupFacetsByName),
     [integrations, groupFacetsByName]
@@ -283,6 +293,7 @@ function FiltersPopover({
         ...members.map((m) => filterToggle({
           id: m.user_id,
           label: displayName(m),
+          icon: <UserAvatar seed={m.avatar_seed} className="size-4 shrink-0 rounded-full" aria-hidden />,
           active: !!f.assignee?.includes(m.user_id),
           onToggle: () => setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) }),
         })),

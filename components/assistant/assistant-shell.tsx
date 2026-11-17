@@ -66,11 +66,9 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import { numoCitations, numoCitedMentions } from "@/lib/numo-cited-mentions";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { MentionLinksProvider } from "@/components/mention-links";
-import { useSlashCommands } from "@/components/assistant/slash-menu";
 import { useProjects } from "@/lib/projects-context";
 import type {
   AssistantChatRequest,
-  AssistantCommandId,
   AssistantMention,
   AssistantMessage,
   AssistantPageContext,
@@ -99,7 +97,7 @@ export type AssistantDisplayMode = "compact" | "expanded";
 export interface AssistantShellHandle {
   /** Send a message. `projectId` null = global mode. The remaining options
    * apply only to this send: page context for contextual openings, plus the
-   * mentions, command, and attachments from a composer outside this shell
+   * mentions and attachments from a composer outside this shell
    * (such as home). An absent `pageContext` uses the shell context. */
   sendMessage: (
     projectId: string | null,
@@ -107,7 +105,6 @@ export interface AssistantShellHandle {
     options?: {
       pageContext?: AssistantPageContext | null;
       mentions?: AssistantMention[];
-      command?: AssistantCommandId;
       attachments?: ResourceInput[];
       skills?: AssistantSkillSelection[];
       intent?: AssistantChatRequest["intent"];
@@ -446,7 +443,6 @@ export const AssistantShell = forwardRef<
                   ? opts.pageContext
                   : effectiveContextRef.current,
               ...(opts?.mentions?.length ? { mentions: opts.mentions } : {}),
-              ...(opts?.command ? { command: opts.command } : {}),
               ...(opts?.attachments?.length
                 ? { attachments: opts.attachments }
                 : {}),
@@ -486,7 +482,6 @@ export const AssistantShell = forwardRef<
       message: string,
       attachments: ResourceInput[] = [],
       mentions: AssistantMention[] = [],
-      command?: AssistantCommandId,
       skills: AssistantSkillSelection[] = [],
       intent?: AssistantChatRequest["intent"],
     ) => {
@@ -502,7 +497,6 @@ export const AssistantShell = forwardRef<
         pageContext: sentContext,
         attachments,
         mentions,
-        command,
         skills,
         intent,
         ...(opening ? { homeBriefId: opening } : {}),
@@ -518,7 +512,6 @@ export const AssistantShell = forwardRef<
     [aiAvailability.available, aiAvailability.loading, sendMessage, clearSelectionContext]
   );
 
-  const slashCommands = useSlashCommands();
   const repositorySkills = useRepositorySkills(
     projectId,
     state.conversationId,
@@ -1382,7 +1375,6 @@ export const AssistantShell = forwardRef<
                   onMentionQuery={onMentionQuery}
                   onAddContext={addPinned}
                   leadingControls={<ConversationSettings />}
-                  commands={slashCommands}
                   skills={projectId ? repositorySkills.skills : undefined}
                   loadSkill={repositorySkills.load}
                   contextSlot={(attachments: ChatInputContextAttachments) => (

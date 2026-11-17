@@ -40,7 +40,7 @@ import { anchorKey } from "@/components/ui/overlay-freeze";
 import { ChevronRightIcon } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckIcon } from "@hugeicons/core-free-icons";
-import { Kbd } from "@/components/ui/kbd";
+import { KbdShortcut } from "@/components/ui/kbd";
 import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
 import { searchActionTree } from "@/lib/action-menu-search";
 import { Unfold } from "@/components/ui/unfold";
@@ -265,7 +265,7 @@ function LeafItem({
       {action.checked && <HugeiconsIcon icon={CheckIcon} className={action.trailing != null ? "size-4" : "ml-auto size-4"} />}
       {action.shortcut && (
         <DropdownMenuShortcut>
-          <Kbd size="sm">{action.shortcut}</Kbd>
+          <KbdShortcut shortcut={action.shortcut} />
         </DropdownMenuShortcut>
       )}
     </DropdownMenuItem>
@@ -290,7 +290,7 @@ function ActionNode({
           {action.trailing != null && <TrailingDetail>{action.trailing}</TrailingDetail>}
           {action.shortcut && (
             <DropdownMenuShortcut>
-              <Kbd size="sm">{action.shortcut}</Kbd>
+              <KbdShortcut shortcut={action.shortcut} />
             </DropdownMenuShortcut>
           )}
         </DropdownMenuSubTrigger>

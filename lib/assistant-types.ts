@@ -162,14 +162,6 @@ export interface AssistantPinnedContext {
 }
 
 /**
- * A “/” command chosen from the composer slash menu. The id is canonical
- * (the label is localized - "/create issue" / "/create ticket"):
- * it is he who travels in the request and persists on `metadata.command`
- * of the user message, where the server unfolds it into instructions for Numo.
- */
-export type AssistantCommandId = "create-issue";
-
-/**
  * An "@" mention written IN the message (team member, project, ticket
  * or goal), resolved at the time of typing. Persisted on
  * `metadata.mentions` of the user message: it is used to return the pill
@@ -372,7 +364,6 @@ export interface NumoIntent {
   prompt?: string;
   pageContext?: AssistantPageContext;
   mentions?: AssistantMention[];
-  command?: AssistantCommandId;
   attachments?: ResourceInput[];
 }
 
@@ -427,12 +418,6 @@ export interface AssistantChatRequest {
    * resolution line name → id.
    */
   mentions?: AssistantMention[];
-  /**
-   * The “/” command placed at the top of the message, when there is one. Validated
-   * server, persisted on the message metadata and unfolded as a block
-   * of instructions attached to this message (same mechanics as the mentions).
-   */
-  command?: AssistantCommandId;
   /** Repository entrypoints selected through the slash or add menu. */
   skillPaths?: string[];
   skills?: AssistantSkillSelection[];

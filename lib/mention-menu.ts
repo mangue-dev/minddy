@@ -1,4 +1,5 @@
 import { isExactIssueQuery, orderIssuesForSearch } from "@/lib/issue-search-order";
+import { foldSearchText } from "./search-fold";
 
 export interface MentionSearchItem {
   type: string;
@@ -123,11 +124,11 @@ export function filterMentionItems<T extends MentionSearchItem>(
   items: readonly T[],
   query: string,
 ): T[] {
-  const normalized = query.trim().toLocaleLowerCase();
+  const normalized = foldSearchText(query.trim());
   const matches = normalized
     ? items.filter((item) =>
         [item.label, ...(item.keywords ?? [])].some((term) =>
-          term.toLocaleLowerCase().includes(normalized),
+          foldSearchText(term).includes(normalized),
         ),
       )
     : [...items];

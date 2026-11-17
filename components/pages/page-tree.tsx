@@ -55,7 +55,7 @@ import { AppTooltip } from "@/components/ui/app-tooltip";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { commentTarget } from "@/lib/comment-focus";
 
-/** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
+/** Tree row: 28 px tall, indented 16 px per level. */
 const INDENT = 16;
 
 /** Open state persistence key — one per project. */
@@ -74,10 +74,50 @@ function readExpanded(projectId: string): Set<string> {
   }
 }
 
+/**
+ * Which branches of a project's page tree are open, remembered per project.
+ * The Pages shell owns it so its header can fold every branch at once.
+ */
+export function usePageTreeExpansion(projectId: string) {
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  // Read after editing: `localStorage` does not exist in server rendering, and
+  // starting from a state different from that of the HTML would cause the hydration to diverge.
+  useEffect(() => {
+    setExpanded(readExpanded(projectId));
+  }, [projectId]);
+
+  const persist = useCallback(
+    (next: Set<string>) => {
+      setExpanded(next);
+      try {
+        window.localStorage.setItem(
+          expandedKey(projectId),
+          JSON.stringify([...next])
+        );
+      } catch {
+        // Private mode, full quota: the tree works, it doesn't remember.
+      }
+    },
+    [projectId]
+  );
+
+  const collapseAll = useCallback(() => persist(new Set()), [persist]);
+  return { expanded, setExpanded, persist, collapseAll };
+}
+
+export type PageTreeExpansion = ReturnType<typeof usePageTreeExpansion>;
+
+/** Whether at least one open branch actually shows children. */
+export function hasOpenBranch(pages: PageSummary[], expanded: Set<string>): boolean {
+  return pages.some((page) => page.parent_id !== null && expanded.has(page.parent_id));
+}
+
 export interface PageTreeProps {
   projectId: string;
   pages: PageSummary[];
   tree: PageTreeNode<PageSummary>[];
+  /** Open branches, owned by the shell (`usePageTreeExpansion`). */
+  expansion: PageTreeExpansion;
   /** The open page, highlighted and whose ancestors unfold. */
   activePageId: string | null;
   /** Title line text filter — not empty, the tree becomes a list. */
@@ -103,6 +143,7 @@ export function PageTree({
   projectId,
   pages,
   tree,
+  expansion,
   activePageId,
   query,
   onCreateChild,
@@ -119,27 +160,7 @@ export function PageTree({
   // Project readers (MIN-693) browse the tree: no reorder, no new subpage.
   const { canWrite } = useProjectCapabilities(projectId);
 
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  // Read after editing: `localStorage` does not exist in server rendering, and
-  // starting from a state different from that of the HTML would cause the hydration to diverge.
-  useEffect(() => {
-    setExpanded(readExpanded(projectId));
-  }, [projectId]);
-
-  const persist = useCallback(
-    (next: Set<string>) => {
-      setExpanded(next);
-      try {
-        window.localStorage.setItem(
-          expandedKey(projectId),
-          JSON.stringify([...next])
-        );
-      } catch {
-        // Private mode, full quota: the tree works, it doesn't remember.
-      }
-    },
-    [projectId]
-  );
+  const { expanded, setExpanded, persist } = expansion;
 
   const toggle = useCallback(
     (pageId: string) => {
@@ -169,7 +190,7 @@ export function PageTree({
           JSON.stringify([...next])
         );
       } catch {
-        /* voir persist */
+        /* see persist */
       }
       return next;
     });

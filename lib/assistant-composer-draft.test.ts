@@ -11,7 +11,7 @@ describe("assistant composer draft serialization", () => {
       '<span data-mention-id="issue"><span>MIN-523</span></span>',
       " with ",
       '<span data-skill-path="skills/review"><button>Review skill</button></span>',
-      ' <span data-command-id="research">/research</span>',
+      ' <strong>/research</strong>',
     ].join("");
 
     const snapshot = assistantDraftHtml(editor);

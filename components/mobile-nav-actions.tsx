@@ -13,7 +13,9 @@ import {
 } from "@/lib/assistant-chat-context";
 import { AppIcon } from "@/components/icon";
 import { useAssistantPanel, useAssistantPanelActions } from "@/lib/assistant-panel-context";
-import { useCreateActions } from "@/components/new-menu";
+import { useCreateActions, type CreateAction } from "@/components/new-menu";
+import { SCRATCHPAD_ICON } from "@/components/feature-icons";
+import { useOptionalScratchpad } from "@/lib/scratchpad-context";
 
 // No focus style of its own, like the other slots (components/mobile-navigation.tsx).
 const SLOT_CLASS = "flex h-full min-w-0 items-center justify-center rounded-full outline-none";
@@ -49,7 +51,21 @@ export function MobileNumoButton() {
 
 export function MobileCreateButton() {
   const tn = useTranslations("Nav");
-  const actions = useCreateActions();
+  const tScratchpad = useTranslations("Scratchpad");
+  const scratchpad = useOptionalScratchpad();
+  // The phone has no sidebar to reach the task notebook from: it joins the
+  // creation sheet, under the new project.
+  const actions: CreateAction[] = [
+    ...useCreateActions(),
+    ...(scratchpad
+      ? [{
+          key: "scratchpad",
+          icon: SCRATCHPAD_ICON,
+          label: tScratchpad("open"),
+          onSelect: () => scratchpad.open("click"),
+        }]
+      : []),
+  ];
   const createTrigger = useRef<HTMLButtonElement>(null);
   const [createOpen, setCreateOpen] = useState(false);
 

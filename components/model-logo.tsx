@@ -134,7 +134,9 @@ function LogoBySlug({
   className?: string;
 }) {
   const Logo = slug ? PROVIDER_LOGOS[slug] : undefined;
-  if (Logo) return <Logo size={size} className={cn("shrink-0", className)} />;
+  // The packaged SVG names itself with a `<title>`: kept for assistive
+  // technology, but the pointer passes through so no raw tooltip shows.
+  if (Logo) return <Logo size={size} className={cn("pointer-events-none shrink-0", className)} />;
   return (
     <HugeiconsIcon icon={CpuIcon} className={cn("shrink-0 text-muted-foreground", className)} style={{ width: size, height: size }} />
   );

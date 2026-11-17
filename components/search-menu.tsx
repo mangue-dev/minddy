@@ -9,7 +9,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Command as CommandPrimitive, defaultFilter } from "cmdk";
+import { Command as CommandPrimitive } from "cmdk";
+import { foldedCommandFilter } from "@/lib/command-filter";
 import { issueAwareFilter } from "@/lib/issue-search-order";
 
 /**
@@ -17,11 +18,11 @@ import { issueAwareFilter } from "@/lib/issue-search-order";
  * issue tier keyword (`issueTierKeyword`): work under way first, closed
  * issues last, an exact identifier before all. Other items score as before.
  */
-const searchMenuFilter = issueAwareFilter(defaultFilter);
+const searchMenuFilter = issueAwareFilter(foldedCommandFilter);
 import { Command, CommandEmpty, CommandSeparator } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { ResponsivePopover, ResponsivePopoverAnchor, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
-import { Kbd } from "@/components/ui/kbd";
+import { KbdShortcut } from "@/components/ui/kbd";
 import { PointerAnchor } from "@/components/pointer-anchor";
 import { anchorKey, useMountedWhileClosing } from "@/components/ui/overlay-freeze";
 import {
@@ -270,10 +271,5 @@ export function SearchMenu({
 
 function ShortcutHint({ keys }: { keys: string | readonly string[] | undefined }) {
   if (!keys?.length) return null;
-  if (typeof keys === "string") return <Kbd size="sm">{keys}</Kbd>;
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {keys.map((key, index) => <Kbd key={`${index}-${key}`} size="sm">{key}</Kbd>)}
-    </span>
-  );
+  return <KbdShortcut shortcut={keys} />;
 }

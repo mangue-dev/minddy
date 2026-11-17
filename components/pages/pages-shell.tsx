@@ -7,7 +7,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 // The persistent page tree and document surfaces for the project.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, File02Icon, StarIcon, StarOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, File02Icon, ListChevronsDownUpIcon, StarIcon, StarOffIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
@@ -18,7 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { PagePeekPanel } from "@/components/pages/page-peek-panel";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
-import { PageTree } from "@/components/pages/page-tree";
+import { PageTree, hasOpenBranch, usePageTreeExpansion } from "@/components/pages/page-tree";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyScene } from "@/components/empty-scene";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
 import { markDatabaseSetup } from "@/lib/page-database-setup";
@@ -71,6 +72,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const projectId = routeProjectId!;
   // Project readers (MIN-693) browse pages without creating any.
   const { canWrite } = useProjectCapabilities(projectId);
+  const treeExpansion = usePageTreeExpansion(projectId);
   const tDatabase = useTranslations("PageDatabase");
   const tCommon = useTranslations("Common");
   const previewFlush = useRef<() => Promise<boolean>>(async () => true);
@@ -337,12 +339,29 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
-          canWrite ? (
-            <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
-              <Button variant="ghost" size="icon" className={SIDEBAR_HEADER_ACTION_CLASS}
-                aria-label={tCommon("create")}><HugeiconsIcon icon={Add01Icon} className="size-4" /></Button>
-            } />
-          ) : undefined
+          <>
+            {/* Folds every branch back to the roots. Enabled only while a
+                branch is open and the tree is a tree (a filter flattens it). */}
+            {pages.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className={SIDEBAR_HEADER_ACTION_CLASS}
+                    aria-label={t("collapseAll")}
+                    disabled={query.trim() !== "" || !hasOpenBranch(pages, treeExpansion.expanded)}
+                    onClick={treeExpansion.collapseAll}>
+                    <HugeiconsIcon icon={ListChevronsDownUpIcon} className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("collapseAll")}</TooltipContent>
+              </Tooltip>
+            )}
+            {canWrite ? (
+              <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
+                <Button variant="ghost" size="icon" className={SIDEBAR_HEADER_ACTION_CLASS}
+                  aria-label={tCommon("create")}><HugeiconsIcon icon={Add01Icon} className="size-4" /></Button>
+              } />
+            ) : null}
+          </>
         }
       >
         {loading ? (
@@ -369,6 +388,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
             projectId={projectId}
             pages={pages}
             tree={tree}
+            expansion={treeExpansion}
             activePageId={activePageId}
             query={query}
             onCreateChild={(parentId) => void create(parentId)}

@@ -19,17 +19,17 @@ completed form, just before clicking on “Create”.
 
 - The modal **“New ticket”** placed on the Aurora board, which remains
 visible behind the veil — we create the ticket *in* the tracker.
-- A **title** and a **description of two sentences**, entered: the form is
-filled, not empty. There is no third text field to fill out.
-- Three properties placed in the compact row — **high priority**,
-**M effort**, **Feature category** — and nothing else. The row shows seven
-possible properties; leaving six empty makes the point that we ask for very
-little.
-- The **“Create in Aurora” button active**: the ticket leaves on the next click.
+- **Smart Fill armed** (its chip pressed). This is the feature the image
+exists for: the user writes two sentences, and Smart Fill writes the title and
+sets priority, effort, categories and objective after the click.
+- A **description of two sentences**, entered. With Smart Fill on, the form
+hides the title field (MIN-813) and the properties Smart Fill fills leave the
+row, so the description is the only thing the user typed.
+- The **create button active**: the ticket leaves on the next click.
 
 ## The ticket is AUR-2, word for word
 
-Title and description are those of AUR-2 in the demo world
+The description is that of AUR-2 in the demo world
 (`captures/world/seed/002-projet-aurora.mjs`):
 
 > **Add keyboard shortcuts to the command palette**
@@ -70,22 +70,15 @@ pt-BR/dark, it/light, it/dark, es/light, es/dark
 
 ## Known pitfalls
 
-- **The title and description are DATA, identical in FR and EN.**
+- **The description is DATA, identical in every locale.**
 As everywhere in the demo world, the content is English and only the interface
 is translated. They are therefore the verification anchors: changing them would
 break one of the two variants.
-- **The property row is controlled by `aria-label`, not by keyboard
-shortcuts.** The S/P/E/A/L/D/O keys are ignored while the focus is in
-the title or description (`create-issue-dialog.tsx` filters them on
-`INPUT` / `TEXTAREA` / `contentEditable`), and it is necessarily there at this
-that moment. We click the triggers, whose accessible labels are translated —
-hence the `ARIA` table in the script.
-- **The category selector is a multi-select: it does not close by itself.**
-Press `Escape`, then check that the popover closed rather than the modal. Simple
-selectors (priority, effort) close on selection.
 - **The board tab bar arrives after the tickets** (separate request):
 it is blurred behind the modal, but its absence would be visible. We wait
 the default view tab before opening the modal.
-- **The create button is a disabled `SplitButton` as long as the title is
+- **The create button is a disabled `SplitButton` as long as the form is
 empty.** Its active state is proof that the form is actually completed:
 it's a control, not a decoration.
+- **Smart Fill can be off by default** for the capture account. The script
+presses its chip when `aria-pressed` is false, and fails if it is still off.

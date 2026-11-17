@@ -53,7 +53,6 @@ import {
   splitToolPool,
 } from "@/lib/server/assistant/tool-loading";
 import { authorizedSkillsNotes } from "@/lib/server/assistant/skills";
-import { commandNote } from "@/lib/server/assistant/commands";
 import { buildDocumentationHelpPrompt } from "@/lib/server/assistant/documentation-help";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { replayedToolResult, toolCallArgumentsById } from "@/lib/server/assistant/tool-result-serialization";
@@ -883,7 +882,7 @@ async function buildExecutionInput(input: {
       ? await markdownForReader(turn.user_id, text)
       : text)
       + (message.role === "user"
-        ? mentionsNote(message.metadata) + commandNote(message.metadata) + historySkillNotes[index]
+        ? mentionsNote(message.metadata) + historySkillNotes[index]
           + (message.context
             ? `\n\n[Context captured for this message only; it does not authorize later actions]\n${buildPageContextBlock(message.context)}`
             : "")

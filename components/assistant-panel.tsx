@@ -128,7 +128,6 @@ export function AssistantPanel() {
       conversationId,
       pageContext,
       mentions,
-      command,
       attachments,
       intent,
       displayMode,
@@ -152,13 +151,12 @@ export function AssistantPanel() {
 
     if (prompt) {
       // Pass the context explicitly: the state set above only reaches the shell
-      // on the next render, after this synchronous one-shot send. Mentions,
-      // command and attachments come from the composer who wrote the message
+      // on the next render, after this synchronous one-shot send. Mentions
+      // and attachments come from the composer who wrote the message
       // (the home) and travel with him: the panel only relays them.
       handle.sendMessage(targetProjectId ?? null, prompt, {
         pageContext: pageContext ?? null,
         mentions,
-        command,
         attachments,
         intent,
       });

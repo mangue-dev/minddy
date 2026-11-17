@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { writeClipboardText } from "@/lib/clipboard";
-import { Kbd } from "@/components/ui/kbd";
+import { KbdShortcut } from "@/components/ui/kbd";
 import {
   PAGE_COLORS,
   activeCalloutColor,
@@ -344,7 +344,7 @@ export function BlockMenu({
               {active && <HugeiconsIcon icon={CheckIcon} className="size-3" />}
               {block.shortcut && (
                 <DropdownMenuShortcut>
-                  <Kbd size="sm">{block.shortcut.display}</Kbd>
+                  <KbdShortcut shortcut={block.shortcut.display} />
                 </DropdownMenuShortcut>
               )}
             </DropdownMenuItem>
@@ -518,7 +518,7 @@ export function BlockMenu({
               {entry.checked && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
               {entry.shortcut && (
                 <DropdownMenuShortcut>
-                  <Kbd size="sm">{entry.shortcut}</Kbd>
+                  <KbdShortcut shortcut={entry.shortcut} />
                 </DropdownMenuShortcut>
               )}
             </DropdownMenuItem>

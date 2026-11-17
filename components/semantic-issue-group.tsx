@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { defaultFilter, useCommandState } from "cmdk";
+import { useCommandState } from "cmdk";
+import { foldedCommandFilter } from "@/lib/command-filter";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { semanticExtras } from "@/lib/issue-semantic-query";
 import { orderIssuesForSearch } from "@/lib/issue-search-order";
@@ -60,7 +61,7 @@ export function SemanticIssueGroup<T>({
         const item = eligible.get(id);
         if (!item) continue;
         const { value, keywords } = textOf(item);
-        if (defaultFilter(value, search, keywords) > 0) shown.add(id);
+        if (foldedCommandFilter(value, search, keywords) > 0) shown.add(id);
       }
     }
     const extras = semanticExtras(ids, eligible, shown);

@@ -70,7 +70,7 @@ const SLOTS = {
     id: "workflowIssue",
     route: "/projects/<id>, modale de création ouverte (c)",
     shot:
-      "La modale « Nouveau ticket » sur le board : un titre, une description de deux phrases, et trois propriétés posées — priorité haute, effort M, catégorie Feature. Le bouton de création est actif. C'est le geste de l'utilisateur, et rien d'autre : le premier temps de la section s'appelle « Vous décrivez ».",
+      "The “New issue” modal on the board: Smart Fill on, a two-sentence description typed, the create button active. The user writes two sentences; Smart Fill writes the title and the properties.",
     altKey: "shotAlt_workflowIssue",
     ratio: "4/3",
     src: null,

@@ -10,6 +10,7 @@ import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { moveSidebarFilterResultFocus } from "@/lib/keyboard/sidebar-filter-navigation";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { foldSearchText } from "@/lib/search-fold";
 
 /**
  * The filter field in the title line of a secondary sidebar.
@@ -132,10 +133,7 @@ export function SidebarFilterField({
  * accents. “Décor” must be found by typing “decor”, and vice versa.
  */
 export function normalizeFilterText(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return foldSearchText(text);
 }
 
 /**

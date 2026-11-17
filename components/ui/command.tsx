@@ -16,6 +16,7 @@ import { SearchIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
 import { haptic } from "@/lib/mobile/haptics"
+import { foldedCommandFilter } from "@/lib/command-filter"
 
 function Command({
   className,
@@ -37,6 +38,9 @@ function Command({
         onPointerMoveCapture?.(event)
         if (event.pointerType !== "mouse") event.stopPropagation()
       }}
+      // Accents do not count: "senal" finds "Señal" (lib/search-fold.ts).
+      // A caller's own filter, or `shouldFilter={false}`, still wins.
+      filter={foldedCommandFilter}
       {...props}
     />
   )

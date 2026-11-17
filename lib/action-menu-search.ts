@@ -4,6 +4,8 @@
 // walks every level and keeps each entry's path, so the menu can list a
 // nested match as one selectable row that shows where it lives.
 
+import { foldSearchText } from "./search-fold";
+
 export interface SearchableAction<T> {
   label: string;
   /** Additional search terms (synonyms, the other language, etc.). */
@@ -33,9 +35,9 @@ export interface ActionSearchMatch<T> {
  * the search reached the block types' keywords.
  */
 export function actionMatchesQuery(action: SearchableAction<unknown>, query: string): boolean {
-  const q = query.trim().toLowerCase();
+  const q = foldSearchText(query.trim());
   if (!q) return true;
-  const haystack = [action.label, ...(action.keywords ?? [])].join(" ").toLowerCase();
+  const haystack = foldSearchText([action.label, ...(action.keywords ?? [])].join(" "));
   for (let at = haystack.indexOf(q); at !== -1; at = haystack.indexOf(q, at + 1)) {
     if (at === 0 || !/[\p{L}\p{N}]/u.test(haystack[at - 1])) return true;
   }
