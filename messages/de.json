@@ -4795,7 +4795,7 @@
       "saved": "Plan aktualisiert."
     },
     "title": "KI-Modelle",
-    "subtitle": "Jede Karte hat ein Standardmodell; öffne „Modelle pro Aufgabe“, um einer Aufgabe ein eigenes zu geben. Jede Auswahl gilt sofort.",
+    "subtitle": "Jede Karte legt das Modell für eine Rolle fest, für die ganze Instanz. Jede Auswahl gilt sofort.",
     "loadError": "Die Konfiguration konnte nicht geladen werden.",
     "saved": "Einstellung gespeichert",
     "fieldDefault": "Standardmodell",

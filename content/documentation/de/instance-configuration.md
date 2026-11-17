@@ -21,7 +21,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-14",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -48,9 +48,9 @@
   },
   "review": {
     "revision": 15,
-    "fact": "agent:claude-code (MIN-988: weekly /api/cron/ai-instruction-proposals row of the scheduled jobs table, checked against vercel.json, deploy/self-hosted/scheduler.mjs and app/api/cron/ai-instruction-proposals/route.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "fact": "agent:claude-code (MIN-988: weekly /api/cron/ai-instruction-proposals row of the scheduled jobs table, checked against vercel.json, deploy/self-hosted/scheduler.mjs and app/api/cron/ai-instruction-proposals/route.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (de changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-14"
+    "date": "2026-11-17"
   },
   "related": [
     "workspace-encryption",

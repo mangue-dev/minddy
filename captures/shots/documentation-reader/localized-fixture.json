@@ -34,7 +34,18 @@
     "Postmortem editor with a shared template",
     "Every postmortem is written from scratch, in a different document. One template, attached to the incident it explains.",
     "Alert when a probe flaps more than twice an hour",
-    "A service that goes up and down repeatedly still looks healthy on average. Catch the pattern and page someone."
+    "A service that goes up and down repeatedly still looks healthy on average. Catch the pattern and page someone.",
+    "Add filters to the sync queue",
+    "Fix focus order when the session expires",
+    "Clarify the copy of the mobile tab bar",
+    "Fix retry backoff in Safari",
+    "Remove the legacy code behind the iOS widget",
+    "Large workspaces",
+    "Fix the iOS widget after an app update",
+    "Log errors from recent searches",
+    "Log errors from the search index",
+    "Show memory usage in the activity feed",
+    "Document the sample workspace in the help center"
   ],
   "translations": {
     "en": [
@@ -71,7 +82,18 @@
       "Postmortem editor with a shared template",
       "Every postmortem is written from scratch, in a different document. One template, attached to the incident it explains.",
       "Alert when a probe flaps more than twice an hour",
-      "A service that goes up and down repeatedly still looks healthy on average. Catch the pattern and page someone."
+      "A service that goes up and down repeatedly still looks healthy on average. Catch the pattern and page someone.",
+      "Add filters to the sync queue",
+      "Fix focus order when the session expires",
+      "Clarify the copy of the mobile tab bar",
+      "Fix retry backoff in Safari",
+      "Remove the legacy code behind the iOS widget",
+      "Large workspaces",
+      "Fix the iOS widget after an app update",
+      "Log errors from recent searches",
+      "Log errors from the search index",
+      "Show memory usage in the activity feed",
+      "Document the sample workspace in the help center"
     ],
     "fr": [
       "Examiner un signalement clavier entrant",
@@ -107,7 +129,18 @@
       "Éditeur de post-mortem avec un modèle partagé",
       "Chaque post-mortem est rédigé de zéro, dans un document différent. Un seul modèle, rattaché à l’incident qu’il explique.",
       "Alerter quand une sonde oscille plus de deux fois par heure",
-      "Un service qui tombe et remonte sans cesse paraît sain en moyenne. Repérez ce schéma et prévenez quelqu’un."
+      "Un service qui tombe et remonte sans cesse paraît sain en moyenne. Repérez ce schéma et prévenez quelqu’un.",
+      "Ajouter des filtres à la file de synchronisation",
+      "Corriger l’ordre du focus à l’expiration de la session",
+      "Clarifier les libellés de la barre d’onglets mobile",
+      "Corriger le délai entre les tentatives dans Safari",
+      "Retirer l’ancien code du widget iOS",
+      "Grands espaces de travail",
+      "Corriger le widget iOS après une mise à jour de l’application",
+      "Journaliser les erreurs des recherches récentes",
+      "Journaliser les erreurs de l’index de recherche",
+      "Afficher l’usage de la mémoire dans le fil d’activité",
+      "Documenter l’espace de travail d’exemple dans le centre d’aide"
     ],
     "de": [
       "Eingehende Tastaturmeldung prüfen",
@@ -143,7 +176,18 @@
       "Postmortem-Editor mit gemeinsamer Vorlage",
       "Jedes Postmortem wird von Grund auf neu geschrieben, jedes in einem anderen Dokument. Eine Vorlage, verknüpft mit dem Vorfall, den sie erklärt.",
       "Alarmieren, wenn eine Probe mehr als zweimal pro Stunde schwankt",
-      "Ein Dienst, der ständig ausfällt und wieder anläuft, wirkt im Durchschnitt trotzdem gesund. Erkenne das Muster und alarmiere jemanden."
+      "Ein Dienst, der ständig ausfällt und wieder anläuft, wirkt im Durchschnitt trotzdem gesund. Erkenne das Muster und alarmiere jemanden.",
+      "Filter zur Sync-Warteschlange hinzufügen",
+      "Fokusreihenfolge beim Ablauf der Sitzung korrigieren",
+      "Texte der mobilen Tab-Leiste klarer formulieren",
+      "Wartezeit zwischen Wiederholungen in Safari korrigieren",
+      "Alten Code hinter dem iOS-Widget entfernen",
+      "Große Arbeitsbereiche",
+      "iOS-Widget nach einem App-Update korrigieren",
+      "Fehler der letzten Suchen protokollieren",
+      "Fehler des Suchindex protokollieren",
+      "Speichernutzung im Aktivitätsfeed anzeigen",
+      "Beispiel-Arbeitsbereich im Hilfecenter dokumentieren"
     ],
     "es": [
       "Revisar un informe de teclado entrante",
@@ -179,7 +223,18 @@
       "Editor de postmortems con una plantilla compartida",
       "Cada postmortem se escribe desde cero, en un documento distinto. Una sola plantilla, vinculada al incidente que explica.",
       "Alertar cuando una sonda oscile más de dos veces por hora",
-      "Un servicio que cae y se recupera una y otra vez parece sano en promedio. Detecta el patrón y avisa a alguien."
+      "Un servicio que cae y se recupera una y otra vez parece sano en promedio. Detecta el patrón y avisa a alguien.",
+      "Añadir filtros a la cola de sincronización",
+      "Corregir el orden del foco cuando caduca la sesión",
+      "Aclarar los textos de la barra de pestañas móvil",
+      "Corregir la espera entre reintentos en Safari",
+      "Eliminar el código antiguo del widget de iOS",
+      "Espacios de trabajo grandes",
+      "Corregir el widget de iOS tras una actualización de la aplicación",
+      "Registrar los errores de las búsquedas recientes",
+      "Registrar los errores del índice de búsqueda",
+      "Mostrar el uso de memoria en el registro de actividad",
+      "Documentar el espacio de trabajo de ejemplo en el centro de ayuda"
     ],
     "it": [
       "Esaminare una segnalazione sulla tastiera in arrivo",
@@ -215,7 +270,18 @@
       "Editor di postmortem con un modello condiviso",
       "Ogni postmortem viene scritto da zero, in un documento diverso. Un solo modello, collegato all’incidente che spiega.",
       "Avvisare quando una sonda oscilla più di due volte all’ora",
-      "Un servizio che cade e riparte di continuo sembra comunque sano in media. Individua lo schema e avvisa qualcuno."
+      "Un servizio che cade e riparte di continuo sembra comunque sano in media. Individua lo schema e avvisa qualcuno.",
+      "Aggiungere filtri alla coda di sincronizzazione",
+      "Correggere l’ordine del focus alla scadenza della sessione",
+      "Chiarire i testi della barra delle schede mobile",
+      "Correggere l’attesa tra i tentativi in Safari",
+      "Rimuovere il vecchio codice del widget iOS",
+      "Spazi di lavoro grandi",
+      "Correggere il widget iOS dopo un aggiornamento dell’app",
+      "Registrare gli errori delle ricerche recenti",
+      "Registrare gli errori dell’indice di ricerca",
+      "Mostrare l’uso della memoria nel feed delle attività",
+      "Documentare lo spazio di lavoro di esempio nel centro assistenza"
     ],
     "pt-BR": [
       "Revisar um relato de teclado recebido",
@@ -251,15 +317,44 @@
       "Editor de postmortem com um modelo compartilhado",
       "Cada postmortem é escrito do zero, em um documento diferente. Um único modelo, vinculado ao incidente que ele explica.",
       "Alertar quando uma sonda oscilar mais de duas vezes por hora",
-      "Um serviço que cai e volta repetidamente ainda parece saudável na média. Detecte o padrão e acione alguém."
+      "Um serviço que cai e volta repetidamente ainda parece saudável na média. Detecte o padrão e acione alguém.",
+      "Adicionar filtros à fila de sincronização",
+      "Corrigir a ordem do foco quando a sessão expira",
+      "Esclarecer os textos da barra de abas no celular",
+      "Corrigir a espera entre tentativas no Safari",
+      "Remover o código antigo do widget do iOS",
+      "Espaços de trabalho grandes",
+      "Corrigir o widget do iOS após uma atualização do aplicativo",
+      "Registrar os erros das buscas recentes",
+      "Registrar os erros do índice de busca",
+      "Mostrar o uso de memória no feed de atividades",
+      "Documentar o espaço de trabalho de exemplo na central de ajuda"
     ]
   },
   "drafts": {
-    "en": ["Keep keyboard navigation in the feedback board", "When reading requests on a small screen, I want to reach the voting button with the keyboard."],
-    "fr": ["Garder la navigation au clavier dans le tableau des retours", "Quand je lis les demandes sur un petit écran, je veux atteindre le bouton de vote au clavier."],
-    "de": ["Tastaturnavigation im Feedback-Board beibehalten", "Wenn ich Anfragen auf einem kleinen Bildschirm lese, möchte ich die Abstimmungsschaltfläche mit der Tastatur erreichen."],
-    "es": ["Mantener la navegación con teclado en el tablero de sugerencias", "Cuando leo peticiones en una pantalla pequeña, quiero llegar al botón de voto con el teclado."],
-    "it": ["Mantenere la navigazione da tastiera nella bacheca dei feedback", "Quando leggo le richieste su uno schermo piccolo, voglio raggiungere il pulsante di voto con la tastiera."],
-    "pt-BR": ["Manter a navegação por teclado no quadro de feedback", "Ao ler pedidos em uma tela pequena, quero chegar ao botão de voto pelo teclado."]
+    "en": [
+      "Keep keyboard navigation in the feedback board",
+      "When reading requests on a small screen, I want to reach the voting button with the keyboard."
+    ],
+    "fr": [
+      "Garder la navigation au clavier dans le tableau des retours",
+      "Quand je lis les demandes sur un petit écran, je veux atteindre le bouton de vote au clavier."
+    ],
+    "de": [
+      "Tastaturnavigation im Feedback-Board beibehalten",
+      "Wenn ich Anfragen auf einem kleinen Bildschirm lese, möchte ich die Abstimmungsschaltfläche mit der Tastatur erreichen."
+    ],
+    "es": [
+      "Mantener la navegación con teclado en el tablero de sugerencias",
+      "Cuando leo peticiones en una pantalla pequeña, quiero llegar al botón de voto con el teclado."
+    ],
+    "it": [
+      "Mantenere la navigazione da tastiera nella bacheca dei feedback",
+      "Quando leggo le richieste su uno schermo piccolo, voglio raggiungere il pulsante di voto con la tastiera."
+    ],
+    "pt-BR": [
+      "Manter a navegação por teclado no quadro de feedback",
+      "Ao ler pedidos em uma tela pequena, quero chegar ao botão de voto pelo teclado."
+    ]
   }
 }

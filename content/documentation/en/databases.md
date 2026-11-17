@@ -22,7 +22,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-17",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -74,7 +74,7 @@
   },
   "review": {
     "revision": 22,
-    "fact": "agent:claude-code (MIN-990: number calculations and formats, read-only Last edited, Created by and Last edited by columns, recurring dates, option reordering by handle, entry handle menu, sort direction labels, author filters, undo and redo checked against lib/page-database-number.ts, lib/page-databases.ts, lib/page-database-filters.ts, lib/use-page-database.ts, lib/undo/undo-context.tsx and components/pages/page-database-view.tsx, and exercised in the running app against the preview database; agent review, not human acceptance); agent:claude-code (MIN-1012: Numo and MCP view changes, calculations under Number columns and saving the default view checked against lib/server/database-view-tools.ts, lib/server/assistant/execute-tool.ts and lib/server/mcp/page-tools.ts; the former claim that MCP clients cannot manage views corrected; no figure affected; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "fact": "agent:claude-code (MIN-990: number calculations and formats, read-only Last edited, Created by and Last edited by columns, recurring dates, option reordering by handle, entry handle menu, sort direction labels, author filters, undo and redo checked against lib/page-database-number.ts, lib/page-databases.ts, lib/page-database-filters.ts, lib/use-page-database.ts, lib/undo/undo-context.tsx and components/pages/page-database-view.tsx, and exercised in the running app against the preview database; agent review, not human acceptance); agent:claude-code (MIN-1012: Numo and MCP view changes, calculations under Number columns and saving the default view checked against lib/server/database-view-tools.ts, lib/server/assistant/execute-tool.ts and lib/server/mcp/page-tools.ts; the former claim that MCP clients cannot manage views corrected; no figure affected; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1012 views paragraph; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-17"
   },

@@ -66,9 +66,10 @@ signed upload URLs, because the vulnerable route ships with every Storage
 server. Upgrade by moving to a newer official Supabase release as a whole.
 
 Storage up to 1.84.13 also lets a captured signed S3 request be replayed after
-it expires (GHSA-2p28-q2vx-mw6w, fixed in 1.84.14). No official Supabase
-release ships the fix yet, and minddy never uses the Storage S3 protocol, so
-the full profile sets `S3_PROTOCOL_ENABLED: "false"` on `storage` and Caddy
+it expires (GHSA-2p28-q2vx-mw6w, fixed in 1.84.14). Official releases up to
+`self-hosted/v0.8.3` lack the fix; `self-hosted/v0.8.4`, pinned from v0.40.0,
+ships Storage 1.89.12. minddy never uses the Storage S3 protocol, so
+the full profile still sets `S3_PROTOCOL_ENABLED: "false"` on `storage` and Caddy
 answers 404 on `/storage/v1/s3`. An operator-run Supabase behind the managed
 profile needs Storage 1.84.14 or later, or the same setting.
 
@@ -78,10 +79,10 @@ row-level security (GHSA-fgvp-cqg6-q8h2, fixed in 1.89.9). Only a trusted
 token issuer can produce such a token. minddy signs `anon` and `service_role`
 keys at installation, GoTrue signs the `role` column of `auth.users`, which
 minddy never writes, and neither reference profile enables a custom
-access-token hook. A Supabase Cloud project is already patched. Until the
-next minddy release pins a fixed official release, an operator-run Supabase
-must not enable an access-token hook or another issuer that can sign
-`role: "none"`; [the operations reference](self-hosting-operations.md#storage-role-none-advisory)
+access-token hook. A Supabase Cloud project is already patched. v0.40.0 pins
+a fixed official release (`self-hosted/v0.8.4`). On v0.30.1 and earlier, or
+with an older operator-run Storage, do not enable an access-token hook or
+another issuer that can sign `role: "none"`; [the operations reference](self-hosting-operations.md#storage-role-none-advisory)
 gives the check for an existing instance.
 
 PostgreSQL before 17.12 (and 14.25, 15.20, 16.16, 18.7 on the other majors)

@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-17",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -51,10 +51,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:claude-code (MIN-847 installer question checked against scripts/self-hosting-install.mjs and lib/desktop/local-installer.ts); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the introduction now points a private instance on your own computer to the desktop app's built-in installer; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en MIN-847 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 14,
+    "fact": "agent:claude-code (MIN-847 installer question checked against scripts/self-hosting-install.mjs and lib/desktop/local-installer.ts); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the introduction now points a private instance on your own computer to the desktop app's built-in installer; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta; correction applied: the full profile pin moved to Supabase self-hosted/v0.8.4 with PostgreSQL 17.12, checked against deploy/self-hosted/compatibility.json and compose.full.yml; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (en MIN-847 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-970 changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-17"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +79,7 @@
       "src": "/documentation/en/self-hosted-compatibility-flow.svg",
       "alt": "Diagram: Annotated source tag. Assets and SHA256SUMS. Official OCI signature and digest. Selected compatibility profile.",
       "caption": "Read the stages in order. Annotated source tag. Assets and `SHA256SUMS`. Official OCI signature and digest. Selected compatibility profile.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -111,7 +111,7 @@
       "src": "/documentation/en/install-a-server-flow.svg",
       "alt": "Diagram: Verified release and protected environment. Installer: full reference profile. Official Supabase, app, scheduler. Account, file and recovery acceptance.",
       "caption": "Read the stages in order. Verified release and protected environment. Installer: full reference profile. Official Supabase, app, scheduler. Account, file and recovery acceptance.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -143,7 +143,7 @@
       "src": "/documentation/en/install-a-server-wizard.png",
       "alt": "Public installation wizard with Supabase on the same server selected.",
       "caption": "The full profile keeps the application and Supabase on your server. In this example, their private network access is restricted to the LAN.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/en/managed-or-source-installation-flow.svg",
       "alt": "Diagram: Your managed Supabase project. PostgreSQL, Auth, Storage, Realtime. OCI profile OR tagged source application. Profile-specific jobs and backup procedure.",
       "caption": "A managed backend can serve either deployment method, with scheduling and backups configured for the chosen profile.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -209,7 +209,7 @@ Choose an origin reachable from the MCP client and its authorization browser. On
 
 ## Select a supported release and installation profile {#self-hosted-compatibility}
 
-Use an immutable release from the public `mangue-dev/minddy` repository and read the requirements from the row of `deploy/self-hosted/compatibility.json` whose `minddyRelease` matches it. A package version without its own row is not a supported self-hosted release. Every published row supports Linux amd64 and arm64 production hosts, Node.js 24, `pnpm` 10.28.0, Docker Engine 27.0.0 or later and Compose plugin 2.29.0 or later. The full profile pins official Supabase `self-hosted/v0.8.3` at commit `bc27d2661edd09a5d0b8d76ce33da6d4071a756e`. Keep its complete image set; upgrading one service separately creates an operator-managed variant.
+Use an immutable release from the public `mangue-dev/minddy` repository and read the requirements from the row of `deploy/self-hosted/compatibility.json` whose `minddyRelease` matches it. A package version without its own row is not a supported self-hosted release. Every published row supports Linux amd64 and arm64 production hosts, Node.js 24, `pnpm` 10.28.0, Docker Engine 27.0.0 or later and Compose plugin 2.29.0 or later. From v0.40.0, the full profile pins official Supabase `self-hosted/v0.8.4` at commit `189adda99d1b56da55fc5a6ee3f849354aaea92a` and replaces its `db` image with `supabase/postgres:17.12.0.000`; v0.20.1 to v0.30.1 pin `self-hosted/v0.8.3`. Keep its complete image set; upgrading one service separately creates an operator-managed variant.
 
 The managed profile connects to a Supabase project on supabase.com. It must expose PostgreSQL, Auth, Storage and Realtime and pass the release verification. PostgreSQL alone is insufficient. The Supabase CLI local stack is for development and evaluation, not a public production service.
 

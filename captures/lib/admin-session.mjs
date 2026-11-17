@@ -35,8 +35,14 @@ export async function refreshAdminSession() {
 
     const challenge = page.locator("#mfa-code");
     for (let attempt = 1; ; attempt += 1) {
-      await page.getByRole("textbox", { name: /e-?mail/i }).fill(email);
-      await page.getByRole("textbox", { name: /password/i }).fill(password);
+      // Sign-in asks for the address first, then for the password (MIN-907).
+      const passwordField = page.getByRole("textbox", { name: /password/i });
+      if (!(await passwordField.isVisible())) {
+        await page.getByRole("textbox", { name: /e-?mail/i }).fill(email);
+        await page.getByRole("button", { name: /^continue$/i }).click();
+        await passwordField.waitFor({ timeout: 15_000 }).catch(() => {});
+      }
+      await passwordField.fill(password);
       await page.getByRole("button", { name: /sign in|log in/i }).click();
       if (await challenge.waitFor({ timeout: 15_000 }).then(() => true, () => false)) break;
       if (attempt === 3) {

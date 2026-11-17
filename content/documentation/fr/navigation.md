@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-12",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -79,9 +79,9 @@
   },
   "review": {
     "revision": 26,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-959 flat phone navigation sheet: one level, a project picker over that project's sections as tiles, no project list, the page's own list in a second tab that the sheet opens on, checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx and in a phone viewport; no figure shows the sheet, none recaptured)",
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-959 flat phone navigation sheet: one level, a project picker over that project's sections as tiles, no project list, the page's own list in a second tab that the sheet opens on, checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx and in a phone viewport; no figure shows the sheet, none recaptured); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; 1 screenshot(s) recaptured on 2026-11-17 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-959 phone menu passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-12"
+    "date": "2026-11-17"
   },
   "related": [
     "views",
@@ -104,13 +104,13 @@
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
       "revision": 26,
       "reviewed": true,
-      "capturedAt": "2026-11-04",
+      "capturedAt": "2026-11-17",
       "viewport": [
-        1488,
-        1128
+        1440,
+        1080
       ],
       "theme": "light",
-      "padding": 24,
+      "padding": 0,
       "deviceScaleFactor": 2
     },
     {

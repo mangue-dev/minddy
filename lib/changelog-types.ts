@@ -3,7 +3,9 @@ import type { Locale } from "@/i18n/config";
 export type ChangelogIllustrationName =
   | "shield" | "board" | "assistant" | "pages" | "connections" | "activity" | "desktop"
   | "smart-fill" | "smart-assign" | "microphone" | "relations" | "pull-request"
-  | "tabs" | "triage" | "providers" | "performance" | "merge" | "deadline";
+  | "tabs" | "triage" | "providers" | "performance" | "merge" | "deadline"
+  | "phone" | "memory" | "reminder" | "inbox" | "database" | "search" | "conversation"
+  | "routines" | "graph" | "sidebar" | "coding-agent" | "forecast";
 
 export type ChangelogIllustration =
   | { kind: "code"; name: ChangelogIllustrationName }

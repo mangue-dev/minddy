@@ -1,0 +1,1121 @@
+{
+  "version": "0.40.0",
+  "layout": "bento",
+  "copy": {
+    "en": {
+      "title": "Numo works alongside you, and minddy comes to iPhone",
+      "summary": "Numo acts in the background, remembers what you tell it and keeps reminders. minddy has a native iOS app, and databases, the Inbox and routines were reworked."
+    },
+    "fr": {
+      "title": "Numo travaille à vos côtés, et minddy arrive sur iPhone",
+      "summary": "Numo agit en arrière-plan, retient ce que vous lui dites et tient des rappels. minddy a une application iOS native, et les bases de données, l’Inbox et les routines ont été retravaillées."
+    },
+    "de": {
+      "title": "Numo arbeitet an deiner Seite, und minddy kommt aufs iPhone",
+      "summary": "Numo handelt im Hintergrund, merkt sich, was du ihm sagst, und führt Wiedervorlagen. minddy hat eine native iOS-App, und Datenbanken, Posteingang und Routinen wurden überarbeitet."
+    },
+    "pt-BR": {
+      "title": "O Numo trabalha ao seu lado, e o minddy chega ao iPhone",
+      "summary": "O Numo age em segundo plano, lembra do que você diz e mantém lembretes. O minddy tem um aplicativo iOS nativo, e os bancos de dados, a caixa de entrada e as rotinas foram reformulados."
+    },
+    "it": {
+      "title": "Numo lavora al tuo fianco, e minddy arriva su iPhone",
+      "summary": "Numo agisce in background, ricorda ciò che gli dici e tiene i promemoria. minddy ha un'app iOS nativa, e database, Posta in arrivo e routine sono stati rivisti."
+    },
+    "es": {
+      "title": "Numo trabaja a tu lado, y minddy llega al iPhone",
+      "summary": "Numo actúa en segundo plano, recuerda lo que le dices y lleva recordatorios. minddy tiene una aplicación nativa para iOS, y las bases de datos, la bandeja de entrada y las rutinas se han rehecho."
+    }
+  },
+  "features": [
+    {
+      "id": "numo-background-0400",
+      "illustration": {
+        "kind": "icon",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Numo works in the background",
+          "summary": "When something concerns you, Numo wakes up, acts within what you allow, and tells you on Home what it did and what waits for you.",
+          "details": [
+            "When you are assigned an issue, mentioned or asked for a review, or when a routine or a CI run fails, Numo wakes a few minutes later, does what it can and notes it in its journal. In shared projects it changes only what is yours. Sensitive actions, such as moving something to the trash, acting on a pull request, using an external MCP tool or changing a setting, need a memory in which you allowed them.",
+            "Home is now a conversation with Numo. It opens on Numo's summary of what waits for you and what it did, with up to four suggestions, and your first message continues from there. Background work is on by default and needs Numo's memory. Turn it off with Let Numo work in the background, under Numo in your account settings."
+          ]
+        },
+        "fr": {
+          "title": "Numo travaille en arrière-plan",
+          "summary": "Quand quelque chose vous concerne, Numo se réveille, agit dans les limites que vous lui donnez, puis vous dit sur l’accueil ce qu’il a fait et ce qui vous attend.",
+          "details": [
+            "Quand un ticket vous est assigné, qu’on vous mentionne ou qu’on vous demande une revue, ou quand une routine ou une exécution de CI échoue, Numo se réveille quelques minutes plus tard, fait ce qu’il peut et le note dans son journal. Dans un projet partagé, il ne modifie que ce qui vous appartient. Les actions sensibles, comme mettre un élément à la corbeille, agir sur une pull request, utiliser un outil MCP externe ou changer un paramètre, demandent un souvenir dans lequel vous les avez autorisées.",
+            "L’accueil est désormais une conversation avec Numo. Il s’ouvre sur son résumé de ce qui vous attend et de ce qu’il a fait, avec jusqu’à quatre suggestions, et votre premier message part de là. Le travail en arrière-plan est activé par défaut et a besoin de la mémoire de Numo. Pour le désactiver, utilisez « Laisser Numo travailler en arrière-plan », sous Numo dans les paramètres du compte."
+          ]
+        },
+        "de": {
+          "title": "Numo arbeitet im Hintergrund",
+          "summary": "Wenn dich etwas betrifft, wird Numo aktiv, handelt im Rahmen dessen, was du erlaubst, und zeigt dir auf der Startseite, was es getan hat und was auf dich wartet.",
+          "details": [
+            "Wenn dir ein Ticket zugewiesen wird, du erwähnt oder um ein Review gebeten wirst oder wenn eine Routine oder ein CI-Lauf fehlschlägt, wird Numo ein paar Minuten später aktiv, erledigt, was es kann, und hält es in seinem Journal fest. In geteilten Projekten ändert es nur, was dir gehört. Sensible Aktionen wie etwas in den Papierkorb zu verschieben, an einem Pull Request zu arbeiten, ein externes MCP-Tool zu nutzen oder eine Einstellung zu ändern, brauchen eine Erinnerung, in der du sie erlaubt hast.",
+            "Die Startseite ist jetzt eine Unterhaltung mit Numo. Sie beginnt mit Numos Zusammenfassung dessen, was auf dich wartet und was es getan hat, mit bis zu vier Vorschlägen, und deine erste Nachricht knüpft daran an. Die Hintergrundarbeit ist standardmäßig an und braucht Numos Gedächtnis. Du schaltest sie mit „Numo im Hintergrund arbeiten lassen“ aus, unter Numo in den Kontoeinstellungen."
+          ]
+        },
+        "pt-BR": {
+          "title": "O Numo trabalha em segundo plano",
+          "summary": "Quando algo diz respeito a você, o Numo desperta, age dentro do que você permite e mostra na página inicial o que fez e o que espera por você.",
+          "details": [
+            "Quando um ticket é atribuído a você, quando você é mencionado ou recebe um pedido de revisão, ou quando uma rotina ou uma execução de CI falha, o Numo desperta alguns minutos depois, faz o que pode e registra isso no diário dele. Em projetos compartilhados, ele só altera o que é seu. Ações sensíveis, como mover algo para a lixeira, agir em um pull request, usar uma ferramenta MCP externa ou alterar uma configuração, exigem uma memória em que você as autorizou.",
+            "A página inicial agora é uma conversa com o Numo. Ela abre com o resumo do que espera por você e do que ele fez, com até quatro sugestões, e sua primeira mensagem continua a partir daí. O trabalho em segundo plano vem ativado e depende da memória do Numo. Para desativá-lo, use \"Deixar o Numo trabalhar em segundo plano\", em Numo nas configurações da conta."
+          ]
+        },
+        "it": {
+          "title": "Numo lavora in background",
+          "summary": "Quando qualcosa ti riguarda, Numo si attiva, agisce entro ciò che gli permetti e ti dice nella Home cosa ha fatto e cosa ti aspetta.",
+          "details": [
+            "Quando ti viene assegnato un ticket, vieni menzionato o ti chiedono una revisione, oppure quando una routine o un'esecuzione di CI fallisce, Numo si attiva qualche minuto dopo, fa ciò che può e lo annota nel suo diario. Nei progetti condivisi modifica solo ciò che è tuo. Le azioni delicate, come spostare qualcosa nel Cestino, intervenire su una pull request, usare uno strumento MCP esterno o cambiare un'impostazione, richiedono un ricordo in cui le hai autorizzate.",
+            "La Home ora è una conversazione con Numo. Si apre con il suo riepilogo di ciò che ti aspetta e di ciò che ha fatto, con un massimo di quattro suggerimenti, e il tuo primo messaggio parte da lì. Il lavoro in background è attivo per impostazione predefinita e richiede la memoria di Numo. Per disattivarlo usa «Lascia lavorare Numo in background», sotto Numo nelle impostazioni dell'account."
+          ]
+        },
+        "es": {
+          "title": "Numo trabaja en segundo plano",
+          "summary": "Cuando algo te concierne, Numo se activa, actúa dentro de lo que le permites y te cuenta en Inicio qué ha hecho y qué te espera.",
+          "details": [
+            "Cuando te asignan una incidencia, te mencionan o te piden una revisión, o cuando falla una rutina o una ejecución de CI, Numo se activa unos minutos después, hace lo que puede y lo anota en su diario. En los proyectos compartidos solo cambia lo que es tuyo. Las acciones delicadas, como enviar algo a la papelera, actuar sobre una pull request, usar una herramienta MCP externa o cambiar un ajuste, requieren un recuerdo en el que las hayas autorizado.",
+            "Inicio es ahora una conversación con Numo. Se abre con su resumen de lo que te espera y de lo que ha hecho, con hasta cuatro sugerencias, y tu primer mensaje continúa desde ahí. El trabajo en segundo plano viene activado y necesita la memoria de Numo. Para desactivarlo usa «Dejar que Numo trabaje en segundo plano», en Numo dentro de los ajustes de la cuenta."
+          ]
+        }
+      }
+    },
+    {
+      "id": "ios-app-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "phone"
+      },
+      "copy": {
+        "en": {
+          "title": "minddy on iPhone and iPad",
+          "summary": "A native iOS app with push notifications, links that open in the app, haptics and dictation in the editor.",
+          "details": [
+            "The app shows minddy Cloud or your own server, which you enter from the sign-in screen. Sign in with Apple, Google or GitHub through the system sheets. Turn on Notify this device in your notification settings to receive push notifications, and minddy links open in the app.",
+            "On a phone, the editor toolbar starts with a microphone that inserts your dictation as formatted text, and a navigation sheet holds the project picker. The first launch asks whether to use AI features: declining turns off Numo, Smart Fill and dictation in the app. Billing stays on the web. The app is on the App Store and needs iOS 15 or later."
+          ]
+        },
+        "fr": {
+          "title": "minddy sur iPhone et iPad",
+          "summary": "Une application iOS native, avec notifications push, liens qui s’ouvrent dans l’application, vibrations et dictée dans l’éditeur.",
+          "details": [
+            "L’application affiche minddy Cloud ou votre propre serveur, à saisir depuis l’écran de connexion. Connectez-vous avec Apple, Google ou GitHub par les fenêtres du système. Activez « Prévenir cet appareil » dans vos paramètres de notification pour recevoir les notifications push ; les liens minddy s’ouvrent dans l’application.",
+            "Sur téléphone, la barre d’outils de l’éditeur commence par un micro qui insère votre dictée sous forme de texte mis en forme, et un panneau de navigation contient le sélecteur de projet. Au premier lancement, l’application demande si vous voulez utiliser les fonctions d’IA : un refus désactive Numo, Smart Fill et la dictée dans l’application. La facturation reste sur le web. L’application est sur l’App Store et demande iOS 15 ou une version ultérieure."
+          ]
+        },
+        "de": {
+          "title": "minddy auf iPhone und iPad",
+          "summary": "Eine native iOS-App mit Push-Benachrichtigungen, Links, die sich in der App öffnen, Vibration und Diktat im Editor.",
+          "details": [
+            "Die App zeigt minddy Cloud oder deinen eigenen Server, den du auf dem Anmeldebildschirm eingibst. Melde dich mit Apple, Google oder GitHub über die Systemdialoge an. Schalte in deinen Benachrichtigungseinstellungen „Dieses Gerät benachrichtigen“ ein, um Push-Benachrichtigungen zu erhalten. minddy-Links öffnen sich in der App.",
+            "Auf dem Telefon beginnt die Werkzeugleiste des Editors mit einem Mikrofon, das dein Diktat als formatierten Text einfügt, und ein Navigationsblatt enthält die Projektauswahl. Beim ersten Start fragt die App, ob du KI-Funktionen nutzen willst: Lehnst du ab, sind Numo, Smart Fill und das Diktat in der App aus. Die Abrechnung bleibt im Web. Die App gibt es im App Store, sie braucht iOS 15 oder neuer."
+          ]
+        },
+        "pt-BR": {
+          "title": "minddy no iPhone e no iPad",
+          "summary": "Um aplicativo iOS nativo, com notificações push, links que abrem no aplicativo, vibração e ditado no editor.",
+          "details": [
+            "O aplicativo mostra o minddy Cloud ou o seu próprio servidor, que você informa na tela de login. Entre com Apple, Google ou GitHub pelas telas do sistema. Ative \"Notificar este dispositivo\" nas configurações de notificação para receber notificações push; os links do minddy abrem no aplicativo.",
+            "No celular, a barra de ferramentas do editor começa com um microfone que insere o ditado como texto formatado, e um painel de navegação traz o seletor de projetos. Na primeira abertura, o aplicativo pergunta se você quer usar os recursos de IA: se recusar, Numo, Smart Fill e o ditado ficam desativados no aplicativo. O faturamento continua na web. O aplicativo está na App Store e exige iOS 15 ou posterior."
+          ]
+        },
+        "it": {
+          "title": "minddy su iPhone e iPad",
+          "summary": "Un'app iOS nativa, con notifiche push, link che si aprono nell'app, vibrazione e dettatura nell'editor.",
+          "details": [
+            "L'app mostra minddy Cloud o il tuo server, che inserisci dalla schermata di accesso. Accedi con Apple, Google o GitHub tramite le schede di sistema. Attiva «Avvisa questo dispositivo» nelle impostazioni delle notifiche per ricevere le notifiche push; i link di minddy si aprono nell'app.",
+            "Sul telefono, la barra degli strumenti dell'editor inizia con un microfono che inserisce la dettatura come testo formattato, e un pannello di navigazione contiene il selettore dei progetti. Al primo avvio l'app chiede se vuoi usare le funzioni IA: se rifiuti, Numo, Smart Fill e la dettatura restano disattivati nell'app. La fatturazione resta sul web. L'app è sull'App Store e richiede iOS 15 o successivo."
+          ]
+        },
+        "es": {
+          "title": "minddy en iPhone y iPad",
+          "summary": "Una aplicación nativa para iOS, con notificaciones push, enlaces que se abren en la aplicación, vibración y dictado en el editor.",
+          "details": [
+            "La aplicación muestra minddy Cloud o tu propio servidor, que indicas en la pantalla de inicio de sesión. Inicia sesión con Apple, Google o GitHub mediante las hojas del sistema. Activa «Notificar en este dispositivo» en los ajustes de notificaciones para recibir notificaciones push; los enlaces de minddy se abren en la aplicación.",
+            "En el teléfono, la barra de herramientas del editor empieza con un micrófono que inserta tu dictado como texto con formato, y un panel de navegación contiene el selector de proyectos. En el primer arranque la aplicación pregunta si quieres usar las funciones de IA: si lo rechazas, Numo, Smart Fill y el dictado quedan desactivados en la aplicación. La facturación sigue en la web. La aplicación está en el App Store y requiere iOS 15 o posterior."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-memory-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "memory"
+      },
+      "copy": {
+        "en": {
+          "title": "Numo remembers what you tell it",
+          "summary": "Numo keeps your preferences, useful facts and standing instructions, for all your projects or for one.",
+          "details": [
+            "Tell Numo to remember something, or to forget it, in any conversation. It keeps up to 100 memories and uses them in later conversations. Routines and mentions of Numo read them but never add any. Memories are private to you.",
+            "Numo's memory, under Numo in your account settings, lists everything it keeps. Edit or delete a memory there, erase them all with Forget everything, or turn memory off with Let Numo remember things."
+          ]
+        },
+        "fr": {
+          "title": "Numo retient ce que vous lui dites",
+          "summary": "Numo garde vos préférences, les faits utiles et vos consignes permanentes, pour tous vos projets ou pour un seul.",
+          "details": [
+            "Demandez à Numo de retenir quelque chose, ou de l’oublier, dans n’importe quelle conversation. Il garde jusqu’à 100 souvenirs et s’en sert dans les conversations suivantes. Les routines et les mentions de Numo les lisent sans jamais en ajouter. Vos souvenirs ne sont visibles que par vous.",
+            "« Mémoire de Numo », sous Numo dans les paramètres du compte, liste tout ce qu’il garde. Vous pouvez y modifier ou supprimer un souvenir, tout effacer avec « Tout oublier », ou désactiver la mémoire avec « Laisser Numo retenir des choses »."
+          ]
+        },
+        "de": {
+          "title": "Numo merkt sich, was du ihm sagst",
+          "summary": "Numo behält deine Vorlieben, nützliche Fakten und dauerhafte Anweisungen, für alle deine Projekte oder für eines.",
+          "details": [
+            "Sag Numo in jeder Unterhaltung, dass es sich etwas merken oder etwas vergessen soll. Es behält bis zu 100 Erinnerungen und nutzt sie in späteren Unterhaltungen. Routinen und Erwähnungen von Numo lesen sie, fügen aber nie welche hinzu. Erinnerungen sind nur für dich sichtbar.",
+            "„Numos Gedächtnis“, unter Numo in den Kontoeinstellungen, listet alles auf, was es behält. Dort bearbeitest oder löschst du eine Erinnerung, löschst alle mit „Alles vergessen“ oder schaltest das Gedächtnis mit „Numo Dinge merken lassen“ aus."
+          ]
+        },
+        "pt-BR": {
+          "title": "O Numo lembra do que você diz",
+          "summary": "O Numo guarda suas preferências, fatos úteis e instruções permanentes, para todos os seus projetos ou para um só.",
+          "details": [
+            "Peça ao Numo para lembrar de algo, ou para esquecer, em qualquer conversa. Ele guarda até 100 memórias e as usa nas conversas seguintes. As rotinas e as menções ao Numo leem essas memórias, mas nunca adicionam novas. Só você vê suas memórias.",
+            "\"Memória do Numo\", em Numo nas configurações da conta, lista tudo o que ele guarda. Ali você edita ou exclui uma memória, apaga todas com \"Esquecer tudo\" ou desativa a memória com \"Deixar o Numo lembrar das coisas\"."
+          ]
+        },
+        "it": {
+          "title": "Numo ricorda ciò che gli dici",
+          "summary": "Numo conserva le tue preferenze, i fatti utili e le istruzioni permanenti, per tutti i tuoi progetti o per uno solo.",
+          "details": [
+            "Chiedi a Numo di ricordare qualcosa, o di dimenticarlo, in qualsiasi conversazione. Conserva fino a 100 ricordi e li usa nelle conversazioni successive. Le routine e le menzioni di Numo li leggono ma non ne aggiungono mai. I ricordi sono visibili solo a te.",
+            "«Memoria di Numo», sotto Numo nelle impostazioni dell'account, elenca tutto ciò che conserva. Lì modifichi o elimini un ricordo, li cancelli tutti con «Dimentica tutto» oppure disattivi la memoria con «Lascia che Numo ricordi le cose»."
+          ]
+        },
+        "es": {
+          "title": "Numo recuerda lo que le dices",
+          "summary": "Numo guarda tus preferencias, los datos útiles y tus instrucciones permanentes, para todos tus proyectos o para uno solo.",
+          "details": [
+            "Pídele a Numo que recuerde algo, o que lo olvide, en cualquier conversación. Guarda hasta 100 recuerdos y los usa en las conversaciones siguientes. Las rutinas y las menciones a Numo los leen, pero nunca añaden ninguno. Solo tú ves tus recuerdos.",
+            "«Memoria de Numo», en Numo dentro de los ajustes de la cuenta, muestra todo lo que guarda. Ahí puedes editar o eliminar un recuerdo, borrarlos todos con «Olvidarlo todo» o desactivar la memoria con «Dejar que Numo recuerde cosas»."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-reminders-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "reminder"
+      },
+      "copy": {
+        "en": {
+          "title": "Reminders: when this happens, do that",
+          "summary": "Ask Numo to watch an issue, an objective or a date, then to message you or carry out an instruction when the moment comes.",
+          "details": [
+            "In a conversation, write for example \"once MIN-42 is done, remind me to tell the client\". A reminder can wait for an issue's status or a comment from someone else, for an objective's status, or for a date. When it fires, Numo sends a message to your Inbox or carries out the instruction you gave. A date reminder needs no project.",
+            "Reminders can repeat every day, on weekdays, every week or every month, at the time you choose. A recurring reminder that acts for you asks for your approval first. Reminders, under Numo in your account settings, lists them and lets you pause, resume or cancel each one. You can have 20 active reminders, 5 of them recurring, and a one-off reminder expires after 90 days."
+          ]
+        },
+        "fr": {
+          "title": "Rappels : quand ceci arrive, fais cela",
+          "summary": "Demandez à Numo de surveiller un ticket, un objectif ou une date, puis de vous écrire ou d’exécuter une consigne le moment venu.",
+          "details": [
+            "Dans une conversation, écrivez par exemple « quand MIN-42 sera terminé, rappelle-moi de prévenir le client ». Un rappel peut attendre le statut d’un ticket ou le commentaire de quelqu’un d’autre, le statut d’un objectif, ou une date. Quand il se déclenche, Numo envoie un message dans votre Inbox ou exécute la consigne que vous avez donnée. Un rappel sur une date n’a pas besoin de projet.",
+            "Un rappel peut se répéter tous les jours, du lundi au vendredi, toutes les semaines ou tous les mois, à l’heure que vous choisissez. Un rappel récurrent qui agit pour vous demande d’abord votre accord. « Rappels », sous Numo dans les paramètres du compte, les liste et permet de mettre chacun en pause, de le reprendre ou de l’annuler. Vous pouvez avoir 20 rappels actifs, dont 5 récurrents, et un rappel ponctuel expire au bout de 90 jours."
+          ]
+        },
+        "de": {
+          "title": "Wiedervorlagen: Wenn das passiert, tu jenes",
+          "summary": "Bitte Numo, ein Ticket, ein Ziel oder ein Datum zu beobachten und dir dann zu schreiben oder eine Anweisung auszuführen.",
+          "details": [
+            "Schreib in einer Unterhaltung zum Beispiel „Sobald MIN-42 erledigt ist, erinnere mich daran, den Kunden zu informieren“. Eine Wiedervorlage kann auf den Status eines Tickets oder den Kommentar einer anderen Person warten, auf den Status eines Ziels oder auf ein Datum. Wenn sie auslöst, schickt Numo eine Nachricht in deinen Posteingang oder führt deine Anweisung aus. Eine Wiedervorlage zu einem Datum braucht kein Projekt.",
+            "Wiedervorlagen können sich täglich, werktags, wöchentlich oder monatlich wiederholen, zu der Uhrzeit, die du wählst. Eine wiederkehrende Wiedervorlage, die für dich handelt, fragt zuerst nach deiner Zustimmung. „Wiedervorlagen“, unter Numo in den Kontoeinstellungen, listet sie auf; dort kannst du jede pausieren, fortsetzen oder abbrechen. Du kannst 20 aktive Wiedervorlagen haben, davon 5 wiederkehrende, und eine einmalige läuft nach 90 Tagen ab."
+          ]
+        },
+        "pt-BR": {
+          "title": "Lembretes: quando isso acontecer, faça aquilo",
+          "summary": "Peça ao Numo para acompanhar um ticket, um objetivo ou uma data e depois avisar você ou executar uma instrução na hora certa.",
+          "details": [
+            "Em uma conversa, escreva por exemplo \"quando o MIN-42 estiver concluído, me lembre de avisar o cliente\". Um lembrete pode esperar o status de um ticket ou o comentário de outra pessoa, o status de um objetivo ou uma data. Quando dispara, o Numo envia uma mensagem para a sua caixa de entrada ou executa a instrução que você deu. Um lembrete de data não precisa de projeto.",
+            "Os lembretes podem se repetir todos os dias, de segunda a sexta, toda semana ou todo mês, no horário que você escolher. Um lembrete recorrente que age por você pede sua aprovação antes. \"Lembretes\", em Numo nas configurações da conta, lista todos e permite pausar, retomar ou cancelar cada um. Você pode ter 20 lembretes ativos, 5 deles recorrentes, e um lembrete único expira após 90 dias."
+          ]
+        },
+        "it": {
+          "title": "Promemoria: quando succede questo, fai quello",
+          "summary": "Chiedi a Numo di tenere d'occhio un ticket, un obiettivo o una data, e poi di scriverti o di eseguire un'istruzione al momento giusto.",
+          "details": [
+            "In una conversazione scrivi per esempio «quando MIN-42 è completato, ricordami di avvisare il cliente». Un promemoria può attendere lo stato di un ticket o il commento di un'altra persona, lo stato di un obiettivo oppure una data. Quando scatta, Numo invia un messaggio nella tua Posta in arrivo o esegue l'istruzione che hai dato. Un promemoria su una data non richiede un progetto.",
+            "I promemoria possono ripetersi ogni giorno, nei giorni feriali, ogni settimana o ogni mese, all'ora che scegli. Un promemoria ricorrente che agisce per te chiede prima la tua approvazione. «Promemoria», sotto Numo nelle impostazioni dell'account, li elenca e ti permette di metterli in pausa, riprenderli o annullarli. Puoi avere 20 promemoria attivi, di cui 5 ricorrenti, e un promemoria singolo scade dopo 90 giorni."
+          ]
+        },
+        "es": {
+          "title": "Recordatorios: cuando pase esto, haz aquello",
+          "summary": "Pídele a Numo que vigile una incidencia, un objetivo o una fecha y que luego te escriba o ejecute una instrucción cuando llegue el momento.",
+          "details": [
+            "En una conversación, escribe por ejemplo «cuando MIN-42 esté hecha, recuérdame avisar al cliente». Un recordatorio puede esperar el estado de una incidencia o el comentario de otra persona, el estado de un objetivo o una fecha. Cuando se activa, Numo envía un mensaje a tu bandeja de entrada o ejecuta la instrucción que le diste. Un recordatorio de fecha no necesita proyecto.",
+            "Los recordatorios pueden repetirse cada día, de lunes a viernes, cada semana o cada mes, a la hora que elijas. Un recordatorio recurrente que actúa por ti pide antes tu aprobación. «Recordatorios», en Numo dentro de los ajustes de la cuenta, los muestra y permite pausar, reanudar o cancelar cada uno. Puedes tener 20 recordatorios activos, 5 de ellos recurrentes, y un recordatorio único caduca a los 90 días."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-conversations-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "conversation"
+      },
+      "copy": {
+        "en": {
+          "title": "Longer work with Numo, easier to follow",
+          "summary": "Numo's steps and reasoning are readable, long conversations compact themselves, and long requests finish instead of being cut.",
+          "details": [
+            "Each action Numo takes shows as a readable line that links to the record it touched, and its reasoning folds into one line. Pasting more than 12,000 characters attaches the text as a file instead of cutting it. A message interrupted by the network offers Resend.",
+            "Numo reads whole plans, pages and descriptions, and compacts a long conversation rather than losing its beginning. On minddy Cloud, long requests carry on past the previous time limit. Numo can also create a database with its columns and entries, change any setting you could change yourself, and find and merge a pull request linked to no issue. On minddy Cloud the instance now sets Numo's model; you still choose it when you use your own provider key."
+          ]
+        },
+        "fr": {
+          "title": "Des travaux plus longs avec Numo, plus faciles à suivre",
+          "summary": "Les étapes et le raisonnement de Numo sont lisibles, les longues conversations se compactent d’elles-mêmes, et les longues demandes vont au bout au lieu d’être coupées.",
+          "details": [
+            "Chaque action de Numo apparaît sur une ligne lisible, avec un lien vers l’élément concerné, et son raisonnement se replie sur une ligne. Coller plus de 12 000 caractères joint le texte en fichier au lieu de le tronquer. Un message interrompu par le réseau propose « Renvoyer ».",
+            "Numo lit les plans, les pages et les descriptions en entier, et compacte une longue conversation au lieu d’en perdre le début. Sur minddy Cloud, les longues demandes continuent au-delà de l’ancienne limite de temps. Numo peut aussi créer une base de données avec ses colonnes et ses entrées, modifier tout paramètre que vous pourriez modifier vous-même, et trouver puis fusionner une pull request liée à aucun ticket. Sur minddy Cloud, c’est désormais l’instance qui fixe le modèle de Numo ; vous le choisissez toujours quand vous utilisez votre propre clé de fournisseur."
+          ]
+        },
+        "de": {
+          "title": "Längere Arbeit mit Numo, leichter nachzuvollziehen",
+          "summary": "Numos Schritte und sein Reasoning sind lesbar, lange Unterhaltungen verdichten sich selbst, und lange Anfragen laufen zu Ende, statt abgeschnitten zu werden.",
+          "details": [
+            "Jede Aktion von Numo erscheint als lesbare Zeile mit einem Link zum betroffenen Element, und sein Reasoning klappt auf eine Zeile ein. Wenn du mehr als 12.000 Zeichen einfügst, wird der Text als Datei angehängt statt abgeschnitten. Eine vom Netzwerk unterbrochene Nachricht bietet „Erneut senden“ an.",
+            "Numo liest ganze Pläne, Seiten und Beschreibungen und verdichtet eine lange Unterhaltung, statt ihren Anfang zu verlieren. In minddy Cloud laufen lange Anfragen über das bisherige Zeitlimit hinaus weiter. Numo kann außerdem eine Datenbank mit Spalten und Einträgen anlegen, jede Einstellung ändern, die du selbst ändern könntest, und einen Pull Request finden und zusammenführen, der mit keinem Ticket verknüpft ist. In minddy Cloud legt jetzt die Instanz Numos Modell fest; mit deinem eigenen Anbieterschlüssel wählst du es weiterhin selbst."
+          ]
+        },
+        "pt-BR": {
+          "title": "Trabalhos mais longos com o Numo, mais fáceis de acompanhar",
+          "summary": "As etapas e o raciocínio do Numo ficam legíveis, conversas longas se compactam sozinhas e pedidos longos terminam em vez de serem cortados.",
+          "details": [
+            "Cada ação do Numo aparece em uma linha legível, com link para o registro afetado, e o raciocínio dele se recolhe em uma linha. Colar mais de 12.000 caracteres anexa o texto como arquivo em vez de cortá-lo. Uma mensagem interrompida pela rede oferece \"Reenviar\".",
+            "O Numo lê planos, páginas e descrições por inteiro e compacta uma conversa longa em vez de perder o começo dela. No minddy Cloud, pedidos longos continuam além do limite de tempo anterior. O Numo também pode criar um banco de dados com colunas e entradas, alterar qualquer configuração que você mesmo poderia alterar e encontrar e mesclar um pull request que não está ligado a nenhum ticket. No minddy Cloud, agora é a instância que define o modelo do Numo; com a sua própria chave de provedor, você continua escolhendo."
+          ]
+        },
+        "it": {
+          "title": "Lavori più lunghi con Numo, più facili da seguire",
+          "summary": "I passaggi e il ragionamento di Numo sono leggibili, le conversazioni lunghe si compattano da sole e le richieste lunghe arrivano in fondo invece di essere troncate.",
+          "details": [
+            "Ogni azione di Numo appare come una riga leggibile, con un link all'elemento interessato, e il suo ragionamento si riduce a una riga. Incollare più di 12.000 caratteri allega il testo come file invece di troncarlo. Un messaggio interrotto dalla rete propone «Invia di nuovo».",
+            "Numo legge per intero piani, pagine e descrizioni, e compatta una conversazione lunga invece di perderne l'inizio. Su minddy Cloud le richieste lunghe proseguono oltre il precedente limite di tempo. Numo può anche creare un database con colonne e voci, cambiare qualsiasi impostazione che potresti cambiare tu, e trovare e unire una pull request non collegata ad alcun ticket. Su minddy Cloud ora è l'istanza a stabilire il modello di Numo; con la tua chiave di un fornitore continui a sceglierlo tu."
+          ]
+        },
+        "es": {
+          "title": "Trabajos más largos con Numo, más fáciles de seguir",
+          "summary": "Los pasos y el razonamiento de Numo se leen bien, las conversaciones largas se compactan solas y las peticiones largas terminan en lugar de cortarse.",
+          "details": [
+            "Cada acción de Numo aparece en una línea legible, con un enlace al elemento afectado, y su razonamiento se pliega en una línea. Pegar más de 12.000 caracteres adjunta el texto como archivo en lugar de cortarlo. Un mensaje interrumpido por la red ofrece «Reenviar».",
+            "Numo lee enteros los planes, las páginas y las descripciones, y compacta una conversación larga en lugar de perder su comienzo. En minddy Cloud, las peticiones largas continúan más allá del límite de tiempo anterior. Numo también puede crear una base de datos con sus columnas y entradas, cambiar cualquier ajuste que tú podrías cambiar, y encontrar y fusionar una pull request que no está vinculada a ninguna incidencia. En minddy Cloud ahora es la instancia la que fija el modelo de Numo; con tu propia clave de proveedor lo sigues eligiendo tú."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-conversation-search-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "search"
+      },
+      "copy": {
+        "en": {
+          "title": "Numo finds earlier conversations",
+          "summary": "Refer to something you discussed before and Numo looks it up in your past conversations.",
+          "details": [
+            "Write \"as we decided last week\" or name a period, and Numo searches your earlier conversations, then reads the one that fits before answering. There is nothing to open: Numo searches when your message calls for it.",
+            "The search covers your own conversations, the 100 most recently active or those from the period you name. It does not look inside tool results, and it is off when Numo's memory is off."
+          ]
+        },
+        "fr": {
+          "title": "Numo retrouve vos conversations passées",
+          "summary": "Faites référence à un échange précédent : Numo le retrouve dans vos anciennes conversations.",
+          "details": [
+            "Écrivez « comme on l’a décidé la semaine dernière » ou indiquez une période : Numo cherche dans vos conversations précédentes, puis lit celle qui correspond avant de répondre. Il n’y a rien à ouvrir, Numo cherche quand votre message le demande.",
+            "La recherche porte sur vos propres conversations, les 100 plus récemment actives ou celles de la période que vous indiquez. Elle ne regarde pas dans les résultats d’outils et elle est désactivée quand la mémoire de Numo l’est."
+          ]
+        },
+        "de": {
+          "title": "Numo findet frühere Unterhaltungen",
+          "summary": "Beziehe dich auf etwas, das ihr schon besprochen habt, und Numo schlägt es in deinen früheren Unterhaltungen nach.",
+          "details": [
+            "Schreib „wie letzte Woche beschlossen“ oder nenne einen Zeitraum: Numo durchsucht deine früheren Unterhaltungen und liest die passende, bevor es antwortet. Du musst nichts öffnen, Numo sucht, wenn deine Nachricht es verlangt.",
+            "Die Suche umfasst deine eigenen Unterhaltungen, die 100 zuletzt aktiven oder die aus dem Zeitraum, den du nennst. Sie schaut nicht in Tool-Ergebnisse und ist aus, wenn Numos Gedächtnis aus ist."
+          ]
+        },
+        "pt-BR": {
+          "title": "O Numo encontra conversas anteriores",
+          "summary": "Mencione algo que vocês já discutiram e o Numo procura nas suas conversas passadas.",
+          "details": [
+            "Escreva \"como decidimos na semana passada\" ou indique um período: o Numo busca nas suas conversas anteriores e lê a que corresponde antes de responder. Não há nada para abrir, o Numo busca quando sua mensagem pede.",
+            "A busca cobre suas próprias conversas, as 100 com atividade mais recente ou as do período que você indicar. Ela não olha dentro dos resultados de ferramentas e fica desativada quando a memória do Numo está desativada."
+          ]
+        },
+        "it": {
+          "title": "Numo ritrova le conversazioni precedenti",
+          "summary": "Fai riferimento a qualcosa di cui avete già parlato e Numo lo cerca nelle tue conversazioni passate.",
+          "details": [
+            "Scrivi «come deciso la settimana scorsa» o indica un periodo: Numo cerca nelle tue conversazioni precedenti e legge quella giusta prima di rispondere. Non c'è nulla da aprire, Numo cerca quando il tuo messaggio lo richiede.",
+            "La ricerca riguarda le tue conversazioni, le 100 con attività più recente o quelle del periodo che indichi. Non guarda nei risultati degli strumenti ed è disattivata quando la memoria di Numo è disattivata."
+          ]
+        },
+        "es": {
+          "title": "Numo encuentra conversaciones anteriores",
+          "summary": "Haz referencia a algo que ya hablasteis y Numo lo busca en tus conversaciones pasadas.",
+          "details": [
+            "Escribe «como decidimos la semana pasada» o indica un periodo: Numo busca en tus conversaciones anteriores y lee la que corresponde antes de responder. No hay nada que abrir, Numo busca cuando tu mensaje lo pide.",
+            "La búsqueda abarca tus propias conversaciones, las 100 con actividad más reciente o las del periodo que indiques. No mira dentro de los resultados de herramientas y está desactivada cuando la memoria de Numo lo está."
+          ]
+        }
+      }
+    },
+    {
+      "id": "inbox-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "inbox"
+      },
+      "copy": {
+        "en": {
+          "title": "A quieter, clearer Inbox",
+          "summary": "Each line says who did what on which record, Numo can leave you a note, and page edits and successful routine runs no longer notify you.",
+          "details": [
+            "Inbox lines now read as a sentence: who acted, what happened and on which record, shown as a mention you can hover. A view picker replaces the date groups, and on a phone you swipe a line to mark it read or delete it.",
+            "Numo can leave a note in your Inbox; the Messages from Numo setting turns these off. Editing a page no longer notifies anyone, though mentions and comments in pages still do. A routine tells you about a run when it failed, stopped or ran out of budget, or when it decides to leave you a note."
+          ]
+        },
+        "fr": {
+          "title": "Une Inbox plus calme et plus claire",
+          "summary": "Chaque ligne dit qui a fait quoi sur quel élément, Numo peut vous laisser un mot, et les modifications de pages comme les routines réussies ne vous notifient plus.",
+          "details": [
+            "Les lignes de l’Inbox se lisent comme une phrase : qui a agi, ce qui s’est passé et sur quel élément, affiché sous forme de mention à survoler. Un sélecteur de vue remplace les groupes par date, et sur téléphone vous balayez une ligne pour la marquer comme lue ou la supprimer.",
+            "Numo peut laisser un mot dans votre Inbox ; le réglage « Messages de Numo » les désactive. Modifier une page ne notifie plus personne, mais les mentions et les commentaires dans les pages continuent de le faire. Une routine vous prévient d’une exécution quand elle a échoué, s’est arrêtée ou a épuisé son budget, ou quand elle décide de vous laisser un mot."
+          ]
+        },
+        "de": {
+          "title": "Ein ruhigerer, klarerer Posteingang",
+          "summary": "Jede Zeile sagt, wer was an welchem Element getan hat, Numo kann dir eine Notiz hinterlassen, und Seitenänderungen sowie erfolgreiche Routinen benachrichtigen dich nicht mehr.",
+          "details": [
+            "Die Zeilen im Posteingang lesen sich jetzt wie ein Satz: wer gehandelt hat, was passiert ist und an welchem Element, dargestellt als Erwähnung, über die du mit der Maus fahren kannst. Eine Ansichtsauswahl ersetzt die Datumsgruppen, und auf dem Telefon wischst du über eine Zeile, um sie als gelesen zu markieren oder zu löschen.",
+            "Numo kann eine Notiz in deinem Posteingang hinterlassen; die Einstellung „Nachrichten von Numo“ schaltet das aus. Das Bearbeiten einer Seite benachrichtigt niemanden mehr, Erwähnungen und Kommentare in Seiten aber weiterhin. Eine Routine meldet dir einen Lauf, wenn er fehlgeschlagen ist, gestoppt wurde oder das Budget aufgebraucht hat, oder wenn sie entscheidet, dir eine Notiz zu hinterlassen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Uma caixa de entrada mais calma e mais clara",
+          "summary": "Cada linha diz quem fez o quê em qual registro, o Numo pode deixar um recado, e edições de páginas e rotinas bem-sucedidas não notificam mais você.",
+          "details": [
+            "As linhas da caixa de entrada agora se leem como uma frase: quem agiu, o que aconteceu e em qual registro, mostrado como uma menção sobre a qual você pode passar o cursor. Um seletor de visualização substitui os grupos por data, e no celular você desliza uma linha para marcá-la como lida ou excluí-la.",
+            "O Numo pode deixar um recado na sua caixa de entrada; a configuração \"Mensagens do Numo\" desativa isso. Editar uma página não notifica mais ninguém, mas menções e comentários em páginas continuam notificando. Uma rotina avisa sobre uma execução quando ela falhou, parou ou esgotou o orçamento, ou quando decide deixar um recado para você."
+          ]
+        },
+        "it": {
+          "title": "Una Posta in arrivo più tranquilla e più chiara",
+          "summary": "Ogni riga dice chi ha fatto cosa su quale elemento, Numo può lasciarti una nota, e le modifiche alle pagine e le routine riuscite non ti notificano più.",
+          "details": [
+            "Le righe della Posta in arrivo ora si leggono come una frase: chi ha agito, cosa è successo e su quale elemento, mostrato come una menzione su cui puoi passare il puntatore. Un selettore di vista sostituisce i gruppi per data, e sul telefono scorri una riga per segnarla come letta o eliminarla.",
+            "Numo può lasciare una nota nella tua Posta in arrivo; l'impostazione «Messaggi di Numo» la disattiva. Modificare una pagina non notifica più nessuno, mentre le menzioni e i commenti nelle pagine continuano a farlo. Una routine ti avvisa di un'esecuzione quando è fallita, si è fermata o ha esaurito il budget, oppure quando decide di lasciarti una nota."
+          ]
+        },
+        "es": {
+          "title": "Una bandeja de entrada más tranquila y más clara",
+          "summary": "Cada línea dice quién hizo qué en qué elemento, Numo puede dejarte una nota, y las ediciones de páginas y las rutinas que salen bien ya no te notifican.",
+          "details": [
+            "Las líneas de la bandeja de entrada se leen ahora como una frase: quién actuó, qué pasó y en qué elemento, mostrado como una mención sobre la que puedes pasar el cursor. Un selector de vista sustituye a los grupos por fecha, y en el teléfono deslizas una línea para marcarla como leída o eliminarla.",
+            "Numo puede dejar una nota en tu bandeja de entrada; el ajuste «Mensajes de Numo» lo desactiva. Editar una página ya no notifica a nadie, aunque las menciones y los comentarios en páginas siguen haciéndolo. Una rutina te avisa de una ejecución cuando ha fallado, se ha detenido o ha agotado el presupuesto, o cuando decide dejarte una nota."
+          ]
+        }
+      }
+    },
+    {
+      "id": "smart-rules-and-objectives-0400",
+      "illustration": {
+        "kind": "icon",
+        "name": "smart-assign"
+      },
+      "copy": {
+        "en": {
+          "title": "Smart Fill and Smart Assign follow your team's rules",
+          "summary": "Give each project its working language and written instructions, and let both features handle objectives too.",
+          "details": [
+            "Project owners get an AI instructions tab in the project settings. Set the Working language and write Team instructions for issue titles, for priority, effort and categories, for objectives and for assignment. When members keep correcting the same property by hand, minddy drafts an instruction that the owner adds or dismisses.",
+            "Smart Fill now fills a new objective's color, target date and missing name, and Smart Assign picks its lead. Turning Smart Assign on asks Assign open issues? so the issues already waiting get an assignee, and Assign from chooses whether it starts at Backlog or Todo. It never replaces an assignee."
+          ]
+        },
+        "fr": {
+          "title": "Smart Fill et Smart Assign suivent les règles de votre équipe",
+          "summary": "Donnez à chaque projet sa langue de travail et des consignes écrites, et laissez les deux fonctions s’occuper aussi des objectifs.",
+          "details": [
+            "Les propriétaires d’un projet disposent d’un onglet « Consignes de l’IA » dans ses paramètres. Choisissez la « Langue de travail » et rédigez les « Consignes de l’équipe » pour les titres de tickets, pour la priorité, l’effort et les catégories, pour les objectifs et pour l’assignation. Quand les membres corrigent sans cesse la même propriété à la main, minddy rédige une consigne que le propriétaire ajoute ou ignore.",
+            "Smart Fill remplit désormais la couleur, la date cible et le nom manquant d’un nouvel objectif, et Smart Assign choisit son responsable. À l’activation, Smart Assign demande « Assigner les tickets ouverts ? » pour donner un assigné aux tickets déjà en attente, et « Assigner à partir de » choisit s’il commence à Backlog ou à « À faire ». Il ne remplace jamais un assigné."
+          ]
+        },
+        "de": {
+          "title": "Smart Fill und Smart Assign folgen den Regeln deines Teams",
+          "summary": "Gib jedem Projekt seine Arbeitssprache und schriftliche Anweisungen, und lass beide Funktionen auch Ziele übernehmen.",
+          "details": [
+            "Projektinhaber bekommen in den Projekteinstellungen den Tab „KI-Anweisungen“. Lege die „Arbeitssprache“ fest und schreib „Anweisungen des Teams“ für Tickettitel, für Priorität, Aufwand und Kategorien, für Ziele und für die Zuweisung. Wenn Mitglieder immer wieder dieselbe Eigenschaft von Hand korrigieren, entwirft minddy eine Anweisung, die der Inhaber hinzufügt oder verwirft.",
+            "Smart Fill füllt jetzt Farbe, Zieldatum und fehlenden Namen eines neuen Ziels aus, und Smart Assign wählt dessen Lead. Beim Einschalten fragt Smart Assign „Offene Tickets zuweisen?“, damit bereits wartende Tickets jemanden bekommen, und „Zuweisen ab“ legt fest, ob es bei Backlog oder „Zu erledigen“ beginnt. Eine bestehende Zuweisung ersetzt es nie."
+          ]
+        },
+        "pt-BR": {
+          "title": "Smart Fill e Smart Assign seguem as regras da sua equipe",
+          "summary": "Dê a cada projeto seu idioma de trabalho e instruções escritas, e deixe os dois recursos cuidarem também dos objetivos.",
+          "details": [
+            "Os proprietários de um projeto ganham a aba \"Instruções da IA\" nas configurações do projeto. Defina o \"Idioma de trabalho\" e escreva as \"Instruções da equipe\" para títulos de tickets, para prioridade, esforço e categorias, para objetivos e para a atribuição. Quando os membros corrigem sempre a mesma propriedade à mão, o minddy redige uma instrução que o proprietário adiciona ou dispensa.",
+            "O Smart Fill agora preenche a cor, a data-alvo e o nome que falta de um novo objetivo, e o Smart Assign escolhe o responsável por ele. Ao ser ativado, o Smart Assign pergunta \"Atribuir os tickets abertos?\" para dar um responsável aos tickets que já esperavam, e \"Atribuir a partir de\" define se ele começa em Backlog ou em \"A fazer\". Ele nunca substitui um responsável."
+          ]
+        },
+        "it": {
+          "title": "Smart Fill e Smart Assign seguono le regole del tuo team",
+          "summary": "Dai a ogni progetto la sua lingua di lavoro e istruzioni scritte, e lascia che le due funzioni si occupino anche degli obiettivi.",
+          "details": [
+            "I proprietari di un progetto trovano la scheda «Istruzioni per l'IA» nelle impostazioni del progetto. Imposta la «Lingua di lavoro» e scrivi le «Istruzioni del team» per i titoli dei ticket, per priorità, impegno e categorie, per gli obiettivi e per l'assegnazione. Quando i membri correggono a mano sempre la stessa proprietà, minddy prepara un'istruzione che il proprietario aggiunge o ignora.",
+            "Smart Fill ora compila il colore, la data obiettivo e il nome mancante di un nuovo obiettivo, e Smart Assign ne sceglie il responsabile. All'attivazione, Smart Assign chiede «Assegnare i ticket aperti?» per dare un assegnatario ai ticket già in attesa, e «Assegna a partire da» stabilisce se parte da Backlog o da «Da fare». Non sostituisce mai un assegnatario."
+          ]
+        },
+        "es": {
+          "title": "Smart Fill y Smart Assign siguen las reglas de tu equipo",
+          "summary": "Da a cada proyecto su idioma de trabajo e instrucciones escritas, y deja que las dos funciones se ocupen también de los objetivos.",
+          "details": [
+            "Los propietarios de un proyecto tienen la pestaña «Instrucciones de la IA» en los ajustes del proyecto. Define el «Idioma de trabajo» y escribe las «Instrucciones del equipo» para los títulos de las incidencias, para la prioridad, el esfuerzo y las categorías, para los objetivos y para la asignación. Cuando los miembros corrigen a mano una y otra vez la misma propiedad, minddy redacta una instrucción que el propietario añade o descarta.",
+            "Smart Fill completa ahora el color, la fecha objetivo y el nombre que falta de un objetivo nuevo, y Smart Assign elige a su responsable. Al activarse, Smart Assign pregunta «¿Asignar las incidencias abiertas?» para dar responsable a las incidencias que ya esperaban, y «Asignar a partir de» decide si empieza en Backlog o en «Pendiente». Nunca sustituye a un responsable."
+          ]
+        }
+      }
+    },
+    {
+      "id": "page-databases-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "database"
+      },
+      "copy": {
+        "en": {
+          "title": "Databases that calculate",
+          "summary": "Number columns total themselves, cells accept calculations, dates can repeat, and every change can be undone.",
+          "details": [
+            "Type 14 + 2 in a number cell and the database keeps the result, with the currency or percentage format you typed. Calculate, under a number column, shows the sum, average, minimum, maximum or count, saved with the view. A date can be Recurring, and new read-only columns show who created or last edited an entry, and when it was last edited.",
+            "Undo and redo cover cells, columns, options, entries and view settings. Columns resize and options reorder by dragging. Numo and agents connected through MCP manage saved views and calculations too."
+          ]
+        },
+        "fr": {
+          "title": "Des bases de données qui calculent",
+          "summary": "Les colonnes de nombres font leur total, les cellules acceptent des calculs, les dates peuvent se répéter, et chaque modification s’annule.",
+          "details": [
+            "Saisissez 14 + 2 dans une cellule de nombre : la base garde le résultat, avec le format monétaire ou en pourcentage que vous avez tapé. « Calculer », sous une colonne de nombres, affiche la somme, la moyenne, le minimum, le maximum ou le nombre d’entrées, enregistré avec la vue. Une date peut être « Récurrent », et de nouvelles colonnes en lecture seule indiquent qui a créé ou modifié une entrée en dernier, et quand elle a été modifiée.",
+            "Annuler et rétablir couvrent les cellules, les colonnes, les options, les entrées et les réglages de vue. Les colonnes se redimensionnent et les options se réordonnent par glisser-déposer. Numo et les agents connectés par MCP gèrent aussi les vues enregistrées et les calculs."
+          ]
+        },
+        "de": {
+          "title": "Datenbanken, die rechnen",
+          "summary": "Zahlenspalten bilden ihre Summe, Zellen nehmen Berechnungen an, Datumswerte können sich wiederholen, und jede Änderung lässt sich rückgängig machen.",
+          "details": [
+            "Tippe 14 + 2 in eine Zahlenzelle, und die Datenbank behält das Ergebnis, im Währungs- oder Prozentformat, das du eingegeben hast. „Berechnen“ unter einer Zahlenspalte zeigt Summe, Durchschnitt, Minimum, Maximum oder Anzahl und wird mit der Ansicht gespeichert. Ein Datum kann „Wiederkehrend“ sein, und neue schreibgeschützte Spalten zeigen, wer einen Eintrag erstellt oder zuletzt bearbeitet hat und wann er zuletzt bearbeitet wurde.",
+            "Rückgängig und Wiederholen gelten für Zellen, Spalten, Optionen, Einträge und Ansichtseinstellungen. Spalten lassen sich in der Breite ändern und Optionen per Ziehen neu ordnen. Auch Numo und über MCP verbundene Agenten verwalten gespeicherte Ansichten und Berechnungen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Bancos de dados que calculam",
+          "summary": "Colunas de números somam sozinhas, células aceitam cálculos, datas podem se repetir e toda alteração pode ser desfeita.",
+          "details": [
+            "Digite 14 + 2 em uma célula de número e o banco de dados guarda o resultado, com o formato de moeda ou de porcentagem que você digitou. \"Calcular\", abaixo de uma coluna de números, mostra a soma, a média, o mínimo, o máximo ou a contagem, salvo com a visualização. Uma data pode ser \"Recorrente\", e novas colunas somente leitura mostram quem criou ou editou uma entrada por último, e quando ela foi editada.",
+            "Desfazer e refazer valem para células, colunas, opções, entradas e configurações de visualização. As colunas podem ser redimensionadas e as opções reordenadas arrastando. O Numo e os agentes conectados por MCP também gerenciam visualizações salvas e cálculos."
+          ]
+        },
+        "it": {
+          "title": "Database che calcolano",
+          "summary": "Le colonne numeriche si sommano da sole, le celle accettano calcoli, le date possono ripetersi e ogni modifica si può annullare.",
+          "details": [
+            "Scrivi 14 + 2 in una cella numerica e il database conserva il risultato, con il formato valuta o percentuale che hai digitato. «Calcola», sotto una colonna numerica, mostra somma, media, minimo, massimo o conteggio, salvato con la vista. Una data può essere «Ricorrente», e nuove colonne di sola lettura mostrano chi ha creato o modificato per ultimo una voce, e quando è stata modificata.",
+            "Annulla e ripristina valgono per celle, colonne, opzioni, voci e impostazioni della vista. Le colonne si ridimensionano e le opzioni si riordinano trascinandole. Anche Numo e gli agenti collegati tramite MCP gestiscono viste salvate e calcoli."
+          ]
+        },
+        "es": {
+          "title": "Bases de datos que calculan",
+          "summary": "Las columnas numéricas se suman solas, las celdas aceptan cálculos, las fechas pueden repetirse y cada cambio se puede deshacer.",
+          "details": [
+            "Escribe 14 + 2 en una celda numérica y la base de datos guarda el resultado, con el formato de moneda o de porcentaje que hayas escrito. «Calcular», bajo una columna numérica, muestra la suma, el promedio, el mínimo, el máximo o el recuento, guardado con la vista. Una fecha puede ser «Recurrente», y nuevas columnas de solo lectura muestran quién creó o editó por última vez una entrada, y cuándo se editó.",
+            "Deshacer y rehacer cubren celdas, columnas, opciones, entradas y ajustes de la vista. Las columnas se redimensionan y las opciones se reordenan arrastrándolas. Numo y los agentes conectados por MCP también gestionan vistas guardadas y cálculos."
+          ]
+        }
+      }
+    },
+    {
+      "id": "coding-agent-prompts-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "coding-agent"
+      },
+      "copy": {
+        "en": {
+          "title": "Send an issue to your coding agent",
+          "summary": "With Claude Code, Codex or Cursor connected to minddy through MCP, a prompt opens in the agent's app and the agent fetches the issue itself.",
+          "details": [
+            "Turn on Open prompts in my coding agent in your preferences and choose the agent. The prompt actions on an issue then send the prompt to that app, and still copy it to the clipboard.",
+            "Because the agent reads the issue, its plan and its comments through minddy's MCP server, the prompt only names the issue. This works on a computer; on a phone, prompts are copied as before."
+          ]
+        },
+        "fr": {
+          "title": "Envoyez un ticket à votre agent de code",
+          "summary": "Avec Claude Code, Codex ou Cursor connecté à minddy par MCP, le prompt s’ouvre dans l’application de l’agent, qui va chercher le ticket lui-même.",
+          "details": [
+            "Activez « Ouvrir les prompts dans mon agent de code » dans vos préférences et choisissez l’agent. Les actions de prompt d’un ticket envoient alors le prompt à cette application, tout en le copiant dans le presse-papiers.",
+            "Comme l’agent lit le ticket, son plan et ses commentaires par le serveur MCP de minddy, le prompt se contente de nommer le ticket. Cela fonctionne sur ordinateur ; sur téléphone, les prompts sont copiés comme avant."
+          ]
+        },
+        "de": {
+          "title": "Schick ein Ticket an deinen Coding-Agenten",
+          "summary": "Ist Claude Code, Codex oder Cursor über MCP mit minddy verbunden, öffnet sich ein Prompt in der App des Agenten, und der Agent holt sich das Ticket selbst.",
+          "details": [
+            "Schalte in deinen Einstellungen „Prompts in meinem Coding-Agenten öffnen“ ein und wähle den Agenten. Die Prompt-Aktionen eines Tickets senden den Prompt dann an diese App und kopieren ihn weiterhin in die Zwischenablage.",
+            "Weil der Agent das Ticket, seinen Plan und seine Kommentare über den MCP-Server von minddy liest, nennt der Prompt nur das Ticket. Das funktioniert am Computer; auf dem Telefon werden Prompts wie bisher kopiert."
+          ]
+        },
+        "pt-BR": {
+          "title": "Envie um ticket ao seu agente de código",
+          "summary": "Com Claude Code, Codex ou Cursor conectado ao minddy por MCP, o prompt abre no aplicativo do agente, que busca o ticket por conta própria.",
+          "details": [
+            "Ative \"Abrir os prompts no meu agente de código\" nas suas preferências e escolha o agente. As ações de prompt de um ticket passam a enviar o prompt para esse aplicativo e continuam copiando para a área de transferência.",
+            "Como o agente lê o ticket, o plano e os comentários pelo servidor MCP do minddy, o prompt apenas indica o ticket. Isso funciona no computador; no celular, os prompts são copiados como antes."
+          ]
+        },
+        "it": {
+          "title": "Invia un ticket al tuo agente di codice",
+          "summary": "Con Claude Code, Codex o Cursor collegato a minddy tramite MCP, il prompt si apre nell'app dell'agente, che recupera il ticket da solo.",
+          "details": [
+            "Attiva «Apri i prompt nel mio agente di codice» nelle tue preferenze e scegli l'agente. Le azioni di prompt di un ticket inviano allora il prompt a quell'app e continuano a copiarlo negli appunti.",
+            "Poiché l'agente legge il ticket, il suo piano e i suoi commenti tramite il server MCP di minddy, il prompt si limita a indicare il ticket. Funziona su computer; sul telefono i prompt vengono copiati come prima."
+          ]
+        },
+        "es": {
+          "title": "Envía una incidencia a tu agente de programación",
+          "summary": "Con Claude Code, Codex o Cursor conectado a minddy por MCP, el prompt se abre en la aplicación del agente, que busca la incidencia por sí mismo.",
+          "details": [
+            "Activa «Abrir los prompts en mi agente de programación» en tus preferencias y elige el agente. Las acciones de prompt de una incidencia envían entonces el prompt a esa aplicación y lo siguen copiando al portapapeles.",
+            "Como el agente lee la incidencia, su plan y sus comentarios mediante el servidor MCP de minddy, el prompt solo nombra la incidencia. Funciona en un ordenador; en el teléfono, los prompts se copian como antes."
+          ]
+        }
+      }
+    },
+    {
+      "id": "routines-home-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "routines"
+      },
+      "copy": {
+        "en": {
+          "title": "Describe a routine to create it",
+          "summary": "The Routines page opens on a composer: write what Numo should do and when, or start from one of ten examples.",
+          "details": [
+            "Describe the routine in a sentence and Numo sets it up. The examples are grouped by use, from triage to reports, and Start from scratch opens the step-by-step form.",
+            "Each due routine now runs on its own, so a long one no longer delays the others."
+          ]
+        },
+        "fr": {
+          "title": "Décrivez une routine pour la créer",
+          "summary": "La page Routines s’ouvre sur un champ de saisie : écrivez ce que Numo doit faire et quand, ou partez de l’un des dix exemples.",
+          "details": [
+            "Décrivez la routine en une phrase et Numo la met en place. Les exemples sont regroupés par usage, du triage aux rapports, et « Partir de zéro » ouvre le formulaire pas à pas.",
+            "Chaque routine arrivée à échéance s’exécute désormais séparément : une routine longue ne retarde plus les autres."
+          ]
+        },
+        "de": {
+          "title": "Beschreib eine Routine, um sie anzulegen",
+          "summary": "Die Seite Routinen beginnt mit einem Eingabefeld: Schreib, was Numo tun soll und wann, oder starte mit einem von zehn Beispielen.",
+          "details": [
+            "Beschreib die Routine in einem Satz, und Numo richtet sie ein. Die Beispiele sind nach Verwendung gruppiert, von Triage bis Berichten, und „Ohne Vorlage starten“ öffnet das Formular Schritt für Schritt.",
+            "Jede fällige Routine läuft jetzt für sich, sodass eine lange die anderen nicht mehr aufhält."
+          ]
+        },
+        "pt-BR": {
+          "title": "Descreva uma rotina para criá-la",
+          "summary": "A página Rotinas abre com um campo de escrita: escreva o que o Numo deve fazer e quando, ou comece por um dos dez exemplos.",
+          "details": [
+            "Descreva a rotina em uma frase e o Numo a configura. Os exemplos são agrupados por uso, da triagem aos relatórios, e \"Começar do zero\" abre o formulário passo a passo.",
+            "Cada rotina no horário agora roda separadamente, e uma rotina longa não atrasa mais as outras."
+          ]
+        },
+        "it": {
+          "title": "Descrivi una routine per crearla",
+          "summary": "La pagina Routine si apre su un campo di scrittura: scrivi cosa deve fare Numo e quando, oppure parti da uno dei dieci esempi.",
+          "details": [
+            "Descrivi la routine in una frase e Numo la imposta. Gli esempi sono raggruppati per uso, dal triage ai report, e «Parti da zero» apre il modulo passo per passo.",
+            "Ogni routine in scadenza ora viene eseguita separatamente, così una routine lunga non ritarda più le altre."
+          ]
+        },
+        "es": {
+          "title": "Describe una rutina para crearla",
+          "summary": "La página Rutinas se abre con un campo de escritura: escribe qué debe hacer Numo y cuándo, o parte de uno de los diez ejemplos.",
+          "details": [
+            "Describe la rutina en una frase y Numo la configura. Los ejemplos están agrupados por uso, de la clasificación a los informes, y «Empezar desde cero» abre el formulario paso a paso.",
+            "Cada rutina que toca ejecutar corre ahora por separado, así que una rutina larga ya no retrasa a las demás."
+          ]
+        }
+      }
+    },
+    {
+      "id": "ai-usage-and-models-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "forecast"
+      },
+      "copy": {
+        "en": {
+          "title": "See where your AI usage is heading",
+          "summary": "Usage & billing forecasts your budget, Numo warns you before it runs out, and decisions get their own model setting.",
+          "details": [
+            "Usage & billing, formerly Billing, shows Budget over time with a dashed forecast, and your usage per day. When the budget would run out before it resets, Numo says so on Home. Numo's own requests also use less of that budget.",
+            "AI settings now have four roles: language model, embeddings, speech to text and decisions. Under Decisions, choose a decision model or a language model, then its provider. Providers used with your own key were corrected against their documented APIs. Local providers such as Ollama are no longer supported: a saved one is marked No longer supported and can be removed."
+          ]
+        },
+        "fr": {
+          "title": "Voyez où va votre usage de l’IA",
+          "summary": "« Usage & facturation » prévoit l’évolution de votre budget, Numo vous prévient avant qu’il soit épuisé, et les décisions ont leur propre réglage de modèle.",
+          "details": [
+            "« Usage & facturation », auparavant « Facturation », affiche « Évolution du budget » avec une prévision en pointillés, ainsi que votre usage par jour. Quand le budget serait épuisé avant sa remise à zéro, Numo le signale sur l’accueil. Les requêtes de Numo consomment aussi moins de ce budget.",
+            "Les paramètres d’IA comptent maintenant quatre rôles : modèle de langage, embeddings, transcription vocale et décisions. Sous « Décisions », choisissez un modèle de décision ou un modèle de langage, puis son fournisseur. Les fournisseurs utilisés avec votre propre clé ont été corrigés d’après leur API documentée. Les fournisseurs locaux comme Ollama ne sont plus pris en charge : un fournisseur enregistré est marqué « Plus pris en charge » et peut être retiré."
+          ]
+        },
+        "de": {
+          "title": "Sieh, wohin sich deine KI-Nutzung entwickelt",
+          "summary": "„Nutzung & Abrechnung“ sagt dein Budget voraus, Numo warnt dich, bevor es aufgebraucht ist, und Entscheidungen bekommen eine eigene Modelleinstellung.",
+          "details": [
+            "„Nutzung & Abrechnung“, bisher „Abrechnung“, zeigt „Budget im Zeitverlauf“ mit einer gestrichelten Prognose sowie deine Nutzung pro Tag. Wenn das Budget vor dem Zurücksetzen aufgebraucht wäre, sagt Numo es auf der Startseite. Numos eigene Anfragen verbrauchen außerdem weniger von diesem Budget.",
+            "Die KI-Einstellungen haben jetzt vier Rollen: Sprachmodell, Embeddings, Sprache zu Text und Entscheidungen. Unter „Entscheidungen“ wählst du ein Entscheidungsmodell oder ein Sprachmodell und dann den Anbieter. Anbieter, die du mit eigenem Schlüssel nutzt, wurden an ihre dokumentierten APIs angepasst. Lokale Anbieter wie Ollama werden nicht mehr unterstützt: Ein gespeicherter Anbieter ist mit „Nicht mehr unterstützt“ markiert und kann entfernt werden."
+          ]
+        },
+        "pt-BR": {
+          "title": "Veja para onde vai o seu uso de IA",
+          "summary": "\"Uso e faturamento\" prevê seu orçamento, o Numo avisa antes que ele acabe, e as decisões ganham uma configuração de modelo própria.",
+          "details": [
+            "\"Uso e faturamento\", antes \"Faturamento\", mostra \"Evolução do orçamento\" com uma previsão tracejada, além do seu uso por dia. Quando o orçamento acabaria antes de ser renovado, o Numo avisa na página inicial. As solicitações do próprio Numo também consomem menos desse orçamento.",
+            "As configurações de IA agora têm quatro funções: modelo de linguagem, embeddings, fala para texto e decisões. Em \"Decisões\", escolha um modelo de decisão ou um modelo de linguagem e depois o provedor. Os provedores usados com a sua própria chave foram corrigidos conforme as APIs documentadas. Provedores locais como o Ollama não são mais compatíveis: um provedor salvo aparece como \"Não é mais compatível\" e pode ser removido."
+          ]
+        },
+        "it": {
+          "title": "Guarda dove sta andando il tuo utilizzo dell'IA",
+          "summary": "«Utilizzo e fatturazione» prevede l'andamento del budget, Numo ti avvisa prima che finisca, e le decisioni hanno una propria impostazione del modello.",
+          "details": [
+            "«Utilizzo e fatturazione», prima «Fatturazione», mostra «Andamento del budget» con una previsione tratteggiata, oltre al tuo utilizzo giornaliero. Quando il budget finirebbe prima del rinnovo, Numo lo segnala nella Home. Anche le richieste di Numo consumano meno di quel budget.",
+            "Le impostazioni IA hanno ora quattro ruoli: modello linguistico, embedding, voce in testo e decisioni. In «Decisioni» scegli un modello di decisione o un modello linguistico, poi il fornitore. I fornitori usati con la tua chiave sono stati corretti in base alle loro API documentate. I fornitori locali come Ollama non sono più supportati: uno salvato è contrassegnato come «Non più supportato» e può essere rimosso."
+          ]
+        },
+        "es": {
+          "title": "Mira hacia dónde va tu uso de la IA",
+          "summary": "«Uso y facturación» prevé tu presupuesto, Numo te avisa antes de que se agote, y las decisiones tienen su propio ajuste de modelo.",
+          "details": [
+            "«Uso y facturación», antes «Facturación», muestra «Evolución del presupuesto» con una previsión en línea discontinua, además de tu uso por día. Cuando el presupuesto se agotaría antes de renovarse, Numo lo indica en Inicio. Las peticiones del propio Numo también consumen menos de ese presupuesto.",
+            "Los ajustes de IA tienen ahora cuatro funciones: modelo de lenguaje, embeddings, voz a texto y decisiones. En «Decisiones», elige un modelo de decisión o un modelo de lenguaje y después su proveedor. Los proveedores usados con tu propia clave se han corregido según sus API documentadas. Los proveedores locales como Ollama ya no son compatibles: uno guardado aparece como «Ya no es compatible» y se puede quitar."
+          ]
+        }
+      }
+    },
+    {
+      "id": "issue-graph-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "graph"
+      },
+      "copy": {
+        "en": {
+          "title": "The issue graph, full screen",
+          "summary": "Enlarge the graph in project statistics to explore up to 600 issues with zoom and pan.",
+          "details": [
+            "Enlarge the graph opens it full screen. Zoom with the wheel, a pinch, a double click or the buttons, and drag to move around.",
+            "The full-screen graph draws up to 600 issues, against 120 in the statistics card. Selecting an issue closes the graph and opens the issue."
+          ]
+        },
+        "fr": {
+          "title": "Le graphe des tickets en plein écran",
+          "summary": "Agrandissez le graphe des statistiques du projet pour explorer jusqu’à 600 tickets, avec zoom et déplacement.",
+          "details": [
+            "« Agrandir le graphe » l’ouvre en plein écran. Zoomez avec la molette, un pincement, un double-clic ou les boutons, et faites glisser pour vous déplacer.",
+            "Le graphe en plein écran dessine jusqu’à 600 tickets, contre 120 dans la carte des statistiques. Sélectionner un ticket ferme le graphe et ouvre le ticket."
+          ]
+        },
+        "de": {
+          "title": "Der Ticket-Graph im Vollbild",
+          "summary": "Vergrößere den Graphen in den Projektstatistiken, um bis zu 600 Tickets mit Zoom und Verschieben zu erkunden.",
+          "details": [
+            "„Graph vergrößern“ öffnet ihn im Vollbild. Zoome mit dem Mausrad, einer Spreizgeste, einem Doppelklick oder den Schaltflächen, und zieh, um dich zu bewegen.",
+            "Der Graph im Vollbild zeichnet bis zu 600 Tickets, in der Statistik-Karte sind es 120. Wenn du ein Ticket auswählst, schließt sich der Graph und das Ticket öffnet sich."
+          ]
+        },
+        "pt-BR": {
+          "title": "O grafo de tickets em tela cheia",
+          "summary": "Amplie o grafo nas estatísticas do projeto para explorar até 600 tickets com zoom e deslocamento.",
+          "details": [
+            "\"Ampliar o grafo\" o abre em tela cheia. Dê zoom com a roda do mouse, um gesto de pinça, um clique duplo ou os botões, e arraste para se mover.",
+            "O grafo em tela cheia desenha até 600 tickets, contra 120 no cartão de estatísticas. Selecionar um ticket fecha o grafo e abre o ticket."
+          ]
+        },
+        "it": {
+          "title": "Il grafo dei ticket a schermo intero",
+          "summary": "Ingrandisci il grafo nelle statistiche del progetto per esplorare fino a 600 ticket con zoom e spostamento.",
+          "details": [
+            "«Ingrandisci il grafo» lo apre a schermo intero. Usa la rotellina, un pizzico, un doppio clic o i pulsanti per lo zoom, e trascina per spostarti.",
+            "Il grafo a schermo intero disegna fino a 600 ticket, contro i 120 della scheda delle statistiche. Selezionare un ticket chiude il grafo e apre il ticket."
+          ]
+        },
+        "es": {
+          "title": "El grafo de incidencias a pantalla completa",
+          "summary": "Amplía el grafo en las estadísticas del proyecto para explorar hasta 600 incidencias con zoom y desplazamiento.",
+          "details": [
+            "«Ampliar el grafo» lo abre a pantalla completa. Haz zoom con la rueda, un pellizco, un doble clic o los botones, y arrastra para moverte.",
+            "El grafo a pantalla completa dibuja hasta 600 incidencias, frente a 120 en la tarjeta de estadísticas. Seleccionar una incidencia cierra el grafo y abre la incidencia."
+          ]
+        }
+      }
+    },
+    {
+      "id": "project-navigation-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "sidebar"
+      },
+      "copy": {
+        "en": {
+          "title": "Switch and reorder projects",
+          "summary": "A searchable picker moves you between projects, and the sidebar keeps the project order you choose.",
+          "details": [
+            "Switch project opens a searchable picker from the keyboard and keeps you on the same tab in the project you choose.",
+            "Drag projects in the sidebar to put them in your order. The order follows your account on every device."
+          ]
+        },
+        "fr": {
+          "title": "Changez de projet et réordonnez-les",
+          "summary": "Un sélecteur avec recherche vous fait passer d’un projet à l’autre, et la barre latérale garde l’ordre que vous choisissez.",
+          "details": [
+            "« Changer de projet » ouvre au clavier un sélecteur avec recherche et vous laisse sur le même onglet dans le projet choisi.",
+            "Faites glisser les projets dans la barre latérale pour les ranger à votre façon. Cet ordre suit votre compte sur tous vos appareils."
+          ]
+        },
+        "de": {
+          "title": "Projekte wechseln und neu ordnen",
+          "summary": "Eine durchsuchbare Auswahl bringt dich von Projekt zu Projekt, und die Seitenleiste behält die Reihenfolge, die du wählst.",
+          "details": [
+            "„Projekt wechseln“ öffnet per Tastatur eine durchsuchbare Auswahl und lässt dich im gewählten Projekt auf demselben Tab.",
+            "Zieh Projekte in der Seitenleiste in deine Reihenfolge. Sie folgt deinem Konto auf jedem Gerät."
+          ]
+        },
+        "pt-BR": {
+          "title": "Troque de projeto e reordene-os",
+          "summary": "Um seletor com busca leva você de um projeto a outro, e a barra lateral mantém a ordem que você escolhe.",
+          "details": [
+            "\"Trocar de projeto\" abre pelo teclado um seletor com busca e mantém você na mesma aba no projeto escolhido.",
+            "Arraste os projetos na barra lateral para deixá-los na sua ordem. Ela acompanha sua conta em todos os dispositivos."
+          ]
+        },
+        "it": {
+          "title": "Cambia progetto e riordinali",
+          "summary": "Un selettore con ricerca ti porta da un progetto all'altro, e la barra laterale mantiene l'ordine che scegli.",
+          "details": [
+            "«Cambia progetto» apre dalla tastiera un selettore con ricerca e ti lascia sulla stessa scheda nel progetto scelto.",
+            "Trascina i progetti nella barra laterale per metterli nel tuo ordine. L'ordine segue il tuo account su ogni dispositivo."
+          ]
+        },
+        "es": {
+          "title": "Cambia de proyecto y reordénalos",
+          "summary": "Un selector con búsqueda te lleva de un proyecto a otro, y la barra lateral conserva el orden que eliges.",
+          "details": [
+            "«Cambiar de proyecto» abre desde el teclado un selector con búsqueda y te deja en la misma pestaña del proyecto elegido.",
+            "Arrastra los proyectos en la barra lateral para ponerlos en tu orden. Ese orden sigue a tu cuenta en todos los dispositivos."
+          ]
+        }
+      }
+    },
+    {
+      "id": "sign-in-0400",
+      "illustration": {
+        "kind": "icon",
+        "name": "shield"
+      },
+      "copy": {
+        "en": {
+          "title": "One sign-in screen, with Apple",
+          "summary": "Enter your email first and minddy shows the right next step. Continue with Apple joins Google and GitHub.",
+          "details": [
+            "The sign-in screen asks for your email, then for your password, a new password, or the service your account uses. Continue with Apple is available on the web, in the desktop app and on iOS. On a self-hosted instance it appears once the administrator has configured it.",
+            "New accounts set a name and a picture, then follow a full-screen tour that replaces the checklist in the sidebar."
+          ]
+        },
+        "fr": {
+          "title": "Un seul écran de connexion, avec Apple",
+          "summary": "Saisissez d’abord votre e-mail et minddy affiche l’étape qui convient. « Continuer avec Apple » rejoint Google et GitHub.",
+          "details": [
+            "L’écran de connexion demande votre e-mail, puis votre mot de passe, un nouveau mot de passe ou le service utilisé par votre compte. « Continuer avec Apple » est disponible sur le web, dans l’application de bureau et sur iOS. Sur une instance auto-hébergée, le bouton apparaît une fois configuré par l’administrateur.",
+            "Les nouveaux comptes choisissent un nom et une photo, puis suivent une visite en plein écran qui remplace la liste de la barre latérale."
+          ]
+        },
+        "de": {
+          "title": "Ein Anmeldebildschirm, jetzt mit Apple",
+          "summary": "Gib zuerst deine E-Mail-Adresse ein, und minddy zeigt den passenden nächsten Schritt. „Weiter mit Apple“ kommt zu Google und GitHub hinzu.",
+          "details": [
+            "Der Anmeldebildschirm fragt nach deiner E-Mail-Adresse und dann nach deinem Passwort, einem neuen Passwort oder dem Dienst, den dein Konto nutzt. „Weiter mit Apple“ gibt es im Web, in der Desktop-App und auf iOS. Auf einer selbst gehosteten Instanz erscheint es, sobald der Administrator es eingerichtet hat.",
+            "Neue Konten legen Namen und Bild fest und folgen dann einer Tour im Vollbild, die die Checkliste in der Seitenleiste ersetzt."
+          ]
+        },
+        "pt-BR": {
+          "title": "Uma só tela de login, agora com a Apple",
+          "summary": "Informe primeiro seu e-mail e o minddy mostra o próximo passo certo. \"Continuar com a Apple\" se junta ao Google e ao GitHub.",
+          "details": [
+            "A tela de login pede seu e-mail e depois a senha, uma nova senha ou o serviço que sua conta usa. \"Continuar com a Apple\" está disponível na web, no aplicativo para desktop e no iOS. Em uma instância auto-hospedada, o botão aparece depois que o administrador o configura.",
+            "Contas novas definem um nome e uma foto e depois seguem um tour em tela cheia, que substitui a lista da barra lateral."
+          ]
+        },
+        "it": {
+          "title": "Un'unica schermata di accesso, con Apple",
+          "summary": "Inserisci prima la tua email e minddy mostra il passaggio giusto. «Continua con Apple» si aggiunge a Google e GitHub.",
+          "details": [
+            "La schermata di accesso chiede la tua email, poi la password, una nuova password o il servizio usato dal tuo account. «Continua con Apple» è disponibile sul web, nell'app desktop e su iOS. Su un'istanza self-hosted compare dopo che l'amministratore l'ha configurato.",
+            "I nuovi account impostano un nome e un'immagine, poi seguono un tour a schermo intero che sostituisce l'elenco nella barra laterale."
+          ]
+        },
+        "es": {
+          "title": "Una sola pantalla de inicio de sesión, con Apple",
+          "summary": "Escribe primero tu correo y minddy muestra el paso que corresponde. «Continuar con Apple» se suma a Google y GitHub.",
+          "details": [
+            "La pantalla de inicio de sesión pide tu correo y después tu contraseña, una contraseña nueva o el servicio que usa tu cuenta. «Continuar con Apple» está disponible en la web, en la aplicación de escritorio y en iOS. En una instancia autoalojada aparece cuando el administrador lo ha configurado.",
+            "Las cuentas nuevas eligen un nombre y una imagen y luego siguen un recorrido a pantalla completa, que sustituye a la lista de la barra lateral."
+          ]
+        }
+      }
+    },
+    {
+      "id": "smaller-changes-0400",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Smaller changes",
+          "summary": "An XXL effort size, board cards that show the title alone, one pull request card everywhere, and a Help menu.",
+          "details": [
+            "Effort gains an XXL size worth 13 points. Board cards show the title alone. A pull request mention shows the same card everywhere, colored by its state, and the task notebook can mention pages from any project. In the composer, what Numo just mentioned comes first in the mention menu.",
+            "The What's new menu is now Help and also opens the keyboard shortcuts. The pages sidebar gets Collapse all, favorites reorder by dragging, and search ignores accents. Your own page save is no longer reported as a conflict, and an issue you created no longer stays in your drafts."
+          ]
+        },
+        "fr": {
+          "title": "Changements plus modestes",
+          "summary": "Une taille d’effort XXL, des cartes du board réduites au titre, une même carte de pull request partout et un menu « Aide ».",
+          "details": [
+            "L’effort gagne une taille XXL qui vaut 13 points. Les cartes du board n’affichent plus que le titre. Une mention de pull request montre la même carte partout, colorée selon son état, et le carnet de tâches peut mentionner les pages de n’importe quel projet. Dans le champ de saisie, ce que Numo vient de mentionner arrive en tête du menu des mentions.",
+            "Le menu des nouveautés devient « Aide » et ouvre aussi les raccourcis clavier. La barre latérale des pages reçoit « Tout replier », les favoris se réordonnent par glisser-déposer et la recherche ignore les accents. Votre propre enregistrement d’une page n’est plus signalé comme un conflit, et un ticket que vous avez créé ne reste plus dans vos brouillons."
+          ]
+        },
+        "de": {
+          "title": "Kleinere Änderungen",
+          "summary": "Eine Aufwandsgröße XXL, Board-Karten nur mit Titel, überall dieselbe Pull-Request-Karte und ein Menü „Hilfe“.",
+          "details": [
+            "Der Aufwand bekommt die Größe XXL mit 13 Punkten. Board-Karten zeigen nur noch den Titel. Eine Pull-Request-Erwähnung zeigt überall dieselbe Karte, eingefärbt nach ihrem Zustand, und das Aufgabennotizbuch kann Seiten aus jedem Projekt erwähnen. Im Eingabefeld steht im Erwähnungsmenü zuerst, was Numo gerade erwähnt hat.",
+            "Das Menü mit den Neuigkeiten heißt jetzt „Hilfe“ und öffnet auch die Tastaturkürzel. Die Seitenleiste der Seiten bekommt „Alle einklappen“, Favoriten lassen sich per Ziehen ordnen, und die Suche ignoriert Akzente. Dein eigenes Speichern einer Seite wird nicht mehr als Konflikt gemeldet, und ein Ticket, das du erstellt hast, bleibt nicht mehr in deinen Entwürfen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Mudanças menores",
+          "summary": "Um tamanho de esforço XXL, cartões do board só com o título, o mesmo cartão de pull request em todo lugar e um menu \"Ajuda\".",
+          "details": [
+            "O esforço ganha o tamanho XXL, que vale 13 pontos. Os cartões do board mostram apenas o título. Uma menção a um pull request mostra o mesmo cartão em todo lugar, colorido conforme o estado, e o caderno de tarefas pode mencionar páginas de qualquer projeto. No campo de escrita, o que o Numo acabou de mencionar aparece primeiro no menu de menções.",
+            "O menu de novidades agora se chama \"Ajuda\" e também abre os atalhos de teclado. A barra lateral das páginas ganha \"Recolher tudo\", os favoritos são reordenados arrastando e a busca ignora acentos. O seu próprio salvamento de uma página não é mais informado como conflito, e um ticket que você criou não fica mais nos seus rascunhos."
+          ]
+        },
+        "it": {
+          "title": "Modifiche minori",
+          "summary": "Una taglia di impegno XXL, schede del board con il solo titolo, la stessa scheda di pull request ovunque e un menu «Aiuto».",
+          "details": [
+            "L'impegno ottiene la taglia XXL, che vale 13 punti. Le schede del board mostrano solo il titolo. Una menzione di pull request mostra ovunque la stessa scheda, colorata in base allo stato, e il taccuino delle attività può menzionare pagine di qualsiasi progetto. Nel campo di scrittura, ciò che Numo ha appena menzionato compare per primo nel menu delle menzioni.",
+            "Il menu delle novità ora si chiama «Aiuto» e apre anche le scorciatoie da tastiera. La barra laterale delle pagine ha «Comprimi tutto», i preferiti si riordinano trascinandoli e la ricerca ignora gli accenti. Il tuo salvataggio di una pagina non viene più segnalato come conflitto, e un ticket che hai creato non resta più nelle tue bozze."
+          ]
+        },
+        "es": {
+          "title": "Cambios menores",
+          "summary": "Un tamaño de esfuerzo XXL, tarjetas del board solo con el título, la misma tarjeta de pull request en todas partes y un menú «Ayuda».",
+          "details": [
+            "El esfuerzo gana el tamaño XXL, que vale 13 puntos. Las tarjetas del board muestran solo el título. Una mención de pull request muestra la misma tarjeta en todas partes, coloreada según su estado, y el cuaderno de tareas puede mencionar páginas de cualquier proyecto. En el campo de escritura, lo que Numo acaba de mencionar aparece primero en el menú de menciones.",
+            "El menú de novedades se llama ahora «Ayuda» y también abre los atajos de teclado. La barra lateral de las páginas tiene «Contraer todo», los favoritos se reordenan arrastrándolos y la búsqueda ignora los acentos. Tu propio guardado de una página ya no se indica como conflicto, y una incidencia que has creado ya no se queda en tus borradores."
+          ]
+        }
+      }
+    },
+    {
+      "id": "self-hosting-0400",
+      "illustration": {
+        "kind": "icon",
+        "name": "desktop"
+      },
+      "copy": {
+        "en": {
+          "title": "For self-hosted instances",
+          "summary": "The complete profile moves to official Supabase self-hosted/v0.8.4 and PostgreSQL 17.12.",
+          "details": [
+            "v0.40.0 pins official Supabase self-hosted/v0.8.4, which includes the Storage security fixes, and replaces the database image with PostgreSQL 17.12. Coming from v0.30.1, follow the update guide in the manual: the Supabase services move together, never one image alone.",
+            "Background Numo, reminders and routines depend on the instance's scheduled jobs. Administrators set a daily limit on background turns in the admin area, and 0 turns background work off."
+          ]
+        },
+        "fr": {
+          "title": "Pour les instances auto-hébergées",
+          "summary": "Le profil complet passe à Supabase officiel self-hosted/v0.8.4 et à PostgreSQL 17.12.",
+          "details": [
+            "La v0.40.0 épingle Supabase officiel self-hosted/v0.8.4, qui inclut les correctifs de sécurité de Storage, et remplace l’image de la base par PostgreSQL 17.12. Depuis la v0.30.1, suivez le guide de mise à jour du manuel : les services Supabase évoluent ensemble, jamais une image seule.",
+            "Numo en arrière-plan, les rappels et les routines dépendent des tâches planifiées de l’instance. Les administrateurs fixent une limite quotidienne de tours en arrière-plan dans l’administration ; 0 désactive le travail en arrière-plan."
+          ]
+        },
+        "de": {
+          "title": "Für selbst gehostete Instanzen",
+          "summary": "Das vollständige Profil wechselt auf das offizielle Supabase self-hosted/v0.8.4 und PostgreSQL 17.12.",
+          "details": [
+            "v0.40.0 pinnt das offizielle Supabase self-hosted/v0.8.4, das die Sicherheitskorrekturen für Storage enthält, und ersetzt das Datenbank-Image durch PostgreSQL 17.12. Wenn du von v0.30.1 kommst, folge der Update-Anleitung im Handbuch: Die Supabase-Dienste wechseln gemeinsam, nie ein einzelnes Image.",
+            "Numo im Hintergrund, Wiedervorlagen und Routinen hängen von den geplanten Jobs der Instanz ab. Administratoren legen im Adminbereich ein Tageslimit für Hintergrund-Durchläufe fest; 0 schaltet die Hintergrundarbeit aus."
+          ]
+        },
+        "pt-BR": {
+          "title": "Para instâncias auto-hospedadas",
+          "summary": "O perfil completo passa para o Supabase oficial self-hosted/v0.8.4 e para o PostgreSQL 17.12.",
+          "details": [
+            "A v0.40.0 fixa o Supabase oficial self-hosted/v0.8.4, que inclui as correções de segurança do Storage, e substitui a imagem do banco pelo PostgreSQL 17.12. Vindo da v0.30.1, siga o guia de atualização do manual: os serviços do Supabase mudam juntos, nunca uma imagem sozinha.",
+            "O Numo em segundo plano, os lembretes e as rotinas dependem das tarefas agendadas da instância. Os administradores definem um limite diário de turnos em segundo plano na área de administração; 0 desativa o trabalho em segundo plano."
+          ]
+        },
+        "it": {
+          "title": "Per le istanze self-hosted",
+          "summary": "Il profilo completo passa a Supabase ufficiale self-hosted/v0.8.4 e a PostgreSQL 17.12.",
+          "details": [
+            "La v0.40.0 fissa Supabase ufficiale self-hosted/v0.8.4, che include le correzioni di sicurezza di Storage, e sostituisce l'immagine del database con PostgreSQL 17.12. Se arrivi dalla v0.30.1, segui la guida di aggiornamento nel manuale: i servizi Supabase si aggiornano insieme, mai una singola immagine.",
+            "Numo in background, i promemoria e le routine dipendono dalle attività pianificate dell'istanza. Gli amministratori impostano un limite giornaliero di turni in background nell'area di amministrazione; 0 disattiva il lavoro in background."
+          ]
+        },
+        "es": {
+          "title": "Para instancias autoalojadas",
+          "summary": "El perfil completo pasa a Supabase oficial self-hosted/v0.8.4 y a PostgreSQL 17.12.",
+          "details": [
+            "La v0.40.0 fija Supabase oficial self-hosted/v0.8.4, que incluye las correcciones de seguridad de Storage, y sustituye la imagen de la base de datos por PostgreSQL 17.12. Si vienes de la v0.30.1, sigue la guía de actualización del manual: los servicios de Supabase cambian juntos, nunca una imagen sola.",
+            "Numo en segundo plano, los recordatorios y las rutinas dependen de las tareas programadas de la instancia. Los administradores fijan un límite diario de turnos en segundo plano en el área de administración; 0 desactiva el trabajo en segundo plano."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "1ea2dacab7989a4a147093946566e61c04ae0cca",
+      "cc3b237b0f76c32dcf63df644bdd8095945b70a7",
+      "b65855db99ea2f5dbea0d7b77d11ef99c3718149",
+      "3ebb5ad84c7c046f492cae50ebf8008153f65735",
+      "d1f57d7f30a83a7aae55fcb6b1f1a5642fffd82b",
+      "8adadcf7bd56a5ae8c2a61965019830e4d2a8c07",
+      "7a5a6632b573f52da75b9a9b48dcc785c13ec4c8",
+      "7feabf020d1f4e78b8e3ee55e940555681982e84",
+      "38eee9dc907a8ce8dff0958d1bcb187965f1d3d2",
+      "b7bfaec7aa767dede14896e55141dc248c58ce0b",
+      "95c551d742428f41edc63583d42c960c03859668",
+      "608339aeda0e631dbfd94e335f65668740e1aaf2",
+      "660c980155af5bae6a6f5bb0d3d23bb0a9035d0d",
+      "e5bf9da9290b22d7cdd7a122f4b56d9ff48b7810",
+      "e2f149637d73420a220b922843a062a0b421882d",
+      "2b43182de7e1c46d607d0d97dfa2fea5ce94d14f",
+      "154865930273b6ea02f69f3e9d0e3e1d04fdb9e0",
+      "b95c735c13aeca36e9e0fe867ea63b6a76a8170a",
+      "c951bcf3b7e9908fb5feb15558a590cedbec56d4",
+      "70b6a12efe734ce56907b21b52e2eb5acfe87d6c",
+      "e1e274eca3e309ebb9c62f14d29f425e0fbc0759",
+      "fc43cc3c17b66b96c7f18629667c8d2e0474acee",
+      "df87dd70a4cb003f5881183f0949a7bfad28b088",
+      "1aeed5b49a3a871b002661fa48d8a789a5930ae9",
+      "0e9b37d778e335599a16f8130ca82481b158109f",
+      "f787b2ef2bfdc1f80427a5df26780e920a4f1e8f",
+      "5c1aa451eb07fb69679934d47110b8426f195780",
+      "116ba0dcbfecde04eec7d782e7a77b910aef3b38",
+      "9b1a268ec7dcbaf925eb5e3a0c2976eb68be5bb0",
+      "a1765d3ebcd1ef7c9b673c95cdc84f2eda1fbdc0",
+      "58a5dc6a23a2252c0ede1de8cbc417ba1448e8d8",
+      "b00d723442e7a349b3f8d0226de61489dc105881",
+      "003794fde13b33e57b6bbc2a656c323958f6d10b",
+      "cb43aa13179418f75e80e98043b323ed12cd2e94",
+      "1f575aed31f9a4cac677a153e75b1802ab8161a6",
+      "4fb554ce85b8b96cd4a1467afa7f8604b4423afa",
+      "e53c7e14c439ed3b941aadfd8c7ba48dca6b182f",
+      "ddeac53937aafb1ee00ead84311a44b5359121c0",
+      "501e64d867c07f881488099c38eb4ad074ead4ab",
+      "a1e7c25bc5555af1f61bb1a4ae139db1aa1cd0f7",
+      "9b528975b23efc4839a711b5fe57aa604e9915fd",
+      "662f1c4920d7ba404214837a1bf1cf23f7e67057",
+      "161d83fa251313ad26335f3fa475151f09320728",
+      "0f5a02c7a78793229763f0c7331df48d8c161919",
+      "c3c2236a734e1878b4e93d4fb26537091c0fa3ac",
+      "1ec1bf9e54ea103eae1234902010b56c0baba6fd",
+      "204f3902eedfba2e0df22e492c3c93d1744f8106",
+      "552400cbe29b2e305b0d00fab45ccab598d0afb4",
+      "51226f6287f975d46113baf38a1aceb58ae60202",
+      "d1d79eea70d59dbc4667212e2cf1d54a73e9fec1",
+      "28cee1a8344eb982975db478b8cf620df0df54ee",
+      "b2b3e954501b661d9b2a4a004d2edaeffb73112a",
+      "189df13bacbff2a76764d34db87e542a77c85de3",
+      "4ef5ebea2be07a7634ba18bede046e6e3c1585bb",
+      "3581800810973ea477bf0c859d7fe4fbb172fd71",
+      "80c9db71fce7665488ec4300ddfd8c3a3bf786c1"
+    ],
+    "issues": [
+      "MIN-897",
+      "MIN-898",
+      "MIN-899",
+      "MIN-900",
+      "MIN-903",
+      "MIN-906",
+      "MIN-907",
+      "MIN-914",
+      "MIN-915",
+      "MIN-916",
+      "MIN-917",
+      "MIN-918",
+      "MIN-919",
+      "MIN-923",
+      "MIN-924",
+      "MIN-926",
+      "MIN-927",
+      "MIN-928",
+      "MIN-929",
+      "MIN-930",
+      "MIN-933",
+      "MIN-936",
+      "MIN-942",
+      "MIN-945",
+      "MIN-946",
+      "MIN-949",
+      "MIN-951",
+      "MIN-953",
+      "MIN-954",
+      "MIN-955",
+      "MIN-956",
+      "MIN-957",
+      "MIN-958",
+      "MIN-959",
+      "MIN-964",
+      "MIN-968",
+      "MIN-969",
+      "MIN-974",
+      "MIN-975",
+      "MIN-979",
+      "MIN-980",
+      "MIN-982",
+      "MIN-983",
+      "MIN-984",
+      "MIN-986",
+      "MIN-987",
+      "MIN-988",
+      "MIN-990",
+      "MIN-996",
+      "MIN-1001",
+      "MIN-1004",
+      "MIN-1006",
+      "MIN-1008",
+      "MIN-1010",
+      "MIN-1011",
+      "MIN-1012",
+      "MIN-1013",
+      "MIN-1014"
+    ]
+  }
+}

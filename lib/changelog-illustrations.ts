@@ -5,6 +5,9 @@ export const CHANGELOG_ASPECT_RATIOS: Record<ChangelogIllustrationName, number> 
   activity: 1.3, desktop: 1.4, "smart-fill": 1.5, "smart-assign": 1.2,
   microphone: 1.3, relations: 1.4, "pull-request": 1.3, tabs: 1.5,
   triage: 1.35, providers: 1.4, performance: 1.35, merge: 1.3, deadline: 1.25,
+  phone: 1, memory: 1.4, reminder: 1.35, inbox: 1.3, database: 1.4, search: 1.35,
+  conversation: 1.2, routines: 1.4, graph: 1.4, sidebar: 1.25, "coding-agent": 1.5,
+  forecast: 1.3,
 };
 
 /** Presentation-only upgrades also cover immutable releases served by the remote catalog. */

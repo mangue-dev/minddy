@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-17",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.40.0 (MIN-970 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -73,7 +73,7 @@
   },
   "review": {
     "revision": 28,
-    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope)",
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (de translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-17"
   },

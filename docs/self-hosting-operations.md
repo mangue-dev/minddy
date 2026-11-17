@@ -233,7 +233,7 @@ GHSA-fgvp-cqg6-q8h2: a validly signed token with `role: "none"` makes Storage
 run its queries as `supabase_storage_admin`, which owns the Storage tables and
 bypasses their row-level security. Storage 1.89.9 fixes it, and official
 `self-hosted/v0.8.4` ships Storage 1.89.12. Release preparation refuses a new
-row below `self-hosted/v0.8.4`, so the release after v0.30.1 moves to it with
+row below `self-hosted/v0.8.4`, so v0.40.0 moves to it with
 the sequence below; do not upgrade the Storage image alone.
 
 The reference profiles have no issuer for that role, so the advisory needs no

@@ -4795,7 +4795,7 @@
       "saved": "Plan updated."
     },
     "title": "AI models",
-    "subtitle": "Each card has one default model; open “Per-task models” to give a task its own. Every choice applies right away.",
+    "subtitle": "Each card sets the model for one role, for the whole instance. Every choice applies right away.",
     "loadError": "Couldn’t load the configuration.",
     "saved": "Setting saved",
     "fieldDefault": "Default model",
