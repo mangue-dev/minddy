@@ -127,6 +127,48 @@
           }
         }
       }
+    },
+    "NSPhotoLibraryAddUsageDescription": {
+      "comment": "iOS permission prompt, shown when an image is saved to Photos from the long-press menu of the WebView; the English source is in Info.plist.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy saves the images you choose to add to your photos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy enregistre dans vos photos les images que vous choisissez d’y ajouter."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy speichert die Bilder, die du zu deinen Fotos hinzufügen möchtest."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy guarda en tus fotos las imágenes que eliges añadir."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy salva nelle tue foto le immagini che scegli di aggiungere."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O minddy salva nas suas fotos as imagens que você escolhe adicionar."
+          }
+        }
+      }
     }
   }
 }

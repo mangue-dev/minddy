@@ -108,10 +108,10 @@ page does.
 The shell also reports the radius of the screen's corners (`cornerRadius` in
 `state()`), published to the page as `--device-corner-radius`. The page set
 aside for the sidebar takes that radius, and the bottom sheets about six
-tenths of it, as native sheets do. UIKit has no public reading of the value:
-`MinddyViewController.screenCornerRadius` asks the screen for a private key
-and answers 0 when the screen does not know it, in which case the page keeps
-its own defaults.
+tenths of it, as native sheets do. `MinddyViewController.screenCornerRadius`
+takes the largest corner `effectiveRadius(corner:)` reads on a
+container-concentric view, from iOS 26 on. Before iOS 26 UIKit has no public
+reading of the value: the shell answers 0 and the page keeps its own defaults.
 
 The history swipe of the WebView is off: the swipe from the left edge belongs
 to the product, which opens its sidebar with it.
@@ -455,7 +455,10 @@ uses the same wrapper.
 - `CFBundleLocalizations` in `App/Info.plist` lists the six locales of the
   web app, which is what the App Store shows as the app's languages.
   `App/InfoPlist.xcstrings` translates the permission prompts (camera,
-  microphone, photos); the English source stays in `Info.plist`.
+  microphone, photos read and photos added); the English source stays in
+  `Info.plist`. A long press on an image in the WebView offers to add it to
+  Photos, and iOS ends an app that asks without
+  `NSPhotoLibraryAddUsageDescription`: keep that key.
 - The app's version follows the web's: `npm run release:prepare` (and
   `scripts/prepare-release.mjs`) writes it into `mobile/package.json` and the
   Xcode project's `MARKETING_VERSION`, numbers only (the App Store reads no
@@ -463,6 +466,62 @@ uses the same wrapper.
   build number (`CURRENT_PROJECT_VERSION`) goes up by hand for a second upload
   of the same version. The app's menu (What's new) lists this version beside
   the web's.
+
+## App Store review
+
+The shell was audited against the App Store Review Guidelines before its
+first submission (MIN-1014). Each rule below names the place that holds it.
+
+| Guideline | What it asks | Where minddy holds it |
+| --- | --- | --- |
+| 2.1 | no crash, no placeholder | the offline screen, the photo-add usage text |
+| 2.5.1 | public APIs only | see the private calls below |
+| 3.1.1 | nothing bought, nor any call to buy | "Nothing is sold in the app" |
+| 4.2 | more than a website | the native bar, push, haptics, Sign in with Apple, universal links |
+| 4.8 | Sign in with Apple next to Google and GitHub | "Signing in with Apple" |
+| 5.1.1(v) | delete the account in the app, Apple authorization revoked | Account settings, `apple_sign_in_tokens` |
+| 5.1.2(i) | consent before data goes to an AI provider | "AI features ask first" |
+
+### Private calls the shell keeps
+
+The shell makes three calls outside the public SDK. Each was weighed against
+guideline 2.5.1 and kept for a reason that a public API cannot meet; each is
+guarded, so a WebKit without it is left as it is.
+
+- `WKContentView`'s `inputAccessoryView` is emptied, which removes the form
+  bar above the keyboard (`hideFormAccessoryBar`). Capacitor's keyboard
+  plugin does the same.
+- `_webView:focusShouldStartInputSession:` answers yes, so a field the page
+  focuses raises the keyboard (`letFocusRaiseKeyboard`). Cordova ships the
+  same behind `KeyboardDisplayRequiresUserAction`.
+- WebKit's `PreferPageRenderingUpdatesNear60FPSEnabled` flag is turned off, so
+  the page animates at 120 Hz on ProMotion (`drawAtDisplayRate`). It is the
+  only one kept for looks alone, so it is the first to go if App Review
+  objects: set `MinddyPreferDisplayRate` to false in `Info.plist` and the
+  build never makes the call. It runs only on a display above 60 Hz, and only
+  when the private setter still has the shape the shell calls.
+
+The screen's corner radius used to come from a private key as well; it now
+comes from public UIKit (see "The native bottom bar").
+
+### Before each submission
+
+These live in App Store Connect, not in this folder:
+
+- **App Review Information**: a demo account with a project that holds
+  issues, pages and a conversation with Numo, so the reviewer can sign in
+  without creating one. Say in the notes that subscriptions are bought on
+  the web only and that nothing in the app links to them, and that the
+  server choice under the sign-in form is for self-hosted servers.
+- **App Privacy**: the labels match `NSPrivacyCollectedDataTypes` in
+  `PrivacyInfo.xcprivacy`. Change both together.
+- **Privacy policy and support URLs**: `https://www.minddy.app/privacy` and
+  a support page that answers.
+- **iPad screenshots**: the target supports iPad (`TARGETED_DEVICE_FAMILY`
+  1,2), so the listing needs iPad screenshots and the reviewer may test on
+  one.
+- **Export compliance**: `ITSAppUsesNonExemptEncryption` is false; the app
+  uses only the system's HTTPS.
 
 ## Develop
 
