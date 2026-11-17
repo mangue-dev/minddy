@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Kbd } from "@/components/ui/kbd";
+import { Kbd, KbdShortcut } from "@/components/ui/kbd";
 import { AppIcon } from "@/components/icon";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -136,7 +136,7 @@ export function NewMenu({
         {/* Collapsed, the button has no visible text: the tooltip names it. */}
         <TooltipContent side="top" className="flex items-center gap-1.5">
           {collapsed ? issueAction.label : null}
-          <Kbd size="sm">{issueAction.shortcut}</Kbd>
+          {issueAction.shortcut ? <KbdShortcut shortcut={issueAction.shortcut} /> : null}
         </TooltipContent>
       </Tooltip>
     );

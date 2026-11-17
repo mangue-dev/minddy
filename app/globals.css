@@ -420,9 +420,8 @@ a.markdown-link[data-documentation-citation]::before {
    bottom, pressed a notch, so that the hover says “this clicks” without the
    pilule change de nature.
 
-   The values ​​of `--mention-chip` and `--mention-chip-hover` set here are used
-   of REPLI: they paint what borrows the geometry of the pill without
-   be a — the pill of a command “/” from the Numo composer. */
+   The values of `--mention-chip` and `--mention-chip-hover` set here are the
+   FALLBACK: they paint a pill that has no type color of its own. */
 :root {
   --mention-chip: oklch(0.21 0.012 265 / 6%); --mention-chip-hover: oklch(0.21 0.012 265 / 12%);
   --mention-chip-l: 0.62; --mention-chip-a: 13%; --mention-chip-a-hover: 22%; --mention-chip-ink-l: 0.47;
@@ -1302,14 +1301,20 @@ html[data-input-modality="keyboard"] :is(.sidebar-nav-panel, [role="tablist"]) :
 .code-block-node-actions button {
   color: var(--code-block-muted);
 }
+/* Wrapping on reads in the accent, like the copied state beside it: on the
+   hover's gray it looked hovered rather than switched on. */
 .code-block-node-wrap[data-active="true"] {
-  background: var(--code-block-hover);
-  color: var(--code-block-foreground);
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+  color: var(--primary);
 }
 @media (hover: hover) and (pointer: fine) {
   .code-block-node-actions button:hover {
     background: var(--code-block-hover);
     color: var(--code-block-foreground);
+  }
+  .code-block-node-actions .code-block-node-wrap[data-active="true"]:hover {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+    color: var(--primary);
   }
 }
 .code-block-node-copy {
@@ -1350,6 +1355,10 @@ html[data-input-modality="keyboard"] :is(.sidebar-nav-panel, [role="tablist"]) :
 .code-block-node-view[data-overflowing="true"][data-expanded="false"] > pre {
   max-height: 26.25rem;
   overflow-y: hidden;
+  /* The cut lines fade into the block rather than stopping on a hard edge:
+     the "Expand" button below says there is more, the fade shows it. */
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 4rem), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 4rem), transparent);
 }
 .code-block-node-view > pre > code {
   font-size: inherit;

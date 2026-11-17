@@ -1,5 +1,4 @@
 import { createElement } from "react";
-import { PencilEdit01Icon as SquarePen } from "@hugeicons/core-free-icons";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -14,26 +13,22 @@ import {
   findActiveComposerMenuQuery,
 } from "./assistant-slash-options";
 
-const command = {
-  kind: "command",
-  id: "create-issue",
-  label: "create issue",
-  description: "Create a complete issue",
-  keywords: ["ticket"],
-} as const;
-
 describe("Numo slash options", () => {
   const skills = [{
-    kind: "skill",
     id: ".agents/skills/release/SKILL.md",
     label: "release",
     description: "Publish signed artifacts",
+  }, {
+    id: ".agents/skills/triage/SKILL.md",
+    label: "triage",
+    description: "Sort incoming reports",
   }] as const;
 
-  it("searches commands and skills by label, description, and command aliases", () => {
-    expect(filterSlashOptions([command, ...skills], "ticket")).toEqual([command]);
-    expect(filterSlashOptions([command, ...skills], "signed")).toEqual(skills);
-    expect(filterSlashOptions([command, ...skills], "release")).toEqual(skills);
+  it("searches skills by label and description", () => {
+    expect(filterSlashOptions(skills, "signed")).toEqual([skills[0]]);
+    expect(filterSlashOptions(skills, "TRIAGE")).toEqual([skills[1]]);
+    expect(filterSlashOptions(skills, "")).toEqual(skills);
+    expect(filterSlashOptions(skills, "deploy")).toEqual([]);
   });
 
   it("recognizes slash triggers, and no longer a dollar one (MIN-872)", () => {
@@ -70,7 +65,7 @@ describe("Numo slash options", () => {
     expect(findActiveComposerMenuQuery("Use /release ")?.query).toBe("release ");
   });
 
-  it("shows trigger prefixes only on commands and styles skill rows in emerald", () => {
+  it("lists skills without a slash prefix and styles their rows in emerald", () => {
     const skillOptions = repositorySkillOptions([
       {
         path: ".agents/skills/release/SKILL.md",
@@ -79,31 +74,16 @@ describe("Numo slash options", () => {
         source: ".agents/skills",
       },
     ]);
-    const commandOption = {
-      ...command,
-      keywords: [...command.keywords],
-      icon: SquarePen,
-    };
     const props = {
       activeIndex: 0,
       onPick: () => {},
       onHover: () => {},
     };
-    const slashHtml = renderToStaticMarkup(
-      createElement(SlashMenu, {
-        ...props,
-        prefix: "/",
-        options: [commandOption, ...skillOptions],
-      }),
-    );
-
     const skillHtml = renderToStaticMarkup(
-      createElement(SlashMenu, { ...props, prefix: "/", options: skillOptions }),
+      createElement(SlashMenu, { ...props, options: skillOptions }),
     );
 
-    expect(slashHtml).toContain(">/create issue</span>");
-    expect(slashHtml).toContain(">release</span>");
-    expect(slashHtml).not.toContain(">/release</span>");
+    expect(skillHtml).toContain(">release</span>");
     expect(skillHtml).not.toContain(">/release</span>");
     expect(skillHtml).toContain("bg-emerald-500/10");
     expect(skillHtml).toContain("text-emerald-700");

@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SparklesIcon as Sparkles, SlidersHorizontalIcon as SlidersHorizontal, TicketIcon as Ticket, UserIcon as User, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SparklesIcon as Sparkles, SlidersHorizontalIcon as SlidersHorizontal, TicketIcon as Ticket, UserIcon as User, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { SMART_FILL_ICON } from "@/components/feature-icons";
+import { NumoFace } from "@/components/numo-face";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
 import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
@@ -128,7 +129,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
     {
       value: "numo",
       label: t("numoTab"),
-      icon: Bot,
+      icon: NumoFace,
       content: (
         <>
           <AccountNumoSection />

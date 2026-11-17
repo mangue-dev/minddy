@@ -6,7 +6,6 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { browserTimezone } from "./routine-schedule";
 import type {
-  AssistantCommandId,
   AssistantMention,
   AssistantMessage,
   AssistantToolCall,
@@ -606,8 +605,6 @@ type SendOptions = {
   attachments?: ResourceInput[];
   /** The “@” written in the message (members, projects). */
   mentions?: AssistantMention[];
-  /** The “/” command placed at the top of the message (slash menu). */
-  command?: AssistantCommandId;
   /** Repository skills explicitly attached to this message. */
   skills?: AssistantSkillSelection[];
   /** Voluntary entry provenance from the common Numo intent contract. */
@@ -908,7 +905,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         is_first_of_conversation: !state.conversationId,
         has_project_scope: projectId !== null,
         attachment_count: options?.attachments?.length ?? 0,
-        has_command: !!options?.command,
         skill_count: options?.skills?.length ?? 0,
       });
       const startedAt = performance.now();
@@ -962,7 +958,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(options?.pageContext ? { pageContext: options.pageContext } : {}),
           ...(files.length ? { attachments: files } : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
-          ...(options?.command ? { command: options.command } : {}),
           ...(options?.skills?.length
             ? { skills: options.skills }
             : {}),

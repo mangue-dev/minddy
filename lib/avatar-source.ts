@@ -43,3 +43,30 @@ export function avatarImageUrl(value: string | null | undefined): string | null 
   }
   return null;
 }
+
+/**
+ * Portrait of a GitHub author, from their login alone. GitHub serves every
+ * account's avatar at `github.com/<login>.png`; the login is checked against
+ * GitHub's own username rules so mirrored text never becomes an arbitrary URL.
+ * Bot accounts (`name[bot]`) and GitLab authors have no such route: null lets
+ * the caller fall back to a generated portrait.
+ */
+export function githubAuthorAvatarUrl(
+  provider: "github" | "gitlab" | null | undefined,
+  login: string | null | undefined,
+): string | null {
+  if ((provider ?? "github") !== "github" || !login) return null;
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/.test(login)) return null;
+  return `https://github.com/${login}.png?size=80`;
+}
+
+/**
+ * Whether a forge login is a bot account: GitHub suffixes app accounts with
+ * `[bot]` (dependabot[bot]), and GitLab names project and group access-token
+ * bots `project_<id>_bot…` / `group_<id>_bot…`. A bot's avatar is drawn
+ * square, as the forges draw it, so it never passes for a person.
+ */
+export function isForgeBotLogin(login: string | null | undefined): boolean {
+  if (!login) return false;
+  return /\[bot\]$/i.test(login) || /^(?:project|group)_\d+_bot(?:_|$)/i.test(login);
+}

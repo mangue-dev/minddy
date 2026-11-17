@@ -10,6 +10,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 
 export interface AdaptiveContextItem {
   key: string;
@@ -27,9 +28,16 @@ export function ScrollableContextRow({
   items: AdaptiveContextItem[];
   className?: string;
 }) {
+  // The edge that hides more pills fades out: the row scrolls sideways
+  // without a scrollbar, and the fade is what says so. A mask, not an
+  // overlay, so it works over whatever surface the row sits on.
+  const { ref, scrollProps } = useScrollFade<HTMLDivElement>("x", "1.5rem");
   if (items.length === 0) return null;
   return (
     <div
+      ref={ref}
+      onScroll={scrollProps.onScroll}
+      style={scrollProps.style}
       className={cn(
         "min-w-0 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,

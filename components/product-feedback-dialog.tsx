@@ -7,6 +7,7 @@ import { FeedbackComposerDialog } from "@/components/feedback/feedback-composer-
 import { useResetAfterClose } from "@/lib/use-dialog-close-content";
 import { DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX, type DocumentationFeedbackContext } from "@/lib/documentation-feedback";
 import { FEEDBACK_BODY_MAX } from "@/lib/feedback/types";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 /**
  * “Share feedback” from the help menu (and “Report an error” in the
@@ -38,6 +39,9 @@ export function ProductFeedbackDialog({
   const [editorKey, setEditorKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  // Closing with something written asks first, as the routine and project
+  // wizards do: a click beside the sheet must not throw the text away.
+  const [confirmingClose, setConfirmingClose] = useState(false);
 
   const loadBody = (markdown: string) => {
     bodyRef.current = markdown;
@@ -60,6 +64,12 @@ export function ProductFeedbackDialog({
     // A dictation in flight lands in this form: closing it would throw it away.
     if (transcribing) {
       toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
+      return;
+    }
+    // The rich description commits on blur: commit it before weighing it.
+    (document.activeElement as HTMLElement | null)?.blur();
+    if (title.trim() || bodyRef.current.trim()) {
+      setConfirmingClose(true);
       return;
     }
     close();
@@ -108,6 +118,7 @@ export function ProductFeedbackDialog({
   };
 
   return (
+    <>
     <FeedbackComposerDialog
       Body={Body}
       bodyMaxLength={bodyMax}
@@ -142,5 +153,15 @@ export function ProductFeedbackDialog({
       busy={submitting}
       onSubmit={() => void submit()}
     />
+    <ConfirmDeleteDialog
+      open={confirmingClose}
+      onOpenChange={setConfirmingClose}
+      title={t("feedbackQuitTitle")}
+      description={t("feedbackQuitDescription")}
+      confirmLabel={t("feedbackQuitConfirm")}
+      cancelLabel={t("feedbackQuitCancel")}
+      onConfirm={close}
+    />
+    </>
   );
 }

@@ -61,11 +61,14 @@ export function McpAgentLogo({
   const Logo = agent ? AGENT_LOGOS[agent as McpAgentId] : undefined;
   if (Logo) {
     return (
+      // `pointer-events-none`: the packaged SVG carries a `<title>` ("Claude
+      // Code"), which the browser shows as a raw tooltip over the control
+      // the logo decorates.
       <Logo
         aria-hidden
         focusable="false"
         size={size}
-        className={cn("shrink-0", className)}
+        className={cn("pointer-events-none shrink-0", className)}
       />
     );
   }

@@ -1,4 +1,5 @@
 import type { Collaborator } from "./types";
+import { foldSearchText } from "./search-fold";
 
 /**
  * The collaborators to propose under an invite field (MIN-689): those matching
@@ -19,7 +20,7 @@ export function matchCollaborators(
     .filter((c) =>
       !needle ||
       c.email.includes(needle) ||
-      (c.full_name ?? "").toLowerCase().includes(needle),
+      foldSearchText(c.full_name ?? "").includes(foldSearchText(needle)),
     )
     .slice(0, limit);
 }

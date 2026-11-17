@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/search-select";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { cn } from "@/lib/utils";
-import { Kbd } from "@/components/ui/kbd";
+import { KbdShortcut } from "@/components/ui/kbd";
 import { DATE_ONLY, dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
 import {
   RECURRENCE_CADENCES,
@@ -635,7 +635,7 @@ export function DateTimePicker({
       {popover}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltipText}
-        {shortcutHint && <Kbd size="sm">{shortcutHint}</Kbd>}
+        {shortcutHint && <KbdShortcut shortcut={shortcutHint} />}
       </TooltipContent>
     </Tooltip>
   );

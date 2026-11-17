@@ -200,7 +200,6 @@ vi.mock("@/lib/server/assistant/tools", () => ({
   ROUTINE_UNATTENDED_EXCLUDED_TOOLS: new Set(["ask_user", "propose_backlog"]),
 }));
 vi.mock("@/lib/server/web-search", () => ({ withoutWebSearch: (tools: unknown) => tools }));
-vi.mock("@/lib/server/assistant/commands", () => ({ commandNote: () => "" }));
 vi.mock("@/lib/server/assistant/sanitize", () => ({ sanitizeAssistantMessageContent: (value: unknown) => String(value ?? "") }));
 vi.mock("@/lib/server/ai-usage", () => ({
   recordAiUsage: (...args: unknown[]) => h.recordAiUsage(...args),

@@ -70,6 +70,8 @@ import { commentsKey } from "@/lib/issue-timeline-queries";
 import { ForgeThreadResolveButton, useForgeThread, type ForgeThread } from "@/components/forge-comment-thread";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
+import { githubAuthorAvatarUrl, isForgeBotLogin } from "@/lib/avatar-source";
+import { collapseTextEdits } from "@/lib/activity-edit-collapse";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { landedResources, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
@@ -646,7 +648,12 @@ export function CommentBlock({
             <span className="flex shrink-0"><McpAvatar agent={comment.api_key_agent} /></span>
           </AgentHoverCard>
         ) : github ? (
-          <UserAvatar seed={github.author_login ?? "GitHub"} className="size-5" />
+          <UserAvatar
+            url={githubAuthorAvatarUrl(github.provider, github.author_login)}
+            seed={github.author_login ?? "GitHub"}
+            shape={isForgeBotLogin(github.author_login) ? "rounded" : "circle"}
+            className="size-5"
+          />
         ) : visitor ? (
           <UserAvatar seed={visitor.pseudonym} className="size-5" />
         ) : (
@@ -1334,7 +1341,8 @@ export const IssueActivity = memo(function IssueActivity({
   // with hundreds of comments re-renders on each timeline patch or poll.
   // A long feed used to regroup per render; the array identity only changes
   // with the items themselves.
-  const rows = useMemo(() => groupRows(items), [items]);
+  // A person's run of saves to one text field reads as one entry.
+  const rows = useMemo(() => groupRows(collapseTextEdits(items)), [items]);
 
   return (
     <CommentPermissionsContext.Provider value={permissions}>

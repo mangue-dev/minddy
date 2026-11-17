@@ -19,7 +19,6 @@ import type {
   AssistantSelectedItemKind,
 } from "@/lib/assistant-types";
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
-import { parseCommand } from "@/lib/server/assistant/commands";
 import { parseSelectedSkills } from "@/lib/server/assistant/skills";
 import { parseSelfHostingHelpContext } from "@/lib/self-hosting-help-context";
 import { normalizeSelectionText } from "@/lib/assistant-selection";
@@ -392,13 +391,12 @@ export async function POST(request: NextRequest) {
   if (body.pageContext && typeof body.pageContext === "object" && "documentation" in body.pageContext && !pageContext?.documentation) {
     return Response.json({ error: "Invalid documentation context" }, { status: 400 });
   }
-  if (pageContext?.documentation && (projectId || body.skills || body.skillPaths || body.attachments || body.mentions || body.command)) {
+  if (pageContext?.documentation && (projectId || body.skills || body.skillPaths || body.attachments || body.mentions)) {
     return Response.json({ error: "Documentation help does not accept workspace context or actions" }, { status: 400 });
   }
   if (projectId && !pageContext?.projectId) pageContext = { ...pageContext, projectId };
   let mentions = parseMentions(body.mentions);
   const numoIntent = parseNumoIntent(body.intent);
-  const command = parseCommand(body.command);
   const skillSelections = parseSelectedSkills(body.skills, body.skillPaths, projectId);
   if (skillSelections === null) {
     return Response.json({ error: "Invalid repository skills" }, { status: 400 });
@@ -694,7 +692,6 @@ export async function POST(request: NextRequest) {
       metadata: {
         ...(attachments.length > 0 ? { attachments } : {}),
         ...(mentions.length > 0 ? { mentions } : {}),
-        ...(command ? { command } : {}),
         ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
         ...(numoIntent ? { intent: numoIntent } : {}),
       },

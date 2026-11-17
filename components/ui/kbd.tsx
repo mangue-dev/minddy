@@ -142,3 +142,47 @@ export function KbdSequence({
     </span>
   );
 }
+
+const MODIFIER_GLYPHS = new Set(["⌘", "⇧", "⌥", "⌃"]);
+
+/**
+ * The keys of a shortcut written as one string: "⌘⇧L" → ⌘ ⇧ L,
+ * "Ctrl+Shift+L" → Ctrl Shift L, "⇧P" → ⇧ P. Modifier glyphs lead; whatever
+ * follows them is the last key ("⌘↵", "⇧Tab").
+ */
+export function splitShortcut(shortcut: string): string[] {
+  const text = shortcut.trim();
+  if (!text) return [];
+  if (/[^+]\+./.test(text)) {
+    return text.split(/\+(?=.)/).map((key) => key.trim()).filter(Boolean);
+  }
+  const chars = [...text];
+  const keys: string[] = [];
+  let index = 0;
+  while (index < chars.length - 1 && MODIFIER_GLYPHS.has(chars[index])) keys.push(chars[index++]);
+  keys.push(chars.slice(index).join("").trim());
+  return keys.filter(Boolean);
+}
+
+/** A shortcut, one key cap per key. Accepts a string ("⌘⇧L") or its keys. */
+export function KbdShortcut({
+  shortcut,
+  size = "sm",
+  className,
+}: {
+  shortcut: string | readonly string[];
+  size?: "sm" | "default";
+  className?: string;
+}) {
+  const keys = typeof shortcut === "string" ? splitShortcut(shortcut) : shortcut;
+  if (keys.length === 0) return null;
+  return (
+    <span className={cn("inline-flex items-center gap-0.5", className)}>
+      {keys.map((key, index) => (
+        <Kbd key={`${index}-${key}`} size={size}>
+          {key}
+        </Kbd>
+      ))}
+    </span>
+  );
+}

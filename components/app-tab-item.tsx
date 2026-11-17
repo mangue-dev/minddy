@@ -100,7 +100,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
     <IssueContextMenu position={menu} searchable={false} onClose={() => { setMenu(null); ref.current?.focus(); }} actions={[
       { id: "pin", label: t(tab.pinned ? "unpin" : "pin"), icon: tab.pinned ? <HugeiconsIcon icon={PinOffIcon} /> : <HugeiconsIcon icon={PinIcon} />, onSelect: onPin, disabled: busy },
       { id: "rename", label: t("rename"), icon: <HugeiconsIcon icon={Edit04Icon} />, onSelect: onRename, disabled: busy },
-      { id: "close", label: t("close"), icon: <HugeiconsIcon icon={Cancel01Icon} />, onSelect: onClose, disabled: last || busy, separatorBefore: true },
+      { id: "close", label: t("close"), icon: <HugeiconsIcon icon={Cancel01Icon} />, onSelect: onClose, disabled: last || busy, separatorBefore: true, variant: "destructive" },
     ]} />
   </div>;
 }

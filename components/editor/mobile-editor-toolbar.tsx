@@ -203,11 +203,14 @@ function ToolbarButton({ label, active = false, disabled = false, pinned = false
       onClick={onPress}
       className={cn(
         "group/tool flex h-full shrink-0 touch-manipulation items-center justify-center text-foreground/80 disabled:opacity-40",
-        // A carousel slot: four and a half fit a phone's strip, the half one
-        // at the edge saying there are more, and each snaps to its start. On
-        // a tablet a fixed slot instead: the strip is wide enough for every
+        // A carousel slot: a quarter of the strip's content box, whose inline
+        // padding is half a slot on each side (below), so the phone shows four
+        // whole slots and half of the next one on every side that has more:
+        // at the start on the right, at the end on the left, in between on
+        // both. Each snaps half a slot from the left edge (`scroll-px`). On a
+        // tablet a fixed slot instead: the strip is wide enough for every
         // tool at once, and a share of its width made each slot 300px wide.
-        pinned ? "w-16" : "grow-0 basis-[calc(100%/4.5)] snap-start min-[744px]:basis-[4.5rem]",
+        pinned ? "w-16" : "grow-0 basis-1/4 snap-start min-[744px]:basis-[4.5rem]",
       )}
     >
       {/* The highlight sits inside the touch target, with room around it. */}
@@ -443,7 +446,7 @@ export function MobileEditorToolbar({
               not a free scroll. */}
           <div className="relative flex h-full min-w-0 flex-1">
             <div ref={carouselRef} onScroll={scrollProps.onScroll}
-              className="no-scrollbar flex h-full min-w-0 flex-1 snap-x snap-mandatory items-center overflow-x-auto overflow-y-hidden overscroll-x-contain"
+              className="no-scrollbar flex h-full min-w-0 flex-1 snap-x snap-mandatory items-center overflow-x-auto overflow-y-hidden overscroll-x-contain max-[743px]:px-[10%] max-[743px]:scroll-px-[10%]"
               style={{ touchAction: "pan-x" }}>
               {signedIn && (
                 <ToolbarButton
@@ -505,7 +508,9 @@ export function MobileEditorToolbar({
                 </ToolbarButton>
               )}
             </div>
-            <ScrollFadeEdges edges={edges} axis="x" from="from-popover" className="w-10" />
+            {/* Narrower than the half slot at the edge on a phone, so the
+                half-cut button stays readable under it. */}
+            <ScrollFadeEdges edges={edges} axis="x" from="from-popover" className="w-5 min-[744px]:w-10" />
           </div>
           <ToolbarButton pinned label={t("mobileHideKeyboard")} onPress={() => editor.commands.blur()}>
             <HugeiconsIcon icon={ChevronDownIcon} className="size-6" />

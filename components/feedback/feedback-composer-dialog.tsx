@@ -13,6 +13,8 @@ import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut"
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import { FEEDBACK_TITLE_MAX } from "@/lib/feedback/types";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { CreationDictation } from "@/components/creation-form-layout";
 
 /** What the description field receives, plain or rich. */
 export interface FeedbackBodyProps {
@@ -140,6 +142,10 @@ export function FeedbackComposerDialog({
   const tCommon = useTranslations("Common");
   // Title and description read as one text on the keyboard (MIN-756).
   const titleBody = useTitleBodyLink();
+  // On a phone the dialog is a bottom sheet laid out like the creation
+  // sheets: a visible title row that leaves the close button its room, then
+  // the action across the width with the microphone beside it.
+  const mobile = useMobileLayout() === true;
 
   return (
     <Dialog
@@ -167,7 +173,7 @@ export function FeedbackComposerDialog({
           if (canSubmit) onSubmit();
         }}
       >
-        <DialogTitle className="sr-only">{srTitle}</DialogTitle>
+        <DialogTitle className={mobile ? "shrink-0 pr-10" : "sr-only"}>{srTitle}</DialogTitle>
         {srDescription ? (
           <DialogDescription className="sr-only">{srDescription}</DialogDescription>
         ) : null}
@@ -186,7 +192,7 @@ export function FeedbackComposerDialog({
           placeholder={titlePlaceholder}
           aria-label={titleAriaLabel}
           maxLength={FEEDBACK_TITLE_MAX}
-          className="w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+          className="w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 app-mobile:mt-4"
         />
         <div ref={titleBody.bodyRef}>
           <Body
@@ -202,49 +208,72 @@ export function FeedbackComposerDialog({
 
         {children}
 
-        {/* The voice on the left, the creation on the right — the same bar as on
-            the public board and in the ticket modal. While Numo tidies up, its
-            face takes the place of the microphone. */}
-        <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
-          {numoBusy ? (
-            <span
-              className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
-              aria-hidden
-            >
-              <NumoIcon
-                state="thinking"
-                className="size-6 text-primary animate-in fade-in duration-300"
-              />
-            </span>
-          ) : (
-            <DictateButton
+        {mobile ? (
+          // No Cancel on a phone: the sheet's close button does that job.
+          <div className="mt-4 flex items-center gap-2">
+            <Button disabled={!canSubmit} onClick={onSubmit} className="min-w-0 flex-1">
+              {busy && <Spinner />}
+              <span className="truncate">{submitLabel}</span>
+            </Button>
+            <CreationDictation
+              mobile
+              busy={numoBusy}
+              busyLabel={numoWorkingLabel ?? ""}
               context="feedback_form"
               feature={dictation.feature}
               onTranscription={dictation.onTranscription}
               uploadAudio={dictation.uploadAudio}
               onProcessingChange={dictation.onProcessingChange}
               disabled={busy}
-              shortcutKey="mod+shift+d"
-              className="-ml-2"
             />
-          )}
-          {numoBusy && numoWorkingLabel ? (
-            <span className="sr-only" role="status">
-              {numoWorkingLabel}
-            </span>
-          ) : null}
-          <div className="ml-auto flex items-center gap-2">
-            <Button type="button" variant="ghost" disabled={busy || numoBusy} onClick={onRequestClose}>
-              {tCommon("cancel")}
-            </Button>
-            <SendShortcutTooltip scope="form" label={submitLabel}>
-              <Button disabled={!canSubmit} onClick={onSubmit}>
-                {busy && <Spinner />}
-                {submitLabel}
-              </Button>
-            </SendShortcutTooltip>
           </div>
-        </div>
+        ) : (
+          <>
+          {/* The voice on the left, the creation on the right — the same bar as on
+              the public board and in the ticket modal. While Numo tidies up, its
+              face takes the place of the microphone. */}
+          <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
+            {numoBusy ? (
+              <span
+                className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
+                aria-hidden
+              >
+                <NumoIcon
+                  state="thinking"
+                  className="size-6 text-primary animate-in fade-in duration-300"
+                />
+              </span>
+            ) : (
+              <DictateButton
+                context="feedback_form"
+                feature={dictation.feature}
+                onTranscription={dictation.onTranscription}
+                uploadAudio={dictation.uploadAudio}
+                onProcessingChange={dictation.onProcessingChange}
+                disabled={busy}
+                shortcutKey="mod+shift+d"
+                className="-ml-2"
+              />
+            )}
+            {numoBusy && numoWorkingLabel ? (
+              <span className="sr-only" role="status">
+                {numoWorkingLabel}
+              </span>
+            ) : null}
+            <div className="ml-auto flex items-center gap-2">
+              <Button type="button" variant="ghost" disabled={busy || numoBusy} onClick={onRequestClose}>
+                {tCommon("cancel")}
+              </Button>
+              <SendShortcutTooltip scope="form" label={submitLabel}>
+                <Button disabled={!canSubmit} onClick={onSubmit}>
+                  {busy && <Spinner />}
+                  {submitLabel}
+                </Button>
+              </SendShortcutTooltip>
+            </div>
+          </div>
+          </>
+        )}
 
         {/* Numo takes over the dictation: the border highlights the edge of the
             modal while it works — the same signal as its face, lower down. */}

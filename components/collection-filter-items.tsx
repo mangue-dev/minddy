@@ -12,6 +12,9 @@ import { EFFORTS, PRIORITIES } from "@/lib/issue-constants";
 import { ME_ASSIGNEE } from "@/lib/view-filter";
 import { displayName } from "@/lib/display-name";
 import { ObjectivePill } from "@/components/objective-label";
+import { UserAvatar } from "@/components/user-avatar";
+import { useMyAvatarSource } from "@/lib/use-my-avatar";
+import { isOpenObjectiveStatus } from "@/lib/objective-order";
 import type { Category, Member, Objective, ViewFilters } from "@/lib/types";
 
 export type CollectionFilterProps = {
@@ -25,11 +28,18 @@ function useCollectionFilterActions({ filters, onChange, members, categories, ob
   const tc = useTranslations("Common");
   const tp = useTranslations("Priority");
   const tActivity = useTranslations("Activity");
-  const facets: { key: "priority" | "effort" | "assignee" | "objective" | "category" | "integration"; label: string; options: { value: string | null; label: string; node?: ReactNode }[] }[] = [
+  const myAvatarSource = useMyAvatarSource();
+  const avatar = (seed: string | null | undefined) =>
+    seed ? <UserAvatar seed={seed} className="size-4 shrink-0 rounded-full" aria-hidden /> : undefined;
+  // Open objectives first, closed ones below (stable: the caller's order holds inside each group).
+  const orderedObjectives = [...objectives].sort(
+    (a, b) => Number(isOpenObjectiveStatus(b.status)) - Number(isOpenObjectiveStatus(a.status)),
+  );
+  const facets: { key: "priority" | "effort" | "assignee" | "objective" | "category" | "integration"; label: string; options: { value: string | null; label: string; node?: ReactNode; icon?: ReactNode }[] }[] = [
     { key: "priority", label: tf("priority"), options: PRIORITIES.map((p) => ({ value: p.value, label: tp(p.value) })) },
     { key: "effort", label: tf("effort"), options: [{ value: null, label: tf("effortNone") }, ...EFFORTS.map((e) => ({ value: e.value, label: e.label }))] },
-    { key: "assignee", label: tf("assignee"), options: [{ value: ME_ASSIGNEE, label: tf("assignedToMe") }, { value: null, label: tf("unassigned") }, ...members.map((m) => ({ value: m.user_id, label: displayName(m, tActivity("memberSomeone")) }))] },
-    { key: "objective", label: tf("objective"), options: [{ value: null, label: tc("none") }, ...objectives.map((o) => ({ value: o.id, label: o.name, node: <ObjectivePill objective={o} /> }))] },
+    { key: "assignee", label: tf("assignee"), options: [{ value: ME_ASSIGNEE, label: tf("assignedToMe"), icon: avatar(myAvatarSource) }, { value: null, label: tf("unassigned") }, ...members.map((m) => ({ value: m.user_id, label: displayName(m, tActivity("memberSomeone")), icon: avatar(m.avatar_seed) }))] },
+    { key: "objective", label: tf("objective"), options: [{ value: null, label: tc("none") }, ...orderedObjectives.map((o) => ({ value: o.id, label: o.name, node: <ObjectivePill objective={o} /> }))] },
     { key: "category", label: tf("categories"), options: categories.map((c) => ({ value: c.id, label: c.name })) },
     ...(integrations ? [{ key: "integration" as const, label: tf("integration"), options: [{ value: null, label: tc("none") }, ...integrations.map((i) => ({ value: i.id, label: i.name }))] }] : []),
   ];
@@ -40,7 +50,7 @@ function useCollectionFilterActions({ filters, onChange, members, categories, ob
         const selected = filters[key] as (string | null)[] | undefined ?? [];
         const active = selected.includes(option.value);
         return filterToggle({
-          id: option.value ?? "none", label: option.label, labelNode: option.node, active,
+          id: option.value ?? "none", label: option.label, labelNode: option.node, icon: option.icon, active,
           onToggle: () => onChange({ ...filters, [key]: active ? selected.filter((value) => value !== option.value) : [...selected, option.value] }),
         });
       }),
