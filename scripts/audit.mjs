@@ -19,6 +19,12 @@
  * to end up in whatever the user is executing. We therefore audit the ENTIRE tree.
  *
  * Threshold: `high`. A high or critical vuln causes the process to fail.
+ *
+ * Each audit runs with `--json`, so the gate decides from the advisories
+ * themselves. An advisory listed in `AUDIT_EXCEPTIONS` stops failing the gate
+ * until its `expires` date, then fails it again: an exception is a dated
+ * decision, never a silent mute. Every other high or critical advisory still
+ * fails the gate.
  */
 
 import { spawnSync } from "node:child_process";
@@ -46,25 +52,116 @@ export const AUDIT_RESULT = {
   unavailable: "unavailable",
 };
 
+/**
+ * High or critical advisories accepted for a limited time, by GHSA id. Add one
+ * only when no patched version exists, record why the risk is acceptable, and
+ * keep `expires` close: once it passes, the gate fails again and the decision
+ * has to be made again.
+ */
+export const AUDIT_EXCEPTIONS = [
+  {
+    id: "GHSA-fc5q-39xc-vjpf",
+    package: "picomatch",
+    expires: "2026-12-17",
+    reason:
+      "ReDoS through repeated extglobs; every published picomatch version is affected (no patch as of " +
+      "2026-11-17). It is reached only through build and test tooling (vitest, electron-builder, node-gyp) " +
+      "matching patterns written in this repository, never through user input.",
+  },
+];
+
+const BLOCKING_SEVERITIES = new Set(["high", "critical"]);
+
+/** The UTC calendar day of `now`, as `YYYY-MM-DD`. */
+function today(now) {
+  return now.toISOString().slice(0, 10);
+}
+
+/** The exception that covers this advisory id on `now`, if any (it covers its `expires` day). */
+export function activeException(id, { exceptions = AUDIT_EXCEPTIONS, now = new Date() } = {}) {
+  return exceptions.find((exception) => exception.id === id && today(now) <= exception.expires) ?? null;
+}
+
+function ghsaFromUrl(url) {
+  return typeof url === "string" ? (url.match(/GHSA-[\w-]+/)?.[0] ?? null) : null;
+}
+
+/**
+ * The advisories in an audit's JSON report, from pnpm (`advisories`) or npm
+ * (`vulnerabilities[].via`, where an object is an advisory and a string only
+ * points at another package). Returns `null` when the output is not a report.
+ */
+export function parseAuditAdvisories(output) {
+  let report;
+  try {
+    report = JSON.parse(output);
+  } catch {
+    return null;
+  }
+  if (!report || typeof report !== "object") return null;
+
+  const advisories = new Map();
+  const add = (id, severity, packageName, title) => {
+    if (!id || advisories.has(id)) return;
+    advisories.set(id, { id, severity, package: packageName, title });
+  };
+
+  if (report.advisories && typeof report.advisories === "object") {
+    for (const advisory of Object.values(report.advisories)) {
+      add(
+        advisory.github_advisory_id ?? ghsaFromUrl(advisory.url),
+        advisory.severity,
+        advisory.module_name,
+        advisory.title,
+      );
+    }
+    return [...advisories.values()];
+  }
+
+  if (report.vulnerabilities && typeof report.vulnerabilities === "object") {
+    for (const vulnerability of Object.values(report.vulnerabilities)) {
+      for (const via of vulnerability.via ?? []) {
+        if (via && typeof via === "object") add(ghsaFromUrl(via.url), via.severity, via.name, via.title);
+      }
+    }
+    return [...advisories.values()];
+  }
+
+  return null;
+}
+
+/** Split a report's advisories into those that fail the gate and those an exception covers. */
+export function classifyAdvisories(advisories, options) {
+  const blocking = [];
+  const excepted = [];
+  for (const advisory of advisories) {
+    if (!BLOCKING_SEVERITIES.has(advisory.severity)) continue;
+    const exception = activeException(advisory.id, options);
+    if (exception) excepted.push({ ...advisory, expires: exception.expires });
+    else blocking.push(advisory);
+  }
+  return { blocking, excepted };
+}
+
 /** The lockfiles that resolve code installed or packaged by CI. */
 export const AUDIT_TARGETS = [
   {
     label: "root — pnpm-lock.yaml (the actually installed tree)",
     cwd: ROOT,
     command: "pnpm",
-    args: ["audit", "--audit-level=high"],
+    args: ["audit", "--json"],
   },
   {
     label: "desktop — package-lock.json (macOS shell)",
     cwd: path.join(ROOT, "desktop"),
     command: "npm",
-    args: ["audit", "--audit-level=high"],
+    args: ["audit", "--json"],
   },
   {
     label: "mobile — package-lock.json (Capacitor shell)",
     cwd: path.join(ROOT, "mobile"),
     command: "npm",
-    args: ["audit", "--audit-level=high"],
+    args: ["audit", "--json"],
   },
 ];
 
@@ -87,6 +184,8 @@ export async function runAuditTarget(
     retryDelays = RETRY_DELAYS_MS,
     stdout = process.stdout,
     stderr = process.stderr,
+    exceptions = AUDIT_EXCEPTIONS,
+    now = new Date(),
   } = {},
 ) {
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
@@ -101,6 +200,13 @@ export async function runAuditTarget(
       maxBuffer: MAX_OUTPUT_BYTES,
       shell: process.platform === "win32",
     });
+    // A JSON report decides on its own: the audit's exit code also counts
+    // moderate findings and advisories an exception covers.
+    const advisories = result.error ? null : parseAuditAdvisories(result.stdout ?? "");
+    if (advisories) {
+      if (result.stderr) stderr.write(result.stderr);
+      return reportAdvisories(advisories, { stdout, exceptions, now });
+    }
     writeResult(result, stdout, stderr);
 
     if (result.status === 0) return AUDIT_RESULT.passed;
@@ -131,6 +237,23 @@ export async function runAuditTarget(
   }
 
   return AUDIT_RESULT.failed;
+}
+
+function reportAdvisories(advisories, { stdout, exceptions, now }) {
+  const { blocking, excepted } = classifyAdvisories(advisories, { exceptions, now });
+  const lower = advisories.length - blocking.length - excepted.length;
+  for (const advisory of blocking) {
+    stdout.write(`  ✗ ${advisory.severity} ${advisory.package}: ${advisory.title} (${advisory.id})\n`);
+  }
+  for (const advisory of excepted) {
+    stdout.write(
+      `  ⚠ ${advisory.severity} ${advisory.package}: ${advisory.id} accepted until ${advisory.expires} ` +
+        `(AUDIT_EXCEPTIONS in scripts/audit.mjs)\n`,
+    );
+  }
+  if (lower > 0) stdout.write(`  ${lower} advisory(ies) below high, not blocking.\n`);
+  if (blocking.length === 0) stdout.write("  No blocking advisory.\n");
+  return blocking.length > 0 ? AUDIT_RESULT.failed : AUDIT_RESULT.passed;
 }
 
 export async function main({
@@ -167,7 +290,7 @@ export async function main({
     return 2;
   }
 
-  output.log("\n✓ Audit: no high/critical vulnerabilities reported.");
+  output.log("\n✓ Audit: no blocking high/critical vulnerability.");
   return 0;
 }
 

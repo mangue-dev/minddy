@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  AUDIT_EXCEPTIONS,
   AUDIT_RESULT,
   AUDIT_TARGETS,
+  activeException,
   isTransientAuditFailure,
   main,
+  parseAuditAdvisories,
   runAuditTarget,
 } from "./audit.mjs";
 
@@ -157,4 +160,84 @@ test("still fails the dependency gate for a vulnerability finding", async () => 
 
   assert.equal(exitCode, 1);
   assert.match(errors.join("\n"), /high\/critical vulnerability/i);
+});
+
+const EXCEPTION = { id: "GHSA-aaaa-bbbb-cccc", package: "fixture", expires: "2026-12-17", reason: "fixture" };
+
+/** A pnpm `audit --json` report with the given advisories. */
+function pnpmReport(advisories) {
+  return JSON.stringify({
+    advisories: Object.fromEntries(
+      advisories.map(([id, severity], index) => [
+        String(index),
+        { github_advisory_id: id, severity, module_name: "fixture", title: `Fixture ${id}` },
+      ]),
+    ),
+  });
+}
+
+/** An npm `audit --json` report: one direct advisory and one package that only points at it. */
+function npmReport(id, severity) {
+  return JSON.stringify({
+    auditReportVersion: 2,
+    vulnerabilities: {
+      fixture: { via: [{ url: `https://github.com/advisories/${id}`, severity, name: "fixture", title: "Fixture" }] },
+      parent: { via: ["fixture"] },
+    },
+  });
+}
+
+async function auditWith(stdout, { status = 1, now = new Date("2026-11-17T12:00:00Z") } = {}) {
+  return runAuditTarget(target, {
+    spawn: () => ({ status, stdout, stderr: "" }),
+    wait: async () => assert.fail("a report must not be retried"),
+    retryDelays: [25],
+    stdout: silentStream,
+    stderr: silentStream,
+    exceptions: [EXCEPTION],
+    now,
+  });
+}
+
+test("reads advisories from pnpm and npm JSON reports", () => {
+  assert.deepEqual(
+    parseAuditAdvisories(pnpmReport([["GHSA-1111-2222-3333", "high"]])).map(({ id, severity }) => ({ id, severity })),
+    [{ id: "GHSA-1111-2222-3333", severity: "high" }],
+  );
+  assert.deepEqual(
+    parseAuditAdvisories(npmReport("GHSA-1111-2222-3333", "critical")).map(({ id, severity }) => ({ id, severity })),
+    [{ id: "GHSA-1111-2222-3333", severity: "critical" }],
+  );
+  assert.equal(parseAuditAdvisories("found 1 high severity vulnerability"), null);
+  assert.equal(parseAuditAdvisories(JSON.stringify({ error: { code: "ENOTFOUND" } })), null);
+});
+
+test("passes when the only high advisory is covered by an exception", async () => {
+  assert.equal(await auditWith(pnpmReport([[EXCEPTION.id, "high"]])), AUDIT_RESULT.passed);
+  assert.equal(await auditWith(npmReport(EXCEPTION.id, "high")), AUDIT_RESULT.passed);
+});
+
+test("still fails on a high advisory that no exception covers", async () => {
+  const report = pnpmReport([[EXCEPTION.id, "high"], ["GHSA-9999-8888-7777", "critical"]]);
+  assert.equal(await auditWith(report), AUDIT_RESULT.failed);
+  assert.equal(await auditWith(npmReport("GHSA-9999-8888-7777", "high")), AUDIT_RESULT.failed);
+});
+
+test("ignores advisories below high", async () => {
+  assert.equal(await auditWith(npmReport("GHSA-9999-8888-7777", "moderate")), AUDIT_RESULT.passed);
+});
+
+test("an exception covers its expiry day and stops covering the day after", async () => {
+  const report = pnpmReport([[EXCEPTION.id, "high"]]);
+  assert.equal(await auditWith(report, { now: new Date("2026-12-17T23:00:00Z") }), AUDIT_RESULT.passed);
+  assert.equal(await auditWith(report, { now: new Date("2026-12-18T00:00:00Z") }), AUDIT_RESULT.failed);
+});
+
+test("every exception is dated and explained", () => {
+  for (const exception of AUDIT_EXCEPTIONS) {
+    assert.match(exception.id, /^GHSA-[\w]{4}-[\w]{4}-[\w]{4}$/);
+    assert.match(exception.expires, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(exception.package && exception.reason.length > 40, `${exception.id} needs a package and a reason`);
+    assert.equal(activeException(exception.id, { now: new Date(`${exception.expires}T00:00:00Z`) }), exception);
+  }
 });
