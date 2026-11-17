@@ -75,7 +75,10 @@ async function capture({ locale, theme }) {
         straddling: columns
           .filter((c) => c.left < window.innerWidth && c.right > window.innerWidth)
           .map((c) => c.name),
-        cards: document.querySelectorAll("main p").length,
+        // Cards show the issue key and the title alone (MIN-987): count keys.
+        cards: [...document.querySelectorAll("main *")].filter(
+          (el) => el.childElementCount === 0 && /^[A-Z]{2,5}-\d+$/.test(el.textContent.trim()),
+        ).length,
       };
     });
 
@@ -89,7 +92,7 @@ async function capture({ locale, theme }) {
       throw new Error(`${locale}/${theme} — ${check.entire} colonnes entières au lieu de 4.`);
     }
     if (check.cards < 13) {
-      throw new Error(`${locale}/${theme} — board incomplet, ${check.cards} lignes de texte.`);
+      throw new Error(`${locale}/${theme}: incomplete board, ${check.cards} issue cards.`);
     }
 
     const path = `${OUT}/${locale}-${theme}.png`;

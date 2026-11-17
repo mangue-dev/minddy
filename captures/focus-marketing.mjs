@@ -6,11 +6,13 @@ import sharp from 'sharp';
 // Recomputed for the landing-refinements layout (2026-09-21): the shell moved
 // the secondary sidebar, the palette centers over the board, the PR detail
 // sheet sits further right. The agent crop retired with Numo's code work (MIN-747).
+// Recomputed for 0.40.0 (2026-11-17): pages and the pull request detail share
+// one wider, centered content column, so both crops start further left.
 const shots = [
-  { id: 'pagesEditor', shot: 'pages-editor', x: .42, y: .10, width: .44, ratio: 16 / 10 },
+  { id: 'pagesEditor', shot: 'pages-editor', x: .315, y: .10, width: .54, ratio: 16 / 10 },
   { id: 'feedbackBoard', shot: 'feedback-board', x: .20, y: .05, width: .43, height: .45, ratio: 16 / 10 },
   { id: 'featurePalette', shot: 'palette', x: .292, y: .153, width: .414, height: .40, ratio: 16 / 10 },
-  { id: 'workflowPr', shot: 'pull-request', x: .335, y: .10, width: .645, ratio: 4 / 3 },
+  { id: 'workflowPr', shot: 'pull-request', x: .28, y: .10, width: .645, ratio: 4 / 3 },
   { id: 'numoPanel', shot: 'numo', x: .605, y: .293, width: .395, ratio: 4 / 3 },
 ];
 const locales = ['en', 'fr', 'de', 'es', 'it', 'pt-BR'];

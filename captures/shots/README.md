@@ -3,6 +3,19 @@
 Each folder contains `intent.md`, its Playwright `shot.mjs`, lossless PNGs in
 `out/`, and a run history in `history.jsonl`.
 
+## November 17, 2026 refresh (0.40.0)
+
+The eleven landing shots were recaptured on `https://preview.minddy.app`
+serving `1a95b09c`, in six locales and both themes, then published with
+`publish.mjs --shots` and `focus-marketing.mjs`. Seeds `015` and `017` were
+reapplied for the Nov 9-22 cycle; without them its Done column is empty.
+`captures/lib/clear-tabs.mjs` now closes the
+account's synced tabs; run it before each shot. `routines` needs one variant
+per run (`CAPTURE_LOCALES` and `CAPTURE_THEMES`) with a cleanup in between:
+the second variant of a run opens on the remaining synced tab instead of
+`/routines`. Pages and the pull request detail moved to a wider, centered
+column, so their focus crops were recomputed.
+
 ## November 4, 2026 refresh (0.30.0)
 
 The eleven landing shots were recaptured on `https://preview.minddy.app`
