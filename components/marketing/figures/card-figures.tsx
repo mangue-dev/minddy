@@ -5,6 +5,8 @@ import { useFormatter, useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
+  AiBrain01Icon,
+  CalendarClockIcon,
   File01Icon,
   GridIcon,
   SlidersHorizontalIcon,
@@ -27,6 +29,8 @@ import {
   IssueCardFace,
 } from "@/components/issue-card-face";
 import { DictationWave } from "@/components/ai-elements/dictation-wave";
+import { AppIcon, type AppIcon as AppIconType } from "@/components/icon";
+import { NumoFace } from "@/components/numo-face";
 import { ImportSourceLogo } from "@/components/import-source-logo";
 import { EffortIndicator, PriorityIndicator, RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
@@ -146,6 +150,58 @@ export function RoutineExcerpt() {
       <p className="font-medium">{t("cardRoutine_name")}</p>
       <p className="mt-1 text-xs text-muted-foreground">{t("cardRoutine_schedule")}</p>
       <p className="mt-3 w-[22rem] leading-relaxed text-muted-foreground">{t("cardRoutine_body")}</p>
+    </Surface>
+  );
+}
+
+/**
+ * A request to Numo and the step its reply shows, as the conversation draws
+ * them: the user's bubble (`ai-elements/message.tsx`), indented so its start stays readable, then the
+ * tool line with its icon (`tool-call-display.tsx`).
+ */
+function NumoExchange({ ask, step, icon }: { ask: string; step: string; icon: AppIconType }) {
+  return (
+    <div aria-hidden className={cn("h-full w-full select-none", CARD_FADE)}>
+      <div className="flex h-full w-[24rem] flex-col gap-3 rounded-tl-xl border-t border-l border-border bg-background p-4 text-sm">
+        <p className="ml-10 rounded-lg bg-[color-mix(in_oklab,var(--primary)_14%,var(--background))] px-4 py-3 leading-relaxed">
+          {ask}
+        </p>
+        <p className="flex items-center gap-2 py-0.5 text-muted-foreground">
+          <AppIcon icon={icon} className="size-4 shrink-0" />
+          {step}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Numo saving a preference it will apply in every later conversation. */
+export function NumoMemory() {
+  const t = useTranslations("Landing");
+  return <NumoExchange ask={t("cardMemory_ask")} step={t("cardMemory_saved")} icon={AiBrain01Icon} />;
+}
+
+/** Numo setting a reminder on an issue's status. */
+export function NumoReminder() {
+  const t = useTranslations("Landing");
+  return <NumoExchange ask={t("cardReminder_ask")} step={t("cardReminder_set")} icon={CalendarClockIcon} />;
+}
+
+/**
+ * What Numo did while you were away, as its summary opens Home: Numo's face,
+ * then what waits for you first and what it did for you.
+ */
+export function NumoAwaySummary() {
+  const t = useTranslations("Landing");
+  return (
+    <Surface className="w-[24rem]">
+      <div className="flex items-start gap-3">
+        <NumoFace className="mt-1 h-4 w-auto shrink-0 text-primary" aria-hidden />
+        <div className="flex flex-col gap-2 leading-relaxed">
+          <p>{t("cardAway_waiting")}</p>
+          <p>{t("cardAway_done")}</p>
+        </div>
+      </div>
     </Surface>
   );
 }

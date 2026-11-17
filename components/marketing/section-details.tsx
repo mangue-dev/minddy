@@ -1,17 +1,34 @@
-import { getTranslations } from "next-intl/server";
-import { ArrowUpRight01Icon, InboxIcon, MessageMultiple01Icon, PaintBoardIcon, Share08Icon, SourceCodeIcon } from "@hugeicons/core-free-icons";
+import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
+import {
+  ArrowUpRight01Icon,
+  InboxIcon,
+  MessageMultiple01Icon,
+  PaintBoardIcon,
+  ServerStack01Icon,
+  Share08Icon,
+  SourceCodeIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SCRATCHPAD_ICON } from "@/components/feature-icons";
 import { Github } from "@/components/git/provider-icons";
+import type { Locale } from "@/i18n/config";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
+import { localizedHref } from "@/lib/locale-href";
+import { cn } from "@/lib/utils";
 import { FeedbackRows, NotebookExcerpt } from "./figures/card-figures";
 import { PointGrid, type ChapterPoint } from "./feature-chapter";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
 
+/** The open-source card's two links, as pills on the card's color. */
+const OPEN_SOURCE_LINK =
+  "inline-flex min-h-12 items-center gap-2.5 rounded-full px-6 text-base font-medium transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring";
+
 /** The smaller features, one card each with its screenshot. */
 export async function SectionDetails() {
   const t = await getTranslations("Landing");
+  const locale = (await getLocale()) as Locale;
   const points: ChapterPoint[] = [
     {
       icon: SCRATCHPAD_ICON,
@@ -46,18 +63,22 @@ export async function SectionDetails() {
       body: t("details_openSource_body"),
       shot: {
         node: (
-          // No picture: the repository itself, one click away, in the card's middle.
-          <div className="-ml-8 flex h-full items-center justify-center pb-10">
+          // No picture: the repository and the self-hosting guide, one click away, in the card's middle.
+          <div className="-ml-8 flex h-full flex-col items-center justify-center gap-2.5 pb-10">
             <a
               href={MINDDY_REPOSITORY_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-12 items-center gap-2.5 rounded-full bg-background px-6 text-base font-medium shadow-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+              className={cn(OPEN_SOURCE_LINK, "bg-background shadow-sm")}
             >
               <Github className="size-5" aria-hidden />
               {t("heroCtaSecondary")}
               <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4" aria-hidden />
             </a>
+            <Link href={localizedHref("/self-hosting", locale)} className={cn(OPEN_SOURCE_LINK, "bg-background/55")}>
+              <HugeiconsIcon icon={ServerStack01Icon} className="size-5" aria-hidden />
+              {t("navMenu_selfHosting_title")}
+            </Link>
           </div>
         ),
       },

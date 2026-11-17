@@ -66,7 +66,7 @@ export default async function LandingPage() {
  * Tailwind reads class names literally, so they are written out in full.
  */
 const SIZE = {
-  ai: "[contain-intrinsic-size:auto_none_auto_2620px] sm:[contain-intrinsic-size:auto_none_auto_1530px]",
+  ai: "[contain-intrinsic-size:auto_none_auto_3600px] sm:[contain-intrinsic-size:auto_none_auto_1900px]",
   tools: "[contain-intrinsic-size:auto_none_auto_3240px] sm:[contain-intrinsic-size:auto_none_auto_1490px]",
   tracker: "[contain-intrinsic-size:auto_none_auto_2770px] sm:[contain-intrinsic-size:auto_none_auto_1540px]",
   pages: "[contain-intrinsic-size:auto_none_auto_2820px] sm:[contain-intrinsic-size:auto_none_auto_1610px]",

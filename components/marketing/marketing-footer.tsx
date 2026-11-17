@@ -35,7 +35,7 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       { href: "/#ai", labelKey: "navMenu_ai_title" },
       { href: "/#numo", labelKey: "footerNumo" },
       { href: "/#voice", labelKey: "footerVoice" },
-      { href: "/#agents", labelKey: "footerAgents" },
+      { href: "/#agents", labelKey: "navMenu_agents_title" },
       { href: "/#workflow", labelKey: "navHowItWorks" },
       { href: "/#tracker", labelKey: "navMenu_tracker_title" },
       { href: "/#pages", labelKey: "navMenu_pages_title" },

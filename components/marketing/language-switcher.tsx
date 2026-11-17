@@ -56,9 +56,11 @@ export function LanguageSwitcher() {
  value ("French"), so a screen reader announced a
  drop-down list without knowing what it sets — and the
  `button-name` audit failed on all public pages. */}
+      {/* `-ml-3.5` cancels the trigger's inner padding (`px-3.5`): the
+          language name lines up with the left edge of the tagline above it. */}
       <SelectTrigger
         aria-label={tLang("title")}
-        className="h-8 w-auto self-start bg-transparent text-xs"
+        className="-ml-3.5 h-8 w-auto self-start bg-transparent text-xs"
       >
         <SelectValue />
       </SelectTrigger>

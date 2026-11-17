@@ -74,7 +74,7 @@ export const PUBLIC_ROUTES = [
     localized: { de: "/de", "pt-BR": "/pt-br", it: "/it", es: "/es" },
     namespace: "Landing",
     titleIsAbsolute: true,
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-17",
     priority: 1,
   },
   {
@@ -88,7 +88,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/precios",
     },
     namespace: "Pricing",
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-17",
     priority: 0.8,
   },
   {
@@ -149,7 +149,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/descargar",
     },
     namespace: "Download",
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-17",
     priority: 0.9,
   },
   {
@@ -198,7 +198,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/linear",
     },
     namespace: "AlternativeLinear",
-    lastModified: "2026-11-03",
+    lastModified: "2026-11-17",
     priority: 0.7,
   },
   {
@@ -212,7 +212,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/jira",
     },
     namespace: "AlternativeJira",
-    lastModified: "2026-11-03",
+    lastModified: "2026-11-17",
     priority: 0.7,
   },
   {
@@ -226,7 +226,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/notion",
     },
     namespace: "AlternativeNotion",
-    lastModified: "2026-11-03",
+    lastModified: "2026-11-17",
     priority: 0.7,
   },
   {

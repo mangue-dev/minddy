@@ -159,7 +159,7 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
   const stems = (prefix: string, keys: readonly string[]) => keys.map((k) => `${prefix}_${k}`);
 
   const sections: Array<[string, string, Array<[string, string]>]> = [
-    chapter("aiTitle", "aiLede", stems("ai", ["fill", "assign", "numo", "routines", "voice", "models"])),
+    chapter("aiTitle", "aiLede", stems("ai", ["fill", "assign", "numo", "memory", "background", "reminders", "routines", "voice", "models"])),
     chapter("toolsTitle", "toolsLede", [
       ...stems("toolsScene", ["prompt", "work", "merge"]),
       ...stems("tools", ["mcp", "apps", "pr", "review", "followUp", "api"]),
