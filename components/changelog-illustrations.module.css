@@ -106,9 +106,96 @@
 .service { position: relative; display: flex; flex: 1; justify-content: center; align-items: center; height: 3.5rem; }
 .service::before { content: ""; position: absolute; height: .8rem; top: -.8rem; border-left: 1px solid var(--border); }
 
+.phone { position: relative; display: flex; flex-direction: column; width: 36%; height: 86%; border-radius: 1.3rem; overflow: hidden; }
+.notch { align-self: center; width: 32%; height: .3rem; margin-top: .5rem; border-radius: 1rem; background: color-mix(in oklab, var(--foreground) 22%, transparent); }
+.phoneBody { display: grid; align-content: start; gap: .7rem; flex: 1; padding: .9rem .7rem; }
+.phoneRow { display: flex; align-items: center; gap: .4rem; border-top: 1px solid var(--border); padding-top: .6rem; }
+.phoneRow .lines > span:last-child { display: none; }
+.phoneBar { display: flex; justify-content: space-around; padding: .55rem .4rem .7rem; border-top: 1px solid var(--border); }
+
+.memory { display: flex; align-items: center; gap: 1.1rem; width: 82%; }
+.memoryNotes { display: grid; gap: .5rem; flex: 1; min-width: 0; }
+.memoryNote { display: flex; align-items: center; gap: .5rem; padding: .65rem .6rem; }
+.memoryNote:nth-child(2) { margin-left: .9rem; }
+
+.reminder { width: 74%; }
+.reminderRow { display: flex; align-items: center; gap: .6rem; padding: .8rem; }
+.reminderRow .lines > span:last-child { display: none; }
+.reminderLink { height: 1.5rem; margin-left: 1.25rem; border-left: 1px dashed var(--muted-foreground); }
+
+.inbox { width: 84%; }
+.inboxRow { display: flex; align-items: center; gap: .55rem; padding: .7rem .8rem; }
+.inboxRow + .inboxRow { border-top: 1px solid var(--border); }
+.inboxRow > i { width: 1rem; height: .2rem; border-radius: 2px; background: var(--border); }
+.unread, .read { width: .4rem; height: .4rem; flex-shrink: 0; border-radius: 50%; background: var(--primary); }
+.read { background: transparent; }
+.inboxAvatar { width: 1rem; height: 1rem; margin-inline: .125rem; flex-shrink: 0; border-radius: 50%; background: color-mix(in oklab, var(--foreground) 14%, transparent); }
+
+.database { width: 88%; overflow: hidden; }
+.database > div { display: grid; grid-template-columns: 1.6fr .8fr 1fr; }
+.database > div + div { border-top: 1px solid var(--border); }
+.database span { display: flex; align-items: center; min-height: 1.7rem; padding: 0 .6rem; }
+.database span + span { border-left: 1px solid var(--border); }
+.database i { height: .25rem; border-radius: 2px; background: color-mix(in oklab, var(--foreground) 16%, transparent); }
+.databaseHead { background: color-mix(in oklab, var(--muted) 60%, var(--card)); }
+.databaseHead i { background: color-mix(in oklab, var(--foreground) 28%, transparent); }
+.databaseFoot i { width: 55%; height: .35rem; background: var(--primary); }
+
+.search { width: 84%; }
+.query { position: relative; width: 38%; height: .3rem; border-radius: 2px; background: color-mix(in oklab, var(--foreground) 30%, transparent); }
+.query::after { content: ""; position: absolute; left: calc(100% + .25rem); top: -.3rem; height: .9rem; border-left: 1px solid var(--primary); }
+.searchRow { display: flex; align-items: center; gap: .55rem; padding: .7rem .8rem; }
+.searchRow + .searchRow { border-top: 1px solid var(--border); }
+.searchRow > div { display: flex; align-items: center; gap: .25rem; flex: 1; }
+.searchRow i { height: .25rem; border-radius: 2px; background: color-mix(in oklab, var(--foreground) 14%, transparent); }
+.searchRow mark { width: 16%; height: .55rem; border-radius: 2px; background: color-mix(in oklab, #e9ae38 45%, var(--card)); }
+
+.conversation { display: grid; gap: .5rem; width: 78%; }
+.bubble { justify-self: end; width: 55%; padding: .65rem .7rem; border-radius: .8rem .8rem .2rem .8rem; background: color-mix(in oklab, var(--primary) 16%, var(--card)); }
+.toolCall { display: flex; align-items: center; gap: .5rem; width: 82%; padding: .5rem .6rem; }
+.answer { display: flex; align-items: flex-start; gap: .5rem; padding-top: .3rem; }
+
+.routines { width: 84%; }
+.routineRow { display: flex; align-items: center; gap: .6rem; padding: .75rem .8rem; }
+.routineRow + .routineRow { border-top: 1px solid var(--border); }
+.switch, .switchOff { position: relative; width: 1.3rem; height: .7rem; flex-shrink: 0; border-radius: 1rem; background: var(--primary); }
+.switch::after, .switchOff::after { content: ""; position: absolute; top: .1rem; right: .1rem; width: .5rem; height: .5rem; border-radius: 50%; background: var(--card); }
+.switchOff { background: color-mix(in oklab, var(--foreground) 18%, transparent); }
+.switchOff::after { right: auto; left: .1rem; }
+
+.graph { position: relative; width: 86%; }
+.graph svg { display: block; width: 100%; height: auto; }
+.graph line { stroke: var(--border); stroke-width: 1.5; }
+.graph circle { fill: var(--card); stroke: var(--muted-foreground); stroke-width: 1.5; }
+.graph .node1 { fill: #e9ae38; stroke: #e9ae38; }
+.graph .node2 { fill: var(--primary); stroke: var(--primary); }
+.zoom { position: absolute; right: .5rem; bottom: .5rem; display: grid; gap: .35rem; padding: .35rem; border: 1px solid var(--border); border-radius: .4rem; background: var(--card); color: var(--muted-foreground); }
+
+.projects { display: grid; gap: .3rem; width: 62%; padding: .6rem; }
+.projects > div { display: flex; align-items: center; gap: .55rem; padding: .55rem .5rem; border: 1px solid transparent; border-radius: .45rem; }
+.projects .dragged { border-color: var(--border); background: var(--card); box-shadow: 0 6px 16px color-mix(in oklab, var(--foreground) 12%, transparent); translate: .8rem -.25rem; }
+.projectMark { width: .8rem; height: .8rem; flex-shrink: 0; border-radius: .25rem; background: #5884e9; }
+.projects > div:nth-child(2) .projectMark { background: var(--primary); }
+.projects > div:nth-child(3) .projectMark { background: #e9ae38; }
+.projects > div:nth-child(4) .projectMark { background: #45ac78; }
+.projects .lines > span:last-child { display: none; }
+
+.codingAgent { display: flex; align-items: center; gap: .8rem; width: 86%; }
+.prompt { display: grid; gap: .65rem; flex: 1; min-width: 0; padding: .9rem .8rem; }
+.prompt > div:first-child { display: flex; align-items: center; gap: .4rem; }
+.agentApp { display: flex; align-items: center; justify-content: center; width: 3.6rem; height: 3.6rem; flex-shrink: 0; border-radius: .9rem; }
+
+.forecast { width: 80%; }
+.bars { position: relative; display: flex; align-items: flex-end; gap: .4rem; height: 6rem; padding: .8rem; }
+.bars::before { content: ""; position: absolute; inset: 1.2rem .8rem auto; border-top: 1px dashed var(--muted-foreground); }
+.bars i { flex: 1; border-radius: 2px 2px 0 0; background: var(--primary); }
+.bars .projected { border: 1px dashed var(--primary); border-bottom: 0; background: color-mix(in oklab, var(--primary) 14%, transparent); }
+
 @container (max-width: 240px) {
   .ticket { padding: .45rem .3rem; }
   .columns { padding: .5rem; gap: .3rem; }
   .toolbar { padding: .6rem; }
   .services { gap: .5rem; }
+  .memory, .codingAgent { gap: .6rem; }
+  .inboxRow, .searchRow, .routineRow { padding: .55rem .6rem; }
 }

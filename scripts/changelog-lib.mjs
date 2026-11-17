@@ -4,7 +4,9 @@ export const MAX_RELEASE_BYTES = 192 * 1024;
 export const MAX_PAGE_BYTES = 48 * 1024;
 const NAMES = ["shield", "board", "assistant", "pages", "connections", "activity", "desktop",
   "smart-fill", "smart-assign", "microphone", "relations", "pull-request", "tabs",
-  "triage", "providers", "performance", "merge", "deadline"];
+  "triage", "providers", "performance", "merge", "deadline",
+  "phone", "memory", "reminder", "inbox", "database", "search", "conversation",
+  "routines", "graph", "sidebar", "coding-agent", "forecast"];
 export const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 export const MIN_CHANGELOG_VERSION = "0.11.0";
 
