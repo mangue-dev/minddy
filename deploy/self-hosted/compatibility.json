@@ -640,6 +640,46 @@
         }
       },
       "migrationPolicy": "forward-only; bootstrap from the schema baseline and upgrade one published minddy release at a time"
+    },
+    {
+      "minddyRelease": "0.40.0",
+      "tag": "v0.40.0",
+      "schemaBaseline": "20270106090000_baseline.sql",
+      "supportedTopologies": [
+        "simple-managed-supabase",
+        "complete-official-supabase"
+      ],
+      "application": {
+        "node": "24",
+        "pnpm": "10.28.0",
+        "architectures": [
+          "linux/amd64",
+          "linux/arm64"
+        ]
+      },
+      "containerRuntime": {
+        "dockerEngineMinimum": "27.0.0",
+        "dockerComposePluginMinimum": "2.29.0"
+      },
+      "referenceCompose": {
+        "minddyImage": "ghcr.io/mangue-dev/minddy:v0.40.0",
+        "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
+      },
+      "supabase": {
+        "simpleManaged": {
+          "requirement": "Postgres, Auth, Storage, and Realtime are reachable and pnpm verify:supabase passes."
+        },
+        "completeOfficial": {
+          "distribution": "https://github.com/supabase/supabase/tree/self-hosted/v0.8.4/docker",
+          "release": "self-hosted/v0.8.4",
+          "commit": "189adda99d1b56da55fc5a6ee3f849354aaea92a",
+          "dockerComposeSha256": "91d706ea68ae8bc194aa278680a91c486f642f1e7ee89a1ebc096d4f72c9c157",
+          "environmentTemplateSha256": "bc2763a3676fd9f9b27fd8b166f54110c49773c2bedb09888c665b4be8025933",
+          "upgradePolicy": "Use the complete upstream Compose release as a tested image set; do not upgrade individual services."
+        }
+      },
+      "migrationPolicy": "forward-only; bootstrap from the schema baseline and upgrade one published minddy release at a time"
     }
   ]
 }
