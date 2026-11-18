@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-18",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -74,14 +74,16 @@
       "components/settings/ai-instructions-section.tsx",
       "components/ai-instruction-proposal-card.tsx",
       "lib/ai-instructions.ts",
-      "lib/server/ai-instruction-proposals.ts"
+      "lib/server/ai-instruction-proposals.ts",
+      "lib/server/numo/home-brief.ts",
+      "lib/server/numo/wake-context.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-1016: Numo sentence of #hide-project, source audit against lib/server/hidden-projects.ts, lib/server/assistant/execute-tool.ts, lib/server/numo/journal-prompt.ts, memory-prompt.ts, home-brief.ts and wake-context.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (pt-BR MIN-1016 sentence written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-18"
   },
   "related": [
     "issues",
@@ -105,7 +107,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
       "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -122,7 +124,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Cartão “Convidar pessoas” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +141,7 @@
       "src": "/documentation/pt-BR/project-statistics.png",
       "alt": "Seções Ritmo, Situação atual e Colaboradores de um projeto com cerca de mil tickets: barras semanais de tickets criados e concluídos, uma barra de status, indicadores de saúde e uma barra de status por pessoa.",
       "caption": "O ritmo compara as últimas quatro semanas com as quatro anteriores; os tickets atrasados e parados apontam o trabalho a observar.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -156,7 +158,7 @@
       "src": "/documentation/pt-BR/project-issue-graph.png",
       "alt": "Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda, o interruptor Incluir tickets e objetivos fechados e o botão Ampliar o grafo no canto superior direito.",
       "caption": "Passe o cursor sobre um ponto para ler o ticket e destacar suas ligações; selecione-o para abrir o ticket no painel lateral.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -215,7 +217,7 @@ A sugestão aparece na **Página inicial** e no topo da aba **Instruções da IA
 
 Oculte um projeto que você não acompanha mais no dia a dia para tirá-lo da sua barra lateral e do seu início sem sair dele. Nas configurações gerais do projeto, escolha **Ocultar** na **Zona de perigo**, ou clique com o botão direito no projeto na barra lateral e escolha **Ocultar projeto** e confirme. Nos dois casos, uma caixa de diálogo com o nome do projeto pede confirmação porque ele sai da sua navegação; mostrá-lo de novo não pede confirmação. Qualquer pessoa no projeto pode ocultá-lo, inclusive o proprietário e os leitores.
 
-Ocultar muda apenas a sua própria navegação. Fora do próprio projeto, o minddy deixa de oferecê-lo, assim como seus tickets, objetivos e páginas, em todo lugar onde você escolhe algo: a paleta de comandos, as sugestões de menção após @, o contexto do Numo e a escolha do projeto ao criar um ticket, um objetivo ou uma rotina. Menções e links já escritos mantêm o nome e continuam abrindo. Os tickets dele também saem do quadro **Todos os tickets** e dos seus filtros, da exportação CSV de todos os seus projetos e do preenchimento automático do seu ciclo; escolher o projeto explicitamente na exportação ainda o inclui. A preferência é salva na sua conta, então continua valendo depois de entrar novamente e nos seus outros dispositivos. Você mantém seu acesso e ainda pode abrir e editar o projeto por um link direto ou na aba **Projetos ocultos** das **Configurações da conta**. Os outros membros continuam vendo o projeto, e as rotinas, integrações e notificações dele continuam funcionando. Abrir um projeto oculto não o traz de volta para a sua barra lateral.
+Ocultar muda apenas a sua própria navegação. Fora do próprio projeto, o minddy deixa de oferecê-lo, assim como seus tickets, objetivos e páginas, em todo lugar onde você escolhe algo: a paleta de comandos, as sugestões de menção após @, o contexto do Numo e a escolha do projeto ao criar um ticket, um objetivo ou uma rotina. Menções e links já escritos mantêm o nome e continuam abrindo. O Numo também o deixa de fora: a menos que você pergunte sobre o projeto ou abra o Numo de dentro dele, o Numo não menciona o projeto nem nada do que ele contém, seja nas respostas, no resumo na **Página inicial**, no diário ou no trabalho em segundo plano. Os tickets dele também saem do quadro **Todos os tickets** e dos seus filtros, da exportação CSV de todos os seus projetos e do preenchimento automático do seu ciclo; escolher o projeto explicitamente na exportação ainda o inclui. A preferência é salva na sua conta, então continua valendo depois de entrar novamente e nos seus outros dispositivos. Você mantém seu acesso e ainda pode abrir e editar o projeto por um link direto ou na aba **Projetos ocultos** das **Configurações da conta**. Os outros membros continuam vendo o projeto, e as rotinas, integrações e notificações dele continuam funcionando. Abrir um projeto oculto não o traz de volta para a sua barra lateral.
 
 Para trazê-lo de volta, escolha **Mostrar** em **Projetos ocultos** ou nas configurações gerais do projeto, ou escolha **Mostrar projeto** no menu dele na barra lateral. Se a alteração não puder ser salva, aparece um erro e o projeto volta ao estado anterior; tente novamente. Diferentemente de sair do projeto ou movê-lo para a lixeira, ocultar nunca remove acesso nem conteúdo.
 

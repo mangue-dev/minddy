@@ -3,9 +3,19 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
+vi.mock("./memory-content", () => ({ listNumoMemories: async () => [] }));
+vi.mock("./journal-content", () => ({ listOpenJournalEntries: async () => [] }));
+vi.mock("@/lib/server/project-access", () => ({
+  accessibleProjectIds: async (_user: string, ids: string[]) => new Set(ids),
+}));
+vi.mock("@/lib/server/hidden-projects", () => ({
+  hiddenProjectIdSet: async () => new Set(["33333333-3333-4333-8333-333333333333"]),
+}));
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   dropRepeatedAssignments,
+  loadWakeInput,
   readKind,
   summarizeWakeEvent,
   type WakeEventRow,
@@ -152,5 +162,25 @@ describe("the loader's edge cases", () => {
     await expect(readKind("issues", ["issue-1"],
       () => Promise.resolve({ data: null, error: { message: "boom" } }),
       () => Promise.resolve({ data: null, error: { message: "boom" } }))).rejects.toThrow();
+  });
+});
+
+describe("a project the user hid (MIN-1016)", () => {
+  it("wakes nothing on its events and reads nothing more about it", async () => {
+    const tables: string[] = [];
+    const service = {
+      from: (table: string) => {
+        tables.push(table);
+        return {
+          select: () => ({
+            in: () => ({ order: async () => ({ data: [row({ id: 7 })], error: null }) }),
+          }),
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    expect(await loadWakeInput(service, { user_id: ME, event_ids: [7] }))
+      .toEqual({ events: [], memories: [], journal: [] });
+    expect(tables).toEqual(["routine_events"]);
   });
 });

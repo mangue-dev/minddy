@@ -72,3 +72,16 @@ export async function setProjectHidden(
   if (error) throw new HiddenProjectsError("insert");
   return "ok";
 }
+
+/**
+ * The caller's hidden project ids as a set, for the reads that leave them out
+ * by default (Numo's project list, journal, memory, home word and background
+ * wake: MIN-1016). Works with the RLS client or a service client: the
+ * explicit user filter keeps the read to the caller's own rows either way.
+ */
+export async function hiddenProjectIdSet(
+  client: SupabaseClient,
+  userId: string,
+): Promise<Set<string>> {
+  return new Set(await listHiddenProjectIds(client, userId));
+}

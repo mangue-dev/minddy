@@ -10,6 +10,7 @@ import { readResultForReader } from "@/lib/server/mention-access";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { decodePageProjection } from "@/lib/server/page-content";
 import { accessibleProjectIds } from "@/lib/server/project-access";
+import { hiddenProjectIdSet } from "@/lib/server/hidden-projects";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { listOpenJournalEntries } from "./journal-content";
 import { listNumoMemories } from "./memory-content";
@@ -339,15 +340,22 @@ export async function loadWakeInput(service: SupabaseClient, batch: {
     ...memories.flatMap((m) => m.project_id ? [m.project_id] : []),
     ...journal.flatMap((j) => j.project_id ? [j.project_id] : []),
   ])];
-  const visible = await accessibleProjectIds(userId, candidateProjects);
+  const [accessible, hidden] = await Promise.all([
+    accessibleProjectIds(userId, candidateProjects),
+    hiddenProjectIdSet(service, userId),
+  ]);
+  // A project the user hid (MIN-1016) is one background Numo leaves alone:
+  // its events wake nothing, and its memories and entries stay out.
+  const visible = new Set([...accessible].filter((id) => !hidden.has(id)));
   // `accessibleProjectIds` reads a database error as "no access": confirm
   // the database answers before closing the batch as empty.
-  if (visible.size === 0) {
+  if (accessible.size === 0) {
     const { error: probeError } = await service.from("projects").select("id")
       .in("id", candidateProjects).limit(1);
     check(probeError, "projects");
     return { events: [], memories: [], journal: [] };
   }
+  if (visible.size === 0) return { events: [], memories: [], journal: [] };
   const { data: projectRows, error: projectError } = await service.from("projects")
     .select("id, key, owner_id").in("id", [...visible]).is("deleted_at", null);
   check(projectError, "projects");

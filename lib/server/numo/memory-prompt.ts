@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { accessibleProjectIds } from "@/lib/server/project-access";
+import { hiddenProjectIdSet } from "@/lib/server/hidden-projects";
 import { listNumoMemories, type NumoMemory } from "./memory-content";
 
 /**
@@ -83,7 +84,11 @@ export async function loadNumoMemoryPrompt(input: {
   const memories = await listNumoMemories(input.service, input.userId);
   const projectIds = [...new Set(memories.flatMap((memory) =>
     memory.project_id ? [memory.project_id] : []))];
-  const visible = await accessibleProjectIds(input.userId, projectIds);
+  const accessible = await accessibleProjectIds(input.userId, projectIds);
+  // A memory about a project the user hid (MIN-1016) stays out, unless the
+  // conversation is about that very project.
+  const hidden = accessible.size ? await hiddenProjectIdSet(input.service, input.userId) : new Set<string>();
+  const visible = new Set([...accessible].filter((id) => !hidden.has(id) || id === input.projectId));
   const projectKeys = new Map<string, string>();
   if (visible.size > 0) {
     const { data, error } = await input.service.from("projects")

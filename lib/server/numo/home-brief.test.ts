@@ -14,6 +14,9 @@ const mocks = vi.hoisted(() => ({
   forcedToolCall: vi.fn(),
   writeHomeBrief: vi.fn(),
   forecast: null as Record<string, unknown> | null,
+  memories: [] as Array<{ id: string; project_id: string | null; content: string }>,
+  accessible: new Set<string>(),
+  hidden: new Set<string>(),
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -27,7 +30,7 @@ vi.mock("./journal-content", () => ({
   listOpenJournalEntries: async () => mocks.open,
   listUnseenJournalEntries: async () => mocks.unseen,
 }));
-vi.mock("./memory-content", () => ({ listNumoMemories: async () => [] }));
+vi.mock("./memory-content", () => ({ listNumoMemories: async () => mocks.memories }));
 vi.mock("./home-brief-content", async (importOriginal) => ({
   ...await importOriginal<typeof import("./home-brief-content")>(),
   getLatestHomeBriefDigest: async () => mocks.latestDigest,
@@ -35,7 +38,11 @@ vi.mock("./home-brief-content", async (importOriginal) => ({
 }));
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => mocks.budget }));
 vi.mock("@/lib/server/usage-analytics", () => ({ getUsageForecast: async () => mocks.forecast }));
-vi.mock("@/lib/server/project-access", () => ({ accessibleProjectIds: async () => new Set<string>() }));
+vi.mock("@/lib/server/project-access", () => ({
+  accessibleProjectIds: async (_user: string, ids: string[]) =>
+    new Set(ids.filter((id) => mocks.accessible.has(id))),
+}));
+vi.mock("@/lib/server/hidden-projects", () => ({ hiddenProjectIdSet: async () => new Set(mocks.hidden) }));
 vi.mock("@/lib/server/mention-access", () => ({
   // The label the reader may see, as the real relabeling gives it.
   markdownForReader: async (_user: string, markdown: string) =>
@@ -76,6 +83,9 @@ describe("rewriteHomeBrief", () => {
     mocks.budget = true;
     mocks.answer = null;
     mocks.forecast = null;
+    mocks.memories = [];
+    mocks.accessible = new Set();
+    mocks.hidden = new Set();
     mocks.forcedToolCall.mockClear();
     mocks.writeHomeBrief.mockReset();
   });
@@ -114,6 +124,37 @@ describe("rewriteHomeBrief", () => {
     mocks.answer = { text: `Read [@Secret](mention:page/${HIDDEN}) and [@MIN-42](mention:issue/${ISSUE}).`, suggestions: [] };
     expect(await rewriteHomeBrief("user-1", undefined, NOW)).toBe("written");
     expect(mocks.writeHomeBrief.mock.calls[0][2].content).toBe(`Read Secret and [@](mention:issue/${ISSUE}).`);
+  });
+
+  it("leaves out the entries and memories of a project the user hid (MIN-1016)", async () => {
+    mocks.accessible = new Set(["project-shown", "project-hidden"]);
+    mocks.hidden = new Set(["project-hidden"]);
+    mocks.open = [
+      entry({ id: "shown-1", project_id: "project-shown", content: "Shown project entry." }),
+      entry({ id: "hidden-1", project_id: "project-hidden", content: "Hidden project entry." }),
+    ];
+    mocks.memories = [
+      { id: "m1", project_id: "project-shown", content: "Shown project memory." },
+      { id: "m2", project_id: "project-hidden", content: "Hidden project memory." },
+    ];
+    mocks.answer = { text: "Une entrée vous attend.", suggestions: [] };
+
+    expect(await rewriteHomeBrief("user-1", undefined, NOW)).toBe("written");
+
+    const [, , message] = mocks.forcedToolCall.mock.calls[0];
+    expect(message).toContain("Shown project entry.");
+    expect(message).toContain("Shown project memory.");
+    expect(message).not.toContain("Hidden project");
+    expect(message).not.toContain("project-hidden");
+    expect(mocks.writeHomeBrief.mock.calls[0][2].journalEntryIds).toEqual(["shown-1"]);
+  });
+
+  it("writes nothing when the only entries are about a hidden project", async () => {
+    mocks.accessible = new Set(["project-hidden"]);
+    mocks.hidden = new Set(["project-hidden"]);
+    mocks.open = [entry({ id: "hidden-1", project_id: "project-hidden", content: "Hidden project entry." })];
+    expect(await rewriteHomeBrief("user-1", undefined, NOW)).toBe("empty");
+    expect(mocks.forcedToolCall).not.toHaveBeenCalled();
   });
 
   it("writes nothing and calls no model when nothing is open or unseen", async () => {

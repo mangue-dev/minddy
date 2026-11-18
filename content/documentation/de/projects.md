@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 22,
+  "revision": 25,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-18",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -74,14 +74,16 @@
       "components/settings/ai-instructions-section.tsx",
       "components/ai-instruction-proposal-card.tsx",
       "lib/ai-instructions.ts",
-      "lib/server/ai-instruction-proposals.ts"
+      "lib/server/ai-instruction-proposals.ts",
+      "lib/server/numo/home-brief.ts",
+      "lib/server/numo/wake-context.ts"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 25,
+    "fact": "agent:claude-code (MIN-1016: Numo sentence of #hide-project, source audit against lib/server/hidden-projects.ts, lib/server/assistant/execute-tool.ts, lib/server/numo/journal-prompt.ts, memory-prompt.ts, home-brief.ts and wake-context.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (de MIN-1016 sentence written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-18"
   },
   "related": [
     "issues",
@@ -105,7 +107,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Tickets, Mitglieder, Ziele, Kategorien und Erstellt.",
       "caption": "Wähle Symbol, Namen oder Schlüssel, um sie direkt zu ändern; das Verschieben in den Papierkorb bleibt eine eigene Aktion weiter unten.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -122,7 +124,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +141,7 @@
       "src": "/documentation/de/project-statistics.png",
       "alt": "Abschnitte Dynamik, Aktueller Stand und Mitwirkende eines Projekts mit rund tausend Tickets: wöchentliche Balken für erstellte und erledigte Tickets, ein Statusbalken, Kennzahlen und ein Statusbalken pro Person.",
       "caption": "Die Dynamik vergleicht die letzten vier Wochen mit den vier davor; überfällige und stockende Tickets zeigen, wo du hinschauen solltest.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -156,7 +158,7 @@
       "src": "/documentation/de/project-issue-graph.png",
       "alt": "Ticket-Graph der offenen Tickets, in farbigen Blasen pro Ziel um quadratische Anker gruppiert, mit grauen Pfeilen vom übergeordneten Ticket zum Unterticket, roten Blockierpfeilen, gestrichelten Verwandt-Linien, grauen Verbindungslinien zwischen Zielen, der Legende, dem Schalter Abgeschlossene Tickets und Ziele einbeziehen und der Schaltfläche Graph vergrößern oben rechts.",
       "caption": "Fahre über einen Punkt, um sein Ticket zu lesen und seine Verknüpfungen hervorzuheben; wähle ihn aus, um das Ticket im Seitenbereich zu öffnen.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -215,7 +217,7 @@ Der Vorschlag erscheint auf der **Startseite** und oben im Tab **KI-Anweisungen*
 
 Blende ein Projekt aus, das du nicht mehr täglich verfolgst, damit es aus deiner Seitenleiste und deiner Startseite verschwindet, ohne dass du es verlässt. Wähle in den allgemeinen Projekteinstellungen in der **Gefahrenzone** die Option **Ausblenden**, oder klicke das Projekt in der Seitenleiste mit der rechten Maustaste an und wähle **Projekt ausblenden** und bestätige. In beiden Fällen fragt zuerst ein Dialog mit dem Projektnamen nach, weil das Projekt aus deiner Navigation verschwindet; das Wiedereinblenden braucht keine Bestätigung. Alle Personen im Projekt können es ausblenden, auch der Eigentümer und Leser.
 
-Das Ausblenden ändert nur deine eigene Navigation. Außerhalb des Projekts selbst bietet minddy weder das Projekt noch seine Tickets, Ziele und Seiten mehr an, wo du etwas auswählst: in der Befehlspalette, in den Erwähnungsvorschlägen nach @, im Numo-Kontext und bei der Projektwahl beim Erstellen eines Tickets, Ziels oder einer Routine. Bereits geschriebene Erwähnungen und Links zeigen weiterhin ihren Namen und lassen sich öffnen. Seine Tickets verschwinden außerdem aus der Ansicht **Alle Tickets** und ihren Filtern, aus dem CSV-Export aller deiner Projekte und aus dem automatischen Befüllen deines Zyklus; wählst du das Projekt im Export ausdrücklich aus, wird es weiterhin exportiert. Die Einstellung wird in deinem Konto gespeichert und gilt daher auch nach einer erneuten Anmeldung und auf deinen anderen Geräten. Du behältst deinen Zugriff und kannst das Projekt weiterhin über einen direkten Link oder über den Tab **Ausgeblendete Projekte** der **Kontoeinstellungen** öffnen und bearbeiten. Andere Mitglieder sehen das Projekt weiterhin, und seine Routinen, Integrationen und Benachrichtigungen laufen weiter. Das Öffnen eines ausgeblendeten Projekts bringt es nicht in deine Seitenleiste zurück.
+Das Ausblenden ändert nur deine eigene Navigation. Außerhalb des Projekts selbst bietet minddy weder das Projekt noch seine Tickets, Ziele und Seiten mehr an, wo du etwas auswählst: in der Befehlspalette, in den Erwähnungsvorschlägen nach @, im Numo-Kontext und bei der Projektwahl beim Erstellen eines Tickets, Ziels oder einer Routine. Bereits geschriebene Erwähnungen und Links zeigen weiterhin ihren Namen und lassen sich öffnen. Auch Numo lässt das Projekt außen vor: Außer du fragst danach oder öffnest Numo im Projekt selbst, nennt Numo weder das Projekt noch etwas daraus, weder in seinen Antworten noch in seiner Zusammenfassung auf der **Startseite**, seinem Journal oder seiner Arbeit im Hintergrund. Seine Tickets verschwinden außerdem aus der Ansicht **Alle Tickets** und ihren Filtern, aus dem CSV-Export aller deiner Projekte und aus dem automatischen Befüllen deines Zyklus; wählst du das Projekt im Export ausdrücklich aus, wird es weiterhin exportiert. Die Einstellung wird in deinem Konto gespeichert und gilt daher auch nach einer erneuten Anmeldung und auf deinen anderen Geräten. Du behältst deinen Zugriff und kannst das Projekt weiterhin über einen direkten Link oder über den Tab **Ausgeblendete Projekte** der **Kontoeinstellungen** öffnen und bearbeiten. Andere Mitglieder sehen das Projekt weiterhin, und seine Routinen, Integrationen und Benachrichtigungen laufen weiter. Das Öffnen eines ausgeblendeten Projekts bringt es nicht in deine Seitenleiste zurück.
 
 Um es wieder anzuzeigen, wähle **Einblenden** unter **Ausgeblendete Projekte** oder in den allgemeinen Projekteinstellungen, oder wähle **Projekt einblenden** im Menü der Seitenleiste. Kann die Änderung nicht gespeichert werden, erscheint ein Fehler und das Projekt kehrt in seinen vorherigen Zustand zurück; versuche es erneut. Anders als Verlassen oder In den Papierkorb verschieben entfernt das Ausblenden nie Zugriff oder Inhalte.
 
