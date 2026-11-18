@@ -1,6 +1,27 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { buildNumoJournalBlock } from "./journal-prompt";
+const mocks = vi.hoisted(() => ({
+  entries: [] as import("./journal-content").NumoJournalEntry[],
+  accessible: new Set<string>(),
+  hidden: new Set<string>(),
+  deleted: vi.fn(),
+}));
+
+vi.mock("./journal-content", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./journal-content")>(),
+  listOpenJournalEntries: async () => mocks.entries,
+  deleteOpenJournalEntriesOfProjects: async (...args: unknown[]) => mocks.deleted(...args),
+}));
+vi.mock("@/lib/server/project-access", () => ({
+  accessibleProjectIds: async (_user: string, ids: string[]) =>
+    new Set(ids.filter((id) => mocks.accessible.has(id))),
+}));
+vi.mock("@/lib/server/hidden-projects", () => ({ hiddenProjectIdSet: async () => new Set(mocks.hidden) }));
+vi.mock("@/lib/server/mention-access", () => ({ markdownForReader: async (_u: string, md: string) => md }));
+vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: (work: () => unknown) => void work() }));
+
+import { buildNumoJournalBlock, loadNumoJournalPrompt } from "./journal-prompt";
 import type { NumoJournalEntry } from "./journal-content";
 
 const NOW = new Date("2026-11-08T12:00:00.000Z");
@@ -53,5 +74,35 @@ describe("Numo journal prompt block (MIN-927)", () => {
     expect(crowded).toContain("Entry a");
     expect(crowded).not.toContain("Entry c");
     expect(crowded).toMatch(/older open entries do not fit/);
+  });
+});
+
+describe("loadNumoJournalPrompt with hidden projects (MIN-1016)", () => {
+  const HIDDEN = "55555555-5555-4555-8555-555555555555";
+  const service = {} as SupabaseClient;
+
+  beforeEach(() => {
+    mocks.entries = [
+      entry("shown", { project_id: PROJECT }),
+      entry("hidden", { project_id: HIDDEN }),
+      entry("global"),
+    ];
+    mocks.accessible = new Set([PROJECT, HIDDEN]);
+    mocks.hidden = new Set([HIDDEN]);
+    mocks.deleted.mockReset();
+  });
+
+  it("leaves out the entries of a hidden project without deleting them", async () => {
+    const block = await loadNumoJournalPrompt({ service, userId: "user-1" });
+    expect(block).toContain("Entry shown");
+    expect(block).toContain("Entry global");
+    expect(block).not.toContain("Entry hidden");
+    expect(block).not.toContain(HIDDEN);
+    expect(mocks.deleted).not.toHaveBeenCalled();
+  });
+
+  it("shows them in a conversation attached to that very project", async () => {
+    const block = await loadNumoJournalPrompt({ service, userId: "user-1", projectId: HIDDEN });
+    expect(block).toContain("Entry hidden");
   });
 });

@@ -779,7 +779,7 @@ async function buildExecutionInput(input: {
   if (journalSource) {
     // An unreadable journal degrades the turn rather than failing it.
     const journal = await loadNumoJournalPrompt({
-      service, userId: turn.user_id, scope: journalScope ?? undefined,
+      service, userId: turn.user_id, scope: journalScope ?? undefined, projectId: intent.projectId,
     }).catch(() => {
       console.error("[numo-journal] prompt_load_failed");
       return null;

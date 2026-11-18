@@ -10,6 +10,7 @@ import { mentionLinks, mentionMarkdown, mentionTargetKey } from "@/lib/mention-l
 import { resolveNumoBackgroundEnabled } from "@/lib/numo-background";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
+import { hiddenProjectIdSet } from "@/lib/server/hidden-projects";
 import { markdownForReader, UNAVAILABLE_MENTION_LABEL } from "@/lib/server/mention-access";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { accessibleProjectIds } from "@/lib/server/project-access";
@@ -119,6 +120,10 @@ export async function rewriteHomeBrief(userId: string,
   const merged = mergeEntries(open, unseen);
   const projectIds = [...new Set(merged.flatMap((entry) => entry.project_id ? [entry.project_id] : []))];
   const visible = projectIds.length ? await accessibleProjectIds(userId, projectIds) : new Set<string>();
+  // The home page never brings up a project the user hid (MIN-1016): its
+  // entries and memories stay out of the word.
+  const hidden = await hiddenProjectIdSet(service, userId);
+  for (const id of hidden) visible.delete(id);
   const entries = selectHomeBriefEntries(merged
     .filter((entry) => entry.project_id === null || visible.has(entry.project_id))
     .map((entry): HomeBriefEntry & { conversationId: string | null; createdAt: string } => ({
@@ -143,7 +148,8 @@ export async function rewriteHomeBrief(userId: string,
 
   const stored = await listNumoMemories(service, userId).catch(() => []);
   const memoryProjects = [...new Set(stored.flatMap((memory) =>
-    memory.project_id && !visible.has(memory.project_id) ? [memory.project_id] : []))];
+    memory.project_id && !visible.has(memory.project_id) && !hidden.has(memory.project_id)
+      ? [memory.project_id] : []))];
   if (memoryProjects.length) {
     for (const id of await accessibleProjectIds(userId, memoryProjects)) visible.add(id);
   }

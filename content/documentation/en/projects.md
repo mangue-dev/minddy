@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-18",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -74,14 +74,16 @@
       "components/settings/ai-instructions-section.tsx",
       "components/ai-instruction-proposal-card.tsx",
       "lib/ai-instructions.ts",
-      "lib/server/ai-instruction-proposals.ts"
+      "lib/server/ai-instruction-proposals.ts",
+      "lib/server/numo/home-brief.ts",
+      "lib/server/numo/wake-context.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-1016: Numo sentence of #hide-project, source audit against lib/server/hidden-projects.ts, lib/server/assistant/execute-tool.ts, lib/server/numo/journal-prompt.ts, memory-prompt.ts, home-brief.ts and wake-context.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (en MIN-1016 sentence written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-18"
   },
   "related": [
     "issues",
@@ -105,7 +107,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
       "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -122,7 +124,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Invite people card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +141,7 @@
       "src": "/documentation/en/project-statistics.png",
       "alt": "Momentum, Where things stand and Contributors sections of a project with about a thousand issues: weekly created and completed bars, a status bar, health counts and one status bar per person.",
       "caption": "The momentum compares the last four weeks with the four before; overdue and stalled counts flag the work to look at.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -156,7 +158,7 @@
       "src": "/documentation/en/project-issue-graph.png",
       "alt": "Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend, the Include closed issues and objectives switch and the Enlarge the graph button at the top right.",
       "caption": "Hover over a dot to read its issue and highlight its links; select it to open the issue in the side panel.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -215,7 +217,7 @@ The suggestion appears on **Home** and at the top of the **AI instructions** tab
 
 Hide a project you no longer follow day to day to keep it out of your sidebar and home without leaving it. In the project's general settings, choose **Hide** in the **Danger zone**, or right-click the project in the sidebar and choose **Hide project**, then confirm. Both ask first, in a dialog that names the project, because it leaves your navigation; showing it again needs no confirmation. Everyone in the project can hide it, including the owner and readers.
 
-Hiding changes only your own navigation. Outside the project itself, minddy no longer offers it or its issues, objectives and pages anywhere you choose something: the command palette, mention suggestions after @, Numo context, and the project choice when you create an issue, an objective or a routine. Mentions and links already written still show their name and open. Its issues also leave the **All issues** board and its filters, the CSV export of all your projects and the automatic filling of your cycle; choosing the project explicitly in the export still includes it. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from the **Hidden projects** tab of **Account settings**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
+Hiding changes only your own navigation. Outside the project itself, minddy no longer offers it or its issues, objectives and pages anywhere you choose something: the command palette, mention suggestions after @, Numo context, and the project choice when you create an issue, an objective or a routine. Mentions and links already written still show their name and open. Numo leaves the project out as well: unless you ask about it or open Numo from inside it, Numo doesn't list or mention the project or anything in it, whether in its replies, its summary on **Home**, its journal or its work in the background. Its issues also leave the **All issues** board and its filters, the CSV export of all your projects and the automatic filling of your cycle; choosing the project explicitly in the export still includes it. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from the **Hidden projects** tab of **Account settings**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
 
 To bring it back, choose **Show** in **Hidden projects** or in the project's general settings, or choose **Show project** from its sidebar menu. If the change cannot be saved, an error appears and the project returns to its previous state; try again. Unlike leaving or moving to trash, hiding never removes access or content.
 

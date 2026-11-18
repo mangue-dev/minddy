@@ -261,6 +261,7 @@ import { proposeBacklogFromBrief } from "@/lib/server/brief-to-issues";
 import { MIN_BRIEF_CHARS } from "@/lib/seed/types";
 import { getKnowledgeArticle, getKnowledgeTopicList } from "./knowledge";
 import { readInboxNotifications } from "@/lib/server/inbox";
+import { hiddenProjectIdSet } from "@/lib/server/hidden-projects";
 import { parseNumoNoteLink, sendNumoNote } from "@/lib/server/numo-notes";
 import {
   NumoMemoryError,
@@ -876,17 +877,34 @@ async function listViews(
   return { result: { views }, success: true };
 }
 
-/** Service-safe projection of projects the current actor can still access. */
-async function accessibleProjects(ctx: ToolContext): Promise<{
+/** Projects the user hid from their own lists (MIN-692). Numo leaves them out
+    of its default reads (MIN-1016); a failed read is an error, never "none". */
+async function readHiddenProjects(ctx: ToolContext): Promise<
+  { hidden: Set<string>; error: null } | { hidden: null; error: string }
+> {
+  try {
+    return { hidden: await hiddenProjectIdSet(ctx.service, ctx.userId), error: null };
+  } catch {
+    return { hidden: null, error: "Unable to read the user's hidden projects." };
+  }
+}
+
+/** Service-safe projection of projects the current actor can still access.
+    Hidden projects are left out unless `includeHidden`, and flagged then. */
+async function accessibleProjects(ctx: ToolContext, options: { includeHidden?: boolean } = {}): Promise<{
   projects: Array<{
     id: string;
     name: string;
     key: string;
     owner_id: string;
     role: ReturnType<typeof resolveProjectRole>;
+    hidden: boolean;
   }>;
   error: string | null;
 }> {
+  const hiddenRead = await readHiddenProjects(ctx);
+  if (hiddenRead.error !== null) return { projects: [], error: hiddenRead.error };
+  const hidden = hiddenRead.hidden;
   const [{ data: owned, error: ownedError }, { data: memberships, error: membershipError }] =
     await Promise.all([
       ctx.service
@@ -906,6 +924,7 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
     ...((owned ?? []) as Array<{ id: string }>).map((project) => project.id),
     ...((memberships ?? []) as Array<{ project_id: string }>).map((membership) => membership.project_id),
   ]);
+  if (!options.includeHidden) for (const id of hidden) ids.delete(id);
   if (ids.size === 0) return { projects: [], error: null };
   const memberRoles = new Map(
     ((memberships ?? []) as Array<{ project_id: string; role: unknown }>)
@@ -922,6 +941,7 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
       id: project.id, name: await decodeProjectName(project, ctx.userId),
       key: project.key, owner_id: project.owner_id,
       role: resolveProjectRole(ctx.userId, project.owner_id, memberRoles.get(project.id)),
+      hidden: hidden.has(project.id),
     }))),
     error: error?.message ?? null,
   };
@@ -1612,7 +1632,9 @@ async function executeUserTool(
     }
     // ── Project discovery and global-only filter options ───────────────
     case "list_projects": {
-      const visible = await accessibleProjects(ctx);
+      // Hidden projects stay out unless the user asked about one (MIN-1016).
+      const includeHidden = args.include_hidden === true;
+      const visible = await accessibleProjects(ctx, { includeHidden });
       if (visible.error) return toolError(visible.error);
       return {
         result: {
@@ -1621,6 +1643,7 @@ async function executeUserTool(
             name: project.name,
             key: project.key,
             role: project.role,
+            ...(includeHidden ? { hidden: project.hidden } : {}),
           })),
         },
         success: true,
@@ -1717,13 +1740,27 @@ async function executeUserTool(
         userId: ctx.userId,
       });
       if (result.error) return toolError(result.error);
+      // Notifications of hidden projects stay out unless the user asked
+      // about them (MIN-1016); the count says how many were left out.
+      let notifications = result.notifications;
+      let hiddenSkipped = 0;
+      if (args.include_hidden !== true) {
+        const hiddenRead = await readHiddenProjects(ctx);
+        if (hiddenRead.error !== null) return toolError(hiddenRead.error);
+        notifications = notifications.filter((notification) =>
+          !notification.project_id || !hiddenRead.hidden.has(notification.project_id));
+        hiddenSkipped = result.notifications.length - notifications.length;
+      }
       return {
-        result: buildInboxToolResult(result.notifications, {
-          state,
-          category,
-          query: typeof args.query === "string" ? args.query : undefined,
-          limit,
-        }),
+        result: {
+          ...buildInboxToolResult(notifications, {
+            state,
+            category,
+            query: typeof args.query === "string" ? args.query : undefined,
+            limit,
+          }),
+          ...(hiddenSkipped > 0 ? { hidden_project_notifications_skipped: hiddenSkipped } : {}),
+        },
         success: true,
       };
     }

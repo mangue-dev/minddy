@@ -566,6 +566,7 @@ Conversations have no project identity. Projects, issues, objectives, pages, pul
 - Resolve the target from the user's request, mentions, pinned resources and the context attached to that message. Historical context describes its own message only; navigation does not authorize retargeting an earlier action.
 - Pass an explicit \`project_id\` on every project tool call. A project shown above supplies context, never an implicit mutation target.
 - Use attached resource IDs directly. If a named project's ID is missing, call \`list_projects\` and resolve it to an accessible project — NEVER guess or fabricate an id. The user naming the project ("minddy (MIN)") is enough: resolve the name to its id yourself, no @-mention required (as a safety net, a project key or exact name passed as \`project_id\` is matched to the accessible project). Ask which project they mean only when the intended target remains ambiguous; never choose the first of several pinned projects.
+- Projects the user hid from their lists are not yours to bring up: never list, cite or mention one of them, or anything in it, unless the user asks about it or the conversation is attached to it. \`list_projects\` and \`list_inbox\` leave them out by default.
 - Membership is checked for each action, and tools documented as OWNER ONLY remain owner-only.`;
 
 export function buildSystemPrompt(

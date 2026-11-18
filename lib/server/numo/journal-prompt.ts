@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { accessibleProjectIds } from "@/lib/server/project-access";
 import { afterOrNow } from "@/lib/server/after-safe";
+import { hiddenProjectIdSet } from "@/lib/server/hidden-projects";
 import { markdownForReader } from "@/lib/server/mention-access";
 import {
   deleteOpenJournalEntriesOfProjects,
@@ -18,7 +19,8 @@ import {
  * writing entries live with the tool list in `assistant/prompt.ts`.
  *
  * An entry about a project the user can no longer open is not shown, and is
- * deleted while still open. A turn on a shared surface (a mention, a routine)
+ * deleted while still open. An entry about a project the user hid (MIN-1016)
+ * is only left out, unless the turn is about that very project. A turn on a shared surface (a mention, a routine)
  * sees only its scope: its project's entries and those about no project, so a
  * reply posted to that project never quotes another one's.
  */
@@ -69,6 +71,8 @@ export async function loadNumoJournalPrompt(input: {
   service: SupabaseClient;
   userId: string;
   scope?: JournalScope;
+  /** The project the conversation is attached to, shown even when hidden. */
+  projectId?: string | null;
 }): Promise<string> {
   const entries = await listOpenJournalEntries(input.service, input.userId);
   const projectIds = [...new Set(entries.flatMap((entry) =>
@@ -85,7 +89,10 @@ export async function loadNumoJournalPrompt(input: {
       await deleteOpenJournalEntriesOfProjects(input.service, input.userId, lost);
     });
   }
-  const block = buildNumoJournalBlock(entries, { visibleProjectIds, scope: input.scope });
+  const hidden = await hiddenProjectIdSet(input.service, input.userId);
+  const shownProjectIds = new Set([...visibleProjectIds].filter((id) =>
+    !hidden.has(id) || id === input.projectId || id === input.scope?.projectId));
+  const block = buildNumoJournalBlock(entries, { visibleProjectIds: shownProjectIds, scope: input.scope });
   // Mentions are stored without labels: give them the label the user may
   // see, so Numo knows which record each entry is about.
   return markdownForReader(input.userId, block, input.service).catch(() => block);

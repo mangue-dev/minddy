@@ -314,8 +314,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "list_projects",
       description:
-        "List all projects the user has access to, with their id, name, key, and role (owner, member, or reader; a reader's project is read-only for them). Use this to resolve a project named by the user when its ID is not already attached to the message.",
-      parameters: { type: "object", properties: {} },
+        "List the projects the user has access to, with their id, name, key, and role (owner, member, or reader; a reader's project is read-only for them). Use this to resolve a project named by the user when its ID is not already attached to the message. Projects the user hid from their lists are left out: never list, cite or bring up one of them unless the user asks about it. Pass include_hidden only then, or when a project the user names is not in the default list.",
+      parameters: {
+        type: "object",
+        properties: {
+          include_hidden: {
+            type: "boolean",
+            description: "Also return the projects the user hid, each flagged hidden: true. Only when the user asks about a hidden project or names a project the default list lacks.",
+          },
+        },
+      },
     },
   },
   // The cross-project view's category, objective and integration filters:
@@ -354,10 +362,14 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "list_inbox",
       description:
-        "Read the current user's inbox with read/unread state, timestamps, actors, excerpts, and resolvable targets. Use this for questions such as 'What did I miss?' or 'What is waiting for me?'. Defaults to unread notifications.",
+        "Read the current user's inbox with read/unread state, timestamps, actors, excerpts, and resolvable targets. Use this for questions such as 'What did I miss?' or 'What is waiting for me?'. Defaults to unread notifications. Notifications of projects the user hid are left out and counted in hidden_project_notifications_skipped.",
       parameters: {
         type: "object",
         properties: {
+          include_hidden: {
+            type: "boolean",
+            description: "Also return the notifications of projects the user hid. Only when the user asks about a hidden project.",
+          },
           state: {
             type: "string",
             enum: ["all", "unread", "read"],
