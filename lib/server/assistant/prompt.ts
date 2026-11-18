@@ -328,6 +328,28 @@ const WEB_SEARCH_RULE: ToolRule = {
 };
 
 /**
+ * How to follow something over time (MIN-1019). The reminder and routine
+ * tools are deferred (MIN-1001), so their family rules reach the model only
+ * once loaded: without this rule, "watch MIN-42" or "close that journal entry
+ * once MIN-42 is done" got "I cannot follow an issue over time". It is given
+ * whenever the turn can reach create_watch, loaded or not, and never where
+ * reminders are hidden (routines, mentions, a reminder's own turn).
+ */
+const FOLLOW_UP_RULE: ToolRule = {
+  tools: ["create_watch"],
+  text: `- **Following something over time** — "surveille MIN-42", "préviens-moi quand…", "tiens-moi
+  au courant des commentaires", "clos cette entrée quand le ticket passe en done" ask for a
+  REMINDER (create_watch): it watches an issue reaching a status, a new comment on an issue, an
+  objective reaching a status or a date, then notifies the user or has you act. Set it directly;
+  never answer that you cannot follow something over time, and never suggest checking back by
+  hand. Pick the mechanism by what the user describes, and say which one in one line, with why:
+  a one-off "when X, do Y" is a one-off reminder; a personal habit on a schedule ("every evening,
+  prepare my day") is a recurring reminder; recurring or event-driven work the whole PROJECT
+  shares is a routine; a task that comes back on the board ("every Monday, send the report") is
+  an issue with a recurrence.`,
+};
+
+/**
  * The family rules for a set of tools, as the prompt would give them
  * (MIN-1001): search_tools returns them with the tools it loads, since the
  * prompt of the turn was written before they were offered. Empty when no
@@ -344,6 +366,8 @@ export function buildSharedRules(
   locale: string,
   offeredTools: ReadonlySet<string>,
   defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS,
+  /** Offered tools plus those search_tools can load this turn (MIN-1019). */
+  loadableTools: ReadonlySet<string> = offeredTools,
 ): string {
   return `## Rules
 - Feedback objectives are explicit choices. Use link_feedback_to_objective ONLY when the user asks; never infer or assign an objective during feedback review, categorization or triage. A feedback integration default applies to new submissions. Promotion preserves the selected objective, including none.
@@ -456,7 +480,7 @@ export function buildSharedRules(
   with what you can do: sharpen the issue, its description and acceptance criteria, or read the
   pull request with read_pull_request. The user can copy an issue as a prompt for their own coding
   tool from the issue menu.
-${toolRule(offeredTools, ROUTINES_RULE)}${toolRule(offeredTools, REMINDERS_RULE)}- **Notes to the user (notify_me)** — leaves a note in the inbox of the user you work for, with a
+${toolRule(loadableTools, FOLLOW_UP_RULE)}${toolRule(offeredTools, ROUTINES_RULE)}${toolRule(offeredTools, REMINDERS_RULE)}- **Notes to the user (notify_me)** — leaves a note in the inbox of the user you work for, with a
   push; in a routine, that is its owner. The title says what happened and names the record as a
   typed mention ("Review [@](mention:issue/<id>) before Friday"); the body adds only the context
   the title lacks, and the link opens the record.
@@ -549,6 +573,7 @@ export function buildSystemPrompt(
   locale: string,
   offeredTools: ReadonlySet<string>,
   defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS,
+  loadableTools: ReadonlySet<string> = offeredTools,
 ): string {
   const memberLines =
     project.members
@@ -580,7 +605,7 @@ ${USER_MESSAGES_BLOCK}
 
 ${SETTINGS_BLOCK}
 
-${buildSharedRules(locale, offeredTools, defaultStatus)}
+${buildSharedRules(locale, offeredTools, defaultStatus, loadableTools)}
 
 ## Current project
 - Name: ${project.name}
@@ -624,6 +649,7 @@ export function buildGlobalSystemPrompt(
   locale: string,
   offeredTools: ReadonlySet<string>,
   defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS,
+  loadableTools: ReadonlySet<string> = offeredTools,
 ): string {
   return `You are Numo, the AI assistant for minddy, a lightweight issue tracker (projects, kanban issues, objectives, saved views).
 You help users create, find and edit issues, triage, assign work, comment, and configure kanban views — through your tools, in natural language.
@@ -657,7 +683,7 @@ ${USER_MESSAGES_BLOCK}
 
 ${SETTINGS_BLOCK}
 
-${buildSharedRules(locale, offeredTools, defaultStatus)}`;
+${buildSharedRules(locale, offeredTools, defaultStatus, loadableTools)}`;
 }
 
 /**

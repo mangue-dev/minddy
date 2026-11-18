@@ -722,6 +722,9 @@ async function buildExecutionInput(input: {
   const { active, deferred } = splitToolPool(pool, loadedToolNames(history));
   const tools = deferred.length > 0 ? [...active, searchToolsDefinition()] : active;
   const offeredToolNames = new Set(tools.map((tool) => tool.function.name));
+  // What search_tools can still load: a rule about a deferred family that
+  // the model must know exists is given from this set (MIN-1019).
+  const loadableToolNames = new Set([...offeredToolNames, ...deferred.map((tool) => tool.function.name)]);
 
   // Two parts (MIN-1001): `systemPrompt` holds what stays identical from one
   // turn to the next (rules, project structure), so a provider's prompt cache
@@ -736,7 +739,7 @@ async function buildExecutionInput(input: {
       service,
       project: access.project,
     });
-    systemPrompt = buildSystemPrompt(promptProject, intent.locale, offeredToolNames, intent.numoDefaultStatus);
+    systemPrompt = buildSystemPrompt(promptProject, intent.locale, offeredToolNames, intent.numoDefaultStatus, loadableToolNames);
     turnPrompt += buildProjectSnapshotBlock(promptProject);
     if (readerAccess) {
       turnPrompt += `\n## Access
@@ -750,7 +753,7 @@ async function buildExecutionInput(input: {
       });
     }
   } else {
-    systemPrompt = buildGlobalSystemPrompt(intent.locale, offeredToolNames, intent.numoDefaultStatus);
+    systemPrompt = buildGlobalSystemPrompt(intent.locale, offeredToolNames, intent.numoDefaultStatus, loadableToolNames);
   }
   // What search_tools can load: part of the stable prompt, so it lists the
   // whole deferrable pool, loaded or not, and never changes in a conversation
