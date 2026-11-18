@@ -433,7 +433,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "search_issues",
       description:
-        "Search the project's issues by text (matches title/description, and exact identifiers like 'MIND-42' or bare numbers). Text matches come first; a descriptive query may add issues found by meaning, marked match: \"semantic\" — check them before relying on them.",
+        "Find issues that already exist in the project, by text (matches title/description, and exact identifiers like 'MIND-42' or bare numbers). Not a step before create_issue: to create an issue the user asked for, call create_issue directly. Text matches come first; a descriptive query may add issues found by meaning, marked match: \"semantic\" — check them before relying on them.",
       parameters: {
         type: "object",
         properties: {
@@ -617,7 +617,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "create_issue",
       description:
-        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — minddy files new issues in the user's chosen Numo landing status (an account setting) on its own. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first. When no project is attached to the conversation, resolve the project the user named (by key like 'MIN' or by name like 'minddy') to its id with list_projects BEFORE calling this — never guess an id, and never silently give up because the id was not attached.",
+        "Create an issue. When the user asks to create one, call this directly — do NOT search for it first (search_issues finds issues that already exist; the one asked for does not yet), unless they asked you to check for duplicates. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — minddy files new issues in the user's chosen Numo landing status (an account setting) on its own. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first. When no project is attached to the conversation, resolve the project the user named (by key like 'MIN' or by name like 'minddy') to its id with list_projects BEFORE calling this — never guess an id, and never silently give up because the id was not attached.",
       parameters: {
         type: "object",
         properties: {
