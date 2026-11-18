@@ -355,8 +355,11 @@ whatever the model (MIN-1001):
   to no optional reasoning (see [Smart Fill structured output](#smart-fill-structured-output));
   the feedback voice pass and the compaction summary send
   `reasoning: { enabled: false }`, replayed without the field by
-  `fetchAiChat` on a model that must reason; web search sends `minimal`, as
-  the FAQ box does, because its request has no such replay.
+  `fetchAiChat` on a model that must reason; web search sends `minimal` on
+  OpenRouter, as the FAQ box does, because its request has no such replay.
+  Its native search on a personal key sends `enabled: false` to Claude
+  (translated to `low` effort on a model that must think) and `low` to
+  OpenAI, whose web search tool refuses `minimal`.
 - **Output ceilings fit the answer, reasoning included.** Only generated
   tokens are billed, so a ceiling never costs on a short reply, but a cut
   reply is paid and thrown away: Smart Assign's fallback allows 1,024 tokens

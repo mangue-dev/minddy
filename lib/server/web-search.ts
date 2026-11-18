@@ -12,11 +12,16 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import type { AiSurface } from "@/lib/ai-surfaces";
+import { normalizeBaseUrl, type AgentProviderId } from "@/lib/agent-providers";
 import {
   handleManagedKeyRejection,
   resolveAiRuntime,
   resolvePlatformApiKey,
+  type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
+import { fetchAiProvider } from "@/lib/server/ai-provider-request";
+import { ANTHROPIC_API_VERSION, toAnthropicMessagesBody } from "@/lib/server/anthropic-messages";
+import { toResponsesBody } from "@/lib/server/openai-responses";
 import {
   aiChatProviderHeaders,
   translateAiChatRequest,
@@ -43,6 +48,15 @@ import { providerErrorFromResponse, reportProviderError } from "@/lib/server/ai-
  *
  * The engine is pinned to `exa` voluntarily: left free, OpenRouter route
  * to the NATIVE search of the provider (OpenAI, Anthropic, Google, xAI) whose price is a variable passthrough. Exa = flat, predictable price.
+ *
+ * PERSONAL KEYS (MIN-1021): a search follows the account's language-model
+ * route like the turn that asks for it. An OpenRouter key runs the plugin
+ * above with the account's model. An Anthropic or OpenAI key searches with the
+ * provider's own web search tool (`runNativeWebSearch`), on the account's model
+ * and at the account's expense; a failure there is returned as such, never
+ * replayed on minddy Cloud. Only a personal provider without a web search of
+ * its own (DeepSeek, Mistral, Google's OpenAI-compatible endpoint…) still
+ * searches through minddy Cloud.
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -279,6 +293,224 @@ async function attemptWebSearch(params: {
   }
 }
 
+/** Personal-key providers whose API runs a web search of its own. */
+const NATIVE_WEB_SEARCH_PROVIDERS = new Set<AgentProviderId>(["anthropic", "openai"]);
+
+export function hasNativeWebSearch(provider: AgentProviderId): boolean {
+  return NATIVE_WEB_SEARCH_PROVIDERS.has(provider);
+}
+
+/** One search per call, as on the OpenRouter path: the calling model searches again if it needs to. */
+const NATIVE_MAX_SEARCHES = 1;
+
+/**
+ * Summarizing results needs no reflection (MIN-1001). Claude turns thinking
+ * off, or runs at `low` effort where it must think (`lib/ai-chat.ts` picks per
+ * model). OpenAI asks for `low`, the cheapest effort its web search tool
+ * accepts (`minimal` is refused), dropped for a model that does not reason.
+ */
+function nativeSearchChatBody(runtime: ResolvedAiRuntime, query: string): Record<string, unknown> {
+  return translateAiChatRequest(
+    {
+      model: runtime.model,
+      messages: [
+        { role: "system", content: SEARCH_SYSTEM_PROMPT },
+        { role: "user", content: query },
+      ],
+      maxOutputTokens: MAX_ANSWER_TOKENS,
+      reasoning: runtime.provider === "anthropic" ? { enabled: false } : { effort: "low" },
+    },
+    runtime.provider,
+  );
+}
+
+/** A Responses body asks for encrypted reasoning only from a model that reasons. */
+function nativeResponsesBody(chat: Record<string, unknown>): Record<string, unknown> {
+  const { include, ...body } = toResponsesBody(chat);
+  return {
+    ...body,
+    ...(body.reasoning ? { include } : {}),
+    tools: [{ type: "web_search" }],
+  };
+}
+
+/** Adds a source once, until `max` are kept. */
+function addSource(sources: WebSource[], max: number, url: unknown, title: unknown, snippet: unknown): void {
+  if (typeof url !== "string" || !url || sources.length >= max) return;
+  if (sources.some((source) => source.url === url)) return;
+  sources.push({
+    url,
+    title: typeof title === "string" && title.trim() ? title.trim() : null,
+    snippet: typeof snippet === "string" && snippet.trim() ? cap(snippet.trim(), MAX_SNIPPET_CHARS) : null,
+  });
+}
+
+interface AnthropicSearchBlock {
+  type?: string;
+  text?: string;
+  citations?: Array<{ url?: string; title?: string | null; cited_text?: string }> | null;
+  content?: unknown;
+}
+
+/**
+ * The Messages API reply of a search → answer and sources. Cited passages
+ * come first; the remaining results fill the list without a snippet, since
+ * Anthropic returns their page content encrypted.
+ */
+export function parseAnthropicWebSearch(
+  body: { content?: AnthropicSearchBlock[] },
+  maxResults: number,
+): { answer: string; sources: WebSource[]; error: string | null } {
+  const blocks = Array.isArray(body.content) ? body.content : [];
+  const sources: WebSource[] = [];
+  let answer = "";
+  let error: string | null = null;
+  for (const block of blocks) {
+    if (block.type !== "text") continue;
+    answer += block.text ?? "";
+    for (const citation of block.citations ?? []) {
+      addSource(sources, maxResults, citation.url, citation.title, citation.cited_text);
+    }
+  }
+  for (const block of blocks) {
+    if (block.type !== "web_search_tool_result") continue;
+    if (Array.isArray(block.content)) {
+      for (const result of block.content as Array<{ url?: string; title?: string }>) {
+        addSource(sources, maxResults, result.url, result.title, null);
+      }
+    } else if (block.content && typeof block.content === "object") {
+      const code = (block.content as { error_code?: unknown }).error_code;
+      error = `web search failed: ${typeof code === "string" ? code : "unavailable"}`;
+    }
+  }
+  return { answer: answer.trim(), sources, error };
+}
+
+interface ResponsesSearchItem {
+  type?: string;
+  content?: Array<{
+    type?: string;
+    text?: string;
+    annotations?: Array<{ type?: string; url?: string; title?: string }>;
+  }>;
+  action?: { sources?: Array<{ url?: string }> };
+}
+
+/**
+ * The Responses API reply of a search → answer and sources: the message's
+ * `url_citation` annotations, then the pages the search call read.
+ */
+export function parseOpenAiWebSearch(
+  body: { output?: ResponsesSearchItem[] },
+  maxResults: number,
+): { answer: string; sources: WebSource[] } {
+  const items = Array.isArray(body.output) ? body.output : [];
+  const sources: WebSource[] = [];
+  let answer = "";
+  for (const item of items) {
+    if (item.type !== "message") continue;
+    for (const part of item.content ?? []) {
+      if (part.type !== "output_text") continue;
+      answer += part.text ?? "";
+      for (const annotation of part.annotations ?? []) {
+        if (annotation.type === "url_citation") addSource(sources, maxResults, annotation.url, annotation.title, null);
+      }
+    }
+  }
+  for (const item of items) {
+    if (item.type !== "web_search_call") continue;
+    for (const source of item.action?.sources ?? []) addSource(sources, maxResults, source.url, null, null);
+  }
+  return { answer: answer.trim(), sources };
+}
+
+/**
+ * A web search on the account's own Anthropic or OpenAI key (MIN-1021): the
+ * provider's web search tool, on the model the account runs. The provider
+ * bills the account; minddy's ledger keeps no line for a personal key.
+ */
+export async function runNativeWebSearch(params: {
+  query: string;
+  runtime: ResolvedAiRuntime;
+  maxResults?: number;
+  signal?: AbortSignal;
+}): Promise<WebSearchOutcome> {
+  const { runtime } = params;
+  const query = params.query.trim().slice(0, MAX_QUERY_CHARS);
+  if (!query) return { ok: false, error: "query is required" };
+  if (!hasNativeWebSearch(runtime.provider)) {
+    return { ok: false, error: "Web search is not available here." };
+  }
+  const maxResults = Math.min(
+    Math.max(Math.trunc(params.maxResults ?? DEFAULT_MAX_RESULTS), 1),
+    MAX_RESULTS_CAP
+  );
+  const signal = params.signal
+    ? AbortSignal.any([params.signal, AbortSignal.timeout(TIMEOUT_MS)])
+    : AbortSignal.timeout(TIMEOUT_MS);
+  const chat = nativeSearchChatBody(runtime, query);
+  const anthropic = runtime.provider === "anthropic";
+  const url = `${normalizeBaseUrl(runtime.baseUrl)}/${anthropic ? "messages" : "responses"}`;
+  const body = anthropic
+    ? {
+        ...toAnthropicMessagesBody(chat),
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: NATIVE_MAX_SEARCHES }],
+      }
+    : nativeResponsesBody(chat);
+  const headers: Record<string, string> = anthropic
+    ? { "x-api-key": runtime.apiKey, "anthropic-version": ANTHROPIC_API_VERSION, "content-type": "application/json" }
+    : { Authorization: `Bearer ${runtime.apiKey}`, "Content-Type": "application/json" };
+
+  try {
+    const response = await fetchAiProvider(runtime.provider, url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (!response.ok) {
+      const failure = await providerErrorFromResponse(runtime.provider, runtime.model, response.clone());
+      reportProviderError(failure, "web_search");
+      const detail = await response.text().catch(() => "");
+      return { ok: false, error: `web search failed (${response.status}): ${detail.slice(0, 200)}` };
+    }
+    const reply = (await response.json()) as {
+      id?: string;
+      model?: string;
+      content?: AnthropicSearchBlock[];
+      output?: ResponsesSearchItem[];
+      usage?: { input_tokens?: number; output_tokens?: number };
+    };
+    const parsed = anthropic
+      ? parseAnthropicWebSearch(reply, maxResults)
+      : { ...parseOpenAiWebSearch(reply, maxResults), error: null };
+    if (!parsed.answer && parsed.error) return { ok: false, error: parsed.error };
+    const promptTokens = reply.usage?.input_tokens ?? null;
+    const completionTokens = reply.usage?.output_tokens ?? null;
+    return {
+      ok: true,
+      answer: parsed.answer,
+      sources: parsed.sources,
+      usage: {
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens !== null && completionTokens !== null ? promptTokens + completionTokens : null,
+        cost: null,
+        cachedTokens: null,
+        cacheWriteTokens: null,
+      },
+      model: reply.model ?? runtime.model,
+      generationId: reply.id ?? null,
+    };
+  } catch (err) {
+    const aborted = (err as Error).name === "AbortError" || (err as Error).name === "TimeoutError";
+    return {
+      ok: false,
+      error: aborted ? "web search timed out" : `web search failed: ${(err as Error).message}`,
+    };
+  }
+}
+
 /**
  * The search as called by the tools (Numo chat, @Numo in comment,
  * code agents): admin settings, call, writing of the line `web_search` to
@@ -315,9 +547,31 @@ export async function runWebSearchTool(params: {
       }).catch(() => null)
     : null;
 
-  // The `web` plugin is an OpenRouter capability, not an extension of the standard
-  // OpenAI-compatible. A native key therefore remains on the Minddy quota for CE
-  // subcall; an OpenRouter key uses its model per feature.
+  // An Anthropic or OpenAI key searches with its provider's own tool, on the
+  // account's model (MIN-1021). Its failure is the search's answer: replaying
+  // it on minddy Cloud would spend what the account chose not to.
+  if (runtime?.mode === "byok" && hasNativeWebSearch(runtime.provider)) {
+    const native = await runNativeWebSearch({
+      query: params.query,
+      runtime,
+      maxResults: params.maxResults,
+      signal: params.signal,
+    });
+    if (!native.ok) return { result: { error: native.error }, success: false };
+    return {
+      result: {
+        query: params.query.trim().slice(0, MAX_QUERY_CHARS),
+        answer: native.answer,
+        sources: native.sources,
+      },
+      success: true,
+    };
+  }
+
+  // The `web` plugin is an OpenRouter capability, not part of the
+  // OpenAI-compatible standard: an OpenRouter key runs it with the account's
+  // model, and a personal provider without a search of its own stays on
+  // minddy Cloud for this subcall.
   const byokOpenRouter = runtime?.provider === "openrouter" ? runtime : null;
   const managedKey = byokOpenRouter ?? (params.apiKey
     ? { apiKey: params.apiKey }

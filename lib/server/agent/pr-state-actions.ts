@@ -6,6 +6,7 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { hasUsageBudget } from "@/lib/server/usage";
+import { usesByokForSurface } from "@/lib/server/ai-runtime";
 import {
   reducePullRequestReadiness,
   unavailableMergePolicy,
@@ -184,7 +185,8 @@ export async function prStateActionResponse(
 /**
  * Merge prepared by "Numo" (MIN-548): the generation runs in the BACKGROUND
  * and the merge fires the moment it lands. Behind the "Numo" label stands
- * the admin model `merge_message_model` — ONE forced call over the PR diff
+ * the admin model `merge_message_model`, or the member's own language model
+ * on a personal key (MIN-1021) — ONE forced call over the PR diff
  * and its commits, never a full agent session. Optimistic: the response
  * leaves before any generation starts, and the broadcast carries the
  * outcome (merged, or not) to the open panel.
@@ -239,7 +241,13 @@ async function runAiMergeJob(
       console.error("[pr-ai-merge] usage budget exhausted");
       return;
     }
-    const cfg = await getAppConfigValues(modelConfigKeys("merge_message_model"));
+    const [cfg, personalKey] = await Promise.all([
+      getAppConfigValues(modelConfigKeys("merge_message_model")),
+      // A member whose language model runs on a personal key writes the
+      // message with it and its model, like every other text task (MIN-1021);
+      // minddy Cloud keeps the instance's merge model.
+      usesByokForSurface(userId, "assistant", "assistant_model").catch(() => false),
+    ]);
     const model = resolveFromValues("merge_message_model", cfg).model;
 
     // The context: title, description, commits, and the diff — file by
@@ -292,6 +300,7 @@ async function runAiMergeJob(
       {
         xTitle: "Merge commit (minddy)",
         logPrefix: "[pr-ai-merge]",
+        ...(personalKey ? { modelKey: "assistant_model" as const } : {}),
         // The default model (GLM-5.3) reasons MANDATORILY, and without this
         // field it runs at its family default `max`: the reasoning tokens
         // count inside the output ceiling and, at 1_024, a thinking burst
