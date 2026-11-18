@@ -56,9 +56,9 @@ export interface ToolFamily {
  * matched by their `admin_` prefix.
  */
 export const TOOL_FAMILIES: readonly ToolFamily[] = [
-  { name: "Routines", summary: "create, change and read the runs of scheduled or event-driven project routines",
+  { name: "Routines", summary: "work the whole PROJECT shares, run on a schedule or triggered by project events (every member sees it): create, change and read their runs",
     tools: ["create_routine", "update_routine", "list_routine_runs", "read_routine_occurrence"] },
-  { name: "Reminders", summary: "\"when X, do Y\", \"remind me on…\" and recurring personal appointments",
+  { name: "Reminders", summary: "watch something for the user and act or notify when it happens: an issue reaching a status, a new comment on an issue, an objective reaching a status, a date (\"tell me when MIN-42 is done\", \"remind me on Friday\"), and the user's own recurring habits",
     tools: ["create_watch", "list_watches", "update_watch", "cancel_watch"] },
   { name: "Saved views", summary: "kanban views of a project or the cross-project board",
     tools: ["list_views", "create_view", "update_view", "list_global_filter_options"] },
@@ -213,7 +213,7 @@ export function deferredToolsCatalog(deferred: readonly AssistantToolDef[]): str
     ? `- ${family.name}: ${family.summary} (${names.join(", ")})`
     : `- Other: ${names.join(", ")}`);
   return `\n\n## More tools
-These tools are not sent until loaded. Before you use one you do not have yet, call ${SEARCH_TOOLS_NAME} with its name or its family; it is then yours for the rest of the conversation. Never tell the user you cannot do something one of them does.
+These tools are not sent until loaded. Before you use one you do not have yet, call ${SEARCH_TOOLS_NAME} with its name or its family; it is then yours for the rest of the conversation. Before telling the user you cannot do something, check this list: when a family might do it, load it and read its tools' descriptions. Never tell the user you cannot do something one of them does.
 ${lines.join("\n")}`;
 }
 
