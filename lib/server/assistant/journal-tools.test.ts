@@ -59,6 +59,12 @@ describe("Numo journal tools (MIN-927)", () => {
     expect(tool("journal_write")?.function.parameters.properties).not.toHaveProperty("source");
   });
 
+  // MIN-1024: a replacement copied from the entry it closed kept outdated
+  // facts alive for several generations.
+  it("asks for a replacement entry written from the records, not from the old entry", () => {
+    expect(tool("journal_write")?.function.description).toContain("never by copying the old entry's facts and figures");
+  });
+
   it("stays available to a Reader, since it changes no project", () => {
     const names = readerToolSet(CONVERSATION_ASSISTANT_TOOLS, false)
       .map((candidate) => candidate.function.name);

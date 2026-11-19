@@ -45,6 +45,13 @@ describe("Numo journal prompt block (MIN-927)", () => {
     expect(block).toContain(`- [id: b] (3 days ago, project ${PROJECT}, seen by the user) Entry b`);
   });
 
+  // MIN-1024: an entry is a snapshot; Numo carried its facts over unchecked.
+  it("presents each entry as true when written, to check again before reuse", () => {
+    const block = buildNumoJournalBlock([entry("a")], { visibleProjectIds: new Set(), now: NOW });
+    expect(block).toContain("not what is true now");
+    expect(block).toContain("read the records it cites again");
+  });
+
   it("hides entries about a project the user can no longer open", () => {
     const block = buildNumoJournalBlock([entry("a", { project_id: GONE })],
       { visibleProjectIds: new Set(), now: NOW });

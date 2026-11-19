@@ -35,6 +35,8 @@ describe("an occurrence of a recurring reminder (MIN-953)", () => {
 
   it("reports in the journal and keeps notes for what the user must act on", () => {
     expect(occurrence([])).toContain("Report in your journal (journal_write)");
+    // MIN-1024: each occurrence restates from what it reads, not the last entry.
+    expect(occurrence([])).toContain("write this occurrence's entry from what you read now");
     expect(occurrence([])).toContain("pass urgent: true and urgency_reason");
     expect(occurrence(["notification"])).toContain("An occurrence with nothing to report sends no note.");
     expect(occurrence([])).toContain("You cannot set, change or cancel reminders in this turn.");
