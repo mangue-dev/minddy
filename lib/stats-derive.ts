@@ -1,4 +1,6 @@
-import type { HeatmapDay } from "./types";
+import { EFFORT_POINTS } from "./cycle";
+import { EFFORTS } from "./issue-constants";
+import type { HeatmapDay, StatsCycleEffort } from "./types";
 
 /** Number → localized string (FR comma, EN period), 1 decimal place by default. */
 export function fmtNum(value: number, locale: string, digits = 1): string {
@@ -104,4 +106,41 @@ export function dayInZone(
   } catch {
     return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(date);
   }
+}
+
+/**
+ * Fills the effort sizes nobody has completed yet from the measured ones
+ * (MIN-1023), so a new account sees a full scale after a few issues.
+ *
+ * Each measured size gives a time per Fibonacci point (its median divided by
+ * its points, xs1 s2 m3 l5 xl8 xxl13 — the cycle capacity scale). The rates
+ * are averaged weighted by sample, so a size measured on ten issues counts more
+ * than one measured on a single issue, and every missing size gets that rate
+ * times its points. Measured sizes are returned untouched: real data always
+ * wins over an estimate. Without any measured size there is nothing to scale
+ * from, and the list stays empty.
+ */
+export function estimateMissingEffortMedians(
+  measured: StatsCycleEffort[],
+): StatsCycleEffort[] {
+  const real = measured.filter((row) => !row.estimated && row.sample > 0);
+  const totalSample = real.reduce((sum, row) => sum + row.sample, 0);
+  if (totalSample === 0) return [];
+  const secondsPerPoint =
+    real.reduce(
+      (sum, row) =>
+        sum + (row.medianSeconds / EFFORT_POINTS[row.effort]) * row.sample,
+      0,
+    ) / totalSample;
+  const byEffort = new Map(real.map((row) => [row.effort, row] as const));
+  return EFFORTS.map(({ value }) => {
+    return (
+      byEffort.get(value) ?? {
+        effort: value,
+        medianSeconds: Math.round(secondsPerPoint * EFFORT_POINTS[value]),
+        sample: 0,
+        estimated: true,
+      }
+    );
+  });
 }

@@ -90,6 +90,7 @@ const statsFixture: UserStats = {
     byEffort: [
       { effort: "xs", medianSeconds: 1800, sample: 12 },
       { effort: "m", medianSeconds: 43200, sample: 7 },
+      { effort: "l", medianSeconds: 72000, sample: 0, estimated: true },
     ],
   },
 };
@@ -120,6 +121,7 @@ describe("userStatsForAssistantTool", () => {
     expect(result.medianSecondsByEffort).toEqual([
       { effort: "xs", medianSeconds: 1800, sample: 12 },
       { effort: "m", medianSeconds: 43200, sample: 7 },
+      { effort: "l", medianSeconds: 72000, sample: 0, estimated: true },
     ]);
     expect(result.topProjects).toEqual([
       { name: "minddy", completed: 80 },

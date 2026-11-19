@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 11,
+  "revision": 13,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of personal-statistics-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of personal-statistics-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude-code (MIN-1023: estimated effort durations in the time-by-effort paragraph, source audit against lib/stats-derive.ts, lib/server/stats.ts and components/stats/effort-durations.tsx; no browser walkthrough; no figure shows this section; existing figures kept, not recaptured)",
+    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the MIN-1023 passage with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/pt-BR/personal-statistics-workflow.png",
       "alt": "Estatísticas do perfil com a faixa de números, a grade de atividade de 12 meses, as distribuições por projeto e categoria e o ritmo de trabalho.",
       "caption": "Histórico real da conta de demonstração: seis tickets concluídos em dois projetos, trinta tickets criados e nenhuma tarefa do caderno marcada.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -94,7 +94,7 @@ Primeiro vem uma faixa de seis números: **Concluídos**, **Tarefas marcadas**, 
 
 Use a quantidade de tickets concluídos, o ritmo, os dias ativos, as sequências e as medições de tempo para examinar sua própria atividade. A grade de atividade conta eventos de conclusão de tickets e de tarefas do caderno, agrupados em dias de calendário no seu fuso horário. Suas linhas começam pelo dia escolhido em **Primeiro dia da semana**, em **Preferências**. A grade nunca rola: ela mostra as semanas mais recentes que cabem na tela, então um celular mostra menos meses que um computador. Um dia ativo tem pelo menos um desses eventos; a sequência atual permite que hoje ainda esteja vazio, mas termina no próximo dia vazio. O número **Concluídos** conta cada identificador apenas uma vez: mover o mesmo ticket para Concluído duas vezes ainda conta uma vez; portanto, a contagem de eventos e o total de tickets distintos respondem a perguntas diferentes. O número acima da grade soma os tickets e as tarefas do caderno que você concluiu nos últimos 12 meses; aponte para o número para ver a divisão em tickets, tarefas e dias ativos. Ele também conta cada ticket uma única vez nesses 12 meses: um ticket concluído de novo marca cada um dos seus dias na grade, mas soma um só ticket ao número.
 
-O tempo por esforço é a mediana do tempo decorrido entre a primeira mudança registrada de um ticket para Em andamento e sua conclusão. São considerados tickets elegíveis em Concluído, atribuídos a você, com esforço e ambos os horários registrados. Esse tempo inclui a espera; não é um cronômetro de horas trabalhadas. A visualização **Contagem de tickets** mostra o tamanho da amostra usada. Uma mediana ausente pode indicar que não há medições elegíveis, não uma duração zero.
+O tempo por esforço é a mediana do tempo decorrido entre a primeira mudança registrada de um ticket para Em andamento e sua conclusão. São considerados tickets elegíveis em Concluído, atribuídos a você, com esforço e ambos os horários registrados. Esse tempo inclui a espera; não é um cronômetro de horas trabalhadas. A visualização **Contagem de tickets** mostra o tamanho da amostra usada. Assim que um esforço tem mediana, cada esforço sem medições elegíveis mostra uma estimativa, indicada por um ícone de informação e uma barra mais clara: as medianas medidas são escaladas pelo peso relativo de cada esforço (XS 1, S 2, M 3, L 5, XL 8, XXL 13), e um esforço medido em mais tickets conta mais. Uma mediana medida substitui a estimativa assim que um ticket desse esforço se torna elegível. A visualização **Contagem de tickets** lista apenas os esforços medidos.
 
 Leia a unidade e o período de cada seção antes de comparar os valores.
 

@@ -120,11 +120,26 @@ describe("getUserStats — durations by effort", () => {
       { effort: "m", median_seconds: 43200, sample: 7 },
     ]);
 
-    expect(stats.cycles.byEffort).toEqual([
+    const measured = stats.cycles.byEffort.filter((e) => !e.estimated);
+    expect(measured).toEqual([
       { effort: "xs", medianSeconds: 1800, sample: 12 },
       { effort: "m", medianSeconds: 43200, sample: 7 },
       { effort: "l", medianSeconds: 172800, sample: 3 },
     ]);
+  });
+
+  it("estimates the sizes nobody has completed yet, after the measured ones", async () => {
+    const stats = await call([{ effort: "m", median_seconds: 3600, sample: 1 }]);
+
+    expect(stats.cycles.byEffort.map((e) => [e.effort, e.estimated ?? false]))
+      .toEqual([
+        ["xs", true],
+        ["s", true],
+        ["m", false],
+        ["l", true],
+        ["xl", true],
+        ["xxl", true],
+      ]);
   });
 
   it("discards an effort with no sample", async () => {
@@ -133,7 +148,13 @@ describe("getUserStats — durations by effort", () => {
       { effort: "m", median_seconds: 3600, sample: 1 },
     ]);
 
-    expect(stats.cycles.byEffort.map((e) => e.effort)).toEqual(["m"]);
+    const measured = stats.cycles.byEffort.filter((e) => !e.estimated);
+    expect(measured.map((e) => e.effort)).toEqual(["m"]);
+    // The empty s row is estimated rather than read as a zero duration.
+    expect(stats.cycles.byEffort.find((e) => e.effort === "s")).toMatchObject({
+      medianSeconds: 2400,
+      estimated: true,
+    });
   });
 
   it("does not fall back to the old average when the migration has not run", async () => {

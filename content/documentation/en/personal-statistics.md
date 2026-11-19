@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude-code (MIN-1023: estimated effort durations in the time-by-effort paragraph, source audit against lib/stats-derive.ts, lib/server/stats.ts and components/stats/effort-durations.tsx; no browser walkthrough; no figure shows this section; existing figures kept, not recaptured)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1023 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/en/personal-statistics-workflow.png",
       "alt": "Profile statistics with the figure strip, the 12-month activity grid, the breakdowns by project and category, and the work rhythm.",
       "caption": "The demonstration account's real history: six completed issues in two projects, thirty created issues, no notebook task checked off.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -94,7 +94,7 @@ A strip of six figures comes first: **Completed**, **Tasks checked off**, **Crea
 
 Use completed issue counts, pace, active days, streaks and time measurements to inspect your own activity. The activity grid counts issue-completion and notebook-task-completion events, grouped into calendar days in your time zone. Its rows start on the day chosen under **First day of the week** in **Preferences**. The grid never scrolls: it shows the most recent weeks that fit the screen, so a phone shows fewer months than a computer. An active day has at least one such event; the current streak tolerates an empty today but ends at the next empty day. The **Completed** figure deduplicates issue identifiers: moving the same issue to Done twice still counts once, so an event count and a distinct-issue total answer different questions. The headline above the grid adds the issues and notebook tasks you completed over the last 12 months; point to its number to see the split into issues, tasks and active days. It also counts each issue once over those 12 months: an issue completed again marks each of its days in the grid but adds one issue to the headline.
 
-Time by effort is the median elapsed time from an issue’s first recorded move to in progress until completion, for eligible done issues assigned to you with an effort and both timestamps. It includes elapsed waiting time; it is not a stopwatch of hours worked. The **Issue count** view shows the underlying sample size. A missing median can reflect no eligible measurements rather than zero duration. Read the unit and the period each section describes before comparing values.
+Time by effort is the median elapsed time from an issue’s first recorded move to in progress until completion, for eligible done issues assigned to you with an effort and both timestamps. It includes elapsed waiting time; it is not a stopwatch of hours worked. The **Issue count** view shows the underlying sample size. Once one effort has a median, each effort without eligible measurements shows an estimate, marked with an information icon and a lighter bar: the measured medians are scaled by the relative weight of each effort (XS 1, S 2, M 3, L 5, XL 8, XXL 13), and an effort measured on more issues counts more. A measured median replaces the estimate as soon as one issue of that effort qualifies. The **Issue count** view lists measured efforts only. Read the unit and the period each section describes before comparing values.
 
 ## Interpret sparse or changed data {#statistics-limits}
 

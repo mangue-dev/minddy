@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude-code (MIN-1023: estimated effort durations in the time-by-effort paragraph, source audit against lib/stats-derive.ts, lib/server/stats.ts and components/stats/effort-durations.tsx; no browser walkthrough; no figure shows this section; existing figures kept, not recaptured)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr translation of the MIN-1023 passage with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/fr/personal-statistics-workflow.png",
       "alt": "Statistiques du profil : bandeau de chiffres, grille d’activité sur 12 mois, répartitions par projet et par catégorie, rythme de travail.",
       "caption": "Historique réel du compte de démonstration : six tickets terminés dans deux projets, trente tickets créés, aucune tâche du carnet cochée.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -94,7 +94,7 @@ Une bande de six chiffres vient d’abord : **Terminés**, **Tâches cochées**,
 
 Consultez tickets terminés, rythme, jours actifs, séries et temps pour examiner votre activité. La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. Ses lignes commencent par le jour choisi dans **Premier jour de la semaine**, sous **Préférences**. La grille ne défile jamais : elle montre les semaines les plus récentes qui tiennent à l’écran, si bien qu’un téléphone affiche moins de mois qu’un ordinateur. Un jour actif contient au moins un de ces événements ; la série courante tolère l’absence d’activité aujourd’hui, puis s’arrête au premier jour sans activité dans les jours précédents. Le chiffre **Terminés** déduplique les identifiants : un ticket repassé en Terminé n’est compté qu’une fois, si bien qu’un compte d’événements et un total de tickets distincts ne répondent pas à la même question. Le chiffre affiché au-dessus de la grille additionne les tickets et les tâches du carnet terminés sur les 12 derniers mois ; pointez ce nombre pour voir sa répartition en tickets, tâches et jours actifs. Il compte lui aussi chaque ticket une seule fois sur ces 12 mois : un ticket terminé à nouveau marque chacun de ses jours dans la grille, mais n’ajoute qu’un ticket au chiffre.
 
-Le temps par effort est la médiane du temps écoulé entre le premier passage enregistré d’un ticket en cours et sa réalisation, pour les tickets terminés qui vous sont attribués et possèdent effort et horodatages nécessaires. Il comprend le temps d’attente écoulé ; ce n’est pas un chronomètre d’heures travaillées. La vue **Nombre de tickets** montre la taille de l’échantillon. Une médiane absente peut indiquer l’absence de mesures admissibles, pas une durée nulle. Lisez les unités et la période décrite par chaque section avant de comparer les valeurs.
+Le temps par effort est la médiane du temps écoulé entre le premier passage enregistré d’un ticket en cours et sa réalisation, pour les tickets terminés qui vous sont attribués et possèdent effort et horodatages nécessaires. Il comprend le temps d’attente écoulé ; ce n’est pas un chronomètre d’heures travaillées. La vue **Nombre de tickets** montre la taille de l’échantillon. Dès qu’un effort a une médiane, chaque effort sans mesure admissible affiche une estimation, signalée par une icône d’information et une barre plus claire : les médianes mesurées sont ramenées au poids relatif de chaque effort (XS 1, S 2, M 3, L 5, XL 8, XXL 13), et un effort mesuré sur plus de tickets compte davantage. Une médiane mesurée remplace l’estimation dès qu’un ticket de cet effort est admissible. La vue **Nombre de tickets** ne liste que les efforts mesurés. Lisez les unités et la période décrite par chaque section avant de comparer les valeurs.
 
 ## Interpréter des données limitées ou modifiées {#statistics-limits}
 

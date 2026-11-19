@@ -7,6 +7,7 @@ import { categoryStore } from "@/lib/server/category-store";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { CLOSED_STATUSES } from "@/lib/issue-constants";
 import { EFFORTS } from "@/lib/issue-constants";
+import { estimateMissingEffortMedians } from "@/lib/stats-derive";
 import type {
   HeatmapDay,
   StatsCycleEffort,
@@ -82,7 +83,8 @@ function num(value: unknown): number | null {
  * averages, and an average displayed under a “median” label would be a
  * false figure which cannot be seen. A line without a median is therefore discarded — the
  * section disappears while the migration passes, such as when the RPC itself
- * is not yet deployed.
+ * is not yet deployed. Once at least one size is measured, the missing sizes
+ * are estimated from it and flagged `estimated`.
  */
 function toCycles(raw: RawCycleStats | null): StatsCycles {
   const byEffort = (raw?.by_effort ?? [])
@@ -99,7 +101,8 @@ function toCycles(raw: RawCycleStats | null): StatsCycles {
     completionOffsetSample: num(raw?.completion_offset_sample) ?? 0,
     avgIssuesPerCycle: num(raw?.avg_issues_per_cycle),
     cycleCount: num(raw?.cycle_count) ?? 0,
-    byEffort,
+    // Sizes not measured yet are estimated from the measured ones (MIN-1023).
+    byEffort: estimateMissingEffortMedians(byEffort),
   };
 }
 

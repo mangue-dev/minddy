@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 11,
+  "revision": 14,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 14,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude-code (MIN-1023: estimated effort durations in the time-by-effort paragraph, source audit against lib/stats-derive.ts, lib/server/stats.ts and components/stats/effort-durations.tsx; no browser walkthrough; no figure shows this section; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (de translation of the MIN-1023 passage with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/de/personal-statistics-workflow.png",
       "alt": "Profilstatistik mit Kennzahlenleiste, Aktivitätsraster über 12 Monate, Aufschlüsselung nach Projekt und Kategorie sowie Arbeitsrhythmus.",
       "caption": "Echter Verlauf des Demokontos: sechs abgeschlossene Tickets in zwei Projekten, dreißig erstellte Tickets, keine abgehakte Notizbuchaufgabe.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -94,7 +94,7 @@ Zuerst kommt eine Leiste mit sechs Kennzahlen: **Abgeschlossen**, **Aufgaben abg
 
 Anhand erledigter Tickets, Arbeitsgeschwindigkeit, aktiver Tage, Serien und Zeitmessungen kannst du deine eigene Aktivität untersuchen. Das Aktivitätsraster zählt Abschlussereignisse von Tickets und Aufgaben im Aufgabenheft, zusammengefasst nach Kalendertagen in deiner Zeitzone. Seine Zeilen beginnen mit dem Tag, den du unter **Erster Tag der Woche** im Tab **Einstellungen** gewählt hast. Das Raster scrollt nie: Es zeigt die jüngsten Wochen, die auf den Bildschirm passen, ein Telefon also weniger Monate als ein Computer. Ein aktiver Tag hat mindestens ein solches Ereignis. Die aktuelle Serie toleriert einen heute noch leeren Tag, endet aber am nächsten leeren Tag. Die Kennzahl **Abgeschlossen** zählt jede Ticketkennung nur einmal: Wird dasselbe Ticket zweimal auf Erledigt gesetzt, zählt es trotzdem einmal. Ereigniszahl und Zahl unterschiedlicher Tickets beantworten daher verschiedene Fragen. Die Kennzahl über dem Raster addiert die Tickets und Aufgaben im Aufgabenheft, die du in den letzten 12 Monaten abgeschlossen hast; zeige auf die Zahl, um ihre Aufteilung in Tickets, Aufgaben und aktive Tage zu sehen. Auch sie zählt jedes Ticket in diesen 12 Monaten nur einmal: Ein erneut abgeschlossenes Ticket markiert jeden seiner Tage im Raster, erhöht die Kennzahl aber nur um ein Ticket.
 
-Die Zeit nach Aufwand ist der Median der verstrichenen Zeit zwischen dem ersten aufgezeichneten Wechsel eines Tickets zu In Bearbeitung und seinem Abschluss. Berücksichtigt werden geeignete, dir zugewiesene Tickets im Status Erledigt mit Aufwand und beiden Zeitstempeln. Wartezeit ist enthalten; es handelt sich nicht um eine Stoppuhr für geleistete Arbeitsstunden. Die Ansicht **Anzahl der Tickets** zeigt die zugrunde liegende Stichprobengröße. Ein fehlender Median kann bedeuten, dass es keine geeigneten Messungen gibt, nicht dass die Dauer null ist. Prüfe vor einem Vergleich, welche Einheit und welchen Zeitraum der jeweilige Abschnitt verwendet.
+Die Zeit nach Aufwand ist der Median der verstrichenen Zeit zwischen dem ersten aufgezeichneten Wechsel eines Tickets zu In Bearbeitung und seinem Abschluss. Berücksichtigt werden geeignete, dir zugewiesene Tickets im Status Erledigt mit Aufwand und beiden Zeitstempeln. Wartezeit ist enthalten; es handelt sich nicht um eine Stoppuhr für geleistete Arbeitsstunden. Die Ansicht **Anzahl der Tickets** zeigt die zugrunde liegende Stichprobengröße. Sobald ein Aufwand einen Median hat, zeigt jeder Aufwand ohne geeignete Messung eine Schätzung, gekennzeichnet durch ein Informationssymbol und einen helleren Balken: Die gemessenen Mediane werden über das relative Gewicht jedes Aufwands hochgerechnet (XS 1, S 2, M 3, L 5, XL 8, XXL 13), und ein Aufwand, der an mehr Tickets gemessen wurde, zählt stärker. Ein gemessener Median ersetzt die Schätzung, sobald ein Ticket dieses Aufwands geeignet ist. Die Ansicht **Anzahl der Tickets** listet nur gemessene Aufwände. Prüfe vor einem Vergleich, welche Einheit und welchen Zeitraum der jeweilige Abschnitt verwendet.
 
 ## Wenige oder veränderte Daten einordnen {#statistics-limits}
 
