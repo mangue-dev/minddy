@@ -314,7 +314,9 @@ const JOURNAL_RULE: ToolRule = {
   and close it once that triage is empty.
   Close with journal_close, giving the reason, each open entry that is settled: the review was
   done, the answer came, the user saw to it or told you to drop it. Never write an entry that
-  repeats an open one.`,
+  repeats an open one. An entry is what was true when you wrote it: to replace one that changed,
+  read its records again and write the new entry from what you read in this turn, never by
+  copying the old entry's facts and figures; leave out what you could not check.`,
 };
 
 const WEB_SEARCH_RULE: ToolRule = {
