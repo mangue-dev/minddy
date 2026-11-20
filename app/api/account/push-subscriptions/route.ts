@@ -276,9 +276,9 @@ async function linkToSession(
   service: ReturnType<typeof getServiceClient>,
   row: LinkableRow,
   userId: string,
-  claims: Record<string, unknown>,
+  claims: Record<string, unknown> | undefined,
 ): Promise<void> {
-  const sessionId = claims.session_id;
+  const sessionId = claims?.session_id;
   if (typeof sessionId !== "string" || !sessionId) return;
   // The protected registration returns the whole row: a reload in the same
   // session has nothing to write.
