@@ -167,6 +167,29 @@ describe("toChatCompletionsResponse", () => {
     });
   });
 
+  it("carries a tool call without input as an empty JSON object", async () => {
+    const response = await toChatCompletionsResponse(new Response(sse([
+      { type: "message_start", message: { id: "m", model: "c" } },
+      { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "toolu_a", name: "list_projects", input: {} } },
+      { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "" } },
+      { type: "content_block_stop", index: 0 },
+      { type: "content_block_start", index: 1, content_block: { type: "tool_use", id: "toolu_b", name: "get_project", input: {} } },
+      { type: "content_block_delta", index: 1, delta: { type: "input_json_delta", partial_json: "{\"id\":\"p\"}" } },
+      { type: "content_block_stop", index: 1 },
+      { type: "message_delta", delta: { stop_reason: "tool_use" } },
+      { type: "message_stop" },
+    ])), true);
+    const argumentsByCall = new Map<number, string>();
+    for (const chunk of chatChunks(await response.text())) {
+      for (const choice of chunk.choices) {
+        for (const call of (choice.delta.tool_calls as Array<{ index: number; function: { arguments?: string } }> | undefined) ?? []) {
+          argumentsByCall.set(call.index, (argumentsByCall.get(call.index) ?? "") + (call.function.arguments ?? ""));
+        }
+      }
+    }
+    expect([...argumentsByCall.values()].map((args) => JSON.parse(args))).toEqual([{}, { id: "p" }]);
+  });
+
   it("reports an in-stream error in the chat error shape", async () => {
     const response = await toChatCompletionsResponse(new Response(sse([
       { type: "message_start", message: { id: "m", model: "c" } },
