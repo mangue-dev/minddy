@@ -22,7 +22,7 @@ describe("the background turn's prompt (MIN-929)", () => {
 
   it("states the rules the server enforces", () => {
     for (const rule of ["authorized_by", "urgent: true", "journal_write", "never ask one here",
-      "never by copying its facts and figures"]) {
+      "never by copying its facts and figures", "Never journal a passing state"]) {
       expect(NUMO_WAKE_PROMPT_BLOCK).toContain(rule);
     }
   });

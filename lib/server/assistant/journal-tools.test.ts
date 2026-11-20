@@ -65,6 +65,11 @@ describe("Numo journal tools (MIN-927)", () => {
     expect(tool("journal_write")?.function.description).toContain("never by copying the old entry's facts and figures");
   });
 
+  // MIN-1026: an entry on checks still running made the home word stale within minutes.
+  it("keeps passing states out of the journal", () => {
+    expect(tool("journal_write")?.function.description).toContain("Never for a passing state");
+  });
+
   it("stays available to a Reader, since it changes no project", () => {
     const names = readerToolSet(CONVERSATION_ASSISTANT_TOOLS, false)
       .map((candidate) => candidate.function.name);

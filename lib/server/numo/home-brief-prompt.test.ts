@@ -108,6 +108,13 @@ describe("prompt and selection", () => {
     expect(prompt).toContain("Never open with a greeting");
   });
 
+  // MIN-1026: "CI of PR 734 at 14 of 17" was outdated minutes after it showed.
+  it("asks for a word that still holds the next day, without passing states", () => {
+    const prompt = buildHomeBriefSystemPrompt({ locale: "en", greetings: [] });
+    expect(prompt).toContain("write only what will still be true then");
+    expect(prompt).toContain("Never report a state that changes within minutes or hours");
+  });
+
   it("changes the digest only when the covered entries or their state change", () => {
     const a = homeBriefDigest([entry({ id: "a" }), entry({ id: "b" })]);
     expect(homeBriefDigest([entry({ id: "b" }), entry({ id: "a", seen: true })])).toBe(a);
