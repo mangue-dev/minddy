@@ -19,10 +19,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-13",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -85,10 +85,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-973 iOS app: new ios-app section with sign-in, server choice, offline screen, universal links, push, vibrations, purchases hidden and AI consent, and the iOS app in the PWA and notification passages; checked against mobile/README.md, components/mobile/shell.tsx, components/auth/auth-chrome.tsx, components/mobile/ai-consent-gate.tsx, lib/mobile/ai-consent.ts, lib/server/ai-consent.ts, components/settings/account-mobile-section.tsx, lib/apple-app-site-association.ts and the catalogs; not walked through on a device or on the App Store listing; 3 figures captured on 2026-11-13 from the local candidate in a phone-sized page with the shell bridge stubbed, inspected in all six locales; earlier figures kept with their capture dates); agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone menu opened from the bottom bar as a sheet, and the desktop app's first launch on the single sign-in and sign-up screen: checked against components/mobile-navigation.tsx, components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no browser walkthrough; existing figures do not show the bottom bar or the sign-in screen and were kept); agent:claude-code (MIN-907 store submission prep: the browser-install passage no longer states that minddy has no App Store app, ahead of the iOS app; checked against messages/*.json DownloadMobile.noteBody; no figure affected); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it MIN-973 iOS app section and passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 phone menu and desktop first-launch passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 browser-install sentence, in the locale's register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-1025: a device leaves the push list when its session ends, by signing out on it or from another device, and registers again at the next sign-in; checked against supabase/migrations/20270109200132_push_subscription_session.sql, app/api/account/push-subscriptions/route.ts and components/push-service-worker.tsx; no browser walkthrough; no figure affected); agent:claude-code (MIN-973 iOS app: new ios-app section with sign-in, server choice, offline screen, universal links, push, vibrations, purchases hidden and AI consent, and the iOS app in the PWA and notification passages; checked against mobile/README.md, components/mobile/shell.tsx, components/auth/auth-chrome.tsx, components/mobile/ai-consent-gate.tsx, lib/mobile/ai-consent.ts, lib/server/ai-consent.ts, components/settings/account-mobile-section.tsx, lib/apple-app-site-association.ts and the catalogs; not walked through on a device or on the App Store listing; 3 figures captured on 2026-11-13 from the local candidate in a phone-sized page with the shell bridge stubbed, inspected in all six locales; earlier figures kept with their capture dates); agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone menu opened from the bottom bar as a sheet, and the desktop app's first launch on the single sign-in and sign-up screen: checked against components/mobile-navigation.tsx, components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no browser walkthrough; existing figures do not show the bottom bar or the sign-in screen and were kept); agent:claude-code (MIN-907 store submission prep: the browser-install passage no longer states that minddy has no App Store app, ahead of the iOS app; checked against messages/*.json DownloadMobile.noteBody; no figure affected); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (it MIN-1025 sentence on devices leaving the push list at sign-out, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-973 iOS app section and passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 phone menu and desktop first-launch passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 browser-install sentence, in the locale's register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "issues"
@@ -115,7 +115,7 @@
       "src": "/documentation/it/web-and-mobile-workflow.png",
       "alt": "Pannello mobile di un ticket con titolo, descrizione, proprietà e campo per i commenti.",
       "caption": "Su uno schermo stretto, i dettagli del ticket occupano un pannello adattabile. Usa il pulsante di chiusura per tornare al progetto; Numo resta accessibile dal pulsante mobile.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -132,7 +132,7 @@
       "src": "/documentation/it/ios-app-sign-in.png",
       "alt": "La schermata Accedi o registrati dell’app iOS, con il campo email, i pulsanti Apple, Google e GitHub e Ospita minddy in autonomia.",
       "caption": "Nell’app iOS, Ospita minddy in autonomia segue i servizi di accesso. Le finestre di accesso di Apple e del sistema non compaiono in questa schermata.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-13",
       "viewport": [
@@ -149,7 +149,7 @@
       "src": "/documentation/it/ios-app-ai-consent.png",
       "alt": "La finestra Usare le funzioni IA? dell’app iOS, con Non ora e Consenti.",
       "caption": "La domanda posta una volta su ogni dispositivo prima di qualsiasi funzione IA. Non ora lascia le funzioni IA disattivate nell’app.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-13",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/it/ios-app-mobile-preferences.png",
       "alt": "Il gruppo App mobile delle preferenze dell’app iOS, con gli interruttori Vibrazione e Funzioni IA.",
       "caption": "Questo gruppo compare solo nell’app iOS. Funzioni IA cambia la risposta data alla domanda del primo avvio.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-13",
       "viewport": [
@@ -183,7 +183,7 @@
       "src": "/documentation/it/install-the-pwa-workflow.png",
       "alt": "Guida illustrata di minddy per l’installazione da Safari: Condividi, aggiungi alla schermata Home e conferma.",
       "caption": "La guida pubblica illustra i tre passaggi di Safari e l’opzione Apri come app web da mantenere attiva. Sono illustrazioni didattiche mostrate da minddy, non schermate di un’installazione iOS completata.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -200,7 +200,7 @@
       "src": "/documentation/it/devices-and-notifications-workflow.png",
       "alt": "Impostazioni push con permesso bloccato nel browser e nessun dispositivo registrato.",
       "caption": "Questo browser blocca le notifiche. Ripristina il permesso del sito prima di registrare il dispositivo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -217,7 +217,7 @@
       "src": "/documentation/it/devices-and-notifications-registered.png",
       "alt": "Dispositivo browser registrato e attivo sull’account, con la data effettiva dell’ultimo invio.",
       "caption": "L’account ha un dispositivo browser registrato e attivo. L’elenco mostra la data di registrazione e quella dell’ultimo invio. La comparsa di un avviso dipende comunque dal permesso del browser e dalle impostazioni del sistema operativo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -234,7 +234,7 @@
       "src": "/documentation/it/desktop-renderer-recovery.png",
       "alt": "Pagina locale di ripristino dopo un arresto forzato del processo di rendering, con i controlli Reload window e Check server settings.",
       "caption": "Pagina di ripristino nell’app di sviluppo per macOS, con un profilo isolato e un server dimostrativo. L’interfaccia nativa usa etichette in inglese in tutte le lingue.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -359,7 +359,7 @@ Per ridurre l’uso della memoria nelle sessioni lunghe, i dettagli delle PR, i 
 
 Apri le notifiche nelle impostazioni dell’account sul dispositivo che vuoi registrare. Attivale e accetta la richiesta di autorizzazione del browser o del sistema operativo. Se hai negato il permesso, devi modificarlo nelle impostazioni del browser o del sistema; azionare ripetutamente il controllo di minddy non può superare quel rifiuto. L’[app iOS](#ios-app-operation) si registra direttamente. In Safari su iPhone o iPad, installa e apri prima l’app web quando l’interfaccia lo richiede.
 
-Verifica che il dispositivo compaia nell’elenco e usa il suo comando di prova. Controlla le informazioni sull’ultima consegna. Puoi disattivare o rimuovere singole registrazioni senza eliminare l’account. Le categorie di **Impostazioni account** → **Notifiche** determinano quali eventi generano notifiche; la Posta in arrivo resta disponibile anche quando il push non funziona.
+Verifica che il dispositivo compaia nell’elenco e usa il suo comando di prova. Controlla le informazioni sull’ultima consegna. Puoi disattivare o rimuovere singole registrazioni senza eliminare l’account. Quando esci dall’account su un dispositivo, o la sua sessione viene chiusa da un altro dispositivo, il dispositivo scompare dall’elenco e non riceve più le notifiche di questo account. Accedendo di nuovo su quel dispositivo, viene registrato di nuovo. Le categorie di **Impostazioni account** → **Notifiche** determinano quali eventi generano notifiche; la Posta in arrivo resta disponibile anche quando il push non funziona.
 
 ![Impostazioni push con permesso bloccato nel browser e nessun dispositivo registrato.](/documentation/it/devices-and-notifications-workflow.png)
 

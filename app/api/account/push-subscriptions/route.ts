@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
       console.error("[api/push-subscriptions] protected_registration_failed");
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
+    await linkToSession(service, data as LinkableRow, auth.user.id, auth.claims);
     return NextResponse.json({ device: pushDevice(await openPush(data)) });
   }
 
@@ -255,5 +256,37 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  await linkToSession(service, data as LinkableRow, auth.user.id, auth.claims);
   return NextResponse.json({ device: data as unknown as PushDevice });
+}
+
+/**
+ * Ties the device to the session that registered it (MIN-1025). The row
+ * references `auth.sessions` with `ON DELETE CASCADE`, so it leaves when that
+ * session signs out or is revoked: a phone that changed account or server
+ * stops showing this account's notifications even when it never cleaned up.
+ *
+ * Every app load registers the device again, which moves the link to the
+ * current session. Best effort: a failure leaves the link empty, and an
+ * unlinked row keeps receiving pushes as it did before this change.
+ */
+type LinkableRow = { id: string; auth_session_id?: string | null };
+
+async function linkToSession(
+  service: ReturnType<typeof getServiceClient>,
+  row: LinkableRow,
+  userId: string,
+  claims: Record<string, unknown>,
+): Promise<void> {
+  const sessionId = claims.session_id;
+  if (typeof sessionId !== "string" || !sessionId) return;
+  // The protected registration returns the whole row: a reload in the same
+  // session has nothing to write.
+  if (row.auth_session_id === sessionId) return;
+  const { error } = await service
+    .from("push_subscriptions")
+    .update({ auth_session_id: sessionId })
+    .eq("id", row.id)
+    .eq("user_id", userId);
+  if (error) console.error("[api/push-subscriptions] session_link_failed");
 }

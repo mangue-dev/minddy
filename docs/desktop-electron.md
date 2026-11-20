@@ -495,7 +495,13 @@ settings action, or unread badge until their platform transports provide one.
 
 Packaged macOS builds register with APNs at launch. The signed bundle token goes
 through the Electron bridge, then through the authenticated web session, and
-joins `push_subscriptions` with `transport = 'apns'`.
+joins `push_subscriptions` with `transport = 'apns'`. The row is tied to the
+web session that registered it and leaves when that session ends (MIN-1025).
+**Change server** in the desktop settings card also removes this computer's
+row on the server it leaves, keeping the system registration; closing the
+picker reloads that server, which registers the computer again. The app menu's
+server entries do not do this yet: the old server keeps pushing until its
+session ends.
 
 When inserting an inbox line, the server always constructs a single
 wording. `sendPushToUser` then chooses VAPID for a browser or APNs

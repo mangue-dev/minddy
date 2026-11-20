@@ -15,6 +15,7 @@ import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {useAnalytics} from "@/lib/use-analytics";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { useNativeMobile } from "@/lib/native-app";
+import { forgetThisDeviceOnServer } from "@/lib/push/client";
 
 /**
  * Account → Preferences: the desktop app, in ONE card everywhere (MIN-737).
@@ -38,6 +39,7 @@ export function AccountDesktopSection() {
     origin: string;
   } | null>(null);
   const [checking, setChecking] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   // Whether the bridge was looked for: before that, rendering the download
   // row would make it flash inside the app.
   const [mounted, setMounted] = useState(false);
@@ -109,7 +111,16 @@ export function AccountDesktopSection() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => desktop.bridge.openServerPicker?.()}
+              disabled={leaving}
+              onClick={async () => {
+                setLeaving(true);
+                // This server stops pushing to a computer about to show another
+                // one (MIN-1025). Closing the picker reloads this server's
+                // page, which registers the device again.
+                await forgetThisDeviceOnServer();
+                desktop.bridge.openServerPicker?.();
+                setLeaving(false);
+              }}
             >
               {ta("desktopServerChange")}
             </Button>

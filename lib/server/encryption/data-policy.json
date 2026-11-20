@@ -3355,7 +3355,8 @@
       ],
       "routing_identity": [
         "id",
-        "user_id"
+        "user_id",
+        "auth_session_id"
       ],
       "timestamp": [
         "created_at",
