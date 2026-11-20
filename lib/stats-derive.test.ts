@@ -3,6 +3,7 @@ import {
   completionShare,
   computeStreaks,
   dayInZone,
+  estimateMissingEffortMedians,
   durationParts,
   heatmapTotals,
 } from "./stats-derive";
@@ -132,5 +133,60 @@ describe("dayInZone", () => {
 
   it("falls back to UTC on an unknown zone", () => {
     expect(dayInZone("2026-05-17T12:00:00Z", "Not/AZone")).toBe("2026-05-17");
+  });
+});
+
+describe("estimateMissingEffortMedians", () => {
+  const HOUR = 3600;
+
+  it("scales one measured size to the whole Fibonacci scale", () => {
+    // m = 3 points in 6 h → 2 h per point.
+    const rows = estimateMissingEffortMedians([
+      { effort: "m", medianSeconds: 6 * HOUR, sample: 2 },
+    ]);
+    expect(rows).toEqual([
+      { effort: "xs", medianSeconds: 2 * HOUR, sample: 0, estimated: true },
+      { effort: "s", medianSeconds: 4 * HOUR, sample: 0, estimated: true },
+      { effort: "m", medianSeconds: 6 * HOUR, sample: 2 },
+      { effort: "l", medianSeconds: 10 * HOUR, sample: 0, estimated: true },
+      { effort: "xl", medianSeconds: 16 * HOUR, sample: 0, estimated: true },
+      { effort: "xxl", medianSeconds: 26 * HOUR, sample: 0, estimated: true },
+    ]);
+  });
+
+  it("keeps measured medians even when they disagree with the scale", () => {
+    const rows = estimateMissingEffortMedians([
+      { effort: "xs", medianSeconds: 10 * HOUR, sample: 1 },
+      { effort: "l", medianSeconds: 5 * HOUR, sample: 1 },
+    ]);
+    expect(rows.find((r) => r.effort === "xs")).toEqual({
+      effort: "xs",
+      medianSeconds: 10 * HOUR,
+      sample: 1,
+    });
+    expect(rows.find((r) => r.effort === "l")?.estimated).toBeUndefined();
+  });
+
+  it("weights each measured size's rate by its sample", () => {
+    // xs: 1 h/point on 3 issues; m: 3 h/point on 1 issue → 1.5 h/point.
+    const rows = estimateMissingEffortMedians([
+      { effort: "xs", medianSeconds: 1 * HOUR, sample: 3 },
+      { effort: "m", medianSeconds: 9 * HOUR, sample: 1 },
+    ]);
+    expect(rows.find((r) => r.effort === "s")?.medianSeconds).toBe(3 * HOUR);
+    expect(rows.find((r) => r.effort === "xxl")?.medianSeconds).toBe(
+      19.5 * HOUR,
+    );
+  });
+
+  it("estimates nothing without a measured size", () => {
+    expect(estimateMissingEffortMedians([])).toEqual([]);
+  });
+
+  it("returns only measured rows once every size is measured", () => {
+    const measured = (["xs", "s", "m", "l", "xl", "xxl"] as const).map(
+      (effort, i) => ({ effort, medianSeconds: (i + 1) * HOUR, sample: 1 }),
+    );
+    expect(estimateMissingEffortMedians(measured)).toEqual(measured);
   });
 });

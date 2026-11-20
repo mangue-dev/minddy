@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 11,
+  "revision": 13,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of personal-statistics-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of personal-statistics-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude-code (MIN-1023: estimated effort durations in the time-by-effort paragraph, source audit against lib/stats-derive.ts, lib/server/stats.ts and components/stats/effort-durations.tsx; no browser walkthrough; no figure shows this section; existing figures kept, not recaptured)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (it translation of the MIN-1023 passage with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/it/personal-statistics-workflow.png",
       "alt": "Statistiche del profilo con la striscia di cifre, la griglia di attività di 12 mesi, le ripartizioni per progetto e categoria e il ritmo di lavoro.",
       "caption": "Storico reale dell’account dimostrativo: sei ticket completati in due progetti, trenta ticket creati, nessuna attività del taccuino spuntata.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -94,7 +94,7 @@ Per prima viene una fascia di sei valori: **Completati**, **Attività spuntate**
 
 Usa il numero di ticket completati, il ritmo, i giorni attivi, le serie e le misurazioni del tempo per esaminare la tua attività. La griglia delle attività conta gli eventi di completamento dei ticket e delle attività del taccuino, raggruppati per giorni di calendario nel tuo fuso orario. Le sue righe iniziano dal giorno scelto in **Primo giorno della settimana**, in **Preferenze**. La griglia non scorre mai: mostra le settimane più recenti che entrano nello schermo, quindi un telefono mostra meno mesi di un computer. Un giorno attivo ha almeno uno di questi eventi; la serie attuale tollera che oggi sia ancora vuoto, ma termina al successivo giorno vuoto. Il valore **Completati** conta una sola volta ciascun identificativo: spostare due volte lo stesso ticket a Completato conta una volta sola, quindi il numero di eventi e il totale di ticket distinti rispondono a domande diverse. Il numero sopra la griglia somma i ticket e le attività del taccuino che hai completato negli ultimi 12 mesi; passa sul numero per vederne la suddivisione in ticket, attività e giorni attivi. Anche questo numero conta ogni ticket una sola volta in quei 12 mesi: un ticket completato di nuovo segna ciascuno dei suoi giorni nella griglia, ma aggiunge un solo ticket al numero.
 
-Il tempo per impegno è la mediana del tempo trascorso dal primo passaggio registrato di un ticket a In corso fino al completamento. Si considerano ticket idonei nello stato Completato, assegnati a te, con un impegno ed entrambi i timestamp. Comprende il tempo di attesa; non è un cronometro delle ore lavorate. La vista **Numero di ticket** mostra la dimensione del campione utilizzato. Una mediana assente può indicare che non ci sono misurazioni idonee, non una durata pari a zero.
+Il tempo per impegno è la mediana del tempo trascorso dal primo passaggio registrato di un ticket a In corso fino al completamento. Si considerano ticket idonei nello stato Completato, assegnati a te, con un impegno ed entrambi i timestamp. Comprende il tempo di attesa; non è un cronometro delle ore lavorate. La vista **Numero di ticket** mostra la dimensione del campione utilizzato. Appena un impegno ha una mediana, ogni impegno senza misurazioni idonee mostra una stima, segnalata da un'icona informativa e da una barra più chiara: le mediane misurate vengono riportate al peso relativo di ciascun impegno (XS 1, S 2, M 3, L 5, XL 8, XXL 13), e un impegno misurato su più ticket conta di più. Una mediana misurata sostituisce la stima non appena un ticket di quell'impegno è idoneo. La vista **Numero di ticket** elenca solo gli impegni misurati.
 
 Prima di confrontare i valori, leggi l'unità e il periodo indicati in ogni sezione.
 

@@ -436,8 +436,12 @@ export interface StatsCycleEffort {
    * ticket left open three weeks shifts it by one rank, not three
    * weeks — which the average cannot do on a long tail. */
   medianSeconds: number;
-  /** Number of tickets completed in this median. */
+  /** Number of tickets completed in this median; 0 for an estimate. */
   sample: number;
+  /** True when no ticket of this size is completed yet and the duration is
+   * derived from the measured sizes through their Fibonacci points (MIN-1023).
+   * A measured median always replaces the estimate. */
+  estimated?: boolean;
 }
 
 /** Statistics related to cycles (MIN-58), all scoped to the user. */
@@ -451,8 +455,8 @@ export interface StatsCycles {
   avgIssuesPerCycle: number | null;
   /** Number of started cycles taken into account. */
   cycleCount: number;
-  /** Median completion time per effort (xs→xxl), efforts without sample
-   * omitted. */
+  /** Median completion time per effort (xs→xxl). Once one size is measured,
+   * the others are estimated (`estimated: true`); empty without any sample. */
   byEffort: StatsCycleEffort[];
 }
 

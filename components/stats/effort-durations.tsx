@@ -7,7 +7,8 @@ import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { EFFORT_MAP } from "@/lib/issue-constants";
 import { durationParts, fmtNum } from "@/lib/stats-derive";
 import type { StatsCycleEffort } from "@/lib/types";
-import { StatsSectionHeader } from "./stats-chrome";
+import { cn } from "@/lib/utils";
+import { InfoHint, StatsSectionHeader } from "./stats-chrome";
 
 type EffortView = "duration" | "quantity";
 
@@ -73,6 +74,8 @@ function DurationRows({ byEffort }: { byEffort: StatsCycleEffort[] }) {
         const duration = t(parts.key, { value: fmtNum(parts.value, locale) });
         const width = max > 0 ? (effort.medianSeconds / max) * 100 : 0;
         const label = EFFORT_MAP[effort.effort].label;
+        // An estimated size (MIN-1023) reads lighter and carries its own "i".
+        const estimated = effort.estimated === true;
         return (
           <div key={effort.effort} className="flex items-center gap-3">
             <span className="w-7 shrink-0 text-center text-xs font-semibold text-muted-foreground">
@@ -81,17 +84,28 @@ function DurationRows({ byEffort }: { byEffort: StatsCycleEffort[] }) {
             <div
               className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
               role="img"
-              aria-label={t("effortDurationBarLabel", {
-                effort: label,
-                duration,
-              })}
+              aria-label={t(
+                estimated ? "effortEstimatedBarLabel" : "effortDurationBarLabel",
+                { effort: label, duration },
+              )}
             >
               <div
-                className="h-full rounded-full bg-foreground/30 transition-all"
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  estimated ? "bg-foreground/15" : "bg-foreground/30",
+                )}
                 style={{ width: `${Math.max(width, 3)}%` }}
               />
             </div>
-            <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">
+            <span
+              className={cn(
+                "flex w-24 shrink-0 items-center justify-end gap-1 text-sm font-medium tabular-nums",
+                estimated ? "text-muted-foreground" : "text-foreground",
+              )}
+            >
+              {estimated ? (
+                <InfoHint text={t("effortEstimatedHint", { effort: label })} />
+              ) : null}
               {duration}
             </span>
           </div>
@@ -103,13 +117,15 @@ function DurationRows({ byEffort }: { byEffort: StatsCycleEffort[] }) {
 
 function QuantityRows({ byEffort }: { byEffort: StatsCycleEffort[] }) {
   const t = useTranslations("Stats");
-  const max = byEffort.reduce((value, effort) => {
+  // Counts are measured only: an estimated size has no completed issue.
+  const measured = byEffort.filter((effort) => !effort.estimated);
+  const max = measured.reduce((value, effort) => {
     return Math.max(value, effort.sample);
   }, 0);
 
   return (
     <div className="flex flex-col gap-3">
-      {byEffort.map((effort) => {
+      {measured.map((effort) => {
         const width = max > 0 ? (effort.sample / max) * 100 : 0;
         const label = EFFORT_MAP[effort.effort].label;
         return (
@@ -130,7 +146,7 @@ function QuantityRows({ byEffort }: { byEffort: StatsCycleEffort[] }) {
                 style={{ width: `${Math.max(width, 3)}%` }}
               />
             </div>
-            <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">
+            <span className="w-24 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">
               {effort.sample}
             </span>
           </div>

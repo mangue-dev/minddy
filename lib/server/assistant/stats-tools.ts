@@ -34,6 +34,8 @@ export interface UserStatsToolResult {
     effort: string;
     medianSeconds: number;
     sample: number;
+    /** Estimated from the measured sizes, no issue of this size completed yet. */
+    estimated?: true;
   }>;
   topProjects: Array<{ name: string; completed: number }>;
   topCategories: Array<{ name: string; completed: number }>;
@@ -62,6 +64,7 @@ export function userStatsForAssistantTool(
       effort: row.effort,
       medianSeconds: row.medianSeconds,
       sample: row.sample,
+      ...(row.estimated ? { estimated: true as const } : {}),
     })),
     topProjects: stats.perProject
       .slice(0, 5)

@@ -2482,7 +2482,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "get_user_stats",
       description:
-        "Read the current user's personal performance statistics, read-only — the numbers of the Statistics page: active days over the last ~12 months, current and longest streaks, all-time totals since signup (issues created, issues completed, notebook tasks completed), completions of the last 7 days against the previous 7, the current workload (open and in-progress issues assigned), the median time per ticket by effort, and the top completed projects and categories. Use it when the user asks 'what are my stats?', about their productivity, pace or rhythm. Read-only: it cannot change any setting.",
+        "Read the current user's personal performance statistics, read-only — the numbers of the Statistics page: active days over the last ~12 months, current and longest streaks, all-time totals since signup (issues created, issues completed, notebook tasks completed), completions of the last 7 days against the previous 7, the current workload (open and in-progress issues assigned), the median time per ticket by effort (a size flagged estimated has no completed issue yet: its time is scaled from the measured sizes, so call it an estimate), and the top completed projects and categories. Use it when the user asks 'what are my stats?', about their productivity, pace or rhythm. Read-only: it cannot change any setting.",
       parameters: { type: "object", properties: {} },
     },
   },
