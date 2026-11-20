@@ -401,6 +401,8 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
   let usage: AnthropicUsage = {};
   let toolIndex = -1;
   const toolIndexByBlock = new Map<number, number>();
+  /** Tool blocks that have streamed at least one non-empty argument fragment. */
+  const toolBlocksWithArguments = new Set<number>();
   /** Open thinking blocks by stream index, completed with their signature. */
   const thinkingByBlock = new Map<number, Json>();
   const mergeUsage = (next: unknown) => {
@@ -463,7 +465,8 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
           if (open) open.signature = String(open.signature) + delta.signature;
         } else if (delta.type === "input_json_delta" && typeof delta.partial_json === "string") {
           const index = toolIndexByBlock.get(Number(event.index));
-          if (index !== undefined) {
+          if (index !== undefined && delta.partial_json) {
+            toolBlocksWithArguments.add(Number(event.index));
             emit(chunk({ tool_calls: [{ index, function: { arguments: delta.partial_json } }] }));
           }
         }
@@ -476,6 +479,13 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
           thinkingByBlock.delete(index);
           const detail = thinkingDetail(open);
           if (detail) emit(detailChunk(detail));
+        }
+        // A call without input streams no fragment, or only empty ones. Chat
+        // completions carry it as `{}`; an empty string is not JSON, and the
+        // loop would reject the call as malformed.
+        const toolCall = toolIndexByBlock.get(index);
+        if (toolCall !== undefined && !toolBlocksWithArguments.has(index)) {
+          emit(chunk({ tool_calls: [{ index: toolCall, function: { arguments: "{}" } }] }));
         }
         break;
       }
