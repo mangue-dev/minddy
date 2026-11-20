@@ -5725,6 +5725,11 @@
         "type": "text",
         "nullable": true,
         "generated": false
+      },
+      "auth_session_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -5734,6 +5739,11 @@
       {
         "table": "users",
         "column": "user_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "sessions",
+        "column": "auth_session_id",
         "targetColumn": "id"
       }
     ]

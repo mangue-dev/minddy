@@ -26,7 +26,12 @@
  * and iOS shows its prompt from the settings switch only.
  */
 
-import { saveNativePushDeviceApi, savePushDeviceApi } from "@/lib/push-devices-api";
+import {
+  deletePushDeviceApi,
+  fetchPushDevicesApi,
+  saveNativePushDeviceApi,
+  savePushDeviceApi,
+} from "@/lib/push-devices-api";
 import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
 import {
   getMobileBridge,
@@ -415,4 +420,30 @@ export async function unsubscribeThisDevice(): Promise<string | null> {
   const endpoint = subscription.endpoint;
   await subscription.unsubscribe();
   return endpoint;
+}
+
+/**
+ * Removes THIS device's row on the server this page comes from, and only that
+ * row: the device keeps its browser or system registration (MIN-1025).
+ *
+ * For a desktop app about to leave this server for another one while its
+ * session here stays open: without it, this server would keep pushing its
+ * account's notifications to a computer now showing another server. When the
+ * app comes back, loading the page registers the device again.
+ *
+ * Best effort and bounded: it never throws and gives up after a few seconds,
+ * since the caller is on its way elsewhere.
+ */
+export async function forgetThisDeviceOnServer(): Promise<void> {
+  try {
+    await withClientRequestDeadline(async () => {
+      const endpoint = await currentEndpoint();
+      if (!endpoint) return;
+      const { devices } = await fetchPushDevicesApi();
+      const device = devices.find((candidate) => candidate.endpoint === endpoint);
+      if (device) await deletePushDeviceApi(device.id);
+    }, 8_000);
+  } catch {
+    // Nothing to report: the server still lists the device, as before.
+  }
 }

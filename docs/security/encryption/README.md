@@ -2919,6 +2919,20 @@ content. Migration `20270109200120` is additive: `register_protected_push`
 gains two optional parameters, so the previous release keeps registering
 devices unchanged.
 
+## Push device and its session (MIN-1025)
+
+`push_subscriptions.auth_session_id` references `auth.sessions(id)` with
+`ON DELETE CASCADE`. The registration route sets it, after the row is written,
+to the `session_id` claim of the request, and every app load registers the
+device again in its current session. When that session signs out, is ended
+from another device or is revoked, GoTrue deletes it and the device's row goes
+with it, so a device that changed account or server stops receiving the old
+account's notifications even when it never cleaned up. The column is clear
+routing identity, never returned to clients or exported. A NULL link marks a
+row registered before this change, or one whose link failed: it keeps
+receiving pushes until the device reloads the app. Migration `20270109200132`
+is additive and leaves `register_protected_push` unchanged.
+
 ## Account status for the single sign-in screen (MIN-907)
 
 `public.auth_account_status(text)` answers whether an address holds no

@@ -11,6 +11,9 @@ import { AccountDesktopSection } from "@/components/settings/account-desktop-sec
 import type { DesktopBridge } from "@/lib/desktop/bridge";
 import messages from "@/messages/en.json";
 
+const push = vi.hoisted(() => ({ forgetThisDeviceOnServer: vi.fn(async () => {}) }));
+vi.mock("@/lib/push/client", () => push);
+
 // The hint of each row measures itself with a ResizeObserver to decide
 // whether it truncates (MIN-593). jsdom has none.
 vi.stubGlobal(
@@ -185,8 +188,11 @@ describe("AccountDesktopSection", () => {
     // whose accounts differ from minddy Cloud.
     expect(container.querySelector('button[role="switch"]')).toBeNull();
 
-    act(() => button("Change…").click());
+    await act(async () => button("Change…").click());
     expect(mocks.openServerPicker).toHaveBeenCalledWith();
+    // This server stops pushing to the computer before it leaves (MIN-1025).
+    expect(push.forgetThisDeviceOnServer.mock.invocationCallOrder[0])
+      .toBeLessThan(mocks.openServerPicker.mock.invocationCallOrder[0]);
     expect(mocks.checkForUpdates).not.toHaveBeenCalled();
 
     await act(async () => button("Check for updates…").click());

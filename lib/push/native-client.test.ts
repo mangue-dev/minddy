@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { unsubscribeThisDevice } from "./client";
+import { forgetThisDeviceOnServer, unsubscribeThisDevice } from "./client";
 
 const native = vi.hoisted(() => ({
   notificationCapabilities: { backgroundTransport: "apns" },
@@ -8,6 +8,12 @@ const native = vi.hoisted(() => ({
   unregisterForPushNotifications: vi.fn(),
 }));
 vi.mock("@/lib/desktop/bridge", () => ({ getDesktopBridge: () => native }));
+
+const api = vi.hoisted(() => ({
+  fetchPushDevicesApi: vi.fn(),
+  deletePushDeviceApi: vi.fn(),
+}));
+vi.mock("@/lib/push-devices-api", () => api);
 
 afterEach(() => {
   vi.resetAllMocks();
@@ -40,5 +46,44 @@ describe("native push removal", () => {
     native.registerForPushNotifications.mockRejectedValue(new Error("Helper unavailable"));
     native.unregisterForPushNotifications.mockRejectedValue(new Error("Read-only profile"));
     await expect(unsubscribeThisDevice()).rejects.toThrow("Read-only profile");
+  });
+});
+
+describe("leaving this server (MIN-1025)", () => {
+  it("removes only this device's row and keeps its native registration", async () => {
+    native.registerForPushNotifications.mockResolvedValue({ endpoint: "apns:mine" });
+    api.fetchPushDevicesApi.mockResolvedValue({
+      devices: [
+        { id: "phone", endpoint: "apns:other" },
+        { id: "this-mac", endpoint: "apns:mine" },
+      ],
+    });
+
+    await forgetThisDeviceOnServer();
+
+    expect(api.deletePushDeviceApi).toHaveBeenCalledExactlyOnceWith("this-mac");
+    expect(native.unregisterForPushNotifications).not.toHaveBeenCalled();
+  });
+
+  it("removes nothing when this server does not list the device", async () => {
+    native.registerForPushNotifications.mockResolvedValue({ endpoint: "apns:mine" });
+    api.fetchPushDevicesApi.mockResolvedValue({ devices: [{ id: "phone", endpoint: "apns:other" }] });
+
+    await forgetThisDeviceOnServer();
+
+    expect(api.deletePushDeviceApi).not.toHaveBeenCalled();
+  });
+
+  it("never holds up the server change", async () => {
+    vi.useFakeTimers();
+    native.registerForPushNotifications.mockReturnValue(new Promise(() => {}));
+    const leaving = forgetThisDeviceOnServer();
+    await vi.advanceTimersByTimeAsync(8_000);
+    await expect(leaving).resolves.toBeUndefined();
+
+    vi.useRealTimers();
+    native.registerForPushNotifications.mockResolvedValue({ endpoint: "apns:mine" });
+    api.fetchPushDevicesApi.mockRejectedValue(new Error("Unauthorized"));
+    await expect(forgetThisDeviceOnServer()).resolves.toBeUndefined();
   });
 });
