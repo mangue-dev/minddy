@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 23,
+  "revision": 24,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-18",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -80,10 +80,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-1016: Numo sentence of #hide-project, source audit against lib/server/hidden-projects.ts, lib/server/assistant/execute-tool.ts, lib/server/numo/journal-prompt.ts, memory-prompt.ts, home-brief.ts and wake-context.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr MIN-1016 sentence written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-18"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-962: #project-settings, Categories and AI instructions paragraphs, source audit against components/settings/project-settings-page.tsx, lib/settings-sections.ts and components/project-members.tsx; tab labels checked against messages/*.json; no browser walkthrough; no figure shows a member's settings; existing figures kept, not recaptured); agent:claude-code (MIN-1016: Numo sentence of #hide-project, source audit against lib/server/hidden-projects.ts, lib/server/assistant/execute-tool.ts, lib/server/numo/journal-prompt.ts, memory-prompt.ts, home-brief.ts and wake-context.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (fr MIN-962 passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-1016 sentence written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "issues",
@@ -107,7 +107,7 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -124,7 +124,7 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -141,7 +141,7 @@
       "src": "/documentation/fr/project-statistics.png",
       "alt": "Sections Élan, Où en sont les tickets et Contributeurs d’un projet d’environ mille tickets : barres hebdomadaires des tickets créés et terminés, barre des statuts, compteurs de santé et une barre de statuts par personne.",
       "caption": "L’élan compare les quatre dernières semaines aux quatre précédentes ; les tickets en retard et au point mort signalent le travail à regarder.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -158,7 +158,7 @@
       "src": "/documentation/fr/project-issue-graph.png",
       "alt": "Graphe des tickets ouverts regroupés dans des bulles colorées par objectif autour de carrés d’ancrage, avec des flèches grises du parent vers le sous-ticket, des flèches rouges de blocage, des liens « Lié à » en pointillés, des traits gris entre objectifs, la légende, l’interrupteur Inclure les tickets et objectifs fermés et le bouton Agrandir le graphe en haut à droite.",
       "caption": "Survolez un point pour lire son ticket et mettre ses liens en évidence ; sélectionnez-le pour ouvrir le ticket dans le panneau latéral.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -183,7 +183,7 @@ Un projet rassemble les tickets, les objectifs, les pages et les personnes qui y
 
 ## Configurer un projet {#project-settings}
 
-Ouvrez le projet, puis ses réglages. Le propriétaire contrôle les paramètres administratifs. Les membres et les lecteurs peuvent consulter la section générale, masquer le projet pour eux-mêmes et le quitter, mais ne disposent pas des commandes de modification du propriétaire.
+Ouvrez le projet, puis ses réglages. Les réglages du projet appartiennent à son propriétaire. Les membres et les lecteurs, quel que soit leur rôle, ne voient que deux onglets : **Général**, où ils consultent l’identité et les statistiques du projet, le masquent pour eux-mêmes ou le quittent, et **Membres**, qui liste les personnes du projet.
 
 L’onglet **Général** s’ouvre sur l’identité du projet : son icône, son nom et sa clé, puis cinq chiffres : **Tickets**, **Membres**, **Objectifs**, **Catégories** et **Créé en**. En tant que propriétaire, vous modifiez l’icône, le nom et la clé là où ils s’affichent ; il n’y a plus de bouton Enregistrer. Sélectionnez l’icône et choisissez **Nouvelle orbe** (proposée seulement tant qu’aucune image ne couvre l’orbe), **Importer une image**, **Importer depuis un site…**, qui demande l’adresse du site et importe son icône quand vous choisissez **Importer**, ou, si une image est définie, **Retirer l’image**, qui demande d’abord une confirmation, car l’image est supprimée. Sélectionnez le nom ou la clé pour les modifier : sur ordinateur, ils deviennent un champ où Entrée ou la sortie du champ enregistre et Échap annule ; sur téléphone, une feuille s’ouvre avec **Enregistrer**. Le nom ne peut pas être vide. La clé est normalisée en majuscules et doit compter 2 à 5 lettres (A–Z) ; sinon une erreur s’affiche et la clé n’est pas enregistrée. Vérifiez les identifiants obtenus après sa modification. L’icône sert seulement à distinguer le projet dans la navigation ; elle ne modifie pas ses membres. Les membres et les lecteurs voient le même en-tête, sans ces commandes.
 
@@ -193,16 +193,16 @@ Sous l’en-tête viennent les statistiques du projet, calculées à partir de s
 
 ![Graphe des tickets ouverts regroupés dans des bulles colorées par objectif autour de carrés d’ancrage, avec des flèches grises du parent vers le sous-ticket, des flèches rouges de blocage, des liens « Lié à » en pointillés, des traits gris entre objectifs, la légende, l’interrupteur Inclure les tickets et objectifs fermés et le bouton Agrandir le graphe en haut à droite.](/documentation/fr/project-issue-graph.png)
 
-Les autres onglets sont **Catégories**, **Membres**, **Récurrences**, **Smart Assign**, **Consignes de l'IA**, **Retours**, **Git**, **Import** et **Intégrations**. Consultez le guide correspondant avant d’activer un fournisseur ou du travail automatique. Les préférences du compte, comme la langue de votre interface, restent distinctes de la configuration du projet.
+Les autres onglets sont **Catégories**, **Membres**, **Récurrences**, **Smart Assign**, **Consignes de l'IA**, **Retours**, **Git**, **Import** et **Intégrations** ; seul le propriétaire les voit, à l’exception de **Membres**. Consultez le guide correspondant avant d’activer un fournisseur ou du travail automatique. Les préférences du compte, comme la langue de votre interface, restent distinctes de la configuration du projet.
 
-Dans **Catégories**, le propriétaire et les membres gèrent les catégories qui classent les tickets. Choisissez **Nouvelle catégorie** sur la ligne de titre de la carte : une ligne avec une pastille de couleur et un champ de nom apparaît en haut de la liste. Appuyez sur Entrée ou choisissez **Ajouter** pour créer la catégorie ; Échap referme la ligne sans la créer. Sélectionnez la pastille d’une catégorie pour ouvrir la liste des couleurs, où vous pouvez taper le nom d’une couleur pour la trouver ; la couleur choisie s’applique aussitôt (sur téléphone, la liste s’ouvre dans une feuille), ou sélectionnez son nom pour la renommer sur place. Le bouton de suppression demande une confirmation, puis retire la catégorie de tous les tickets. Dès que le projet compte au moins deux catégories, chaque ligne porte une poignée à gauche : faites-la glisser pour monter ou descendre la catégorie. Au clavier, placez le focus sur la poignée, appuyez sur Espace, déplacez la catégorie avec les flèches Haut et Bas, puis appuyez de nouveau sur Espace pour la déposer ; Échap annule. Cet ordre est celui de tous les menus et filtres de catégories, pour tout le projet. Numo et les clients MCP de minddy peuvent aussi le lire et le modifier, par exemple quand vous demandez à Numo de placer une catégorie en premier.
+Dans **Catégories**, le propriétaire gère les catégories qui classent les tickets. Choisissez **Nouvelle catégorie** sur la ligne de titre de la carte : une ligne avec une pastille de couleur et un champ de nom apparaît en haut de la liste. Appuyez sur Entrée ou choisissez **Ajouter** pour créer la catégorie ; Échap referme la ligne sans la créer. Sélectionnez la pastille d’une catégorie pour ouvrir la liste des couleurs, où vous pouvez taper le nom d’une couleur pour la trouver ; la couleur choisie s’applique aussitôt (sur téléphone, la liste s’ouvre dans une feuille), ou sélectionnez son nom pour la renommer sur place. Le bouton de suppression demande une confirmation, puis retire la catégorie de tous les tickets. Dès que le projet compte au moins deux catégories, chaque ligne porte une poignée à gauche : faites-la glisser pour monter ou descendre la catégorie. Au clavier, placez le focus sur la poignée, appuyez sur Espace, déplacez la catégorie avec les flèches Haut et Bas, puis appuyez de nouveau sur Espace pour la déposer ; Échap annule. Cet ordre est celui de tous les menus et filtres de catégories, pour tout le projet. Numo et les clients MCP de minddy peuvent aussi le lire et le modifier, par exemple quand vous demandez à Numo de placer une catégorie en premier.
 
 
 ![En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.](/documentation/fr/project-general.png)
 
 ### Orienter Smart Fill et Smart Assign {#ai-instructions}
 
-L’onglet **Consignes de l'IA** contient ce que Smart Fill et Smart Assign suivent dans ce projet, quel que soit l’auteur du ticket et la façon dont il est créé : le formulaire, Numo, une intégration ou un client MCP. Seul le propriétaire le modifie ; les membres peuvent le lire.
+L’onglet **Consignes de l'IA** contient ce que Smart Fill et Smart Assign suivent dans ce projet, quel que soit l’auteur du ticket et la façon dont il est créé : le formulaire, Numo, une intégration ou un client MCP. Seul le propriétaire le voit et le modifie.
 
 **Langue de travail** fixe la langue dans laquelle Smart Fill écrit les titres des tickets et les noms des objectifs, quelle que soit la langue de la description. Les retours sont aussi traduits vers elle lorsque le projet n’a pas de langue de l’équipe. **Automatique**, la valeur par défaut, garde chaque titre dans la langue de sa description.
 
