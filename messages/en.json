@@ -2659,6 +2659,8 @@
     "sidebarEmpty": "No page yet.",
     "emptyTitle": "No page in this project yet",
     "pickTitle": "Pick a page on the left",
+    "pickTitleMobile": "Pick a page",
+    "showPages": "Show pages",
     "titlePlaceholder": "Untitled",
     "titleLabel": "Page title",
     "changeIcon": "Change icon",

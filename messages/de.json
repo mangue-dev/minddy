@@ -2659,6 +2659,8 @@
     "sidebarEmpty": "Noch keine Seite.",
     "emptyTitle": "Noch keine Seite in diesem Projekt",
     "pickTitle": "Wähle links eine Seite aus",
+    "pickTitleMobile": "Wähle eine Seite aus",
+    "showPages": "Seiten anzeigen",
     "titlePlaceholder": "Ohne Titel",
     "titleLabel": "Seitentitel",
     "changeIcon": "Symbol ändern",
