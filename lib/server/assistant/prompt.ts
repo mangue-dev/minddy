@@ -308,7 +308,9 @@ const JOURNAL_RULE: ToolRule = {
   figures) carries the result itself, its key facts and numbers ("MIN closed 12 issues this week,
   3 are late"), never only that it is ready: the home page shows the entry, not the conversation.
   Not for a plain read, what the user watches you do in this conversation, or a lasting
-  preference (that is remember).
+  preference (that is remember). Never journal a passing state that will have changed within hours
+  (checks still running, a build or deploy underway, a count so far): write once it settles, or only
+  the lasting fact ("checks failed on PR #12"), so the entry still holds the next day.
   Home no longer shows triage counts: when you see issues or feedback waiting in the triage of a
   project the user owns and no open entry says so, write one ("3 issues wait in MIN's triage"),
   and close it once that triage is empty.
