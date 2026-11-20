@@ -3249,6 +3249,7 @@
     "enrollScanTitle": "Scanne dies mit deiner Authentifizierungs-App",
     "enrollScanHint": "1Password, Bitwarden, Google Authenticator, Raycast – jede davon funktioniert.",
     "enrollQrAlt": "QR-Code zum Einrichten der Zwei-Faktor-Authentifizierung",
+    "enrollAddToPasswordManager": "Zum Passwort-Manager hinzufügen",
     "enrollManualKey": "Scannen nicht möglich? Gib diesen Schlüssel manuell ein:",
     "enrollCodeLabel": "Gib dann den angezeigten Code ein",
     "enrollConfirm": "Aktivieren",

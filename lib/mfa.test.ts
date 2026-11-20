@@ -4,6 +4,7 @@ import {
   MFA_ENABLED_CLAIM,
   RECOVERY_CODE_ALPHABET,
   RECOVERY_CODE_LENGTH,
+  canAddOtpauthCode,
   decodeJwtPayload,
   hasMfaEnabled,
   needsMfaChallenge,
@@ -98,5 +99,22 @@ describe("normalizeRecoveryCode", () => {
     expect(RECOVERY_CODE_LENGTH).toBe(12);
     expect(RECOVERY_CODE_ALPHABET.length).toBe(32);
     expect(RECOVERY_CODE_LENGTH * Math.log2(RECOVERY_CODE_ALPHABET.length)).toBe(60);
+  });
+});
+
+describe("canAddOtpauthCode", () => {
+  it.each([
+    ["iOS app", "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 minddy-mobile/1.0"],
+    ["iPadOS Safari", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Safari/605.1.15"],
+    ["Android Chrome", "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0 Mobile Safari/537.36"],
+  ])("offers the link on %s", (_, userAgent) => {
+    expect(canAddOtpauthCode(userAgent)).toBe(true);
+  });
+
+  it.each([
+    ["Windows Chrome", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0 Safari/537.36"],
+    ["Linux Firefox", "Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0"],
+  ])("keeps the QR code alone on %s", (_, userAgent) => {
+    expect(canAddOtpauthCode(userAgent)).toBe(false);
   });
 });

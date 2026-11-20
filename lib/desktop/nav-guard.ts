@@ -21,8 +21,12 @@
  */
 export type NavigationDecision = "allow" | "external" | "block";
 
-/** The only diagrams that we agree to entrust to the system browser. */
-const EXTERNAL_SCHEMES = new Set(["http:", "https:", "mailto:"]);
+/**
+ * The only schemes handed to the system. `otpauth:` is two-factor enrollment's
+ * **Add to password manager** link (MIN-1020): macOS gives it to Passwords or
+ * to an installed authenticator, which asks before adding the code.
+ */
+const EXTERNAL_SCHEMES = new Set(["http:", "https:", "mailto:", "otpauth:"]);
 
 /**
  * What to do with a navigation to `target`, the window being at `origin`?

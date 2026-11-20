@@ -18,6 +18,12 @@ describe("navigationDecision", () => {
     expect(navigationDecision("mailto:hello@minddy.app", ORIGIN)).toBe("external");
   });
 
+  it("hands two-factor enrollment's otpauth link to the system", () => {
+    expect(
+      navigationDecision("otpauth://totp/minddy:camille%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=minddy", ORIGIN)
+    ).toBe("external");
+  });
+
   it("sort aussi le même hôte en clair — l'origine, pas l'hôte", () => {
     expect(navigationDecision("http://www.minddy.app/home", ORIGIN)).toBe(
       "external"

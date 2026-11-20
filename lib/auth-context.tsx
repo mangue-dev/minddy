@@ -159,6 +159,8 @@ interface AuthContextValue {
     factorId: string;
     qrCode: string;
     secret: string;
+    /** The `otpauth://totp/…` link that adds the code to an app on this device. */
+    uri: string;
   }>;
   /**
    * Presents a six-digit code. This is what checks the factor
@@ -699,6 +701,7 @@ export function AuthProvider({
       factorId: data.id,
       qrCode: data.totp.qr_code,
       secret: data.totp.secret,
+      uri: data.totp.uri,
     };
   }, []);
 

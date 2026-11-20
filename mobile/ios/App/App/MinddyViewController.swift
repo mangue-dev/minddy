@@ -744,6 +744,15 @@ final class NavigationGuard: NSObject, WKNavigationDelegate {
         decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
         let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+        // An `otpauth:` link of two-factor enrollment hands its secret to the
+        // system, which offers to add the code to Passwords or to an
+        // authenticator app. The WebView cannot load it, and the phone cannot
+        // scan the QR code it is showing.
+        if isMainFrame, let url = navigationAction.request.url, url.scheme?.lowercased() == "otpauth" {
+            UIApplication.shared.open(url)
+            decisionHandler(.cancel)
+            return
+        }
         if isMainFrame,
            let url = navigationAction.request.url,
            let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",

@@ -103,8 +103,18 @@ function emailComponents(): Component[] {
   ];
 }
 
+/**
+ * `webcredentials` pairs the app with the passwords saved for the domain
+ * (MIN-1020). Without it, iOS AutoFill in the app's WebView offers neither the
+ * password saved for minddy nor the verification code the Passwords app keeps
+ * with it, and does not offer to save a new password. The app declares the
+ * matching `webcredentials:` domains in `App.entitlements`.
+ */
 export function appleAppSiteAssociation() {
   return {
+    webcredentials: {
+      apps: [IOS_APP_ID],
+    },
     applinks: {
       details: [
         {

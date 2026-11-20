@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ComputerIcon, Download01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
+import { ComputerIcon, Download01Icon, Key01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import {useState} from "react";
 import {useFormatter, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
@@ -15,7 +15,7 @@ import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsEmpty, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {mfaStatusQueryKey, useMfaStatusQuery} from "@/lib/use-mfa-status";
-import {mfaVerifyErrorKey} from "@/lib/mfa";
+import {canAddOtpauthCode, mfaVerifyErrorKey} from "@/lib/mfa";
 import {OtpInput} from "@/components/otp-input";
 import {isMobileDeviceLabel} from "@/lib/device-label";
 import {authSessionsQueryKey, revokeAuthSessionApi, useAuthSessionsQuery} from "@/lib/use-auth-sessions-query";
@@ -79,6 +79,7 @@ export function AccountSecuritySection() {
   const [factorId, setFactorId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState("");
   const [secret, setSecret] = useState("");
+  const [otpauthUri, setOtpauthUri] = useState("");
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
 
@@ -119,6 +120,7 @@ export function AccountSecuritySection() {
       setFactorId(enrolled.factorId);
       setQrCode(enrolled.qrCode);
       setSecret(enrolled.secret);
+      setOtpauthUri(enrolled.uri);
       setCode("");
       setStage("enrolling");
     } catch (e) {
@@ -134,6 +136,7 @@ export function AccountSecuritySection() {
     setFactorId(null);
     setQrCode("");
     setSecret("");
+    setOtpauthUri("");
     setCode("");
     setCodeError(null);
     // An unverified factor counts for nothing, but leaving it lying around
@@ -168,6 +171,7 @@ export function AccountSecuritySection() {
       setFactorId(null);
       setQrCode("");
       setSecret("");
+      setOtpauthUri("");
       setCode("");
 
       // The current JWT does not yet carry the flag: refresh it now
@@ -384,6 +388,18 @@ export function AccountSecuritySection() {
                   alt={t("enrollQrAlt")}
                   className="size-44 rounded-md bg-white p-2"
                 />
+              )}
+              {otpauthUri && canAddOtpauthCode(navigator.userAgent) && (
+                // The phone cannot scan the QR code it is showing: the
+                // `otpauth:` link hands the secret to the system, which offers
+                // to add the code to Passwords or to an authenticator app.
+                // The iOS shell opens it outside the WebView.
+                <Button asChild variant="outline" size="sm">
+                  <a href={otpauthUri}>
+                    <HugeiconsIcon icon={Key01Icon} className="size-4" />
+                    {t("enrollAddToPasswordManager")}
+                  </a>
+                </Button>
               )}
               <p className="text-xs text-muted-foreground">
                 {t("enrollManualKey")}{" "}

@@ -21,7 +21,7 @@ shell lives with the rest of the web app:
 | `ios/App/App/MinddyShellPlugin.swift` | the shell's own plugin, `MinddyShell` in JavaScript |
 | `ios/App/App/ServerStore.swift` | the selected server and the rules for a server address |
 | `ios/App/App/AppNavigator.swift`, `UniversalLink.swift` | the pages a notification or a universal link opens, and which links stay in the browser |
-| `ios/App/App/App.entitlements` | the capabilities: Sign in with Apple, push, and the associated domains of universal links |
+| `ios/App/App/App.entitlements` | the capabilities: Sign in with Apple, push, and the associated domains of universal links and of password AutoFill (`webcredentials`) |
 | `ios/Tests/` | the runner of `test:ios` |
 | `ios/App/App/Info.plist` | minddy Cloud's origin, the camera, photo and microphone usage texts, and the opt-in to frame rates above 60 Hz on iPhone |
 | `ios/App/CapApp-SPM/` | the Swift package Capacitor generates; committed, never edited by hand |
@@ -384,6 +384,23 @@ only. A developer-mode domain is fetched by the device itself rather than
 through Apple's CDN, and needs **Settings → Developer → Associated Domains
 Development** on the iPhone. **Settings → Developer → Universal Links →
 Diagnostics** tells whether a URL would open the app.
+
+## Passwords and verification codes
+
+The sign-in forms carry the standard `autocomplete` tokens (`username`,
+`current-password`, `new-password`, and `one-time-code` on the two-factor
+code). In a WebView those tokens are not enough: iOS offers the password saved
+for a domain, a strong password at sign-up, and the verification code the
+Passwords app keeps with it, only to an app paired with that domain. The pair
+is `webcredentials:` in `App.entitlements` and the `webcredentials` section of
+the same `apple-app-site-association` file (`lib/apple-app-site-association.ts`).
+As with universal links, the domain list is compiled into the app, so a
+self-hosted server gets no password AutoFill in the app.
+
+Two-factor enrollment offers **Add to password manager** next to the QR code,
+which the phone showing it cannot scan. The link is the factor's `otpauth://`
+URI; `NavigationGuard` hands it to the system, which offers to add the code to
+Passwords or to an authenticator app.
 
 ## Nothing is sold in the app
 
