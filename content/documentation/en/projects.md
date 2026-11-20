@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 23,
+  "revision": 24,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-18",
+  "updatedAt": "2026-11-20",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -80,10 +80,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-1016: Numo sentence of #hide-project, source audit against lib/server/hidden-projects.ts, lib/server/assistant/execute-tool.ts, lib/server/numo/journal-prompt.ts, memory-prompt.ts, home-brief.ts and wake-context.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en MIN-1016 sentence written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-18"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-962: #project-settings, Categories and AI instructions paragraphs, source audit against components/settings/project-settings-page.tsx, lib/settings-sections.ts and components/project-members.tsx; tab labels checked against messages/*.json; no browser walkthrough; no figure shows a member's settings; existing figures kept, not recaptured); agent:claude-code (MIN-1016: Numo sentence of #hide-project, source audit against lib/server/hidden-projects.ts, lib/server/assistant/execute-tool.ts, lib/server/numo/journal-prompt.ts, memory-prompt.ts, home-brief.ts and wake-context.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (en MIN-962 passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1016 sentence written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-673 summary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-20"
   },
   "related": [
     "issues",
@@ -107,7 +107,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
       "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -124,7 +124,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Invite people card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -141,7 +141,7 @@
       "src": "/documentation/en/project-statistics.png",
       "alt": "Momentum, Where things stand and Contributors sections of a project with about a thousand issues: weekly created and completed bars, a status bar, health counts and one status bar per person.",
       "caption": "The momentum compares the last four weeks with the four before; overdue and stalled counts flag the work to look at.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -158,7 +158,7 @@
       "src": "/documentation/en/project-issue-graph.png",
       "alt": "Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend, the Include closed issues and objectives switch and the Enlarge the graph button at the top right.",
       "caption": "Hover over a dot to read its issue and highlight its links; select it to open the issue in the side panel.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -183,7 +183,7 @@ A project brings together issues, objectives, pages and the people who work on t
 
 ## Configure a project {#project-settings}
 
-Open the project, then its settings. Project ownership controls administrative settings. Members and readers can inspect the general section, hide the project for themselves and leave it, but do not gain the owner's editing controls.
+Open the project, then its settings. Project settings belong to the owner. Members and readers, whatever their role, see two tabs only: **General**, where they read the project's identity and statistics, hide the project for themselves or leave it, and **Members**, which lists the people in the project.
 
 The **General** tab opens with the project's identity: its icon, its name and key, then five figures: **Issues**, **Members**, **Objectives**, **Categories** and **Created**. As owner, you change the icon, name and key where they are shown; there is no Save button. Select the icon and choose **New orb** (offered only while no image covers the orb), **Upload an image**, **Import from a website…**, which asks for the website address and imports its icon when you choose **Import**, or, when an image is set, **Remove the image**, which asks first because the image is deleted. Select the name or the key to edit it: on a computer it becomes a field, where Enter or leaving the field saves and Escape cancels; on a phone it opens a sheet with **Save**. The name cannot be empty. The key is normalized to uppercase and must have 2 to 5 letters (A–Z); otherwise an error appears and the key is not saved. Review the resulting identifiers after changing it. The icon only distinguishes the project in navigation; it does not change membership. Members and readers see the same header without these controls.
 
@@ -193,16 +193,16 @@ Below the header come the project's statistics, built from its own data and visi
 
 ![Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend, the Include closed issues and objectives switch and the Enlarge the graph button at the top right.](/documentation/en/project-issue-graph.png)
 
-The other tabs are **Categories**, **Members**, **Recurrences**, **Smart Assign**, **AI instructions**, **Feedback**, **Git**, **Import** and **Integrations**. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
+The other tabs are **Categories**, **Members**, **Recurrences**, **Smart Assign**, **AI instructions**, **Feedback**, **Git**, **Import** and **Integrations**; only the owner sees them, except **Members**. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
 
-In **Categories**, the owner and members manage the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to open the list of colors, where you can type a color's name to find it; the color you choose applies at once (on a phone the list opens in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue. Once the project has two categories or more, each row has a handle on its left: drag it to move the category up or down. From the keyboard, focus the handle, press Space, move the category with the Up and Down arrows and press Space again to drop it; Escape cancels. This order is the one every category menu and filter shows to everyone in the project. Numo and minddy MCP clients can read and change it too, for example when you ask Numo to put a category first.
+In **Categories**, the owner manages the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to open the list of colors, where you can type a color's name to find it; the color you choose applies at once (on a phone the list opens in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue. Once the project has two categories or more, each row has a handle on its left: drag it to move the category up or down. From the keyboard, focus the handle, press Space, move the category with the Up and Down arrows and press Space again to drop it; Escape cancels. This order is the one every category menu and filter shows to everyone in the project. Numo and minddy MCP clients can read and change it too, for example when you ask Numo to put a category first.
 
 
 ![Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.](/documentation/en/project-general.png)
 
 ### Guide Smart Fill and Smart Assign {#ai-instructions}
 
-The **AI instructions** tab holds what Smart Fill and Smart Assign follow in this project, whoever creates the issue and however it is created: the form, Numo, an integration or an MCP client. Only the owner changes it; members can read it.
+The **AI instructions** tab holds what Smart Fill and Smart Assign follow in this project, whoever creates the issue and however it is created: the form, Numo, an integration or an MCP client. Only the owner sees and changes it.
 
 **Working language** sets the language Smart Fill writes issue titles and objective names in, whatever language the description uses. Feedback is also translated into it when the project has no team language. **Automatic**, the default, keeps each title in the language of its description.
 

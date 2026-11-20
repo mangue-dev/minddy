@@ -20,7 +20,11 @@ import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
-import { PROJECT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
+import {
+  PROJECT_SETTINGS_DEFAULT_TAB,
+  canOpenProjectSettingsTab,
+  type ProjectSettingsTab,
+} from "@/lib/settings-sections";
 import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
@@ -57,7 +61,11 @@ function ProjectSettingsInner({ browse, projectId }: { browse?: SidebarBrowseTar
   // Same cache key as the Smart Assign section and the Members tab: the
   // list is read here only to know if a tab deserves its badge,
   // and only when Smart Assign is active — otherwise nothing to report.
-  const { members } = useMembersQuery(id, project?.smart_assign_enabled === true);
+  // Smart Assign is an owner-only tab: nobody else needs the badge.
+  const { members } = useMembersQuery(
+    id,
+    project?.smart_assign_enabled === true && project.owner_id === user?.id,
+  );
   const smartAssignIncomplete =
     members.length > 1 &&
     userIdsWithoutRule(
@@ -78,7 +86,9 @@ function ProjectSettingsInner({ browse, projectId }: { browse?: SidebarBrowseTar
   const isOwner = project.owner_id === user?.id;
 
 
-  const tabs: SettingsTab[] = [
+  // Settings belong to the owner (MIN-962): members and readers keep the
+  // General tab, to hide or leave the project, and the member list.
+  const allTabs: (SettingsTab & { value: ProjectSettingsTab })[] = [
     {
       value: "general",
       label: t("generalTab"),
@@ -167,6 +177,7 @@ function ProjectSettingsInner({ browse, projectId }: { browse?: SidebarBrowseTar
       content: <ProjectIntegrations projectId={project.id} isOwner={isOwner} />,
     },
   ];
+  const tabs = allTabs.filter((tab) => canOpenProjectSettingsTab(tab.value, isOwner));
 
   return (
     <>

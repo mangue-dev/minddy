@@ -215,7 +215,12 @@ the feedback SSO secret.
 - Routines: comment-triggered events from readers are skipped at processing.
 - Cycles: rollover and fill skip projects where the user cannot write.
 - Clients: `Project.my_role` / `my_can_comment` and `MembersResponse.myRole`
-  drive UI gating; the server remains authoritative.
+  drive UI gating; the server remains authoritative. Project settings are the
+  owner's (MIN-962): `canOpenProjectSettingsTab` in `lib/settings-sections.ts`
+  leaves members and readers the General tab (read-only identity, hide, leave)
+  and the read-only Members tab, and the command palette and settings search
+  offer them no section on another tab. Category and recurrence writes stay
+  content operations on the server, reachable from issues.
 
 ## 5. Migration, rollout and rollback
 
@@ -261,5 +266,4 @@ The server enforces every rule above. These client surfaces still show
 controls to readers and rely on the server refusal: cross-project bulk
 actions on the global board, page database cells and history restore,
 starting a block comment from a text selection (page-level comments work),
-command palette issue actions, standalone resources, PR panel actions, and
-non-owner project settings sections.
+command palette issue actions, standalone resources and PR panel actions.

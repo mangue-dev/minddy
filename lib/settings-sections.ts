@@ -68,6 +68,37 @@ export type ProjectSettingsTab =
   | "integrations";
 
 /**
+ * The project settings tabs a member or reader can open (MIN-962). Settings
+ * belong to the owner: everyone else sees the General tab (read-only identity
+ * and statistics, hide or leave the project) and the read-only member list.
+ */
+export const PROJECT_SETTINGS_MEMBER_TABS: readonly ProjectSettingsTab[] = [
+  "general",
+  "members",
+];
+
+/** Whether the viewer can open a project settings tab. */
+export function canOpenProjectSettingsTab(
+  tab: ProjectSettingsTab,
+  isOwner: boolean,
+): boolean {
+  return isOwner || PROJECT_SETTINGS_MEMBER_TABS.includes(tab);
+}
+
+/**
+ * The audience of a project section: an explicit one wins, and a section on
+ * an owner-only tab is the owner's, so ⌘K and the settings filter never offer
+ * a member a section on a tab they cannot open.
+ */
+export function projectSectionAudience(
+  tab: ProjectSettingsTab,
+  audience: SettingsSection["audience"],
+): SettingsSection["audience"] {
+  if (audience) return audience;
+  return PROJECT_SETTINGS_MEMBER_TABS.includes(tab) ? undefined : "owner";
+}
+
+/**
  * The identifier of a section. Stable and never translated: it is both
  * the DOM anchor (`settingsSectionAnchor`), the `?section=` parameter of the URL and
  * the identifier of the palette line (therefore the key to favorites and stats).
@@ -258,6 +289,7 @@ export function useSettingsSections(): SettingsSection[] {
       ...s,
       scope: "project",
       tabLabel: projectTabs[s.tab],
+      audience: projectSectionAudience(s.tab, s.audience),
     });
 
     return [
