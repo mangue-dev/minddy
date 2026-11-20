@@ -2659,6 +2659,8 @@
     "sidebarEmpty": "Todavía no hay páginas.",
     "emptyTitle": "Todavía no hay páginas en este proyecto",
     "pickTitle": "Elige una página a la izquierda",
+    "pickTitleMobile": "Elige una página",
+    "showPages": "Ver páginas",
     "titlePlaceholder": "Sin título",
     "titleLabel": "Título de la página",
     "changeIcon": "Cambiar icono",

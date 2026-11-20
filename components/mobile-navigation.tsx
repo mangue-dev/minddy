@@ -12,6 +12,7 @@ import { MobileCreateButton, MobileNumoButton } from "./mobile-nav-actions";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 import { openInbox } from "@/lib/inbox-launcher";
+import { OPEN_MOBILE_PAGE_LIST_EVENT } from "@/lib/mobile-menu-launcher";
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
 import { SidebarFrame, SidebarRows, type SidebarBackBadge } from "./app-sidebar";
 import Link from "@/components/app-link";
@@ -67,6 +68,9 @@ type SheetTab = "goTo" | "page";
  * an issue was created in; changing it changes the tiles, not the page. When
  * the current page has its own list (objectives, triage, settings…), a
  * second tab of the sheet holds it, and the sheet opens on that tab.
+ * Going from Go to to a destination with such a list keeps the sheet open
+ * and turns it to that tab once the page is there (MIN-1022): the next tap
+ * picks what the page shows.
  */
 export const MobileNavigation = memo(function MobileNavigation({ sections, initialPanel, initialPanels, inboxCount = 0, inboxBadgeLabel, onSearch }: {
   sections: MobileMenuSection[];
@@ -107,15 +111,44 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
   const shownProjectPanel = projectPanels.find((panel) => panel.project!.id === pickedProjectId)
     ?? projectPanel ?? projectPanels.find((panel) => panel.project!.id === defaultCreateProjectId(projectPanels.map((panel) => panel.project!), lastCreateProjectId()));
   const onNavigate = useCallback(() => setMenuOpen(false), []);
+  // The Go to destinations whose page has its own list: following one keeps
+  // the sheet open, to show that list.
+  const listRoutes = new Set([...destinations.flatMap((section) => section.items), ...(shownProjectPanel?.sections?.flatMap((section) => section.items) ?? [])]
+    .flatMap((item) => opensPageList(item) ? [destinationOf(item)!] : []));
+  // Set while the sheet waits for the destination it is turning to.
+  const awaitingPageList = useRef(false);
+  const onGoTo = (href: string | undefined) => {
+    if (!href || !listRoutes.has(href)) { setMenuOpen(false); return; }
+    if (href === pathname) { setTab("page"); return; }
+    awaitingPageList.current = true;
+  };
+  // Every link the sheet follows passes here; only Go to's may keep it open.
+  const onFrameNavigate = (link: HTMLAnchorElement) => {
+    if (link.closest('[data-mobile-sidebar-panel="goTo"]')) onGoTo(link.getAttribute("href") ?? undefined);
+    else setMenuOpen(false);
+  };
   const onOpenChange = useCallback((next: boolean) => {
     // Opened on a page with its own list (settings, objectives…), the sheet
     // shows that list first: it is what the page navigates. What was browsed
     // last time is not kept.
     if (next) { setTab(hasPageTab ? "page" : "goTo"); setPickedProjectId(null); }
+    awaitingPageList.current = false;
     setMenuOpen(next);
   }, [hasPageTab]);
-  useEffect(() => { setMenuOpen(false); }, [pathname]);
-  useLayoutEffect(() => { if (menuOpen) focusTarget.current?.focus({ preventScroll: true }); }, [menuOpen, tab]);
+  useEffect(() => {
+    if (!awaitingPageList.current) { setMenuOpen(false); return; }
+    awaitingPageList.current = false;
+    setTab("page");
+  }, [pathname]);
+  // The empty pages screen asks for the page's list (lib/mobile-menu-launcher.ts).
+  useEffect(() => {
+    const open = () => onOpenChange(true);
+    window.addEventListener(OPEN_MOBILE_PAGE_LIST_EVENT, open);
+    return () => window.removeEventListener(OPEN_MOBILE_PAGE_LIST_EVENT, open);
+  }, [onOpenChange]);
+  // A list that registers late (or never) leaves Go to showing meanwhile.
+  const shownTab: SheetTab = hasPageTab ? tab : "goTo";
+  useLayoutEffect(() => { if (menuOpen) focusTarget.current?.focus({ preventScroll: true }); }, [menuOpen, shownTab]);
   const typing = useTypingInField();
   // In the mobile app the shell draws this bar natively, over this one
   // (lib/mobile/native-navigation.ts).
@@ -129,7 +162,7 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
   // there too, vertical (lib/mobile/side-chrome.ts, app/globals.css).
   useEffect(() => watchSideChrome(document), []);
   const inboxLabel = inboxCount > 0 && inboxBadgeLabel ? `${t("inbox")} — ${inboxBadgeLabel}` : t("inbox");
-  const pageNavigation: MobileMenuNavigation = { onBrowse: () => {}, onNavigate, headerHost: tab === "page" ? headerHost : null };
+  const pageNavigation: MobileMenuNavigation = { onBrowse: () => {}, onNavigate, headerHost: shownTab === "page" ? headerHost : null };
   return <>
     <nav ref={navRef} aria-label={t("mainNavigation")} data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
       <div className="grid h-12 w-[min(100%-2rem,320px)] grid-cols-5 grid-rows-1 items-center rounded-full border border-border bg-background shadow-lg">
@@ -152,29 +185,29 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
     <Sheet open={menuOpen} onOpenChange={onOpenChange}>
       <MobileSheetContent side="bottom" aria-describedby={undefined} className="mobile-nav-sheet">
         <SheetTitle className="sr-only">{t("goTo")}</SheetTitle>
-        <SidebarFrame id={sidebarId} mobile onNavigate={onNavigate} focusRef={focusTarget}>
+        <SidebarFrame id={sidebarId} mobile onNavigate={onFrameNavigate} focusRef={focusTarget}>
           {hasPageTab && <div data-mobile-nav-tabs className="shrink-0 px-2.5 pb-2">
             <SegmentedControl<SheetTab>
               options={[{ value: "goTo", label: t("goTo") }, { value: "page", label: pagePanel!.title }]}
-              value={tab} onChange={setTab} ariaLabel={t("goTo")} className="w-full" />
+              value={shownTab} onChange={setTab} ariaLabel={t("goTo")} className="w-full" />
           </div>}
           <div className="relative flex min-h-0 flex-1 flex-col">
             {/* The page's list stays mounted while the other tab shows: the
                 page owns its selection and filters, and keeps them. */}
-            {hasPageTab && <div data-mobile-sidebar-panel="page" hidden={tab !== "page"} inert={tab !== "page"} className="flex min-h-0 flex-1 flex-col [&[hidden]]:hidden">
+            {hasPageTab && <div data-mobile-sidebar-panel="page" hidden={shownTab !== "page"} inert={shownTab !== "page"} className="flex min-h-0 flex-1 flex-col [&[hidden]]:hidden">
               <div ref={setHeaderHost} className="shrink-0 empty:hidden" />
               {hostsRouteList
-                ? <MobileCollectionMenu route={pathname} active={tab === "page"} onNavigate={onNavigate} headerHost={headerHost} />
+                ? <MobileCollectionMenu route={pathname} active={shownTab === "page"} onNavigate={onNavigate} headerHost={headerHost} />
                 : <MobileSheetScrollArea className="space-y-4 px-2.5 pb-2">
                   {pagePanel!.render ? pagePanel!.render(pageNavigation) : <MobileStaticMenu sections={pagePanel!.sections ?? []} {...pageNavigation} />}
                 </MobileSheetScrollArea>}
             </div>}
-            <div data-mobile-sidebar-panel="goTo" hidden={tab !== "goTo"} inert={tab !== "goTo"} className="flex min-h-0 flex-1 flex-col [&[hidden]]:hidden">
+            <div data-mobile-sidebar-panel="goTo" hidden={shownTab !== "goTo"} inert={shownTab !== "goTo"} className="flex min-h-0 flex-1 flex-col [&[hidden]]:hidden">
               <MobileSheetScrollArea className="space-y-4 px-2.5 pt-1 pb-2">
                 {shownProjectPanel?.project && <ProjectTiles project={shownProjectPanel.project}
                   projects={projectPanels.map((panel) => panel.project!)} onPickProject={setPickedProjectId}
-                  items={shownProjectPanel.sections?.flatMap((section) => section.items) ?? []} onNavigate={onNavigate} />}
-                <MobileMenuRows sections={destinations} onNavigate={onNavigate} />
+                  items={shownProjectPanel.sections?.flatMap((section) => section.items) ?? []} onNavigate={onGoTo} />}
+                <MobileMenuRows sections={destinations} onNavigate={onGoTo} />
               </MobileSheetScrollArea>
             </div>
           </div>
@@ -189,11 +222,16 @@ function destinationOf(item: MobileMenuSection["items"][number]): string | undef
   return item.panel?.sidebarRoute ?? item.href;
 }
 
+/** Whether a row's page has its own list, which the sheet shows in a tab. */
+function opensPageList(item: MobileMenuSection["items"][number]): boolean {
+  return !!item.panel && !item.panel.project && !!(item.panel.render || item.panel.sections) && !!destinationOf(item);
+}
+
 /** Every row is a destination: nothing in this sheet opens a level below. */
-export function MobileMenuRows({ sections, onNavigate }: { sections: MobileMenuSection[]; onNavigate: () => void }) {
+export function MobileMenuRows({ sections, onNavigate }: { sections: MobileMenuSection[]; onNavigate: (href: string | undefined) => void }) {
   return <SidebarRows sections={sections.map((section) => ({ ...section, items: section.items.map((item) => ({
     ...item, href: destinationOf(item), descends: false,
-    onClick: () => { onNavigate(); item.onClick?.(); },
+    onClick: () => { onNavigate(destinationOf(item)); item.onClick?.(); },
   })) }))} />;
 }
 
@@ -207,7 +245,7 @@ function ProjectTiles({ project, projects, onPickProject, items, onNavigate }: {
   projects: Project[];
   onPickProject: (projectId: string) => void;
   items: MobileMenuSection["items"];
-  onNavigate: () => void;
+  onNavigate: (href: string) => void;
 }) {
   const t = useTranslations("Nav");
   const tCreation = useTranslations("Creation");
@@ -233,7 +271,7 @@ function ProjectTiles({ project, projects, onPickProject, items, onNavigate }: {
         const Icon = item.icon;
         if (!href) return null;
         return <li key={item.key}>
-          <Link href={href} onClick={onNavigate} aria-current={item.active ? "page" : undefined} data-sidebar-navigation-item
+          <Link href={href} onClick={() => onNavigate(href)} aria-current={item.active ? "page" : undefined} data-sidebar-navigation-item
             className={cn("relative flex h-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-2xl px-1 text-xs font-medium outline-none transition-colors",
               item.active ? "bg-sidebar-accent text-sidebar-foreground" : "bg-sidebar-accent/40 text-sidebar-foreground/75 active:bg-sidebar-accent")}>
             {Icon && <Icon className="size-5 shrink-0" />}

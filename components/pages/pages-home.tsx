@@ -1,6 +1,8 @@
 "use client";
 
 import { isMobileLayout } from "@/lib/app-layout";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { openMobilePageList } from "@/lib/mobile-menu-launcher";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "react";
@@ -31,6 +33,8 @@ export function PagesHome({
   const restored = useRef(false);
   // Project readers (MIN-693) pick a page; they cannot create one.
   const { canWrite } = useProjectCapabilities(projectId);
+  // On a phone the list is not on the left but in the navigation sheet.
+  const mobile = useMobileLayout() === true;
 
   useEffect(() => {
     if (restored.current || loading) return;
@@ -49,8 +53,11 @@ export function PagesHome({
       <div className="mx-auto max-w-content">
         <EmptyScene
           icon={File02Icon}
-          title={pages.length === 0 ? t("emptyTitle") : t("pickTitle")}
+          title={pages.length === 0 ? t("emptyTitle") : mobile ? t("pickTitleMobile") : t("pickTitle")}
         >
+          {mobile && pages.length > 0 && (
+            <Button variant={canWrite ? "outline" : "default"} onClick={openMobilePageList}>{t("showPages")}</Button>
+          )}
           {canWrite && (
             <PageCreateMenu onCreate={onCreate} trigger={<Button>
               <HugeiconsIcon icon={Add01Icon} className="size-4" />

@@ -1244,7 +1244,9 @@ function SidebarFooter({
 /** The same sidebar surface and pinned footer surround both navigation layouts. */
 export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, onNavigate, focusRef }: {
   id: string; mobile?: boolean; children: ReactNode;
-  onLayerOpenChange?: (open: boolean) => void; onNavigate?: () => void; focusRef?: Ref<HTMLElement>;
+  onLayerOpenChange?: (open: boolean) => void;
+  /** A link of the sheet was followed; the sheet decides from it whether to close. */
+  onNavigate?: (link: HTMLAnchorElement) => void; focusRef?: Ref<HTMLElement>;
 }) {
   // On a phone the row's pill keeps the sheet's top inset on its left too,
   // so its curve follows the sheet's corner; the right inset clears the
@@ -1255,7 +1257,10 @@ export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, 
   return <aside ref={focusRef} tabIndex={mobile ? -1 : undefined} id={id} data-sidebar-navigation data-mobile-sidebar={mobile || undefined}
     style={{ width: mobile ? "100%" : EXPANDED_WIDTH }}
     className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-none"
-    onClickCapture={mobile ? (event) => { if (isPlainNavigationClick(event) && event.target instanceof Element && event.target.closest("a[href]")) onNavigate?.(); } : undefined}>
+    onClickCapture={mobile ? (event) => {
+      const link = isPlainNavigationClick(event) && event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (link) onNavigate?.(link);
+    } : undefined}>
     {/* On a phone the account, the usage and what's new head the sheet, on
         the row of its close button (MIN-907); the sidebar's own header band
         follows under them. */}

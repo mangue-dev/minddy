@@ -7,14 +7,15 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MobileNavigation, type MobileMenuPanel } from "./mobile-navigation";
 import type { Project } from "@/lib/types";
+import { openMobilePageList } from "@/lib/mobile-menu-launcher";
 
-const navigation = vi.hoisted(() => ({ visit: vi.fn(), mobile: true }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/projects/aurora", useSearchParams: () => new URLSearchParams() }));
+const navigation = vi.hoisted(() => ({ visit: vi.fn(), mobile: true, pathname: "/projects/aurora" }));
+vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname, useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/app-link", () => ({ default: ({ href, onClick, children, ...props }: {
   href: string; onClick?: () => void; children: ReactNode;
 }) => <a {...props} href={href} onClick={(event: MouseEvent) => { event.preventDefault(); onClick?.(); navigation.visit(href); }}>{children}</a> }));
 vi.mock("./app-sidebar", () => ({
-  SidebarFrame: ({ children, onNavigate, focusRef }: { children: ReactNode; onNavigate: () => void; focusRef: React.Ref<HTMLElement> }) => <aside ref={focusRef} tabIndex={-1} onClickCapture={(event) => { if ((event.target as Element).closest("a[href]")) onNavigate(); }}>{children}</aside>,
+  SidebarFrame: ({ children, onNavigate, focusRef }: { children: ReactNode; onNavigate: (link: HTMLAnchorElement) => void; focusRef: React.Ref<HTMLElement> }) => <aside ref={focusRef} tabIndex={-1} onClickCapture={(event) => { const link = (event.target as Element).closest<HTMLAnchorElement>("a[href]"); if (link) onNavigate(link); }}>{children}</aside>,
   SidebarRows: ({ sections }: { sections: { label?: string; items: { key: string; href?: string; label: string; onClick: () => void; browseKey?: string }[] }[] }) => sections.map((section, index) => <section key={index}>{section.label && <h2>{section.label}</h2>}{section.items.map((item) => item.href
     ? <a key={item.key} href={item.href} onClick={(event) => { event.preventDefault(); navigation.visit(item.href); }}>{item.label}</a>
     : <button key={item.key} data-mobile-menu-branch={item.browseKey} onClick={item.onClick}><svg />{item.label}</button>)}</section>),
@@ -31,12 +32,14 @@ vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => <span /> }));
 vi.mock("@/components/icon", () => ({ AppIcon: (props: { className?: string }) => <svg aria-hidden className={props.className} /> }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => navigation.mobile }));
 const activeElement = <T extends HTMLElement>(selector: string) => [...document.querySelectorAll<T>(selector)].find((node) => !node.closest("[inert]"))!;
+const tab = (label: string) => [...document.querySelectorAll<HTMLButtonElement>("[data-mobile-nav-tabs] button")].find((button) => button.textContent === label)!;
 const activePanel = () => activeElement<HTMLElement>("[data-mobile-sidebar-panel]");
 let root: ReturnType<typeof createRoot>;
 let container: HTMLDivElement;
 beforeEach(() => {
   navigation.visit.mockClear();
   navigation.mobile = true;
+  navigation.pathname = "/projects/aurora";
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   container = document.createElement("div"); container.className = "app-workspace"; document.body.appendChild(container); root = createRoot(container);
@@ -109,7 +112,6 @@ it("holds the page's own list in a second tab, and opens on it", async () => {
     <SecondarySidebarProvider><RouteList /><MobileNavigation initialPanel={collection} sections={[{ items: [{ key: "home", label: "Home", href: "/home" }] }]} onSearch={() => {}} /></SecondarySidebarProvider>
   </NextIntlClientProvider></div>));
   const open = () => act(() => container.querySelector<HTMLButtonElement>("[data-mobile-menu-trigger]")!.click());
-  const tab = (label: string) => [...document.querySelectorAll<HTMLButtonElement>("[data-mobile-nav-tabs] button")].find((button) => button.textContent === label)!;
   await open();
   expect(activePanel().dataset.mobileSidebarPanel).toBe("page");
   expect(activePanel().textContent).toContain("Collection item");
@@ -123,6 +125,67 @@ it("holds the page's own list in a second tab, and opens on it", async () => {
   await open();
   expect(activePanel().dataset.mobileSidebarPanel).toBe("page");
   expect(navigation.visit).not.toHaveBeenCalled();
+});
+
+it("turns to the list of a destination that has one instead of closing", async () => {
+  const objectives: MobileMenuPanel = { key: "aurora-objectives", title: "Objectives", sidebarRoute: "/projects/aurora/objectives",
+    render: () => <a href="/projects/aurora/objectives?objective=1" onClick={(event) => event.preventDefault()}>Launch</a> };
+  const settings: MobileMenuPanel = { key: "settings-aurora", title: "Project settings", sidebarRoute: "/projects/aurora/settings", render: () => <p>Members</p> };
+  const auroraPanel: MobileMenuPanel = { key: "project-aurora", title: "Aurora", project: aurora, sections: [{ items: [
+    { key: "tickets", label: "Issues", href: "/projects/aurora", active: true },
+    { key: "objectives", label: "Objectives", panel: objectives },
+    { key: "settings", label: "Project settings", panel: settings },
+  ] }] };
+  const routines: MobileMenuPanel = { key: "routines", title: "Routines", sidebarRoute: "/routines", render: () => <p>Daily digest</p> };
+  const sections = [{ items: [{ key: "home", label: "Home", href: "/home" }, { key: "routines", label: "Routines", panel: routines }] },
+    { items: [{ key: "project-aurora", label: "Aurora", href: "/projects/aurora", panel: auroraPanel }] }];
+  // The shell gives the sheet the new route's panels as the page changes.
+  const render = (panels: MobileMenuPanel[]) => act(() => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={messages}>
+    <MobileNavigation initialPanels={panels} sections={sections} onSearch={() => {}} />
+  </NextIntlClientProvider></div>));
+  const dialog = () => document.querySelector('[role="dialog"]');
+  const open = () => act(() => container.querySelector<HTMLButtonElement>("[data-mobile-menu-trigger]")!.click());
+  await render([auroraPanel]);
+  await open();
+  await act(() => activeElement<HTMLAnchorElement>('[data-mobile-project-tiles] a[href="/projects/aurora/objectives"]').click());
+  expect(navigation.visit).toHaveBeenLastCalledWith("/projects/aurora/objectives");
+  // Still open until the page is there, then on its list.
+  expect(dialog()).not.toBeNull();
+  navigation.pathname = "/projects/aurora/objectives";
+  await render([auroraPanel, objectives]);
+  expect(dialog()).not.toBeNull();
+  expect(activePanel().dataset.mobileSidebarPanel).toBe("page");
+  expect(activePanel().textContent).toContain("Launch");
+  // Picking from that list closes the sheet as before.
+  await act(() => activeElement<HTMLAnchorElement>('a[href="/projects/aurora/objectives?objective=1"]').click());
+  expect(dialog()).toBeNull();
+  // A Go to row with a list does the same.
+  await open();
+  await act(() => tab("Go to").click());
+  await act(() => activeElement<HTMLAnchorElement>('a[href="/routines"]').click());
+  expect(dialog()).not.toBeNull();
+  navigation.pathname = "/routines";
+  await render([routines]);
+  expect(activePanel().textContent).toContain("Daily digest");
+  // A destination without a list still closes the sheet.
+  await act(() => tab("Go to").click());
+  await act(() => activeElement<HTMLAnchorElement>('a[href="/home"]').click());
+  expect(dialog()).toBeNull();
+  navigation.pathname = "/home";
+  await render([]);
+  expect(dialog()).toBeNull();
+});
+
+it("opens on the page's list when a screen asks for it", async () => {
+  const pages: MobileMenuPanel = { key: "aurora-pages", title: "Pages", sidebarRoute: "/projects/aurora/pages", render: () => <p>Roadmap</p> };
+  navigation.pathname = "/projects/aurora/pages";
+  await act(() => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={messages}>
+    <MobileNavigation initialPanels={[pages]} sections={[]} onSearch={() => {}} />
+  </NextIntlClientProvider></div>));
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  await act(() => openMobilePageList());
+  expect(activePanel().dataset.mobileSidebarPanel).toBe("page");
+  expect(activePanel().textContent).toContain("Roadmap");
 });
 
 it("orders the bottom bar as the menu, search, the inbox, Numo and New", async () => {

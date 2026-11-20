@@ -2659,6 +2659,8 @@
     "sidebarEmpty": "Aucune page pour l'instant.",
     "emptyTitle": "Aucune page dans ce projet",
     "pickTitle": "Choisissez une page à gauche",
+    "pickTitleMobile": "Choisissez une page",
+    "showPages": "Afficher les pages",
     "titlePlaceholder": "Sans titre",
     "titleLabel": "Titre de la page",
     "changeIcon": "Changer l'icône",
