@@ -3249,6 +3249,7 @@
     "enrollScanTitle": "Scan this with your authenticator app",
     "enrollScanHint": "1Password, Bitwarden, Google Authenticator, Raycast; any of them will do.",
     "enrollQrAlt": "QR code to set up two-factor authentication",
+    "enrollAddToPasswordManager": "Add to password manager",
     "enrollManualKey": "Can't scan? Enter this key by hand:",
     "enrollCodeLabel": "Then type the code it shows",
     "enrollConfirm": "Turn on",

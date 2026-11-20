@@ -147,3 +147,14 @@ export function normalizeRecoveryCode(input: string): string | null {
   const formatted = formatRecoveryCode(cleaned);
   return RECOVERY_CODE_RE.test(formatted) ? formatted : null;
 }
+
+/**
+ * Whether this device can take the enrollment's `otpauth://` link itself
+ * (MIN-1020). The phone showing the QR code cannot scan it, so iOS, iPadOS
+ * and macOS add the code to Passwords from the link, and Android hands it to
+ * an installed authenticator. Windows and Linux desktops register no handler
+ * for the scheme by default: the link would do nothing there.
+ */
+export function canAddOtpauthCode(userAgent: string): boolean {
+  return /iPhone|iPad|iPod|Macintosh|Android/i.test(userAgent);
+}

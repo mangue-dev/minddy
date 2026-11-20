@@ -49,6 +49,12 @@ describe("GET /.well-known/apple-app-site-association", () => {
     expect(body.applinks.details).toHaveLength(1);
     expect(body.applinks.details[0].appIDs).toEqual([IOS_APP_ID]);
   });
+
+  it("pairs the iOS app with the passwords saved for the domain", async () => {
+    const body = await GET().json();
+
+    expect(body.webcredentials).toEqual({ apps: [IOS_APP_ID] });
+  });
 });
 
 describe("universal links of the iOS app", () => {
