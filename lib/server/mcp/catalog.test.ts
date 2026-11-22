@@ -27,7 +27,8 @@ const param = (name: string, paramName: string) => {
 describe("catalogue MCP — édition partielle d'un plan", () => {
   it("annonce minddy_append_to_plan avec markdown requis et section optionnelle", () => {
     expect(tool("minddy_append_to_plan").readOnly).toBe(false);
-    expect(param("minddy_append_to_plan", "project_id").required).toBe(true);
+    // The issue reference names its project (MIN-952).
+    expect(param("minddy_append_to_plan", "project_id").required).toBe(false);
     expect(param("minddy_append_to_plan", "issue").required).toBe(true);
     expect(param("minddy_append_to_plan", "markdown").required).toBe(true);
     expect(param("minddy_append_to_plan", "section").required).toBe(false);
@@ -35,7 +36,8 @@ describe("catalogue MCP — édition partielle d'un plan", () => {
 
   it("annonce minddy_edit_issue_text en old_string → new_string", () => {
     expect(tool("minddy_edit_issue_text").readOnly).toBe(false);
-    for (const required of ["project_id", "issue", "field", "old_string", "new_string"]) {
+    expect(param("minddy_edit_issue_text", "project_id").required).toBe(false);
+    for (const required of ["issue", "field", "old_string", "new_string"]) {
       expect(param("minddy_edit_issue_text", required).required).toBe(true);
     }
     expect(param("minddy_edit_issue_text", "replace_all").required).toBe(false);
@@ -175,9 +177,8 @@ describe("catalogue MCP — ressources", () => {
     for (const optional of ["url", "file_name", "mime_type", "content_base64"]) {
       expect(param("minddy_add_resource", optional).required).toBe(false);
     }
-    for (const required of ["project_id", "issue"]) {
-      expect(param("minddy_add_resource", required).required).toBe(true);
-    }
+    expect(param("minddy_add_resource", "issue").required).toBe(true);
+    expect(param("minddy_add_resource", "project_id").required).toBe(false);
   });
 
   it("nomme minddy_get_resource par resource_id, et dit ce qu'un lien rend", () => {

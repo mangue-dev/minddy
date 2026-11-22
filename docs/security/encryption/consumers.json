@@ -2628,70 +2628,70 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 834,
+    "line": 835,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 857,
+    "line": 858,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 910,
+    "line": 911,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 915,
+    "line": 916,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 933,
+    "line": 934,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 973,
+    "line": 974,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1986,
+    "line": 1990,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 2035,
+    "line": 2039,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2495,
+    "line": 2499,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2667,
+    "line": 2671,
     "storage": false
   },
   {
@@ -2838,21 +2838,21 @@
     "file": "lib/server/assistant/project-scope.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 37,
+    "line": 38,
     "storage": false
   },
   {
     "file": "lib/server/assistant/project-scope.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 42,
+    "line": 43,
     "storage": false
   },
   {
     "file": "lib/server/assistant/project-scope.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 50,
+    "line": 51,
     "storage": false
   },
   {
@@ -7318,119 +7318,147 @@
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 89,
+    "line": 90,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 161,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issue_relations",
-    "line": 314,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 332,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 411,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 492,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 513,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 547,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 593,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 624,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "attachments",
-    "line": 635,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "github_issue_sync_metadata",
-    "line": 643,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "github_issue_sync_metadata",
-    "line": 647,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "github_issue_comment_syncs",
-    "line": 653,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "github_issue_comment_syncs",
-    "line": 657,
-    "storage": false
-  },
-  {
-    "file": "lib/server/issue-reads.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 736,
+    "line": 162,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 828,
+    "line": 255,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 262,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 283,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 309,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issue_relations",
+    "line": 438,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 456,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 535,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 616,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 637,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 671,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 717,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 748,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 759,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "github_issue_sync_metadata",
+    "line": 767,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "github_issue_sync_metadata",
+    "line": 771,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "github_issue_comment_syncs",
+    "line": 777,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "github_issue_comment_syncs",
+    "line": 781,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 860,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 952,
     "storage": false
   },
   {
@@ -7682,56 +7710,56 @@
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 729,
+    "line": 787,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 1192,
+    "line": 1250,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 1202,
+    "line": 1260,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1786,
+    "line": 1841,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2902,
+    "line": 2955,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 3061,
+    "line": 3114,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 5135,
+    "line": 5181,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 5149,
+    "line": 5195,
     "storage": false
   },
   {

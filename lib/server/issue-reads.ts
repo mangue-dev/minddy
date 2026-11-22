@@ -12,6 +12,7 @@ import { memberRoleFromRow, resolveProjectRole } from "@/lib/project-roles";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { CLOSED_STATUSES, issueIdentifier } from "@/lib/issue-constants";
@@ -195,6 +196,129 @@ export async function resolveIssueRef(
       identifier: issueIdentifier(scope.projectKey, data.number as number),
     },
   };
+}
+
+/** A project an identifier's key could name, when several share that key. */
+export interface IssueProjectCandidate {
+  project_id: string;
+  name: string;
+  key: string;
+}
+
+export type LocatedIssueProject =
+  | { projectId: string }
+  | {
+      code: IssueRefErrorCode | "project_required" | "ambiguous_issue_ref";
+      error: string;
+      candidates?: IssueProjectCandidate[];
+    };
+
+/**
+ * Finds the project an issue reference names, among the projects `userId`
+ * can open (MIN-952), so a caller holding only "MIN-42" or an issue UUID
+ * needs no project id. A UUID names its issue's project; an identifier names
+ * the visible project with that key (keys are not unique, so two visible
+ * projects sharing it make the reference ambiguous); a bare number names no
+ * project at all. An issue or a key outside the user's projects answers like
+ * a missing issue, so the lookup never reveals what the user cannot see.
+ *
+ * It only locates: the caller still resolves the reference in that project
+ * and checks the role there, exactly as with an explicit project id.
+ */
+export async function locateIssueProject(
+  db: SupabaseClient,
+  userId: string,
+  ref: unknown,
+): Promise<LocatedIssueProject> {
+  const raw = typeof ref === "string" ? ref.trim() : "";
+  if (!raw) {
+    return {
+      code: "invalid_params",
+      error: "issue is required — pass a UUID, an identifier like 'MIND-42', or a bare issue number.",
+    };
+  }
+  if (/^\d+$/.test(raw)) {
+    return {
+      code: "project_required",
+      error: `A bare issue number ('${raw}') names no project: pass project_id, or the full identifier (KEY-${raw}).`,
+    };
+  }
+
+  const identifier = raw.match(IDENTIFIER_RE);
+  if (!UUID_RE.test(raw) && !identifier) {
+    return {
+      code: "invalid_params",
+      error: `'${raw}' is not a valid issue reference — pass a UUID, an identifier like 'MIND-42', or a bare number with project_id.`,
+    };
+  }
+
+  const { data: memberships, error: memberError } = await db
+    .from("project_members")
+    .select("project_id")
+    .eq("user_id", userId);
+  if (memberError) return { code: "database_error", error: memberError.message };
+  const memberIds = (memberships ?? []).map((m) => m.project_id as string);
+  const visibleProjects = (columns: string) => {
+    const query = db.from("projects").select(columns).is("deleted_at", null);
+    return memberIds.length
+      ? query.or(`owner_id.eq.${userId},id.in.(${memberIds.join(",")})`)
+      : query.eq("owner_id", userId);
+  };
+  const notFound = {
+    code: "issue_not_found" as const,
+    error: `Issue '${raw}' not found in any project you can access.`,
+  };
+
+  if (identifier) {
+    // Keys are letters only (IDENTIFIER_RE), so ilike matches them exactly,
+    // case aside, with no wildcard to escape.
+    const { data, error } = await visibleProjects(
+      "id, name, key, owner_id, encrypted_content, encryption_version",
+    ).ilike("key", identifier[1]);
+    if (error) return { code: "database_error", error: error.message };
+    let projects = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    if (projects.length === 0) return notFound;
+    if (projects.length > 1) {
+      // A shared key is ambiguous only among the projects that hold the issue.
+      const { data: holders, error: holderError } = await db
+        .from("issues")
+        .select("project_id")
+        .in("project_id", projects.map((p) => p.id as string))
+        .eq("number", Number(identifier[2]))
+        .is("deleted_at", null);
+      if (holderError) return { code: "database_error", error: holderError.message };
+      const holding = new Set((holders ?? []).map((row) => row.project_id as string));
+      projects = projects.filter((p) => holding.has(p.id as string));
+      if (projects.length === 0) return notFound;
+    }
+    if (projects.length > 1) {
+      const candidates = await Promise.all(projects.map(async (p) => ({
+        project_id: p.id as string,
+        name: await decodeProjectName(p, userId),
+        key: p.key as string,
+      })));
+      return {
+        code: "ambiguous_issue_ref",
+        error: `Several of your projects use the key '${identifier[1].toUpperCase()}': pass project_id to say which one.`,
+        candidates,
+      };
+    }
+    return { projectId: projects[0].id as string };
+  }
+
+  const { data: issue, error: issueError } = await db
+    .from("issues")
+    .select("project_id")
+    .eq("id", raw)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (issueError) return { code: "database_error", error: issueError.message };
+  if (!issue) return notFound;
+  const { data: project, error: projectError } = await visibleProjects("id")
+    .eq("id", issue.project_id as string)
+    .maybeSingle();
+  if (projectError) return { code: "database_error", error: projectError.message };
+  return project ? { projectId: issue.project_id as string } : notFound;
 }
 
 export async function resolveObjectiveRef(

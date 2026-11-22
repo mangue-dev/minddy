@@ -199,14 +199,18 @@ import {
   getUserId,
   mentionsForReader,
   okWithImages,
+  requireIssueScope,
   requireProject,
+  requireProjectForIssues,
   requireUser,
+  resolveIssueAnywhere,
   resolveProject,
   resolveIssueRef,
   resolveObjectiveRef,
   READ_ONLY,
   WRITE,
   WRITE_IDEMPOTENT,
+  type ResolvedIssue,
   type ToolExtra,
   type ToolResult,
 } from "@/lib/server/mcp/tool-helpers";
@@ -422,6 +426,16 @@ const PROJECT_ID = z
   .string()
   .uuid()
   .describe("Project UUID. Use minddy_list_projects to discover ids.");
+
+/**
+ * The project of a tool that designates issues (MIN-952): a UUID or a KEY-N
+ * identifier already names it, so only a bare issue number still needs it.
+ */
+const ISSUE_PROJECT_ID = PROJECT_ID.optional().describe(
+  "Project UUID. Optional: an issue UUID or identifier like 'MIND-42' already " +
+    "names its project. Required only with a bare issue number, or when two of " +
+    "your projects share the identifier's key.",
+);
 
 /** A routine (MIN-185) such that an MCP client rereads it — cadence in clear,
  never a cron expression: this is what it must redisplay to the user. */
@@ -651,6 +665,21 @@ async function issueBriefFor(
   );
 }
 
+/**
+ * The per-item code of an issue that did not resolve: `issueNotFound` as
+ * before for a missing issue, otherwise the resolver's own code (a role,
+ * a bare number or an ambiguous key, MIN-952).
+ */
+function issueFailureCode(result: ToolResult): string {
+  try {
+    const code = (JSON.parse(result.content[0]?.text ?? "") as { error?: { code?: string } })
+      .error?.code;
+    return !code || code === "issue_not_found" ? "issueNotFound" : code;
+  } catch {
+    return "issueNotFound";
+  }
+}
+
 function toolErrorMessage(result: ToolResult): string {
   try {
     const parsed = JSON.parse(result.content[0]?.text ?? "") as {
@@ -660,6 +689,35 @@ function toolErrorMessage(result: ToolResult): string {
   } catch {
     return "Request failed";
   }
+}
+
+/**
+ * The issues of a cycle tool. With `project_id`, they all resolve in that
+ * project after one access check, which refuses the whole call as before.
+ * Without it, each resolves in the project its UUID or identifier names
+ * (MIN-952): a cycle spans projects, so one call may mix them, and each
+ * project's role is checked on its own.
+ */
+async function resolveCycleIssues(
+  userId: string,
+  projectId: string | undefined,
+  refs: readonly string[],
+): Promise<
+  | { resolved: Array<{ issue: ResolvedIssue } | { error: ToolResult }> }
+  | { error: ToolResult }
+> {
+  if (projectId) {
+    const project = await resolveProject(userId, projectId);
+    if ("error" in project) return project;
+    return {
+      resolved: await mapWithConcurrency(refs, BULK_WRITE_CONCURRENCY, (ref) =>
+        resolveIssueRef(project.access, ref)),
+    };
+  }
+  return {
+    resolved: await mapWithConcurrency(refs, BULK_WRITE_CONCURRENCY, (ref) =>
+      resolveIssueAnywhere(userId, undefined, ref)),
+  };
 }
 
 function mcpReadCtx(access: ProjectAccess, actorId?: string): ReadContext {
@@ -1394,7 +1452,7 @@ export function registerMinddyTools(
         "what to save and report). Follow it; without the parameter, no brief is " +
         "returned.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issue: ISSUE_REF,
         brief: z
           .enum(ISSUE_BRIEF_ACTIONS)
@@ -1406,10 +1464,9 @@ export function registerMinddyTools(
       annotations: READ_ONLY,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       const r = await getIssue(mcpReadCtx(scope.access, scope.userId), {
         issue_id: ref.issue.id,
@@ -1468,14 +1525,13 @@ export function registerMinddyTools(
         "Use it to review a PR, explain what it changes, or act on the review feedback. " +
         "Fails if the issue has no linked PR, or if the project has no linked " +
         "repository.",
-      inputSchema: z.object({ project_id: PROJECT_ID, issue: ISSUE_REF }),
+      inputSchema: z.object({ project_id: ISSUE_PROJECT_ID, issue: ISSUE_REF }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       let linked;
       try {
@@ -1569,7 +1625,7 @@ export function registerMinddyTools(
         "pull request — several TERMINAL pull requests on one issue are normal. Re-linking " +
         "the same PR to the same issue is not an error, it just reports 'already: true'.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issue: ISSUE_REF,
         pull_request: z
           .union([z.string(), z.number()])
@@ -1581,10 +1637,9 @@ export function registerMinddyTools(
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       const found = await resolveProjectPullRequest({
         projectId: scope.access.project.id,
@@ -2299,7 +2354,7 @@ export function registerMinddyTools(
         "Issues are updated independently: one failure does not stop the others, " +
         "so check `failed` in the result (`updated` lists the rest, in input order).",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issues: z
           .array(ISSUE_REF)
           .min(1)
@@ -2327,7 +2382,10 @@ export function registerMinddyTools(
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireProjectForIssues(extra, args.project_id, [
+        ...args.issues,
+        ...(args.updates ?? []).map((u) => u.issue),
+      ]);
       if ("error" in scope) return scope.error;
 
       const sharedRefs = [...new Set(args.issues)];
@@ -2485,7 +2543,7 @@ export function registerMinddyTools(
         "All-or-nothing: an invalid index rejects the whole batch. Returns the " +
         "refreshed plan_tasks and plan_progress.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issue: ISSUE_REF,
         tasks: z
           .array(
@@ -2500,10 +2558,9 @@ export function registerMinddyTools(
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
@@ -2568,7 +2625,7 @@ export function registerMinddyTools(
         "`section`), the same way. Returns the refreshed plan_tasks and " +
         "plan_progress (for a plan).",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issue: ISSUE_REF,
         field: z
           .enum(["plan", "description"])
@@ -2595,10 +2652,9 @@ export function registerMinddyTools(
       annotations: WRITE,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       if (!args.markdown.trim()) {
         return fail("invalid_params", "markdown must carry the block to add.");
@@ -2665,7 +2721,7 @@ export function registerMinddyTools(
         "passages to change? Put the first in old_string/new_string and the " +
         "others in `edits`: one call, one write.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issue: ISSUE_REF,
         field: z
           .enum(["plan", "description"])
@@ -2675,10 +2731,9 @@ export function registerMinddyTools(
       annotations: WRITE,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       const edits = readTextEdits(args);
 
@@ -2753,7 +2808,7 @@ export function registerMinddyTools(
         "comment id. To answer a comment, reply INSIDE its thread by passing " +
         "parent_comment_id; a new root comment leaves the thread unanswered.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issue: ISSUE_REF,
         body: z
           .string()
@@ -2775,10 +2830,9 @@ export function registerMinddyTools(
       annotations: WRITE,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       const result = await addCommentToIssue({
         issueId: ref.issue.id,
@@ -2807,7 +2861,7 @@ export function registerMinddyTools(
         "exclusive: send exactly one. Either way it shows as the same pill in " +
         "the app, and minddy_get_issue lists it.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issue: ISSUE_REF,
         comment_id: z
           .string()
@@ -2862,10 +2916,9 @@ export function registerMinddyTools(
       annotations: WRITE,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireIssueScope(extra, args);
       if ("error" in scope) return scope.error;
-      const ref = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in ref) return ref.error;
+      const ref = scope;
 
       // The three forms are exclusive: a call which carries two (or
       //none) is an ambiguous intention, not something to be guessed at.
@@ -3298,7 +3351,7 @@ export function registerMinddyTools(
         "objective), state the first one as usual and the others in `links` — " +
         "one call, applied in order, each with its own result.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         ...LINK_FIELDS.shape,
         links: z
           .array(LINK_FIELDS)
@@ -3315,7 +3368,12 @@ export function registerMinddyTools(
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      // Objectives name no project: only issue references locate it.
+      const links = [args, ...(args.links ?? [])];
+      const scope = await requireProjectForIssues(extra, args.project_id, [
+        ...links.map((link) => link.issue),
+        ...links.map((link) => link.target),
+      ].filter((ref): ref is string => typeof ref === "string" && !/^obj:/i.test(ref)));
       if ("error" in scope) return scope.error;
 
       const linkOne = async (
@@ -4253,10 +4311,10 @@ export function registerMinddyTools(
         "refused ('triageCannotJoinCycle'): triage is undecided work, a cycle is " +
         "a commitment — move it out of triage first. Reassigning an issue to " +
         "someone else later silently drops it from the cycle, and so does moving " +
-        "it back to triage. The cycle is cross-project: call once per project to " +
-        "add issues from several.",
+        "it back to triage. The cycle is cross-project: without project_id, one " +
+        "call may add issues from several projects.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),
       }),
       annotations: WRITE_IDEMPOTENT,
@@ -4264,8 +4322,8 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireCycle(extra);
       if ("error" in scope) return scope.error;
-      const project = await resolveProject(scope.userId, args.project_id);
-      if ("error" in project) return project.error;
+      const issues = await resolveCycleIssues(scope.userId, args.project_id, args.issues);
+      if ("error" in issues) return issues.error;
       const ensured = await ensureCycles({
         service: getServiceClient(),
         userId: scope.userId,
@@ -4277,17 +4335,13 @@ export function registerMinddyTools(
 
       const added: string[] = [];
       const failed: Array<{ issue: string; error: string }> = [];
-      const resolvedRefs = await mapWithConcurrency(
-        args.issues,
-        BULK_WRITE_CONCURRENCY,
-        (ref) => resolveIssueRef(project.access, ref),
-      );
+      const resolvedRefs = issues.resolved;
       for (const [index, ref] of args.issues.entries()) {
         const resolved = resolvedRefs[index];
         if ("error" in resolved) {
           failed.push({
             issue: ref,
-            error: `Issue '${ref}' not found in this project.`,
+            error: toolErrorMessage(resolved.error),
           });
           continue;
         }
@@ -4321,7 +4375,7 @@ export function registerMinddyTools(
         "or assignment changes per item. Repeating a completed move is safe. " +
         "The timezone resolves cycle boundaries in the owner's local calendar.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),
         target_cycle: z.enum(["current", "next"]),
         timezone: z
@@ -4336,23 +4390,19 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireCycle(extra);
       if ("error" in scope) return scope.error;
-      const project = await resolveProject(scope.userId, args.project_id);
-      if ("error" in project) return project.error;
+      const issues = await resolveCycleIssues(scope.userId, args.project_id, args.issues);
+      if ("error" in issues) return issues.error;
 
       const failed: Array<{ issue: string; code?: string; error: string }> = [];
       const identifiersById = new Map<string, string>();
-      const resolvedRefs = await mapWithConcurrency(
-        args.issues,
-        BULK_WRITE_CONCURRENCY,
-        (ref) => resolveIssueRef(project.access, ref),
-      );
+      const resolvedRefs = issues.resolved;
       for (const [index, ref] of args.issues.entries()) {
         const resolved = resolvedRefs[index];
         if ("error" in resolved) {
           failed.push({
             issue: ref,
-            code: "issueNotFound",
-            error: `Issue '${ref}' not found in this project.`,
+            code: issueFailureCode(resolved.error),
+            error: toolErrorMessage(resolved.error),
           });
           continue;
         }
@@ -4402,7 +4452,7 @@ export function registerMinddyTools(
         "Assignment and status are untouched; the issues simply leave the cycle. " +
         "Issues that aren't in the owner's current cycle are reported in `failed`.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),
       }),
       annotations: WRITE_IDEMPOTENT,
@@ -4410,8 +4460,8 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireCycle(extra);
       if ("error" in scope) return scope.error;
-      const project = await resolveProject(scope.userId, args.project_id);
-      if ("error" in project) return project.error;
+      const issues = await resolveCycleIssues(scope.userId, args.project_id, args.issues);
+      if ("error" in issues) return issues.error;
       const service = getServiceClient();
       const ensured = await ensureCycles({
         service,
@@ -4424,17 +4474,13 @@ export function registerMinddyTools(
 
       const removed: string[] = [];
       const failed: Array<{ issue: string; error: string }> = [];
-      const resolvedRefs = await mapWithConcurrency(
-        args.issues,
-        BULK_WRITE_CONCURRENCY,
-        (ref) => resolveIssueRef(project.access, ref),
-      );
+      const resolvedRefs = issues.resolved;
       for (const [index, ref] of args.issues.entries()) {
         const resolved = resolvedRefs[index];
         if ("error" in resolved) {
           failed.push({
             issue: ref,
-            error: `Issue '${ref}' not found in this project.`,
+            error: toolErrorMessage(resolved.error),
           });
           continue;
         }
@@ -4905,14 +4951,14 @@ export function registerMinddyTools(
         "post's public status immediately reflects the issue and follows its " +
         "transitions. Fails if the post is already linked or merged.",
       inputSchema: z.object({
-        project_id: PROJECT_ID,
+        project_id: ISSUE_PROJECT_ID,
         feedback_post_id: z.string().uuid(),
         issue: ISSUE_REF,
       }),
       annotations: WRITE,
     },
     async (args, extra) => {
-      const scope = await requireProject(extra, args.project_id);
+      const scope = await requireProjectForIssues(extra, args.project_id, [args.issue]);
       if ("error" in scope) return scope.error;
       const ref = await resolveFeedbackPost(
         scope.access,

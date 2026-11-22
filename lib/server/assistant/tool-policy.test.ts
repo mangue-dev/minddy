@@ -28,7 +28,7 @@ vi.mock("@/lib/server/mcp-client", async (original) => ({
 }));
 
 const { executeTool } = await import("./execute-tool");
-const { ASSISTANT_TOOLS, CONVERSATION_ASSISTANT_TOOLS } = await import("./tools");
+const { ASSISTANT_TOOLS, CONVERSATION_ASSISTANT_TOOLS, ISSUE_TARGETED_TOOLS } = await import("./tools");
 const { NUMO_TOOL_NAMES, NUMO_TOOL_POLICY } = await import("./tool-policy");
 
 const USER = "93800000-0000-4000-8000-000000000001";
@@ -81,9 +81,11 @@ describe("the Numo tool policy", () => {
         case "per_item":
           expect(tool, name).toBe(ASSISTANT_TOOLS[index]);
           break;
+        // A tool that names its issue finds the project there (MIN-952).
         case "project":
           expect(projectId?.type, name).toBe("string");
-          expect(required, name).toContain("project_id");
+          if (ISSUE_TARGETED_TOOLS.has(name)) expect(required, name).not.toContain("project_id");
+          else expect(required, name).toContain("project_id");
           break;
         case "project_or_personal":
         case "view":

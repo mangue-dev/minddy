@@ -300,7 +300,7 @@ describe("multimodal rereads and durable replay", () => {
     const resource = CONVERSATION_ASSISTANT_TOOLS.find((t) => t.function.name === "add_resource")!;
     expect(resource.function.parameters.properties).toHaveProperty("attachment_id");
     expect(resource.function.parameters.properties).toHaveProperty("comment_id");
-    expect(resource.function.parameters.required).toContain("project_id");
+    expect(resource.function.parameters.properties).toHaveProperty("project_id");
   });
 });
 

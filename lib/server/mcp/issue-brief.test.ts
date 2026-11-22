@@ -22,7 +22,8 @@ vi.mock("@/lib/server/issue-event-store", () => ({
 }));
 vi.mock("./tool-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./tool-helpers")>();
-  return {
+  const { withIssueScopeMocks } = await import("@/test/mcp-issue-scope-mocks");
+  return withIssueScopeMocks({
     ...actual,
     requireProject: vi.fn(async () => ({
       userId: "user-1",
@@ -30,7 +31,7 @@ vi.mock("./tool-helpers", async (importOriginal) => {
       access: { project: { id: "project-1", key: "MIN" } },
     })),
     resolveIssueRef: vi.fn(async () => ({ issue: { id: "issue-1", identifier: "MIN-42" } })),
-  };
+  });
 });
 
 type Handler = (args: Record<string, unknown>, extra: ToolExtra) => Promise<ToolResult>;

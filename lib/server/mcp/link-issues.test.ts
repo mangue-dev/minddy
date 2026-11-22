@@ -10,14 +10,15 @@ vi.mock("@/lib/server/issue-relations", () => ({ addIssueRelation, findIssueRela
 vi.mock("@/lib/server/posthog", () => ({ captureServerEvent: vi.fn() }));
 vi.mock("./tool-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./tool-helpers")>();
-  return {
+  const { withIssueScopeMocks } = await import("@/test/mcp-issue-scope-mocks");
+  return withIssueScopeMocks({
     ...actual,
     requireProject: vi.fn(async () => ({ userId: "user-1", keyId: null, access: { project: { id: "project-1", key: "MIN" } } })),
     resolveIssueRef: vi.fn(async (_access, ref: string) => ref.startsWith("MIN-")
       ? { issue: { id: ref, identifier: ref } }
       : { error: actual.fail("issue_not_found", "Issue not found") }),
     resolveObjectiveRef: vi.fn(async (_access, ref: string) => ({ objective: { id: ref, name: ref.replace(/^obj:/, "") } })),
-  };
+  });
 });
 
 type Handler = (args: Record<string, unknown>, extra: ToolExtra) => Promise<ToolResult>;

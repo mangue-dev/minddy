@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { decodeProjectName } from "@/lib/server/project-content";
+import { locateIssueProject } from "@/lib/server/issue-reads";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -67,5 +68,28 @@ export async function resolveAssistantProjectTarget(
     return { projectId: matched?.id ?? projectId };
   } catch {
     return { projectId };
+  }
+}
+
+/**
+ * A project tool call that names its issue but not its project (MIN-952): the
+ * issue's own project fills `project_id`, the way the MCP reads it from the
+ * reference. Only an `issue_id` UUID in a project the user can open counts;
+ * any other call comes back unchanged, so the executor and the background
+ * guard keep refusing a call with no project as before, and still check the
+ * user's role in the filled project.
+ */
+export async function withIssueProject(
+  ctx: AssistantProjectTargetResolver,
+  args: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const named = typeof args.project_id === "string" && args.project_id.trim() !== "";
+  const issueId = typeof args.issue_id === "string" ? args.issue_id.trim() : "";
+  if (named || !UUID_RE.test(issueId)) return args;
+  try {
+    const located = await locateIssueProject(ctx.service, ctx.userId, issueId);
+    return "projectId" in located ? { ...args, project_id: located.projectId } : args;
+  } catch {
+    return args;
   }
 }

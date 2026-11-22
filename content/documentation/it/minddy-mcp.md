@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-16",
+  "updatedAt": "2026-11-22",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -53,6 +53,7 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "lib/server/issue-reads.ts",
+      "lib/server/mcp/tool-helpers.ts",
       "components/settings/account-settings-page.tsx",
       "lib/server/project-stats.ts",
       "lib/project-stats.ts",
@@ -61,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 connection wizard: the install step's Copy the prompt action and the collapsible Set it up by hand section checked against components/settings/mcp-connect-panel.tsx and messages/*.json; no browser walkthrough; the client-picker figure caption updated; the install-step figure still shows the former layout and needs recapture); agent:claude-code (MIN-907 Other client: the Other entry copying the general prompt with the instance's /api/mcp address, and the two-column cards in the phone tour's sheet, checked against components/settings/mcp-connect-panel.tsx, components/first-run/onboarding-screen.tsx and messages/*.json; no browser walkthrough; the client-picker figure does not show the Other entry and needs recapture); agent:claude-code (MIN-964 tour on every platform: Connect a coding agent opens the client cards in a sheet on a phone and in a dialog on a computer, checked against components/first-run/onboarding-screen.tsx; no browser walkthrough; no figure recaptured); agent:claude-code (MIN-1012 change mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (it paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (it paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance); agent:claude-code (it MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 connection wizard paragraph and figure caption with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 Other client paragraph with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-964 changed passages on the tour on every platform, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it translation of the MIN-1012 views sentence; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-952: issue tools without project_id described from lib/server/mcp/tool-helpers.ts, lib/server/mcp/tools.ts and lib/server/issue-reads.ts; covered by lib/server/mcp/issue-scope.test.ts; no figure affected; not checked against a running server); agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 connection wizard: the install step's Copy the prompt action and the collapsible Set it up by hand section checked against components/settings/mcp-connect-panel.tsx and messages/*.json; no browser walkthrough; the client-picker figure caption updated; the install-step figure still shows the former layout and needs recapture); agent:claude-code (MIN-907 Other client: the Other entry copying the general prompt with the instance's /api/mcp address, and the two-column cards in the phone tour's sheet, checked against components/settings/mcp-connect-panel.tsx, components/first-run/onboarding-screen.tsx and messages/*.json; no browser walkthrough; the client-picker figure does not show the Other entry and needs recapture); agent:claude-code (MIN-964 tour on every platform: Connect a coding agent opens the client cards in a sheet on a phone and in a dialog on a computer, checked against components/first-run/onboarding-screen.tsx; no browser walkthrough; no figure recaptured); agent:claude-code (MIN-1012 change mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (it MIN-952 passages on optional project_id, translated from en revision 22 in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (it paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (it paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance); agent:claude-code (it MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 connection wizard paragraph and figure caption with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 Other client paragraph with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-964 changed passages on the tour on every platform, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it translation of the MIN-1012 views sentence; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-22"
   },
   "related": [
     "numo",
@@ -87,7 +88,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per aprire i suoi due passaggi di collegamento.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -104,7 +105,7 @@
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
       "alt": "Passaggio di installazione di Codex nella procedura di collegamento al MCP di minddy, con l’endpoint minddy Cloud.",
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -160,13 +161,13 @@ minddy MCP nelle impostazioni dell’account elenca accessi esterni e controlli 
 
 ## Usare minddy MCP e scoprire gli strumenti attuali {#mcp-tool-reference}
 
-`/api/mcp` usa Streamable HTTP, strumenti stateless e OAuth 2.1. Collega il tuo account tramite il consenso nel browser; le vecchie chiavi `mdyk_` non sono accettate. Usa `minddy_list_projects` per trovare gli UUID, poi leggi gli schemi del server collegato. `/llms-full.txt` genera i parametri esatti dai registri degli strumenti. Non ricostruirli da un elenco obsoleto. Ogni strumento di progetto ricontrolla l’accesso e restituisce codici di errore stabili.
+`/api/mcp` usa Streamable HTTP, strumenti stateless e OAuth 2.1. Collega il tuo account tramite il consenso nel browser; le vecchie chiavi `mdyk_` non sono accettate. Usa `minddy_list_projects` per trovare gli UUID dei progetti, necessari agli strumenti che agiscono su un intero progetto, poi leggi gli schemi del server collegato. `/llms-full.txt` genera i parametri esatti dai registri degli strumenti. Non ricostruirli da un elenco obsoleto. Ogni strumento di progetto ricontrolla l’accesso e restituisce codici di errore stabili.
 
 ### Leggere prima di modificare i piani {#issue-plans}
 
 Per trovare un ticket, chiama `minddy_list_issues` con `query`: la ricerca considera le parole del titolo e della descrizione, un identificatore o un numero. Le corrispondenze testuali e gli identificatori esatti vengono per primi; una ricerca descrittiva può poi aggiungere ticket dello stesso progetto trovati [per significato](/docs/navigation#search-by-meaning), contrassegnati con `match: "semantic"`. Leggi un ticket di questo tipo prima di agire. La ricerca per significato viene addebitata al tuo account come **Ricerca dei ticket** e non avviene se hai disattivato **Indicizza i ticket**.
 
-`minddy_get_issue` accetta l’UUID di un ticket, un identificatore di ticket come `DEMO-42` oppure il numero del ticket; `project_id` viene fornito separatamente. `plan_tasks` indica `task_index` a partire da zero. `minddy_update_plan_task` riceve un array `tasks` con gli stati `pending`, `in_progress`, `completed` o `cancelled`; un indice non valido fa rifiutare l’intero batch. `minddy_append_to_plan` aggiunge contenuto, mentre `minddy_edit_issue_text` sostituisce una coppia `old_string`/`new_string` esatta e univoca. Rileggi un piano che può essere cambiato: sostituirlo interamente potrebbe sovrascrivere il progresso di altri. La sezione `## Questions` è esclusa dal conteggio delle attività.
+`minddy_get_issue` e gli altri strumenti che indicano dei ticket accettano l’UUID di un ticket, un identificatore come `DEMO-42` oppure il numero del ticket. Un UUID o un identificatore indica già il suo progetto, quindi `project_id` è facoltativo. Passalo con un numero da solo, oppure quando due dei tuoi progetti condividono una chiave e l’errore `ambiguous_issue_ref` li elenca. Un `project_id` che non è quello del ticket restituisce `issue_not_found`. `plan_tasks` indica `task_index` a partire da zero. `minddy_update_plan_task` riceve un array `tasks` con gli stati `pending`, `in_progress`, `completed` o `cancelled`; un indice non valido fa rifiutare l’intero batch. `minddy_append_to_plan` aggiunge contenuto, mentre `minddy_edit_issue_text` sostituisce una coppia `old_string`/`new_string` esatta e univoca. Rileggi un piano che può essere cambiato: sostituirlo interamente potrebbe sovrascrivere il progresso di altri. La sezione `## Questions` è esclusa dal conteggio delle attività.
 
 Quando un prompt di minddy indica un brief (`plan`, `implement`, `verify`, `comments` o `custom`), passalo a `minddy_get_issue` come `brief`. Il risultato inizia allora con un campo `brief`: la procedura da seguire per quell'attività su quel ticket. Il resto del risultato sono dati, non istruzioni.
 
@@ -190,11 +191,10 @@ Gli strumenti delle routine, riservati al proprietario, creano, modificano, sosp
 
 ### Verificare con un esempio {#example}
 
-L’esempio modifica la prima attività di un piano già letto. Sostituisci l’UUID del progetto e il ticket con quelli trovati tramite discovery, e usa l’indice dell’ultima lettura. Controlla poi `plan_tasks` e `plan_progress`. Per un errore di accesso, verifica account e progetto; per un conflitto, rileggi e applica solo la modifica necessaria. Non ripetere una modifica esterna con esito incerto senza averne verificato il risultato.
+L’esempio modifica la prima attività di un piano già letto. Sostituisci il ticket con uno trovato tramite discovery, e usa l’indice dell’ultima lettura. Controlla poi `plan_tasks` e `plan_progress`. Per un errore di accesso, verifica account e progetto; per un conflitto, rileggi e applica solo la modifica necessaria. Non ripetere una modifica esterna con esito incerto senza averne verificato il risultato.
 
 ```json
 {
-  "project_id": "00000000-0000-4000-8000-000000000001",
   "issue": "DEMO-42",
   "tasks": [{"task_index": 0, "state": "in_progress"}]
 }
