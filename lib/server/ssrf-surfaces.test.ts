@@ -276,7 +276,6 @@ vi.mock("@/lib/server/api-auth", () => ({
   }),
 }));
 vi.mock("@/lib/server/agent/byok-credentials", () => ({
-  LOCAL_ENDPOINT_WITHOUT_API_KEY: "sans-cle-local",
   encryptUserAiKey: () => "chiffré",
   decryptUserAiKey: () => "sk-test",
   keyPrefix: () => "sk-…",
@@ -323,7 +322,7 @@ describe("base URL BYOK « generic »", () => {
       jsonRequest({ provider: "ollama", base_url: "http://127.0.0.1:11434" })
     );
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ code: "local_provider_retired" });
+    await expect(response.json()).resolves.toMatchObject({ error: "Unsupported provider" });
     expect(pinnedRequest).not.toHaveBeenCalled();
   });
 });

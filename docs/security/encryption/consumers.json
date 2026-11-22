@@ -3,91 +3,91 @@
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 154,
+    "line": 153,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 159,
+    "line": 158,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 274,
+    "line": 266,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "upsert_user_ai_key_protected",
-    "line": 292,
+    "line": 284,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "upsert_user_ai_key",
-    "line": 315,
+    "line": 307,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 341,
+    "line": 333,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "delete_user_ai_key",
-    "line": 364,
+    "line": 356,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 421,
+    "line": 413,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "set_user_ai_capability_assignment",
-    "line": 439,
+    "line": 431,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 460,
+    "line": 452,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "update_user_ai_key_preferences_protected",
-    "line": 526,
+    "line": 518,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "update_user_ai_key_preferences",
-    "line": 539,
+    "line": 531,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 569,
+    "line": 561,
     "storage": false
   },
   {
@@ -11812,7 +11812,7 @@
     "file": "lib/server/user-ai-key-content.ts",
     "operation": "from",
     "resource": "user_ai_key_content_scope",
-    "line": 32,
+    "line": 31,
     "storage": false
   },
   {

@@ -18,7 +18,6 @@ import {
 import {
   getAgentProvider,
   isKnownAgentProvider,
-  isRetiredLocalProvider,
   normalizeBaseUrl,
   resolveProviderBaseUrl,
 } from "@/lib/agent-providers";
@@ -200,13 +199,6 @@ export async function POST(request: NextRequest) {
   const key = typeof body.key === "string" ? body.key.trim() : "";
   const provider =
     typeof body.provider === "string" ? body.provider.trim() : "";
-  if (isRetiredLocalProvider(provider)) {
-    const t = await getTranslations("ApiErrors");
-    return NextResponse.json(
-      { error: t("aiLocalProviderRetired"), code: "local_provider_retired" },
-      { status: 400 },
-    );
-  }
   if (!isKnownAgentProvider(provider)) {
     return NextResponse.json(
       { error: "Unsupported provider" },

@@ -21,13 +21,6 @@ function getAiKeySecret(): string {
   return requireSecret("AI_KEY_ENCRYPTION_SECRET");
 }
 
-/**
- * Stands in for the missing key of a local endpoint saved before MIN-996
- * (`key_encrypted` is `NOT NULL`). Only decoding still meets it, so those rows
- * stay listed until their owner removes them; nothing writes it any more.
- */
-export const LOCAL_ENDPOINT_WITHOUT_API_KEY = "minddy:local-endpoint-without-api-key:v1";
-
 export function encryptUserAiKey(plain: string): string {
   return JSON.stringify(encrypt(plain, getAiKeySecret()));
 }
