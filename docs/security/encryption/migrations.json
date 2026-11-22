@@ -341,5 +341,6 @@
   "20270109200129_numo_turn_events_tool_result.sql": "ada0401595a49327f3fffa8e749cbbe91c8694c354d6ca2b11629c69ff48ffe0",
   "20270109200130_numo_turns_never_stranded.sql": "46f301fa15a91498385f16fddd590cd9161d3ff7d0449d235234e5e5dd80adb3",
   "20270109200131_revoke_schema_create_from_api_roles.sql": "1f4f290523a6e88f317ae472e359a770987fe959b291a49ca68342c5c198099b",
-  "20270109200132_push_subscription_session.sql": "78463223cc6035ae9f481b45eb509fb7d3216ae116a2707a86ea9e5ccdb1a61e"
+  "20270109200132_push_subscription_session.sql": "78463223cc6035ae9f481b45eb509fb7d3216ae116a2707a86ea9e5ccdb1a61e",
+  "20270109200133_drop_local_ai_keys_and_enabled_surfaces.sql": "7319af92f6538f472dd647a9150e5c49467c1cf9925bd330335f0e02146500ca"
 }

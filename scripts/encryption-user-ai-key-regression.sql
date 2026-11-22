@@ -33,9 +33,10 @@ BEGIN
       saved.encryption_version<>1 THEN
     RAISE EXCEPTION 'Protected BYOK source retained clear values';
   END IF;
+  revision:=saved.content_revision;
   SELECT * INTO saved FROM public.update_user_ai_key_preferences_protected(
-    actor,new_id,saved.content_revision,cipher,1,ARRAY['agent']::text[]);
-  IF saved.enabled_surfaces<>ARRAY['agent']::text[] THEN
+    actor,new_id,revision,cipher,1);
+  IF saved.id IS DISTINCT FROM new_id OR saved.content_revision<=revision THEN
     RAISE EXCEPTION 'Protected preferences were not updated';
   END IF;
   rejected:=false;
@@ -53,7 +54,7 @@ BEGIN
   rejected:=false;
   BEGIN
     PERFORM * FROM public.update_user_ai_key_preferences(actor,new_id,
-      NULL,'{"chat":"private"}'::jsonb);
+      '{"chat":"private"}'::jsonb);
   EXCEPTION WHEN check_violation THEN rejected:=true; END;
   IF NOT rejected THEN RAISE EXCEPTION 'Old preferences RPC accepted'; END IF;
   IF has_function_privilege('authenticated',

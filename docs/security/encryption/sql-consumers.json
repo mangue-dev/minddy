@@ -5865,36 +5865,6 @@
       ],
       "functionReferences": []
     },
-    "update_user_ai_key_preferences(uuid,text,text[],jsonb)": {
-      "sha256": "3fef543b2f319375c665732e048ecc2c60dc26627490110555fe55934671d956",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "user_ai_keys"
-      ],
-      "protectedRelations": [
-        "user_ai_keys"
-      ],
-      "functionReferences": []
-    },
-    "update_user_ai_key_preferences(uuid,uuid,text[],jsonb)": {
-      "sha256": "0344108c8d5146215a35e40051dc3d2b9efe1c3d7b94d1ad65435d7ab4130fa3",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "user_ai_keys"
-      ],
-      "protectedRelations": [
-        "user_ai_keys"
-      ],
-      "functionReferences": []
-    },
     "verify_forge_attachment_object(uuid,text,integer,text)": {
       "sha256": "a0748ab2599f5bee3c18ffac36eaf164415c93963d548809ab7011311e63b828",
       "securityDefiner": true,
@@ -6644,7 +6614,7 @@
       "functionReferences": []
     },
     "upsert_user_ai_key(uuid,text,text,text,text,timestamp with time zone)": {
-      "sha256": "8e8cce4c8c4d819928764341c1f7c5de7236c8d2f674b8841e245301f59f487c",
+      "sha256": "1b93ecb92557a2bb31c047426590dff7c462cac4448d95aa2a6505cc3ecc0716",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6705,21 +6675,6 @@
       "protectedRelations": [
         "comments",
         "page_comments"
-      ],
-      "functionReferences": []
-    },
-    "replace_user_ai_key(uuid,text,text,text,text,timestamp with time zone)": {
-      "sha256": "0da9806285b42c68de9c5501420eecad73f281e84e0f329d0dfc459d93221168",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "user_ai_keys"
-      ],
-      "protectedRelations": [
-        "user_ai_keys"
       ],
       "functionReferences": []
     },
@@ -6972,21 +6927,6 @@
         "provider_operation_reservations"
       ],
       "protectedRelations": [],
-      "functionReferences": []
-    },
-    "update_user_ai_key_preferences_protected(uuid,uuid,bigint,text,integer,text[])": {
-      "sha256": "e2726d1376eb2ee821100405d0a4cf37cd13fcd3d566f1467f91e325a66a55c7",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "user_ai_keys"
-      ],
-      "protectedRelations": [
-        "user_ai_keys"
-      ],
       "functionReferences": []
     },
     "checkpoint_numo_tool_round_protected(uuid,uuid,uuid,text,integer,jsonb,integer)": {
@@ -7247,7 +7187,7 @@
       "functionReferences": []
     },
     "upsert_user_ai_key_protected(uuid,text,uuid,bigint,text,integer,text,timestamp with time zone)": {
-      "sha256": "c1bc701dc760317e777c3fe3d2f1d1c8efdf6eaed38c9de1a5d7840bbc988edf",
+      "sha256": "88ea1a8e0c75e415ee844d87eb54a697677fffd80a8c814acd9e5b30e4c781db",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -7570,6 +7510,36 @@
         "issues",
         "projects",
         "issue_events"
+      ],
+      "functionReferences": []
+    },
+    "update_user_ai_key_preferences(uuid,uuid,jsonb)": {
+      "sha256": "2776022f551bc9e186173954838fc12f3675443823a6179e601eb0d0a3aa87d1",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "user_ai_keys"
+      ],
+      "protectedRelations": [
+        "user_ai_keys"
+      ],
+      "functionReferences": []
+    },
+    "update_user_ai_key_preferences_protected(uuid,uuid,bigint,text,integer)": {
+      "sha256": "c4eef393cb6074fd2452408cca104e7ea79de55aa93537624ae6af2bd16d7627",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "user_ai_keys"
+      ],
+      "protectedRelations": [
+        "user_ai_keys"
       ],
       "functionReferences": []
     }

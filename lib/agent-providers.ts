@@ -24,17 +24,6 @@ export type AgentProviderId =
   | "opencode-zen"
   | "generic";
 
-/**
- * Local providers retired in MIN-996: no server call could reach them. Rows
- * saved before stay listed so their owner can remove them; nothing new is
- * accepted. The schema cleanup deletes the rows and this list with them.
- */
-export const RETIRED_LOCAL_PROVIDERS = ["local_openai", "ollama"] as const;
-
-export function isRetiredLocalProvider(id: string | null | undefined): boolean {
-  return (RETIRED_LOCAL_PROVIDERS as readonly string[]).includes(id ?? "");
-}
-
 /** Adjustments to the chat request by provider (OpenAI compat variable). */
 export interface ProviderRequestProfile {
   /** Sends `usage: { include: true }` (OpenRouter cost count). */

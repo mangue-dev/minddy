@@ -3526,7 +3526,6 @@
         "key_prefix"
       ],
       "operational_configuration": [
-        "enabled_surfaces",
         "provider"
       ],
       "routing_identity": [

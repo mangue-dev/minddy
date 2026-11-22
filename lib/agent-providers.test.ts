@@ -3,18 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   getAgentProvider,
   isKnownAgentProvider,
-  isRetiredLocalProvider,
   resolveProviderBaseUrl,
 } from "./agent-providers";
 
 describe("retired local providers (MIN-996)", () => {
-  it("are no longer providers a key can resolve to, but stay recognizable for removal", () => {
+  it("are no longer providers a key can resolve to", () => {
     for (const provider of ["local_openai", "ollama"]) {
       expect(isKnownAgentProvider(provider)).toBe(false);
       expect(resolveProviderBaseUrl(provider, "http://127.0.0.1:11434")).toBeNull();
-      expect(isRetiredLocalProvider(provider)).toBe(true);
     }
-    expect(isRetiredLocalProvider("generic")).toBe(false);
   });
 });
 

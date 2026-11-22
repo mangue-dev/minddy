@@ -2945,3 +2945,21 @@ sign-in screen has to; nothing encrypted is read. Sign-up no longer stages an
 avatar image before the account exists: `stageSignupAvatar` and its storage
 write are gone, and images staged earlier are still claimed or expired on the
 first authenticated arrival. Migration `20270109200121` is additive.
+
+## Local AI keys and `enabled_surfaces` removed (MIN-998)
+
+Migration `20270109200133` is the schema half of MIN-996. It deletes the
+`user_ai_keys` rows of the retired local providers (`local_openai`, `ollama`);
+their capability assignments and usage routes go with them by cascade. It then
+drops the clear `enabled_surfaces` column (operational configuration) and its
+two check constraints. Since MIN-826 a usage's credential is its row in
+`user_ai_usage_routes`, and the account API derives the surfaces it reports
+from those routes. Nothing encrypted changes: `key_encrypted`, `base_url` and
+`feature_models` keep their codec, and both protected writers keep the
+revision check and the clear-column wipe. `update_user_ai_key_preferences`
+and `update_user_ai_key_preferences_protected` lose their surfaces parameter
+and keep `service_role` as their only grantee; `replace_user_ai_key` and the
+provider-addressed preferences overload, without callers since MIN-573, are
+dropped. The inventory records of these functions were refreshed from the
+preview definitions with `scripts/encryption-schema-audit.sql`; other records
+were left as they were.

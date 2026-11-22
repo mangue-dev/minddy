@@ -2550,11 +2550,6 @@
         "nullable": false,
         "generated": false
       },
-      "enabled_surfaces": {
-        "type": "text[]",
-        "nullable": false,
-        "generated": false
-      },
       "encrypted_content": {
         "type": "text",
         "nullable": true,

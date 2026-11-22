@@ -5,8 +5,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { EncryptedRowCodec, type StoredRow } from "./encryption/row-codec";
 import { getEncryptedStore } from "./encryption/registry";
 import { isContentEncryptionEnabled } from "./encryption/content-config";
-import { decryptUserAiKey,
-  LOCAL_ENDPOINT_WITHOUT_API_KEY } from "./agent/byok-credentials";
+import { decryptUserAiKey } from "./agent/byok-credentials";
 
 export type UserAiKeyRow = Record<string, unknown> & {
   id: string; user_id: string; provider: string;
@@ -43,8 +42,7 @@ export async function decodeUserAiKeyRow(row: UserAiKeyRow,
   actorId: string | null = null): Promise<UserAiKeyRow> {
   if (row.encryption_version === undefined || row.encryption_version === 0) {
     if (row.encrypted_content != null) throw new Error("Invalid legacy BYOK state");
-    const key = row.key_encrypted === LOCAL_ENDPOINT_WITHOUT_API_KEY
-      ? row.key_encrypted : decryptUserAiKey(row.key_encrypted);
+    const key = decryptUserAiKey(row.key_encrypted);
     if (key === null) throw new Error("Unable to decode legacy BYOK credential");
     const plain = { ...row, key_encrypted: key,
       feature_models: row.feature_models ?? {} };

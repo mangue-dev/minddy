@@ -24,7 +24,6 @@ import { ProviderLogo } from "@/components/model-logo";
 import {
   AGENT_PROVIDERS,
   getAgentProvider,
-  isRetiredLocalProvider,
 } from "@/lib/agent-providers";
 import { addAiKeyApi, deleteAiKeyApi, type AiKey } from "@/lib/agent-keys-api";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
@@ -70,13 +69,9 @@ export function ByokConnectPanel({
     if (entry.id === "generic") return t("aiProviderGeneric");
     return entry.label;
   };
-  // A key saved before MIN-996 may name a provider that left the registry.
   const keyProviderLabel = (provider: string) => {
     const definition = getAgentProvider(provider);
-    if (definition) return providerLabel(definition);
-    if (provider === "local_openai") return t("aiProviderLocalOpenAi");
-    if (provider === "ollama") return "Ollama";
-    return provider;
+    return definition ? providerLabel(definition) : provider;
   };
   const availableProviders = useMemo(
     () =>
@@ -207,48 +202,39 @@ export function ByokConnectPanel({
           </div>
         </div>
       )}
-      {keys.map((key) => {
-        const retired = isRetiredLocalProvider(key.provider);
-        return (
-          <div
-            key={key.id}
-            className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
-          >
-            <ProviderLogo provider={key.provider} size={20} />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="text-sm font-medium">
-                {keyProviderLabel(key.provider)}
-              </span>
-              {retired ? (
-                <span className="text-xs text-warning-strong">{t("aiKeyRetired")}</span>
-              ) : (
-                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-                  {key.base_url ? `${key.base_url} · ` : ""}
-                  {key.key_prefix ?? ""}
-                </span>
-              )}
-            </div>
-            {retired ? null : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => beginEdit(key)}
-              >
-                {tc("edit")}
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setRemoving(key)}
-            >
-              {t("aiKeyRemove")}
-            </Button>
+      {keys.map((key) => (
+        <div
+          key={key.id}
+          className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
+        >
+          <ProviderLogo provider={key.provider} size={20} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-medium">
+              {keyProviderLabel(key.provider)}
+            </span>
+            <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+              {key.base_url ? `${key.base_url} · ` : ""}
+              {key.key_prefix ?? ""}
+            </span>
           </div>
-        );
-      })}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => beginEdit(key)}
+          >
+            {tc("edit")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setRemoving(key)}
+          >
+            {t("aiKeyRemove")}
+          </Button>
+        </div>
+      ))}
 
       {mode === "settings" && !adding && (
         <div>
