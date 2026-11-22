@@ -665,6 +665,21 @@ async function issueBriefFor(
   );
 }
 
+/**
+ * The per-item code of an issue that did not resolve: `issueNotFound` as
+ * before for a missing issue, otherwise the resolver's own code (a role,
+ * a bare number or an ambiguous key, MIN-952).
+ */
+function issueFailureCode(result: ToolResult): string {
+  try {
+    const code = (JSON.parse(result.content[0]?.text ?? "") as { error?: { code?: string } })
+      .error?.code;
+    return !code || code === "issue_not_found" ? "issueNotFound" : code;
+  } catch {
+    return "issueNotFound";
+  }
+}
+
 function toolErrorMessage(result: ToolResult): string {
   try {
     const parsed = JSON.parse(result.content[0]?.text ?? "") as {
@@ -4386,7 +4401,7 @@ export function registerMinddyTools(
         if ("error" in resolved) {
           failed.push({
             issue: ref,
-            code: "issueNotFound",
+            code: issueFailureCode(resolved.error),
             error: toolErrorMessage(resolved.error),
           });
           continue;

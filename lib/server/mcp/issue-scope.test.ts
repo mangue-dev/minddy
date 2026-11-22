@@ -21,7 +21,7 @@ const h = vi.hoisted(() => ({
 }));
 
 /**
- * The query subset the resolvers use: equality, null, case-insensitive key,
+ * The query subset the resolvers use: equality, membership, null, case-insensitive key,
  * the owner-or-member `or`, then `maybeSingle()` or a plain await.
  */
 function query(table: string) {
@@ -32,6 +32,10 @@ function query(table: string) {
     order: () => builder,
     eq: (column: string, value: unknown) => {
       filters.push((row) => row[column] === value);
+      return builder;
+    },
+    in: (column: string, values: unknown[]) => {
+      filters.push((row) => values.includes(row[column]));
       return builder;
     },
     is: (column: string, value: unknown) => {
@@ -149,12 +153,19 @@ describe("locateIssueProject", () => {
     expect(await locate("SEC-3")).toMatchObject({ code: "issue_not_found" });
   });
 
-  it("lists the candidates when two visible projects share the key", async () => {
+  it("lists the candidates when two visible projects share the key and the issue number", async () => {
     h.tables.projects.push({ id: SAME_KEY, key: "MIN", name: "minddy two", owner_id: USER });
+    h.tables.issues.push({ id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", project_id: SAME_KEY, number: 42 });
     const located = await locate("MIN-42");
     expect(located).toMatchObject({ code: "ambiguous_issue_ref" });
     expect("candidates" in located && located.candidates?.map((c) => c.project_id).sort())
       .toEqual([MINE, SAME_KEY].sort());
+  });
+
+  it("picks the one project holding the number when the key is shared", async () => {
+    h.tables.projects.push({ id: SAME_KEY, key: "MIN", name: "minddy two", owner_id: USER });
+    expect(await locate("MIN-42")).toEqual({ projectId: MINE });
+    expect(await locate("MIN-99")).toMatchObject({ code: "issue_not_found" });
   });
 });
 
@@ -179,6 +190,7 @@ describe("MCP tools without project_id (MIN-952)", () => {
 
   it("returns the candidate projects of an ambiguous key", async () => {
     h.tables.projects.push({ id: SAME_KEY, key: "MIN", name: "minddy two", owner_id: USER });
+    h.tables.issues.push({ id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", project_id: SAME_KEY, number: 42 });
     const { body } = await run("minddy_add_comment", { issue: "MIN-42", body: "Hi" });
     expect(body.error.code).toBe("ambiguous_issue_ref");
     expect(body.error.candidates).toHaveLength(2);

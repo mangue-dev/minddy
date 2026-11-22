@@ -276,8 +276,21 @@ export async function locateIssueProject(
       "id, name, key, owner_id, encrypted_content, encryption_version",
     ).ilike("key", identifier[1]);
     if (error) return { code: "database_error", error: error.message };
-    const projects = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    let projects = (data ?? []) as unknown as Array<Record<string, unknown>>;
     if (projects.length === 0) return notFound;
+    if (projects.length > 1) {
+      // A shared key is ambiguous only among the projects that hold the issue.
+      const { data: holders, error: holderError } = await db
+        .from("issues")
+        .select("project_id")
+        .in("project_id", projects.map((p) => p.id as string))
+        .eq("number", Number(identifier[2]))
+        .is("deleted_at", null);
+      if (holderError) return { code: "database_error", error: holderError.message };
+      const holding = new Set((holders ?? []).map((row) => row.project_id as string));
+      projects = projects.filter((p) => holding.has(p.id as string));
+      if (projects.length === 0) return notFound;
+    }
     if (projects.length > 1) {
       const candidates = await Promise.all(projects.map(async (p) => ({
         project_id: p.id as string,
