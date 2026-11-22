@@ -248,8 +248,9 @@ describe("buildIssuePlanPrompt", () => {
     const prompt = buildIssuePlanPrompt(input);
     expect(prompt).toContain("Write the implementation plan for this minddy issue.");
     expect(prompt).toContain("Do NOT implement it.");
-    expect(prompt).toContain('project_id "proj-1"');
-    expect(prompt).toContain('issue "MIN-42"');
+    // The identifier names the project for the MCP (MIN-952).
+    expect(prompt).toContain('(issue "MIN-42")');
+    expect(prompt).not.toContain("project_id");
     expect(prompt).toContain("minddy_update_issues");
     expect(prompt).toContain("## Questions");
     expect(prompt).toContain("Stop once the plan is written");
@@ -297,7 +298,7 @@ describe("buildIssueCustomPrompt", () => {
     expect(prompt).toContain("<identifier>MIN-42</identifier>");
     expect(prompt).toContain('<relation type="blocks">');
     expect(prompt).toContain(`<request>\n${instructions}\n</request>`);
-    expect(prompt).toContain('project_id "proj-1"');
+    expect(prompt).toContain('(issue "MIN-42")');
     expect(prompt).toContain("minddy_add_comment");
   });
 
@@ -449,18 +450,13 @@ describe("buildMultiIssuePrompt", () => {
     expect(prompt).toContain("<suggested_branch>min-43-second-issue</suggested_branch>");
   });
 
-  it("one project for the whole selection: compact MCP parameters", () => {
-    const prompt = buildMultiIssuePrompt([input, { ...input, issue: second }]);
-    expect(prompt).toContain('project_id "proj-1", issues "MIN-42, MIN-43"');
-    expect(prompt).not.toContain("(project_id");
-  });
-
-  it("a mixed selection lists each issue with its own project id", () => {
+  it("names the selection by identifiers alone, whatever its projects", () => {
     const prompt = buildMultiIssuePrompt([
       input,
       { ...input, issue: { ...second, project_id: "proj-2" }, projectId: "proj-2" },
     ]);
-    expect(prompt).toContain('MIN-42 (project_id "proj-1"), MIN-43 (project_id "proj-2")');
+    expect(prompt).toContain('parameters: issues "MIN-42, MIN-43"');
+    expect(prompt).not.toContain("project_id");
   });
 
   it("sends the agent through the MCP per issue, and stays usable without it", () => {
@@ -565,14 +561,15 @@ describe("buildIssueBrief", () => {
 });
 
 describe("short prompts", () => {
-  const target = { identifier: "MIN-42", projectId: "proj-1" };
+  const target = { identifier: "MIN-42" };
 
   it.each(["plan", "implement", "verify", "comments"] as const)(
     "names the issue and requires the %s brief",
     (action) => {
       const prompt = buildShortIssuePrompt(target, action);
       expect(prompt).toContain("MIN-42");
-      expect(prompt).toContain(`project_id "proj-1", issue "MIN-42" and brief "${action}"`);
+      expect(prompt).toContain(`with issue "MIN-42" and brief "${action}"`);
+      expect(prompt).not.toContain("project_id");
       expect(prompt).toContain("then follow the `brief` it returns");
       expect(prompt).toContain("If the minddy MCP tools are not available, stop and tell me");
       expect(prompt.length).toBeLessThan(400);
@@ -595,23 +592,22 @@ describe("short prompts", () => {
 
   it("lists a selection once, with one brief per issue", () => {
     const prompt = buildShortMultiIssuePrompt(
-      [target, { identifier: "MIN-43", projectId: "proj-1" }],
+      [target, { identifier: "MIN-43" }],
       "verify",
     );
-    expect(prompt).toContain('MIN-42, MIN-43 (project_id "proj-1")');
+    expect(prompt).toContain("Issues, in this order: MIN-42, MIN-43.");
     expect(prompt).toContain('brief "verify"');
     expect(prompt).toContain("one at a time");
   });
 
-  it("gives each issue its project when the selection spans several", () => {
-    const prompt = buildShortMultiIssuePrompt(
-      [target, { identifier: "DOC-3", projectId: "proj-2" }],
-    );
-    expect(prompt).toContain('MIN-42 (project_id "proj-1"), DOC-3 (project_id "proj-2")');
+  it("lists a selection that spans projects the same way", () => {
+    const prompt = buildShortMultiIssuePrompt([target, { identifier: "DOC-3" }]);
+    expect(prompt).toContain("Issues, in this order: MIN-42, DOC-3.");
+    expect(prompt).not.toContain("project_id");
   });
 
   it("stays short for a selection of fifty issues", () => {
-    const many = Array.from({ length: 50 }, (_, i) => ({ identifier: `MIN-${i + 1}`, projectId: "proj-1" }));
+    const many = Array.from({ length: 50 }, (_, i) => ({ identifier: `MIN-${i + 1}` }));
     expect(buildShortMultiIssuePrompt(many).length).toBeLessThan(1000);
   });
 

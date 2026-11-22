@@ -50,7 +50,8 @@ vi.mock("@/lib/server/feedback/posts", async (importOriginal) => ({
 }));
 vi.mock("./tool-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./tool-helpers")>();
-  return {
+  const { withIssueScopeMocks } = await import("@/test/mcp-issue-scope-mocks");
+  return withIssueScopeMocks({
     ...actual,
     requireProject: vi.fn(async () => ({ userId: "user-1", keyId: "key-1", access: { project: { id: "project-1", key: "MIN" } } })),
     // "MIN-N" and the bare number "N" name the same issue, as in the real resolver.
@@ -60,7 +61,7 @@ vi.mock("./tool-helpers", async (importOriginal) => {
         ? { issue: { id: `issue-${number}`, identifier: `MIN-${number}` } }
         : { error: actual.fail("issue_not_found", `Issue '${ref}' not found`) };
     }),
-  };
+  });
 });
 
 type Handler = (args: Record<string, unknown>, extra: ToolExtra) => Promise<ToolResult>;

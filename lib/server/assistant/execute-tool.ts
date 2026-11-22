@@ -315,7 +315,8 @@ import {
   type InboxReadCategory,
   type InboxReadState,
 } from "@/lib/inbox-tool";
-import { resolveAssistantProjectTarget } from "./project-scope";
+import { resolveAssistantProjectTarget, withIssueProject } from "./project-scope";
+import { ISSUE_TARGETED_TOOLS } from "./tools";
 import { MAX_BULK_ISSUES } from "@/lib/server/mcp/surface-limits";
 import { smartAssignFromStatusOf } from "@/lib/smart-assign-config";
 import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
@@ -1052,6 +1053,9 @@ export async function executeTool(
     const refusal = reminderRefusal(toolName);
     if (refusal) return toolError(refusal);
   }
+  // An issue names its project: a call that gives only the issue runs, and
+  // is guarded, in that project (MIN-952).
+  if (ISSUE_TARGETED_TOOLS.has(toolName)) args = await withIssueProject(ctx, args);
   if (ctx.proactive) {
     const guard = await guardProactiveTool(toolName, args, ctx);
     if (!guard.ok) return toolError(guard.error);
@@ -1577,7 +1581,7 @@ async function dispatchTool(
   const { projectId } = await resolveAssistantProjectTarget(ctx, args.project_id);
   if (!projectId) {
     return toolError(
-      "No explicit project target. Pass project_id (use list_projects to discover projects).",
+      "No explicit project target. Pass project_id (use list_projects to discover projects), or the issue_id of an issue the user can open.",
     );
   }
   const access = await getProjectAccess(ctx.userId, projectId);

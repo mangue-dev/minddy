@@ -14,6 +14,7 @@ import {
 import { declaredProjectCapability } from "./tool-capabilities";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
+  locateIssueProject,
   resolveIssueRef as resolveIssueRefCore,
   resolveObjectiveRef as resolveObjectiveRefCore,
   type ResolvedIssueRef,
@@ -210,6 +211,120 @@ export async function resolveIssueRef(
     return { error: fail(resolved.code, resolved.error) };
   }
   return { issue: resolved.issue };
+}
+
+/**
+ * The project a tool acts in when its issue references may carry it
+ * (MIN-952). An explicit `project_id` keeps its historical behavior: the
+ * references then resolve in that project, and one from another project is
+ * refused as not found there. Without it, the first reference that names a
+ * project (a UUID or a KEY-N identifier) decides, and the project goes
+ * through the same access and role check as an explicit id. A project the
+ * caller cannot open answers like a missing issue.
+ */
+export async function requireProjectForIssues(
+  extra: ToolExtra,
+  projectId: unknown,
+  refs: readonly unknown[],
+  capability: ProjectCapability = declaredProjectCapability(),
+): Promise<
+  | { userId: string; keyId: string | null; access: ProjectAccess }
+  | { error: ToolResult }
+> {
+  if (typeof projectId === "string" && projectId) {
+    return requireProject(extra, projectId, capability);
+  }
+  const auth = requireUser(extra);
+  if ("error" in auth) return auth;
+  const located = await locateIssuesProject(auth.userId, refs);
+  if ("error" in located) return located;
+  const project = await resolveProject(auth.userId, located.projectId, capability);
+  if ("error" in project) {
+    return isProjectNotFound(project.error)
+      ? { error: fail("issue_not_found", "Issue not found in any project you can access.") }
+      : project;
+  }
+  return { userId: auth.userId, keyId: auth.keyId, access: project.access };
+}
+
+/**
+ * One issue and the project it lives in: `requireProject` then
+ * `resolveIssueRef`, with `project_id` optional whenever the reference
+ * carries its project (MIN-952).
+ */
+export async function requireIssueScope(
+  extra: ToolExtra,
+  args: { project_id?: unknown; issue: unknown },
+  capability: ProjectCapability = declaredProjectCapability(),
+): Promise<
+  | { userId: string; keyId: string | null; access: ProjectAccess; issue: ResolvedIssue }
+  | { error: ToolResult }
+> {
+  const scope = await requireProjectForIssues(extra, args.project_id, [args.issue], capability);
+  if ("error" in scope) return scope;
+  const ref = await resolveIssueRef(scope.access, args.issue);
+  if ("error" in ref) return ref;
+  return { ...scope, issue: ref.issue };
+}
+
+/**
+ * The project of a single issue reference, for tools whose issues may come
+ * from several projects (the cycle tools): each reference is located, and its
+ * project's access checked, on its own.
+ */
+export async function resolveIssueAnywhere(
+  userId: string,
+  projectId: unknown,
+  ref: unknown,
+  capability: ProjectCapability = declaredProjectCapability(),
+): Promise<{ access: ProjectAccess; issue: ResolvedIssue } | { error: ToolResult }> {
+  let id = typeof projectId === "string" && projectId ? projectId : null;
+  if (!id) {
+    const located = await locateIssuesProject(userId, [ref]);
+    if ("error" in located) return located;
+    id = located.projectId;
+  }
+  const project = await resolveProject(userId, id, capability);
+  if ("error" in project) {
+    return !projectId && isProjectNotFound(project.error)
+      ? { error: fail("issue_not_found", "Issue not found in any project you can access.") }
+      : project;
+  }
+  const resolved = await resolveIssueRef(project.access, ref);
+  if ("error" in resolved) return resolved;
+  return { access: project.access, issue: resolved.issue };
+}
+
+/** The first reference that names a project decides; a bare number names none. */
+async function locateIssuesProject(
+  userId: string,
+  refs: readonly unknown[],
+): Promise<{ projectId: string } | { error: ToolResult }> {
+  const naming = refs.find((ref) => typeof ref === "string" && !/^\s*\d+\s*$/.test(ref));
+  const located = await locateIssueProject(getServiceClient(), userId, naming ?? refs[0]);
+  if ("projectId" in located) return located;
+  return {
+    error: located.candidates
+      ? failWith(located.code, located.error, { candidates: located.candidates })
+      : fail(located.code, located.error),
+  };
+}
+
+/** Whether a project lookup failed because the project is not the caller's to open. */
+function isProjectNotFound(result: ToolResult): boolean {
+  try {
+    return JSON.parse(result.content[0]?.text ?? "{}")?.error?.code === "project_not_found";
+  } catch {
+    return false;
+  }
+}
+
+/** A failure that carries data the caller acts on, such as candidate projects. */
+function failWith(code: string, message: string, details: Record<string, unknown>): ToolResult {
+  return {
+    content: [{ type: "text", text: JSON.stringify({ error: { code, message, ...details } }) }],
+    isError: true,
+  };
 }
 
 export interface ResolvedObjective {

@@ -3345,6 +3345,41 @@ function withProjectFilter<Name extends string>(tool: AssistantToolDef<Name>): A
   };
 }
 
+/**
+ * The project tools that name one issue by `issue_id` (MIN-952): the issue
+ * already carries its project, so `project_id` is optional there and the
+ * executor fills it from the issue (`withIssueProject`).
+ */
+export const ISSUE_TARGETED_TOOLS: ReadonlySet<string> = new Set(
+  ASSISTANT_TOOLS
+    .filter((tool) => NUMO_TOOL_POLICY[tool.function.name].scope === "project" &&
+      "issue_id" in tool.function.parameters.properties)
+    .map((tool) => tool.function.name),
+);
+
+const ISSUE_PROJECT_ID_DESCRIPTION =
+  `${PROJECT_ID_DESCRIPTION} Optional when issue_id is given: the issue's own project is used.`;
+
+/** An optional `project_id`, first among the tool's parameters. */
+function withOptionalProjectId<Name extends string>(
+  tool: AssistantToolDef<Name>,
+): AssistantToolDef<Name> {
+  const params = tool.function.parameters;
+  return {
+    ...tool,
+    function: {
+      ...tool.function,
+      parameters: {
+        ...params,
+        properties: {
+          project_id: { type: "string", description: ISSUE_PROJECT_ID_DESCRIPTION },
+          ...params.properties,
+        },
+      },
+    },
+  };
+}
+
 /** A tool as a conversation offers it: its `project_id` follows its scope. */
 function conversationTool(tool: AssistantToolDef<NumoToolName>): AssistantToolDef<NumoToolName> {
   const name = tool.function.name;
@@ -3353,7 +3388,9 @@ function conversationTool(tool: AssistantToolDef<NumoToolName>): AssistantToolDe
     case "per_item":
       return tool;
     case "project":
-      return withProjectId(tool, { type: "string", description: PROJECT_ID_DESCRIPTION });
+      return ISSUE_TARGETED_TOOLS.has(name)
+        ? withOptionalProjectId(tool)
+        : withProjectId(tool, { type: "string", description: PROJECT_ID_DESCRIPTION });
     case "project_or_personal":
       return withProjectId(tool, { type: ["string", "null"], description: PERSONAL_PROJECT_ID_DESCRIPTION[name] });
     case "view":

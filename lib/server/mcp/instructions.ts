@@ -6,11 +6,11 @@
  * every cold-start catalog repeat the same manual.
  */
 export const MCP_DISCOVERY_INSTRUCTIONS =
-  "minddy is a stateless issue tracker MCP. Start with minddy_list_projects to " +
-  "discover project_id values, then choose a minddy_* tool by its action-specific " +
-  "description. Issue references accept a UUID, an identifier such as MIND-42, or a " +
-  "bare issue number. Read before writing; failures return stable error codes. Full " +
-  "usage guide: /llms-full.txt.";
+  "minddy is a stateless issue tracker MCP. Choose a minddy_* tool by its " +
+  "action-specific description. An issue UUID or an identifier such as MIND-42 " +
+  "names its project, so issue tools need no project_id; a bare issue number does " +
+  "(minddy_list_projects lists project ids). Read before writing; failures return " +
+  "stable error codes. Full usage guide: /llms-full.txt.";
 
 /**
  * How an agent cites what it writes about (MIN-872), appended to every
@@ -47,7 +47,11 @@ export const MCP_FULL_USAGE_GUIDE =
       "or member uses every tool; a reader is read-only, may comment only when the " +
       "owner allowed it, and receives 'forbidden' from any other write. " +
       "Issue identifiers read '<PROJECT KEY>-<number>' (e.g. MIND-42): " +
-      "tools accept them wherever an 'issue' parameter appears. Statuses: triage, " +
+      "tools accept them wherever an 'issue' parameter appears. An issue UUID or " +
+      "identifier names its project, so a tool that designates issues needs no " +
+      "project_id; pass it with a bare issue number, or when the error " +
+      "'ambiguous_issue_ref' lists two of your projects sharing a key. A project_id " +
+      "that is not the issue's own project returns 'issue_not_found'. Statuses: triage, " +
       "backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities: " +
       "none, low, medium, high, urgent. Efforts (t-shirt): xs, s, m, l, xl, xxl. " +
       "A prompt copied or sent from minddy may only name an issue and a brief " +
@@ -232,7 +236,8 @@ export const MCP_FULL_USAGE_GUIDE =
       "the target — and a mentioned member is notified, so mention a member only in a " +
       "text meant for them. Mentions you read come labeled for you; the label you write " +
       "is never stored." + MCP_MENTIONS_IN_MARKDOWN + " " +
-      "Start with minddy_list_projects to discover project ids.";
+      "Start with minddy_list_projects to discover project ids for the tools that " +
+      "act on a whole project.";
 
 /**
  * Compatibility alias for code and tests written before discovery metadata was split.

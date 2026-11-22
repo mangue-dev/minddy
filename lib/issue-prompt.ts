@@ -402,7 +402,7 @@ ${requestBlock}${SHARED_INSTRUCTIONS}
 ${instructions}
 
 ${mcpAppendix(
-    `project_id "${input.projectId}", issue "${identifier}"`,
+    `issue "${identifier}"`,
     mcp.steps,
     mcp.fallback ?? DEFAULT_FALLBACK,
   )}`;
@@ -644,10 +644,12 @@ With the minddy MCP tools (this result already carries the issue, its plan and i
 ${framing.steps.map((step) => `- ${step}`).join("\n")}`;
 }
 
-/** What a short prompt needs to name one issue. */
+/**
+ * What a short prompt needs to name one issue: its identifier, whose key
+ * names the project for the MCP (MIN-952).
+ */
 export interface ShortPromptIssue {
   identifier: string;
-  projectId: string;
 }
 
 const NO_MCP_STOP =
@@ -693,7 +695,7 @@ export function buildShortIssuePrompt(
   });
   return `${opening}${shortRequest(options.request)}
 
-First call the minddy MCP tool \`minddy_get_issue\` with project_id "${issue.projectId}", issue "${issue.identifier}" and brief "${action}", then follow the \`brief\` it returns: it is the procedure for this task. ${NO_MCP_STOP}`;
+First call the minddy MCP tool \`minddy_get_issue\` with issue "${issue.identifier}" and brief "${action}", then follow the \`brief\` it returns: it is the procedure for this task. ${NO_MCP_STOP}`;
 }
 
 /** The short prompt of a selection: one brief per issue, in list order. */
@@ -706,16 +708,13 @@ export function buildShortMultiIssuePrompt(
   if (issues.length === 1) {
     return buildShortIssuePrompt(issues[0], action, action === "custom" ? { request } : {});
   }
-  const sameProject = issues.every((issue) => issue.projectId === issues[0].projectId);
-  const list = sameProject
-    ? `${issues.map((issue) => issue.identifier).join(", ")} (project_id "${issues[0].projectId}")`
-    : issues.map((issue) => `${issue.identifier} (project_id "${issue.projectId}")`).join(", ");
+  const list = issues.map((issue) => issue.identifier).join(", ");
   const opening = shortOpening(action, "these minddy issues", { many: true });
   return `${opening}${shortRequest(action === "custom" ? request : undefined)}
 
 Issues, in this order: ${list}.
 
-Handle them one at a time, keeping each one's scope, branch and pull request separate. For each, first call the minddy MCP tool \`minddy_get_issue\` with its project_id, the issue and brief "${action}", then follow the \`brief\` it returns: it is the procedure for that issue. ${NO_MCP_STOP}`;
+Handle them one at a time, keeping each one's scope, branch and pull request separate. For each, first call the minddy MCP tool \`minddy_get_issue\` with the issue and brief "${action}", then follow the \`brief\` it returns: it is the procedure for that issue. ${NO_MCP_STOP}`;
 }
 
 /**
@@ -732,7 +731,6 @@ export function issuePromptFor(
     return buildShortIssuePrompt(
       {
         identifier: issueIdentifier(input.projectKey, input.issue.number),
-        projectId: input.projectId,
       },
       action,
       {
@@ -760,7 +758,6 @@ export function multiIssuePromptFor(
   return buildShortMultiIssuePrompt(
     inputs.map((input) => ({
       identifier: issueIdentifier(input.projectKey, input.issue.number),
-      projectId: input.projectId,
     })),
     action,
     options.request,
@@ -865,20 +862,11 @@ export function buildMultiIssuePrompt(
     return issueBlock({ ...input, planProgress }, withBranch);
   });
 
-  // MCP parameters: one project covers the whole selection with a compact
-  // pair; a mixed selection lists each issue with its own project —
-  // `minddy_get_issue` needs both, and they no longer share a default.
-  const sameProject = inputs.every((i) => i.projectId === inputs[0].projectId);
-  const mcpParams = sameProject
-    ? `project_id "${inputs[0].projectId}", issues "${inputs
-        .map((i) => issueIdentifier(i.projectKey, i.issue.number))
-        .join(", ")}"`
-    : inputs
-        .map(
-          (i) =>
-            `${issueIdentifier(i.projectKey, i.issue.number)} (project_id "${i.projectId}")`
-        )
-        .join(", ");
+  // MCP parameters: each identifier names its own project (MIN-952), so a
+  // selection that spans projects lists its issues the same way.
+  const mcpParams = `issues "${inputs
+    .map((i) => issueIdentifier(i.projectKey, i.issue.number))
+    .join(", ")}"`;
 
   const framing = multiIssueFraming(inputs, action);
   const requestBlock = action === "custom" && request !== undefined
