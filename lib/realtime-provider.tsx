@@ -60,6 +60,7 @@ import {
 } from "./realtime-topic";
 import { emitDocumentHead } from "./document-collaboration-signals";
 import { emitPageHead } from "./page-collaboration-signals";
+import { refreshMentionsOfChange } from "./mention-live";
 import { PROJECTS_KEY } from "./query-keys";
 
 /**
@@ -135,6 +136,8 @@ function applyProjectEvent(
     emitDocumentHead(change.record);
     return;
   }
+  // Pills and hover cards citing this row, on any surface.
+  refreshMentionsOfChange(queryClient, change);
   if (isOwnEcho(change)) return;
   adoptRemoteRow(queryClient, projectId, remoteEchoOf(change));
 }
