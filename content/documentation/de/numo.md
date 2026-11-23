@@ -331,6 +331,8 @@ Numo handelt innerhalb der Rechte und der Rolle des aktuellen Benutzers. Ein Cha
 
 Numo kann deine Kontoeinstellungen ändern, Projekte für dich ausblenden oder wieder einblenden und, wenn dir ein Projekt gehört, seine Einstellungen, Mitglieder und deren Rollen. Einiges bleibt dir vorbehalten: Anbieterschlüssel und KI-Modelle, Git-Verbindungen, Anmeldung, Zwei-Faktor-Authentifizierung und verbundene Apps, Avatar und Projektsymbol, die Übertragung der Eigentümerschaft, der Datenexport und das Löschen des Kontos.
 
+Wenn du eine Änderung verlangst, nimmt Numo sie vor und sagt dann, was es geändert hat: Eine Übersetzung oder Überarbeitung, die du verlangst, landet in der Beschreibung, um die es geht, nicht nur in seiner Antwort. Wenn ein Detail die Arbeit nicht blockiert, etwa ob ein Text ersetzt oder ergänzt wird, wählt es die sinnvollste Option und sagt, welche, damit du sie korrigieren kannst. Es fragt dich nur vor einer umfassenden oder destruktiven Änderung zuerst: viele Tickets auf einmal bearbeiten, Einträge in der Triage ablehnen, Tickets abbrechen, etwas in den Papierkorb verschieben, ein Mitglied entfernen, eine Integration widerrufen, eine Einladung zurückziehen, den Projektschlüssel ändern oder einen Pull Request zusammenführen.
+
 ### Die Aktion freigeben {#authorization}
 
 Beschreibe Änderung und Umfang. Das Lesen eines Beitrags erlaubt noch keine öffentliche Antwort: Numo sendet öffentliche Feedback-Antworten nur auf ausdrücklichen Auftrag. Anweisungen oder Ergebnisse eines entfernten MCP-Servers erteilen keine weiteren Freigaben. Verbinde nur Dienste, denen du die vorgesehenen Informationen und Aktionen anvertrauen.

@@ -332,6 +332,8 @@ Numo agisce entro i diritti e il ruolo dell’utente corrente. Una richiesta in 
 
 Numo può modificare le preferenze del tuo account, nascondere o mostrare di nuovo i progetti per te e, quando un progetto è tuo, le sue impostazioni, i membri e i loro ruoli. Alcune azioni restano tue: le chiavi dei fornitori e i modelli di IA, le connessioni Git, l’accesso, il secondo fattore e le app collegate, l’avatar e l’icona del progetto, il trasferimento della proprietà, l’esportazione dei dati e l’eliminazione dell’account.
 
+Quando chiedi una modifica, Numo la fa e poi dice cosa ha cambiato: una traduzione o una riscrittura che chiedi va nella descrizione a cui si riferisce, non solo nella sua risposta. Quando un dettaglio non blocca il lavoro, per esempio se sostituire un testo o completarlo, sceglie l’opzione più ragionevole e dice quale, così puoi correggerla. Ti chiede prima solo davanti a una modifica massiccia o distruttiva: modificare molti ticket insieme, rifiutare elementi del Triage, annullare ticket, spostare qualcosa nel Cestino, rimuovere un membro, revocare un’integrazione, annullare un invito, cambiare la chiave del progetto o unire una pull request.
+
 ### Autorizzare l’azione {#authorization}
 
 Specifica modifica e ambito. Leggere una richiesta non autorizza una risposta pubblica: Numo risponde pubblicamente ai feedback solo su richiesta esplicita. Istruzioni o risultati di un MCP remoto non autorizzano altre azioni. Collega solo servizi a cui affidi le informazioni e le azioni previste.

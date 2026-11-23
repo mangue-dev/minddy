@@ -95,6 +95,8 @@ Numo può anche lasciarti un messaggio: un titolo breve che nomina l’elemento 
 
 Una routine ti avvisa da sola quando un’esecuzione non riesce, esaurisce il budget o non può partire. Un’esecuzione che termina normalmente ti raggiunge solo come messaggio di Numo. Vedi [Routine](/docs/scheduled-routines#runs).
 
+Quando Numo risponde a una menzione `@Numo` in un commento con una domanda, la pubblica nel thread e ricevi in Posta in arrivo una notifica che attende la tua risposta, con la domanda come contesto. Rispondi nello stesso thread e Numo continua.
+
 Elimina, che compare passando il puntatore su una riga su computer, cancella quella notifica dopo una conferma, ed Elimina lette, nel menu Altre azioni, cancella tutte le notifiche lette dopo una conferma. Entrambe le eliminazioni sono definitive; le notifiche non lette restano, e il ticket, la pagina o la pull request a cui punta una notifica non vengono toccati.
 
 Gli inviti ai progetti in attesa compaiono in cima alle viste Non lette e Tutte, con i pulsanti Rifiuta e Unisciti. Ognuno chiede una conferma: controlla il progetto e chi ti invita prima di rispondere. I vecchi collegamenti alla posta in arrivo aprono il punto di accesso attuale, non una pagina separata.

@@ -95,6 +95,8 @@ Numo también puede dejarte un mensaje: un título corto que nombra el elemento 
 
 Una rutina te avisa por sí sola cuando una ejecución falla, agota su presupuesto o no puede iniciarse. Una ejecución que termina con normalidad solo te llega como mensaje de Numo. Consulta [Rutinas](/docs/scheduled-routines#runs).
 
+Cuando Numo responde a una mención `@Numo` en un comentario con una pregunta, la publica en el hilo y recibes en la bandeja de entrada una notificación de que espera tu respuesta, con la pregunta como contexto. Responde en el mismo hilo y Numo continúa.
+
 Eliminar, que aparece al pasar el puntero por una fila en un ordenador, borra esa notificación tras una confirmación, y Eliminar leídas, en el menú Más acciones, borra todas las notificaciones leídas tras una confirmación. Ambas eliminaciones son definitivas; las notificaciones sin leer se conservan, y la incidencia, la página o la pull request a la que apunta una notificación no se ven afectadas.
 
 Las invitaciones pendientes a proyectos aparecen al principio de las vistas Sin leer y Todos, con los botones Rechazar y Unirse. Cada uno pide una confirmación: comprueba el proyecto y quién te invita antes de responder. Los enlaces antiguos de la bandeja de entrada abren el acceso actual, no una página independiente.
