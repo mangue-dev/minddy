@@ -95,6 +95,8 @@ Numo peut aussi vous laisser un message : un titre court qui nomme l’élément
 
 Une routine vous prévient d’elle-même lorsqu’une occurrence échoue, épuise son budget ou ne peut pas démarrer. Une occurrence qui se termine normalement ne vous parvient que sous forme de message de Numo. Voir [Routines](/docs/scheduled-routines#runs).
 
+Quand Numo répond à une mention `@Numo` dans un commentaire par une question, il la publie dans le fil et vous recevez dans l’Inbox une notification indiquant qu’il attend votre réponse, avec la question en contexte. Répondez dans le même fil et Numo reprend.
+
 Supprimer, affiché en pointant une ligne sur ordinateur, retire cette notification après confirmation, et Supprimer les lues, dans le menu Plus d’actions, retire toutes les notifications lues après confirmation. Ces deux suppressions sont définitives ; les notifications non lues restent, et le ticket, la page ou la pull request visés ne sont pas touchés.
 
 Les invitations de projet en attente apparaissent en tête des vues Non lues et Toutes, avec les boutons Refuser et Rejoindre. Chacun demande une confirmation : vérifiez le projet et la personne qui vous invite avant de répondre. Les anciens liens Inbox ouvrent l’accès actuel plutôt qu’une page séparée.
