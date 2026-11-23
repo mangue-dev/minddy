@@ -331,6 +331,8 @@ Numo acts within the current user's access and role. A project member cannot gai
 
 Numo can change your account preferences, hide or show projects for you and, when you own a project, its settings, members and their roles. Some gestures stay yours: provider keys and AI models, Git connections, sign-in, two-factor authentication and connected apps, the avatar and project icon, ownership transfers, data export and account deletion.
 
+When you ask for a change, Numo makes it and then says what it changed: a translation or a rewrite you ask for goes into the description it is about, not only into its reply. When a detail doesn't block the work, such as whether to replace or add to a text, it picks the most reasonable option and says which one, so you can correct it. It asks you first only before a sweeping or destructive change: editing many issues at once, declining triage items, canceling issues, moving something to the trash, removing a member, revoking an integration, cancelling an invitation, changing the project key or merging a pull request.
+
 ### Authorize the action {#authorization}
 
 Describe the intended change and its scope. Reading a request does not authorize a public answer: Numo sends public feedback replies only when explicitly asked. Remote MCP instructions or results cannot authorize additional actions. Connect a service only if you trust it with the information and actions you intend to send.

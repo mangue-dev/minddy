@@ -212,33 +212,78 @@ async function stampProjection(
   if (error) throw new Error("numo_surface_projection_write_failed");
 }
 
+/**
+ * Who hears about Numo's reply in a shared thread. The other participants get
+ * the comment as usual; the requester wrote the reply's comment row, so they
+ * are left out of that, but a reply that ends on a question (`waiting_input`)
+ * waits for them: they get an `agent_question` line in their inbox (MIN-1028),
+ * otherwise nothing tells them Numo is waiting.
+ */
+export function commentProjectionNotificationRows(input: {
+  projectId: string;
+  actorId: string;
+  responseId: string;
+  table: "comments" | "page_comments";
+  notification: NonNullable<
+    Extract<NumoSurfaceDestination, { kind: "comment" }>["notification"]
+  >;
+  memberIds: ReadonlySet<string>;
+  turnStatus: NumoTurn["status"];
+}): NotificationRow[] {
+  const { notification } = input;
+  const target = {
+    project_id: input.projectId,
+    issue_id: notification.issueId ?? null,
+    objective_id: notification.objectiveId ?? null,
+    feedback_post_id: notification.feedbackPostId ?? null,
+    page_id: notification.pageId ?? null,
+    block_id: notification.blockId ?? null,
+    via_assistant: true,
+  };
+  // Inbox excerpts read the `comments` table only; a page comment has none.
+  const commentId = input.table === "comments" ? input.responseId : undefined;
+  const others = new Set(
+    notification.candidateUserIds.filter(
+      (id): id is string => !!id && id !== input.actorId && input.memberIds.has(id),
+    ),
+  );
+  const rows: NotificationRow[] = [...others].map((userId) => ({
+    ...target,
+    user_id: userId,
+    type: notification.type,
+    comment_id: notification.type === "comment" ? input.responseId : undefined,
+    actor_id: input.actorId,
+  }));
+  if (input.turnStatus === "waiting_input" && input.memberIds.has(input.actorId)) {
+    rows.push({
+      ...target,
+      user_id: input.actorId,
+      type: "agent_question",
+      comment_id: commentId,
+      // Numo asks, not the requester: no person is named as the actor.
+      actor_id: null,
+    });
+  }
+  return rows;
+}
+
 async function notifyCommentProjection(
   service: SupabaseClient,
   projection: SurfaceProjectionRow,
   destination: Extract<NumoSurfaceDestination, { kind: "comment" }>,
+  turnStatus: NumoTurn["status"],
 ): Promise<void> {
   if (!destination.notification || !projection.response_id) return;
   const memberIds = await projectMemberIds(service, projection.thread.project_id);
-  const targets = new Set(
-    destination.notification.candidateUserIds.filter(
-      (id): id is string => !!id && id !== projection.actor_id && memberIds.has(id),
-    ),
-  );
-  const rows: NotificationRow[] = [...targets].map((userId) => ({
-    user_id: userId,
-    project_id: projection.thread.project_id,
-    type: destination.notification!.type,
-    issue_id: destination.notification!.issueId ?? null,
-    objective_id: destination.notification!.objectiveId ?? null,
-    feedback_post_id: destination.notification!.feedbackPostId ?? null,
-    page_id: destination.notification!.pageId ?? null,
-    block_id: destination.notification!.blockId ?? null,
-    comment_id: destination.notification!.type === "comment"
-      ? projection.response_id
-      : undefined,
-    actor_id: projection.actor_id,
-    via_assistant: true,
-  }));
+  const rows = commentProjectionNotificationRows({
+    projectId: projection.thread.project_id,
+    actorId: projection.actor_id,
+    responseId: projection.response_id,
+    table: destination.table,
+    notification: destination.notification,
+    memberIds,
+    turnStatus,
+  });
   await insertNotifications(service, rows);
   await service
     .from("numo_surface_events")
@@ -264,7 +309,7 @@ async function projectComment(
       await projectableOutcome(service, turn)
       || commentFallbackDone(destination.locale),
     );
-    await notifyCommentProjection(service, projection, destination);
+    await notifyCommentProjection(service, projection, destination, turn.status);
   } else {
     await display.fail();
   }

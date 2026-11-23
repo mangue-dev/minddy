@@ -331,6 +331,8 @@ Numo agit dans les limites des droits et du rôle de l’utilisateur courant. Un
 
 Numo peut modifier vos préférences de compte, masquer ou réafficher des projets pour vous et, si vous êtes propriétaire d’un projet, ses réglages, ses membres et leurs rôles. Certains gestes restent les vôtres : les clés des fournisseurs et les modèles d’IA, les connexions Git, la connexion, le second facteur et les applications connectées, l’avatar et l’icône du projet, le transfert de propriété, l’export des données et la suppression du compte.
 
+Quand vous demandez une modification, Numo la fait, puis dit ce qu’il a changé : une traduction ou une réécriture que vous demandez va dans la description concernée, pas seulement dans sa réponse. Quand un détail ne bloque pas le travail, par exemple remplacer un texte ou le compléter, il choisit l’option la plus raisonnable et dit laquelle, pour que vous puissiez la corriger. Il ne vous demande d’abord votre accord qu’avant une modification massive ou destructrice : modifier de nombreux tickets à la fois, refuser des éléments du Triage, annuler des tickets, mettre quelque chose à la corbeille, retirer un membre, révoquer une intégration, annuler une invitation, changer la clé du projet ou fusionner une pull request.
+
 ### Autoriser l’action {#authorization}
 
 Précisez la modification et son périmètre. Lire une demande n’autorise pas une réponse publique : Numo répond publiquement aux retours uniquement sur demande explicite. Des instructions ou résultats d’un serveur MCP distant ne peuvent pas autoriser d’autres actions. Connectez seulement un service auquel vous faites confiance pour les informations et actions transmises.

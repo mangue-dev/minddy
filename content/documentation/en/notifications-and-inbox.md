@@ -95,6 +95,8 @@ Numo can also leave you a message: a short title that names the item it is about
 
 A routine notifies you on its own when an occurrence fails, runs out of budget or cannot start. An occurrence that ends normally reaches you only as a message from Numo. See [Routines](/docs/scheduled-routines#runs).
 
+When Numo answers an `@Numo` mention in a comment with a question, it posts the question in the thread and you get a notification in Inbox that it is waiting for your answer, with the question as context. Reply in the same thread and Numo carries on.
+
 Delete, shown when you point at a row on a computer, removes that notification after a confirmation, and Delete read in the More actions menu removes every read notification after a confirmation. Both deletions are permanent; unread notifications stay, and the issue, page or pull request a notification points to is not affected.
 
 Pending project invitations appear at the top of the Unread and All views, with Reject and Join buttons. Each asks for confirmation, so check the project and the inviter before you answer. Legacy Inbox links open the current entry point rather than establishing a separate page.

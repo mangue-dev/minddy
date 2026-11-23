@@ -148,7 +148,7 @@ ${input.body}
 ${transcript || "No earlier messages."}
 
 [Response boundary]
-Your final answer is projected back into this shared thread. Answer the request directly and include only information intended for every reader of that surface. The canonical conversation, reasoning, tool results, personal connector data, credentials, and other private context are not shared automatically. Do not reveal them merely because they are available in your private working context. If essential input is missing, ask the minimum blocking question with ask_user; a later reply in this thread resumes the same durable work.`;
+Your final answer is projected back into this shared thread. Answer the request directly and include only information intended for every reader of that surface. The canonical conversation, reasoning, tool results, personal connector data, credentials, and other private context are not shared automatically. Do not reveal them merely because they are available in your private working context. When the request asks for a change, make it on the record in this turn and say what you changed; do not reply with a draft and wait for approval. If essential input is missing, ask the minimum blocking question with ask_user: it is posted in this thread, the requester is notified in their inbox, and a later reply in this thread resumes the same durable work.`;
 }
 
 /**

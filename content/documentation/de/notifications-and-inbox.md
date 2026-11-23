@@ -95,6 +95,8 @@ Numo kann dir auch eine Nachricht hinterlassen: einen kurzen Titel, der das betr
 
 Eine Routine benachrichtigt dich von selbst, wenn eine Ausführung fehlschlägt, ihr Budget aufbraucht oder nicht starten kann. Eine normal beendete Ausführung erreicht dich nur als Nachricht von Numo. Siehe [Routinen](/docs/scheduled-routines#runs).
 
+Wenn Numo auf eine `@Numo`-Erwähnung in einem Kommentar mit einer Frage antwortet, stellt es die Frage in den Thread, und du bekommst im Posteingang eine Benachrichtigung, dass es auf deine Antwort wartet, mit der Frage als Kontext. Antworte im selben Thread, dann macht Numo weiter.
+
 Löschen, das am Computer unter dem Mauszeiger auf einer Zeile erscheint, entfernt diese Benachrichtigung nach einer Bestätigung, und Gelesene löschen im Menü Weitere Aktionen entfernt nach einer Bestätigung alle gelesenen Benachrichtigungen. Beide Löschungen sind endgültig; ungelesene Benachrichtigungen bleiben, und das Ticket, die Seite oder der Pull Request, auf die eine Benachrichtigung verweist, bleibt unberührt.
 
 Ausstehende Projekteinladungen erscheinen oben in den Ansichten Ungelesen und Alle, mit den Schaltflächen Ablehnen und Beitreten. Beide fragen nach einer Bestätigung: Prüfe das Projekt und die einladende Person, bevor du antwortest. Alte Posteingangslinks öffnen den aktuellen Einstiegspunkt, keine gesonderte Seite.

@@ -95,6 +95,8 @@ O Numo também pode deixar uma mensagem para você: um título curto que cita o 
 
 Uma rotina avisa você por conta própria quando uma execução falha, esgota o orçamento ou não consegue iniciar. Uma execução que termina normalmente só chega a você como mensagem do Numo. Veja [Rotinas](/docs/scheduled-routines#runs).
 
+Quando o Numo responde a uma menção `@Numo` em um comentário com uma pergunta, ele a publica na conversa e você recebe na caixa de entrada uma notificação de que ele aguarda sua resposta, com a pergunta como contexto. Responda na mesma conversa e o Numo continua.
+
 Excluir, que aparece ao apontar para uma linha no computador, remove essa notificação após uma confirmação, e Excluir lidas, no menu Mais ações, remove todas as notificações lidas após uma confirmação. As duas exclusões são definitivas; as notificações não lidas permanecem, e o ticket, a página ou o pull request para o qual uma notificação aponta não é afetado.
 
 Convites pendentes para projetos aparecem no topo das visualizações Não lidas e Todas, com os botões Rejeitar e Participar. Cada um pede uma confirmação: confira o projeto e quem convidou você antes de responder. Links antigos abrem o ponto de acesso atual, não uma página separada.
