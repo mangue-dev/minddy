@@ -97,6 +97,7 @@
       "lib/server/assistant/context-compaction.ts",
       "lib/server/assistant/conversation-config.ts",
       "components/settings/account-ai-keys-section.tsx",
+      "components/settings/llm-model-picker.tsx",
       "components/settings/account-numo-section.tsx",
       "components/assistant/numo-intro.tsx",
       "lib/numo-cited-mentions.ts",
@@ -293,7 +294,7 @@ Numo travaille à partir du contexte de votre conversation et des permissions de
 Ouvrez le ticket ou le projet concerné, puis utilisez le bouton flottant Numo. La page courante devient le contexte de la conversation. Les actions contextuelles qui confient du travail à Numo ouvrent ce même panneau. Vous devez avoir accès au projet et disposer d’un budget IA ou d’une clé personnelle compatible.
 
 1. Vérifiez le contexte affiché dans la zone de saisie. Nommez le ticket si plusieurs éléments sont concernés. Pour ajouter un ticket au contexte, tapez `@` dans la zone de saisie ou utilisez **Ajouter du contexte**, qui range le contexte dans les mêmes sections que le menu `@`, les tickets sous **Tickets** et vos serveurs MCP connectés sous **Serveurs MCP** ; une description liste aussi des tickets trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**.
-2. Sur minddy Cloud, Numo utilise le modèle et le niveau de raisonnement choisis par l’administrateur de votre instance, comme Smart Fill et Smart Assign. Avec une clé personnelle, Numo utilise le modèle choisi pour **Modèle de langage** dans [les paramètres IA](/docs/ai-settings-and-usage#ai-keys-and-models). Dans les deux cas, le composeur n’affiche aucun réglage de modèle.
+2. Sur minddy Cloud, Numo utilise le modèle et le niveau de raisonnement choisis par l’administrateur de votre instance, comme Smart Fill et Smart Assign. Avec une clé personnelle, Numo utilise le modèle et le niveau de raisonnement choisis pour **Modèle de langage** dans [les paramètres IA](/docs/ai-settings-and-usage#ai-keys-and-models). Dans les deux cas, le composeur n’affiche aucun réglage de modèle.
 3. Envoyez une demande délimitée, par exemple : « Lis ce ticket et propose des critères d’acceptation. Ne change pas son statut. »
 4. Lisez la réponse et suivez les liens vers les tickets ou les sources. Pour une modification, ouvrez l’objet concerné et contrôlez le résultat. Les tickets, objectifs, projets, pages et membres que Numo a trouvés apparaissent dans sa réponse sous forme de pastilles de mention : une pastille ouvre sa cible, et celle que vous ne pouvez pas voir s’affiche **Indisponible**. Numo écrit aussi ces mentions dans ce qu’il rédige, comme les descriptions et plans des tickets, les descriptions d’objectifs, les commentaires, les pages et le carnet, uniquement pour les éléments qu’il a identifiés ; un membre mentionné ainsi est notifié comme pour toute mention. Quand vous tapez `@` dans la zone de saisie, ce que Numo a mentionné dans cette conversation ou dans son [mot sur l’**Accueil**](#home-word) apparaît en premier sous **Mentionné par Numo**, en commençant par son dernier message, dans la limite de huit éléments. Le menu propose aussi les pages de tous vos projets, sauf les projets masqués : dans un projet, ses propres pages viennent d’abord, et les autres indiquent le nom de leur projet.
 
@@ -311,7 +312,7 @@ Un texte de plus de 12 000 caractères que vous collez dans la zone de saisie, d
 
 Quand vous demandez un suivi, ou une liste d’éléments qui partagent des champs, par exemple des candidatures avec leur entreprise, leur statut et leur date, Numo crée une [base de données](/docs/databases) avec ces colonnes et ses premières entrées plutôt qu’une page.
 
-Avec une clé personnelle, Numo utilise le modèle choisi pour **Modèle de langage** dans les paramètres IA du compte, enregistré pour ce fournisseur : le modèle par défaut de l’app ou un modèle de votre choix. Les conversations suivent ce choix, et le composeur n’a aucun réglage de modèle. Sur minddy Cloud, il n’y a pas de modèle à choisir. Consultez [les paramètres IA et l’usage](/docs/ai-settings-and-usage#ai-keys-and-models).
+Avec une clé personnelle, Numo utilise le modèle et le niveau de raisonnement choisis pour **Modèle de langage** dans les paramètres IA du compte, enregistrés pour ce fournisseur : le modèle par défaut de l’app ou un modèle de votre choix, et le niveau de raisonnement de l’instance tant que vous n’en avez pas choisi. Les conversations suivent ce choix, et le composeur n’a aucun réglage de modèle. Sur minddy Cloud, il n’y a ni modèle ni niveau de raisonnement à choisir. Consultez [les paramètres IA et l’usage](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Conversation de démonstration Numo avec contexte, demande de changement de priorité et réponse enregistrée.](/documentation/fr/work-with-numo-workflow.png)
 
@@ -409,7 +410,7 @@ Un rappel récurrent est à vous ; une routine appartient à un projet. Vous seu
 
 ## Comprendre les tours durables de Numo {#numo-execution-model}
 
-Les messages interactifs, actions contextuelles et routines entrent dans les conversations Numo. Avec une clé personnelle, le modèle vient de vos paramètres IA ; sur minddy Cloud, le modèle et le niveau de raisonnement viennent de l’instance. Numo agit avec ses outils minddy et les connexions MCP personnelles que vous avez ajoutées ; il n’a besoin d’aucun dépôt. Une routine crée une nouvelle conversation avec l’instruction enregistrée et le contexte propriétaire/projet. Aucune session de bureau ne doit rester ouverte.
+Les messages interactifs, actions contextuelles et routines entrent dans les conversations Numo. Avec une clé personnelle, le modèle et le niveau de raisonnement viennent de vos paramètres IA ; sur minddy Cloud, le modèle et le niveau de raisonnement viennent de l’instance. Numo agit avec ses outils minddy et les connexions MCP personnelles que vous avez ajoutées ; il n’a besoin d’aucun dépôt. Une routine crée une nouvelle conversation avec l’instruction enregistrée et le contexte propriétaire/projet. Aucune session de bureau ne doit rester ouverte.
 
 ![Schéma: Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre votre réponse si une précision est requise. Relire les événements ; réconcilier les écritures.](/documentation/fr/numo-execution-model-flow.svg)
 

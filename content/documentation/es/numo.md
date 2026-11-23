@@ -97,6 +97,7 @@
       "lib/server/assistant/context-compaction.ts",
       "lib/server/assistant/conversation-config.ts",
       "components/settings/account-ai-keys-section.tsx",
+      "components/settings/llm-model-picker.tsx",
       "components/settings/account-numo-section.tsx",
       "components/assistant/numo-intro.tsx",
       "lib/numo-cited-mentions.ts",
@@ -293,7 +294,7 @@ Numo trabaja con el contexto de tu conversación y los permisos de tu cuenta. Fo
 Abre la incidencia o el proyecto y usa el botón flotante de Numo. La página actual pasa a ser el contexto. Las acciones contextuales que delegan trabajo en Numo abren este mismo panel. Necesitas acceso al proyecto y uso de IA disponible o una clave personal compatible.
 
 1. Comprueba el contexto del cuadro de entrada. Indica la incidencia si hay varios elementos relevantes. Para añadir una incidencia como contexto, escribe `@` en el cuadro de entrada o usa **Añadir contexto**, que agrupa el contexto en las mismas secciones que el menú `@`, las incidencias en **Incidencias** y tus servidores MCP conectados en **Servidores MCP**; una descripción también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
-2. En minddy Cloud, Numo usa el modelo y el nivel de razonamiento que eligió la administración de tu instancia, como Smart Fill y Smart Assign. Con una clave personal, Numo usa el modelo elegido en **Modelo de lenguaje** de los [ajustes de IA](/docs/ai-settings-and-usage#ai-keys-and-models). En ambos casos, el campo de composición no muestra ningún control de modelo.
+2. En minddy Cloud, Numo usa el modelo y el nivel de razonamiento que eligió la administración de tu instancia, como Smart Fill y Smart Assign. Con una clave personal, Numo usa el modelo y el nivel de razonamiento elegidos en **Modelo de lenguaje** de los [ajustes de IA](/docs/ai-settings-and-usage#ai-keys-and-models). En ambos casos, el campo de composición no muestra ningún control de modelo.
 3. Envía una petición acotada, por ejemplo: «Lee esta incidencia y propón criterios de aceptación. No cambies su estado».
 4. Lee la respuesta y abre sus enlaces a incidencias o fuentes. Si pediste una modificación, comprueba el objeto modificado. Las incidencias, objetivos, proyectos, páginas y miembros que Numo encontró aparecen en su respuesta como menciones en forma de etiqueta: cada una abre su destino, y la que no puedes ver se muestra como **No disponible**. Numo también escribe estas menciones en lo que redacta, como las descripciones y planes de las incidencias, las descripciones de objetivos, los comentarios, las páginas y el cuaderno, solo para los elementos que identificó; un miembro mencionado ahí recibe una notificación como con cualquier mención. Al escribir `@` en el cuadro de entrada, lo que Numo mencionó en esta conversación o en su [resumen en **Inicio**](#home-word) aparece primero en **Mencionado por Numo**, empezando por su último mensaje, hasta ocho elementos. El menú también ofrece las páginas de todos tus proyectos salvo los ocultos: en un proyecto, sus propias páginas van primero y las demás muestran el nombre de su proyecto.
 
@@ -311,7 +312,7 @@ Si pegas en el campo de mensaje un texto de más de 12.000 caracteres, como unos
 
 Cuando pides un seguimiento, o una lista de elementos que comparten campos, como candidaturas con su empresa, su estado y su fecha, Numo crea una [base de datos](/docs/databases) con esas columnas y sus primeras entradas en lugar de una página.
 
-Con una clave personal, Numo usa el modelo elegido en **Modelo de lenguaje** de los ajustes de IA de la cuenta, guardado para ese proveedor: el modelo predeterminado de la app o uno que elijas. Las conversaciones siguen ese ajuste, y el campo de composición no tiene control de modelo. En minddy Cloud no hay modelo que elegir. Consulta [los ajustes de IA y uso](/docs/ai-settings-and-usage#ai-keys-and-models).
+Con una clave personal, Numo usa el modelo y el nivel de razonamiento elegidos en **Modelo de lenguaje** de los ajustes de IA de la cuenta, guardados para ese proveedor: el modelo predeterminado de la app o uno que elijas, y el nivel de razonamiento de la instancia mientras no elijas otro. Las conversaciones siguen ese ajuste, y el campo de composición no tiene control de modelo. En minddy Cloud no hay modelo ni nivel de razonamiento que elegir. Consulta [los ajustes de IA y uso](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.](/documentation/es/work-with-numo-workflow.png)
 
@@ -409,7 +410,7 @@ Un recordatorio recurrente es tuyo; una rutina pertenece a un proyecto. Solo tú
 
 ## Comprender los turnos duraderos de Numo {#numo-execution-model}
 
-Los mensajes interactivos, acciones contextuales y rutinas entran en conversaciones Numo. Con una clave personal, el modelo viene de tus ajustes de IA; en minddy Cloud, el modelo y el nivel de razonamiento los fija la instancia. Numo actúa mediante sus herramientas de minddy y las conexiones MCP personales que hayas añadido; no necesita ningún repositorio. Una rutina crea una nueva conversación con instrucciones guardadas y contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
+Los mensajes interactivos, acciones contextuales y rutinas entran en conversaciones Numo. Con una clave personal, el modelo y el nivel de razonamiento vienen de tus ajustes de IA; en minddy Cloud, el modelo y el nivel de razonamiento los fija la instancia. Numo actúa mediante sus herramientas de minddy y las conexiones MCP personales que hayas añadido; no necesita ningún repositorio. Una rutina crea una nueva conversación con instrucciones guardadas y contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
 
 ![Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.](/documentation/es/numo-execution-model-flow.svg)
 
