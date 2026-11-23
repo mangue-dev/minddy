@@ -3964,6 +3964,8 @@ html[data-integrated-caption-controls] {
   .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
   .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
   .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: var(--mobile-sheet-top); right: calc(var(--mobile-sheet-column) + var(--mobile-sheet-close-inset)); min-height: 44px; }
+  /* The notebook's save check mirrors the close button, level with the toolbar. */
+  .mobile-bottom-sheet [data-mobile-sheet-save] { top: var(--mobile-sheet-top); left: var(--mobile-sheet-top); }
   .mobile-nav-sheet :is([data-sidebar-navigation-item], [data-sidebar-filter-result], [data-navigation-href], [data-sidebar-back]) { min-height: 44px; }
   .mobile-nav-sheet [data-sidebar-filter-result] { min-width: 44px; }
   .mobile-nav-sheet :is([data-mobile-collection-navigation], [data-sidebar-browse-collection]) button { min-height: 44px; }

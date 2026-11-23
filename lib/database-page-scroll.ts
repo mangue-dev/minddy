@@ -49,8 +49,13 @@ export function bindDatabasePageScroll(
     axis: "pending" | "x" | "y";
   } | null = null;
   const touchStart = (event: TouchEvent) => {
+    // A drag that starts on the table is the browser's own: its native
+    // scrolling keeps the momentum after the finger lifts and locks the
+    // axis itself. Driving it here too stopped the glide, and a slow drag
+    // shook as both moved the table at once.
+    const onTable = event.target instanceof Node && viewport.contains(event.target);
     const touch =
-      event.touches.length === 1 && overflows() ? event.touches[0] : null;
+      event.touches.length === 1 && overflows() && !onTable ? event.touches[0] : null;
     gesture = touch
       ? {
           x: touch.clientX,
