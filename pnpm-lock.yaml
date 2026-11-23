@@ -3994,9 +3994,6 @@ packages:
   prosemirror-markdown@1.13.5:
     resolution: {integrity: sha512-ac8trNQ01ybKDRTcfUc56LZufG3oYyU4N25qSXgp8dS0U4JtzzCj7oQlKu5v09VSmS5IseYoQ2yDkTbo7f7D8Q==}
 
-  prosemirror-model@1.25.12:
-    resolution: {integrity: sha512-Ue2gTmXMa7EhpLNhC7J+h4+ykD8ha12K6rrZFFKKJHBForfIStw5gJ6Zrf1mqqAa9NmpmEB4wp9bKmA4eUVjWg==}
-
   prosemirror-model@1.25.13:
     resolution: {integrity: sha512-MlDMWGjYXaYOeCiO17jcybntCOzPnN+97U0809ke2QsgPtxW3n5/sD6ZKyJONUgMw1iP93ohZTjeKjnRJ7L6kQ==}
 
@@ -4014,9 +4011,6 @@ packages:
 
   prosemirror-transform@1.12.7:
     resolution: {integrity: sha512-/e87cbxcM5WJOJrL1IrM9gJqO3EK8LdQoPvs+r4ss1lRO5t5QeqkU0SlmDvcitCSDUbm8s/MxbBB6ds4pY6Xlg==}
-
-  prosemirror-view@1.42.9:
-    resolution: {integrity: sha512-bKbfzeKZOu2H2JQU2TaJmYu6EBcor3VnGIR4jR31cbEt1ztUnfUB6bKGV1+fJzOJdrVWR+tRU0208zM3oQx4wA==}
 
   prosemirror-view@1.43.0:
     resolution: {integrity: sha512-MZOUuhD+Gv7Cp7UlgvyhptUfb920NkLBgymhyhaM8xp+JXQyLhkssS2EXZvMI3ZU3vRoz5z7mRC32udVgNYHqg==}
@@ -8301,10 +8295,6 @@ snapshots:
       markdown-it: 14.3.3
       prosemirror-model: 1.25.13
 
-  prosemirror-model@1.25.12:
-    dependencies:
-      orderedmap: 2.1.1
-
   prosemirror-model@1.25.13:
     dependencies:
       orderedmap: 2.1.1
@@ -8317,9 +8307,9 @@ snapshots:
 
   prosemirror-search@1.1.1:
     dependencies:
-      prosemirror-model: 1.25.12
+      prosemirror-model: 1.25.13
       prosemirror-state: 1.4.4
-      prosemirror-view: 1.42.9
+      prosemirror-view: 1.43.0
 
   prosemirror-state@1.4.4:
     dependencies:
@@ -8338,12 +8328,6 @@ snapshots:
   prosemirror-transform@1.12.7:
     dependencies:
       prosemirror-model: 1.25.13
-
-  prosemirror-view@1.42.9:
-    dependencies:
-      prosemirror-model: 1.25.13
-      prosemirror-state: 1.4.4
-      prosemirror-transform: 1.12.7
 
   prosemirror-view@1.43.0:
     dependencies:
