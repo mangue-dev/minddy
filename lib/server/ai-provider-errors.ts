@@ -150,10 +150,12 @@ export function captureBackgroundException(
   if (!posthog) return;
   afterOrNow(async () => {
     try {
-      await posthog.captureExceptionImmediate(error, undefined, sanitizeServerProperties({
-        ...properties,
-        $process_person_profile: false,
-      }));
+      await posthog.captureExceptionImmediate(error, {
+        properties: sanitizeServerProperties({
+          ...properties,
+          $process_person_profile: false,
+        }),
+      });
     } catch {
       // A tracking failure must never compound the error being reported.
     }
