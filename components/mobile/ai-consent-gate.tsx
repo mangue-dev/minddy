@@ -20,6 +20,7 @@ import {
   AI_CONSENT_META_KEY,
   AI_CONSENT_REQUEST_EVENT,
   installAiConsentFetchGuard,
+  parseAiConsent,
   readAiConsent,
   writeAiConsent,
   type AiConsent,
@@ -56,7 +57,9 @@ export function useAnswerAiConsent(): (value: AiConsent) => void {
  * provider (MIN-907, App Store guideline 5.1.2(i); `lib/mobile/ai-consent.ts`).
  *
  * The sheet opens once signed in, after the first-run screens, while this
- * device has no answer. It opens again when the server refuses AI work for
+ * device has no answer and the account has none either: signing out clears
+ * the device's answer, so signing back in restores the account's instead of
+ * asking the same person again. It opens again when the server refuses AI work for
  * want of consent, so the person can allow it from where they tried. Closing
  * it without choosing keeps the question for the next launch. Renders nothing
  * outside the app.
@@ -69,9 +72,14 @@ export function AiConsentGate() {
   const [open, setOpen] = useState(false);
   const answerConsent = useAnswerAiConsent();
   const userId = user?.id ?? null;
+  const accountAnswer = parseAiConsent(user?.user_metadata?.[AI_CONSENT_META_KEY]);
 
   useEffect(() => {
     if (!native || !userId || readAiConsent() !== null) return;
+    if (accountAnswer) {
+      writeAiConsent(accountAnswer);
+      return;
+    }
     const root = document.documentElement;
     const askOnceReady = () => {
       if (root.hasAttribute(FIRST_RUN_PENDING_ATTRIBUTE)) return false;
@@ -84,7 +92,7 @@ export function AiConsentGate() {
     });
     observer.observe(root, { attributes: true, attributeFilter: [FIRST_RUN_PENDING_ATTRIBUTE] });
     return () => observer.disconnect();
-  }, [native, userId]);
+  }, [native, userId, accountAnswer]);
 
   useEffect(() => {
     if (!native) return;

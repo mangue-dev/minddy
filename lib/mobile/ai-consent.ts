@@ -15,7 +15,8 @@ import { isMobileAppUserAgent } from "@/lib/mobile/app-request";
  *
  * Signing out clears the cookie, so the next account on the phone is asked
  * again. Each answer is also written to the account (`AI_CONSENT_META_KEY`),
- * which the background jobs read.
+ * which the background jobs read, and which signing back in restores to the
+ * device rather than asking the same person twice.
  */
 
 export const AI_CONSENT_COOKIE = "minddy-ai-consent";
