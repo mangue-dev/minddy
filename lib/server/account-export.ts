@@ -297,7 +297,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     gitIdentities,
     modelKeys,
   ] = await Promise.all([
-    service.from("user_numo_preferences").select("provider,model,updated_at").eq("user_id", userId),
+    service.from("user_numo_preferences").select("provider,model,reasoning_level,updated_at").eq("user_id", userId),
     service.from("user_ai_decision_preferences")
       .select("engine,provider,model,model_engine,updated_at").eq("user_id", userId),
     Promise.resolve(membershipsResult),

@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 const h = vi.hoisted(() => ({ user: "owner", provider: "minddy", authenticated: true,
   routes: new Map<string, string>(),
-  rows: new Map<string, string | null>(), reads: [] as string[], writes: [] as Record<string, unknown>[],
+  rows: new Map<string, string | null>(), levels: new Map<string, string | null>(), reads: [] as string[], writes: [] as Record<string, unknown>[],
   readError: false,
   readCode: "PGRST205", capture: vi.fn(),
 }));
@@ -15,7 +15,7 @@ function database() {
       const providers = [filters.provider].flat();
       const data = providers.flatMap((provider) => {
         const id = `${filters.user_id}:${provider}`; h.reads.push(id);
-        return h.rows.has(id) ? [{ provider, model: h.rows.get(id) }] : [];
+        return h.rows.has(id) ? [{ provider, model: h.rows.get(id), reasoning_level: h.levels.get(id) ?? null }] : [];
       });
       return { data,
         error: h.readError ? { code: h.readCode, message: "Private database response", details: "private-row" } : null,
@@ -26,6 +26,7 @@ function database() {
       then: (resolve: (value: unknown) => unknown) => Promise.resolve(result()).then(resolve),
       upsert: async (row: Record<string, unknown>) => {
         h.writes.push(row); h.rows.set(`${row.user_id}:${row.provider}`, row.model as string | null);
+        h.levels.set(`${row.user_id}:${row.provider}`, (row.reasoning_level ?? null) as string | null);
         return { error: null };
       },
     }; return q;
@@ -50,8 +51,10 @@ vi.mock("@/lib/server/ai-runtime", () => ({
       mode: chosen === "minddy" ? "platform" : "byok", model: modelOverride ?? "app-model", apiKey: "fixture" };
   },
 }));
-vi.mock("@/lib/server/agent/models-catalog", () => ({ getOpenRouterConversationModels: async () => [{ id: "allowed" }],
-  getAssistantModelsForUser: async () => ({ models: h.provider === "generic" ? [] : [{ id: "allowed" }] }) }));
+// "app-model" offers low and high; "allowed" publishes no reasoning.
+const MODELS = [{ id: "allowed" }, { id: "app-model", reasoning: { efforts: ["low", "high"], mandatory: false } }];
+vi.mock("@/lib/server/agent/models-catalog", () => ({ getOpenRouterConversationModels: async () => MODELS,
+  getAssistantModelsForUser: async () => ({ models: h.provider === "generic" ? [] : MODELS }) }));
 vi.mock("@/lib/server/assistant/reasoning", () => ({ getAssistantReasoningLevel: async () => "off" }));
 vi.mock("@/lib/server/error-tracking", () => ({ captureServerException: h.capture }));
 const { GET, PUT } = await import("@/app/api/account/numo-preferences/route");
@@ -62,7 +65,7 @@ const request = (body?: unknown) => new Request("http://localhost/api/account/nu
 }) as Parameters<typeof GET>[0];
 beforeEach(() => {
   h.user = "owner"; h.provider = "openrouter"; h.routes.clear(); h.authenticated = true; h.readError = false;
-  h.rows.clear(); h.reads = []; h.writes = [];
+  h.rows.clear(); h.levels.clear(); h.reads = []; h.writes = [];
   h.readCode = "PGRST205"; h.capture.mockReset();
 });
 describe("personal Numo preferences", () => {
@@ -110,7 +113,23 @@ describe("personal Numo preferences", () => {
     expect(h.writes[0]).toMatchObject({ provider: "anthropic", model: "allowed" });
     expect(await (await GET(request())).json()).toMatchObject({ provider: "anthropic", default_model: "allowed" });
   });
-  it.each([[], null, { provider: "openrouter", default_model: "" }, { provider: "openrouter", default_model: "bad model" },
+  it("saves a reasoning level the model offers, with the model, and reloads it", async () => {
+    expect((await PUT(request({ provider: "openrouter", default_model: null, reasoning_level: "high" }))).status).toBe(200);
+    expect(h.writes[0]).toMatchObject({ provider: "openrouter", model: null, reasoning_level: "high" });
+    expect(await (await GET(request())).json()).toMatchObject({ default_model: null, reasoning_level: "high" });
+    // Omitted, the level follows the instance's again.
+    expect((await PUT(request({ provider: "openrouter", default_model: null }))).status).toBe(200);
+    expect(await (await GET(request())).json()).toMatchObject({ reasoning_level: null });
+  });
+  it("refuses a level the model does not offer, and any level on minddy Cloud", async () => {
+    const unsupported = await PUT(request({ provider: "openrouter", default_model: null, reasoning_level: "max" }));
+    expect(unsupported.status).toBe(422);
+    expect(await unsupported.json()).toMatchObject({ code: "reasoning_unsupported" });
+    const locked = await PUT(request({ provider: "minddy", default_model: null, reasoning_level: "low" }));
+    expect(locked.status).toBe(422);
+    expect(h.writes).toHaveLength(0);
+  });
+  it.each([[], null, { provider: "openrouter", default_model: null, reasoning_level: "extreme" }, { provider: "openrouter", default_model: "" }, { provider: "openrouter", default_model: "bad model" },
     { provider: "unknown", default_model: null }])("rejects malformed preference %j", async (body) => {
     expect((await PUT(request(body))).status).toBe(400); expect(h.writes).toHaveLength(0);
   });
@@ -136,7 +155,7 @@ describe("personal Numo preferences", () => {
     h.readError = true; h.readCode = code;
     const response = await getModels(request());
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ models: [{ id: "allowed" }], defaultModel: null, defaultReasoning: "off" });
+    expect(await response.json()).toMatchObject({ models: MODELS, defaultModel: null, defaultReasoning: "off" });
     expect(h.capture).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
       operation: "read_numo_preferences", diagnostics: expect.objectContaining({ code, status: 503 }),
     }), null, { routePath: "/api/assistant/models", routeType: "route", httpMethod: "GET" });

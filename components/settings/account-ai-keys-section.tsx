@@ -16,6 +16,7 @@ import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { ProviderOptionLabel } from "@/components/ai-provider-label";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
+import { LlmModelPicker } from "@/components/settings/llm-model-picker";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { useNumoPreferencesQuery, useSaveNumoPreferences } from "@/lib/use-numo-preferences-query";
 import { useAiRoutesQuery, useSetAiRoute } from "@/lib/use-ai-routes-query";
@@ -110,12 +111,12 @@ function useModelCopy() {
 
 /**
  * The language model (MIN-954): its provider, then that provider's model,
- * which Numo and every text feature run. The instance's provider runs the
- * administrator's model, so only a personal key offers a model.
+ * which Numo and every text feature run, and the reasoning level Numo runs it
+ * at. The instance's provider runs the administrator's model and level, so
+ * only a personal key offers them.
  */
 function LanguageModelRow() {
   const t = useTranslations("Account");
-  const modelCopy = useModelCopy();
   const preferences = useNumoPreferencesQuery();
   const save = useSaveNumoPreferences(() => toast.error(t("numoModelSaveError")));
   const data = preferences.data;
@@ -129,13 +130,17 @@ function LanguageModelRow() {
         <UsageControls
           provider={<ProviderSelect value={provider} options={data?.providers ?? []}
             ariaLabel={t("aiUsageProvider", { usage: label })} disabled={!data}
-            onChange={(next) => save.mutate({ provider: next, default_model: null })} />}
-          model={data?.model_locked ? undefined : <ModelCombobox scope="assistant" providerChoice={provider}
-            value={data?.default_model ?? ""}
-            onChange={(value) => data && save.mutate({ provider, default_model: value || null })}
+            onChange={(next) => save.mutate({ provider: next, default_model: null, reasoning_level: null })} />}
+          // The reasoning level is the language model's alone: embeddings,
+          // speech to text and decisions have none to choose.
+          model={data?.model_locked ? undefined : <LlmModelPicker provider={provider}
+            value={{ model: data?.default_model ?? null, reasoningLevel: data?.reasoning_level ?? null }}
+            applicationModel={data?.application_model ?? null}
+            onChange={(next) => data && save.mutate({
+              provider, default_model: next.model, reasoning_level: next.reasoningLevel,
+            })}
             disabled={!data}
-            defaultLabel={t("numoApplicationDefault")} defaultModelId={data?.application_model}
-            {...modelCopy} ariaLabel={t("numoDefaultModel")} />}
+            ariaLabel={t("numoDefaultModel")} />}
         />
       }
     >

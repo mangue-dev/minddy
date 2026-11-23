@@ -3064,6 +3064,7 @@
     "aiAddProvider": "Anbieter hinzufügen",
     "numoDefaultModel": "Standardmodell für Numo",
     "numoApplicationDefault": "App-Standard",
+    "numoModelReset": "Standardmodell und Standard-Reasoning verwenden",
     "numoModelSaveError": "Das Numo-Modell konnte nicht gespeichert werden. Versuche es erneut.",
     "numoModelLoadError": "Das Numo-Modell konnte nicht geladen werden. Lade die Einstellungen neu.",
     "hiddenProjectsTitle": "Ausgeblendete Projekte",

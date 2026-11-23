@@ -3064,6 +3064,7 @@
     "aiAddProvider": "Add provider",
     "numoDefaultModel": "Default Numo model",
     "numoApplicationDefault": "App default",
+    "numoModelReset": "Use the default model and reasoning",
     "numoModelSaveError": "Could not save the Numo model. Try again.",
     "numoModelLoadError": "Could not load the Numo model. Reload settings.",
     "hiddenProjectsTitle": "Hidden projects",

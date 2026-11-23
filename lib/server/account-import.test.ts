@@ -309,6 +309,21 @@ describe("account import tenant isolation", () => {
     const exported = await buildAccountExport(USER);
     expect(exported.numo_preferences).toEqual([expect.objectContaining({ provider: "openrouter", model: "test/model" })]);
   });
+  it("imports the reasoning level with the model, and a preference exported before it had one", async () => {
+    await importAccountTransfer(transfer({ numo_preferences: [
+      { user_id: SOURCE_USER, provider: "openrouter", model: "test/model", reasoning_level: "high" },
+      { user_id: SOURCE_USER, provider: "anthropic", model: null },
+    ] }), USER);
+    expect(database.writes.filter((write) => write.table === "user_numo_preferences").flatMap((write) => write.rows)).toEqual([
+      expect.objectContaining({ provider: "openrouter", reasoning_level: "high" }),
+      expect.objectContaining({ provider: "anthropic", reasoning_level: null }),
+    ]);
+  });
+  it("refuses an imported reasoning level that does not exist", async () => {
+    await expect(importAccountTransfer(transfer({ numo_preferences: [
+      { user_id: SOURCE_USER, provider: "openrouter", model: null, reasoning_level: "extreme" },
+    ] }), USER)).rejects.toThrow("Invalid imported Numo preference");
+  });
   it("imports personal notes encrypted and exports their plaintext through the repository", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");

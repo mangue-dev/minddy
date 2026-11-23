@@ -3064,6 +3064,7 @@
     "aiAddProvider": "Adicionar provedor",
     "numoDefaultModel": "Modelo padrão do Numo",
     "numoApplicationDefault": "Padrão do app",
+    "numoModelReset": "Usar o modelo e o raciocínio padrão",
     "numoModelSaveError": "Não foi possível salvar o modelo do Numo. Tente novamente.",
     "numoModelLoadError": "Não foi possível carregar o modelo do Numo. Recarregue as configurações.",
     "hiddenProjectsTitle": "Projetos ocultos",

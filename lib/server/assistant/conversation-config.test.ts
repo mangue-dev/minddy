@@ -9,11 +9,15 @@ const h = vi.hoisted(() => ({
   conversationModels: vi.fn(),
   defaultReasoning: vi.fn(),
   defaultModel: vi.fn(async (_user: string, _provider: string): Promise<string | null> => null),
+  accountReasoning: null as string | null,
 }));
 
 vi.mock("@/lib/server/assistant/model-preferences", () => ({
   getNumoProvider: vi.fn(async () => h.route),
-  getNumoDefaultModel: h.defaultModel,
+  getNumoProviderPreference: vi.fn(async (user: string, provider: string) => ({
+    model: await h.defaultModel(user, provider),
+    reasoningLevel: h.accountReasoning,
+  })),
   numoModelIsInstanceDefined: (provider: string | null | undefined) => provider === "minddy",
 }));
 vi.mock("@/lib/server/ai-runtime", () => ({
@@ -37,6 +41,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.route = "minddy";
   h.defaultModel.mockResolvedValue(null);
+  h.accountReasoning = null;
   // Minddy Cloud runs on the platform key; a personal provider on its own key.
   h.runtime.mockImplementation(async (input: { modelOverride?: string | null; provider?: string | null; managedOnly?: boolean }) => {
     const provider = input.managedOnly ? "minddy" : input.provider ?? h.route;
@@ -142,8 +147,22 @@ describe("Numo on a personal key", () => {
   });
 
   it("lets an explicit conversation model override the saved default", async () => {
-    await resolveNumoTurnConfiguration({ userId: "user", model: "chosen-model" });
-    expect(h.defaultModel).not.toHaveBeenCalled();
+    h.defaultModel.mockResolvedValue(ADMIN_MODEL);
+    await expect(resolveNumoTurnConfiguration({ userId: "user", model: "chosen-model" }))
+      .resolves.toMatchObject({ model: "chosen-model" });
+  });
+
+  it("runs the account's reasoning level instead of the instance's", async () => {
+    h.accountReasoning = "low";
+    await expect(resolveNumoTurnConfiguration({ userId: "user" }))
+      .resolves.toMatchObject({ model: ADMIN_MODEL, reasoningLevel: "low", persistedReasoningLevel: null });
+  });
+
+  it("places the account's level on the nearest one the model offers", async () => {
+    // The default model offers low and medium, not high.
+    h.accountReasoning = "high";
+    await expect(resolveNumoTurnConfiguration({ userId: "user" }))
+      .resolves.toMatchObject({ reasoningLevel: "medium" });
   });
 
   it("refuses a removed saved default instead of silently replacing it", async () => {

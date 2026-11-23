@@ -3064,6 +3064,7 @@
     "aiAddProvider": "Añadir proveedor",
     "numoDefaultModel": "Modelo predeterminado de Numo",
     "numoApplicationDefault": "Predeterminado de la app",
+    "numoModelReset": "Usar el modelo y el razonamiento predeterminados",
     "numoModelSaveError": "No se pudo guardar el modelo de Numo. Inténtalo de nuevo.",
     "numoModelLoadError": "No se pudo cargar el modelo de Numo. Recarga los ajustes.",
     "hiddenProjectsTitle": "Proyectos ocultos",
