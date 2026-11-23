@@ -96,7 +96,7 @@
       "lib/server/numo/watch-prompt.ts",
       "lib/server/assistant/context-compaction.ts",
       "lib/server/assistant/conversation-config.ts",
-      "components/assistant/conversation-settings.tsx",
+      "components/settings/account-ai-keys-section.tsx",
       "components/settings/account-numo-section.tsx",
       "components/assistant/numo-intro.tsx",
       "lib/numo-cited-mentions.ts",
@@ -294,7 +294,7 @@ Numo usa il contesto della conversazione e i permessi del tuo account. Inizia co
 Apri il ticket o il progetto interessato e usa il pulsante flottante di Numo. La pagina corrente diventa il contesto. Le azioni contestuali che affidano lavoro a Numo aprono lo stesso pannello. Servono accesso al progetto e budget IA disponibile oppure una chiave personale compatibile.
 
 1. Controlla il contesto nell’area di scrittura. Specifica il ticket quando sono coinvolti più elementi. Per aggiungere un ticket come contesto, digita `@` nell’area di scrittura o usa **Aggiungi contesto**, che raggruppa il contesto nelle stesse sezioni del menu `@`, i ticket sotto **Ticket** e i tuoi server MCP collegati sotto **Server MCP**; una descrizione mostra anche ticket trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**.
-2. Su minddy Cloud, Numo usa il modello e il livello di ragionamento scelti dall’amministrazione della tua istanza, come Smart Fill e Smart Assign, e il composer non mostra alcun controllo del modello. Con una chiave personale per Numo, il logo del fornitore accanto al microfono sceglie fornitore, modello e livello di ragionamento della conversazione; passandoci sopra vedi il modello attuale. Se il modello non offre il controllo del ragionamento, il cursore resta su **Nessun ragionamento**; su un modello che ragiona sempre, **Nessun ragionamento** usa il suo livello più leggero. Lo stesso logo riporta la conversazione su **minddy Cloud**.
+2. Su minddy Cloud, Numo usa il modello e il livello di ragionamento scelti dall’amministrazione della tua istanza, come Smart Fill e Smart Assign. Con una chiave personale, Numo usa il modello scelto in **Modello linguistico** nelle [impostazioni IA](/docs/ai-settings-and-usage#ai-keys-and-models). In entrambi i casi il composer non mostra alcun controllo del modello.
 3. Invia una richiesta circoscritta, per esempio: «Leggi questo ticket e proponi criteri di accettazione. Non modificarne lo stato».
 4. Leggi la risposta e apri i collegamenti ai ticket o alle fonti. Se hai chiesto una modifica, verifica l’oggetto aggiornato. Ticket, obiettivi, progetti, pagine e membri trovati da Numo compaiono nella risposta come menzioni a pillola: ognuna apre il proprio elemento, e una che non puoi vedere appare come **Non disponibile**. Numo scrive queste menzioni anche in ciò che redige, come descrizioni e piani dei ticket, descrizioni degli obiettivi, commenti, pagine e taccuino, solo per gli elementi che ha identificato; un membro menzionato lì riceve una notifica come per qualsiasi menzione. Quando digiti `@` nell’area di scrittura, ciò che Numo ha menzionato in questa conversazione o nel suo [riepilogo nella **Home**](#home-word) compare per primo sotto **Menzionato da Numo**, a partire dal suo ultimo messaggio, fino a otto elementi. Il menu propone anche le pagine di tutti i tuoi progetti tranne quelli nascosti: in un progetto le sue pagine vengono prima, le altre mostrano il nome del loro progetto.
 
@@ -312,7 +312,7 @@ Se incolli nel composer un testo di oltre 12.000 caratteri, ad esempio dei log, 
 
 Quando chiedi qualcosa da tenere sotto controllo, o un elenco di elementi con campi in comune, come candidature con azienda, stato e data, Numo crea un [database](/docs/databases) con quelle colonne e le prime voci invece di una pagina.
 
-Con una chiave personale, il modello predefinito di Numo si configura in **Impostazioni account → IA → Numo → Conversazioni**, salvato per quel fornitore: il valore dell’app o un modello a tua scelta. La scelta propria di una conversazione ha la precedenza. Su minddy Cloud non c’è un modello da scegliere. Consulta [le impostazioni IA e l’utilizzo](/docs/ai-settings-and-usage#ai-keys-and-models).
+Con una chiave personale, Numo usa il modello scelto in **Modello linguistico** nelle impostazioni IA dell’account, salvato per quel fornitore: il modello predefinito dell’app o un modello a tua scelta. Le conversazioni seguono questa impostazione, e il composer non ha alcun controllo del modello. Su minddy Cloud non c’è un modello da scegliere. Consulta [le impostazioni IA e l’utilizzo](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Conversazione dimostrativa Numo con contesto, cambio di priorità e risposta salvata.](/documentation/it/work-with-numo-workflow.png)
 
@@ -410,7 +410,7 @@ Un promemoria ricorrente è tuo; una routine appartiene a un progetto. Solo tu v
 
 ## Comprendere i turni persistenti di Numo {#numo-execution-model}
 
-Messaggi interattivi, azioni contestuali e routine entrano nelle conversazioni Numo. Con una chiave personale, modello e ragionamento della conversazione si scelgono nel composer; su minddy Cloud li stabilisce l’istanza. Numo agisce tramite i suoi strumenti minddy e le eventuali connessioni MCP personali che hai aggiunto; non ha bisogno di un repository. Una routine crea una nuova conversazione con istruzioni salvate e contesto di proprietario e progetto. Non serve mantenere il desktop online.
+Messaggi interattivi, azioni contestuali e routine entrano nelle conversazioni Numo. Con una chiave personale, il modello viene dalle tue impostazioni IA; su minddy Cloud modello e livello di ragionamento li stabilisce l’istanza. Numo agisce tramite i suoi strumenti minddy e le eventuali connessioni MCP personali che hai aggiunto; non ha bisogno di un repository. Una routine crea una nuova conversazione con istruzioni salvate e contesto di proprietario e progetto. Non serve mantenere il desktop online.
 
 ![Schema: Persistire intento, messaggio e UUID. Acquisire turno, salvare tool e risultati. Attendere la tua risposta se serve un input. Riprodurre eventi e riconciliare scritture incerte.](/documentation/it/numo-execution-model-flow.svg)
 

@@ -96,7 +96,7 @@
       "lib/server/numo/watch-prompt.ts",
       "lib/server/assistant/context-compaction.ts",
       "lib/server/assistant/conversation-config.ts",
-      "components/assistant/conversation-settings.tsx",
+      "components/settings/account-ai-keys-section.tsx",
       "components/settings/account-numo-section.tsx",
       "components/assistant/numo-intro.tsx",
       "lib/numo-cited-mentions.ts",
@@ -294,7 +294,7 @@ O Numo usa o contexto da conversa e as permissões da sua conta. Comece com uma 
 Abra o ticket ou o projeto e use o botão flutuante do Numo. A página atual vira contexto da conversa. As ações contextuais que passam trabalho ao Numo abrem o mesmo painel. Você precisa de acesso ao projeto e uso de IA disponível ou uma chave pessoal compatível.
 
 1. Confira o contexto na área de mensagem. Identifique o ticket quando houver vários itens relevantes. Para adicionar um ticket como contexto, digite `@` na área de mensagem ou use **Adicionar contexto**, que agrupa o contexto nas mesmas seções do menu `@`, os tickets em **Tickets** e seus servidores MCP conectados em **Servidores MCP**; uma descrição também lista tickets encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
-2. No minddy Cloud, o Numo usa o modelo e o nível de raciocínio escolhidos pela administração da sua instância, como o Smart Fill e o Smart Assign, e o campo de composição não mostra nenhum controle de modelo. Com uma chave pessoal para o Numo, o logotipo do provedor, ao lado do microfone, escolhe o provedor, o modelo e o nível de raciocínio da conversa; ao passar o cursor, você vê o modelo atual. Se o modelo não oferece controle de raciocínio, o controle deslizante fica em **Sem raciocínio**; em um modelo que sempre raciocina, **Sem raciocínio** usa o nível mais leve. O mesmo logotipo leva a conversa de volta ao **minddy Cloud**.
+2. No minddy Cloud, o Numo usa o modelo e o nível de raciocínio escolhidos pela administração da sua instância, como o Smart Fill e o Smart Assign. Com uma chave pessoal, o Numo usa o modelo escolhido em **Modelo de linguagem** nas [configurações de IA](/docs/ai-settings-and-usage#ai-keys-and-models). Nos dois casos, o campo de composição não mostra nenhum controle de modelo.
 3. Envie um pedido delimitado, por exemplo: “Leia este ticket e proponha critérios de aceitação. Não altere o status”.
 4. Leia a resposta e abra os links de tickets ou fontes. Para uma alteração, confira o objeto atualizado. Tickets, objetivos, projetos, páginas e membros que o Numo encontrou aparecem na resposta como menções em formato de pílula: cada uma abre o item correspondente, e uma que você não pode ver aparece como **Indisponível**. O Numo também escreve essas menções no que redige, como descrições e planos de tickets, descrições de objetivos, comentários, páginas e o caderno, só para os itens que identificou; um membro mencionado ali é notificado como em qualquer menção. Ao digitar `@` na área de mensagem, o que o Numo mencionou nesta conversa ou no seu [resumo na **Página inicial**](#home-word) aparece primeiro em **Mencionado pelo Numo**, a partir da última mensagem dele, até oito itens. O menu também oferece as páginas de todos os seus projetos, exceto os ocultos: em um projeto, as páginas dele vêm primeiro, e as outras mostram o nome do projeto.
 
@@ -312,7 +312,7 @@ Se você colar no campo de mensagem um texto com mais de 12.000 caracteres, como
 
 Quando você pede um acompanhamento, ou uma lista de itens que compartilham campos, como candidaturas com empresa, status e data, o Numo cria um [banco de dados](/docs/databases) com essas colunas e as primeiras entradas em vez de uma página.
 
-Com uma chave pessoal, o modelo padrão do Numo vem de **Configurações da conta → IA → Numo → Conversas**, salvo para esse provedor: o padrão do app ou um modelo que você escolher. A escolha própria de uma conversa tem prioridade. No minddy Cloud não há modelo a escolher. Consulte [configurações de IA e uso](/docs/ai-settings-and-usage#ai-keys-and-models).
+Com uma chave pessoal, o Numo usa o modelo escolhido em **Modelo de linguagem** nas configurações de IA da conta, salvo para esse provedor: o modelo padrão do app ou um modelo que você escolher. As conversas seguem essa configuração, e o campo de composição não tem controle de modelo. No minddy Cloud não há modelo a escolher. Consulte [configurações de IA e uso](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.](/documentation/pt-BR/work-with-numo-workflow.png)
 
@@ -410,7 +410,7 @@ Um lembrete recorrente é seu; uma rotina pertence a um projeto. Só você vê o
 
 ## Entender os turnos persistentes do Numo {#numo-execution-model}
 
-Mensagens interativas, ações contextuais e rotinas entram nas conversas do Numo. Com uma chave pessoal, o modelo e o raciocínio da conversa são escolhidos no campo de composição; no minddy Cloud, eles vêm da instância. O Numo age por meio de suas ferramentas do minddy e das conexões MCP pessoais que você adicionou; ele não precisa de repositório. Uma rotina cria uma conversa nova com instruções salvas e contexto do proprietário e projeto. O desktop não precisa permanecer online.
+Mensagens interativas, ações contextuais e rotinas entram nas conversas do Numo. Com uma chave pessoal, o modelo vem das suas configurações de IA; no minddy Cloud, o modelo e o nível de raciocínio vêm da instância. O Numo age por meio de suas ferramentas do minddy e das conexões MCP pessoais que você adicionou; ele não precisa de repositório. Uma rotina cria uma conversa nova com instruções salvas e contexto do proprietário e projeto. O desktop não precisa permanecer online.
 
 ![Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.](/documentation/pt-BR/numo-execution-model-flow.svg)
 

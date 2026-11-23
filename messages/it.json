@@ -1583,6 +1583,7 @@
     "add": "Aggiungi",
     "remove": "Rimuovi",
     "close": "Chiudi",
+    "open": "Apri",
     "create": "Crea",
     "manage": "Gestisci",
     "loading": "Caricamento…",
@@ -3299,7 +3300,6 @@
   },
   "Agent": {
     "sectionTitle": "Numo",
-    "modelDefault": "Il mio modello predefinito",
     "modelSearchPlaceholder": "Cerca un modello…",
     "modelSearchEmpty": "Nessun modello trovato.",
     "modelSearchLoading": "Caricamento modelli…",
@@ -3341,7 +3341,6 @@
     "reasoningMinimal": "Minimo",
     "reasoningXhigh": "Molto profondo",
     "reasoningMax": "Massimo",
-    "modelSettingsReset": "Ripristina i valori predefiniti dell'account",
     "providerLabel": "Fornitore"
   },
   "Projects": {
@@ -6633,7 +6632,6 @@
     "executionEnvironment": "Numo usa gli strumenti minddy e i servizi MCP collegati.",
     "workerModelHint": "Ogni esecuzione usa il modello Numo predefinito impostato nell’account.",
     "promptLabel": "Istruzione",
-    "modelDefault": "Il mio modello predefinito",
     "spendCapLabel": "Limite di spesa",
     "spendCapHelp": "Ogni esecuzione si ferma a questa quota del tuo utilizzo mensile. Non si applica quando usi la tua chiave API.",
     "spendCapValue": "{percent}% max",

@@ -35,7 +35,6 @@ import {
   type ChatInputHandle,
 } from "@/components/assistant/chat-input";
 import { AssistantChatInput } from "@/components/assistant/assistant-chat-input";
-import { ConversationSettings } from "@/components/assistant/conversation-settings";
 import {
   ChatMessage,
   StreamingMessage,
@@ -1374,7 +1373,6 @@ export const AssistantShell = forwardRef<
                   mentionables={mentionables}
                   onMentionQuery={onMentionQuery}
                   onAddContext={addPinned}
-                  leadingControls={<ConversationSettings />}
                   skills={projectId ? repositorySkills.skills : undefined}
                   loadSkill={repositorySkills.load}
                   contextSlot={(attachments: ChatInputContextAttachments) => (

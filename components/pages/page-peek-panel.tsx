@@ -5,7 +5,9 @@
 // and a page opened from a link anywhere in the app (MIN-777,
 // components/global-page-panel.tsx). Both offer the same ways out: Expand to
 // the full page, open it in a new tab from Expand's menu (not on the phone,
-// which has no tabs), or close back to what was underneath.
+// which has no tabs), or close back to what was underneath. On the phone the
+// panel is a sheet and leaving it for the full page is what the button is for,
+// so it reads Open rather than Expand.
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Cancel01Icon, ExpandIcon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
@@ -34,6 +36,7 @@ export function PagePeekPanel({
   open: boolean;
   /** Read by assistive technology only: the page shows its own title. */
   title: string;
+  /** The button's label on a computer; the phone shows Open instead. */
   expandLabel: string;
   onExpand: () => void;
   /** The shown page's address (lib/app-urls.ts), opened in a new tab from
@@ -84,7 +87,7 @@ export function PagePeekPanel({
           {mobile ? (
             <Button variant="outline" size="sm" onClick={onExpand}>
               <HugeiconsIcon icon={ExpandIcon} className="size-3.5" />
-              {expandLabel}
+              {tCommon("open")}
             </Button>
           ) : (
             <SplitButton

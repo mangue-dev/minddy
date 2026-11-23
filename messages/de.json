@@ -1583,6 +1583,7 @@
     "add": "Hinzufügen",
     "remove": "Entfernen",
     "close": "Schließen",
+    "open": "Öffnen",
     "create": "Erstellen",
     "manage": "Verwalten",
     "loading": "Wird geladen…",
@@ -3299,7 +3300,6 @@
   },
   "Agent": {
     "sectionTitle": "Numo",
-    "modelDefault": "Mein Standardmodell",
     "modelSearchPlaceholder": "Ein Modell suchen…",
     "modelSearchEmpty": "Kein Modell gefunden.",
     "modelSearchLoading": "Modelle werden geladen…",
@@ -3341,7 +3341,6 @@
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Sehr gründlich",
     "reasoningMax": "Maximal",
-    "modelSettingsReset": "Auf Kontostandards zurücksetzen",
     "providerLabel": "Anbieter"
   },
   "Projects": {
@@ -6633,7 +6632,6 @@
     "executionEnvironment": "Numo nutzt deine verbundenen minddy-Tools und MCP-Dienste.",
     "workerModelHint": "Jede Ausführung nutzt dein Standardmodell für Numo aus den Kontoeinstellungen.",
     "promptLabel": "Anweisung",
-    "modelDefault": "Mein Standardmodell",
     "spendCapLabel": "Ausgabenobergrenze",
     "spendCapHelp": "Jede Ausführung endet bei diesem Anteil deiner monatlichen Nutzung. Bei Verwendung deines eigenen API-Schlüssels gilt diese Grenze nicht.",
     "spendCapValue": "max. {percent} %",

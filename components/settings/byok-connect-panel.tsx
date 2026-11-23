@@ -15,6 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -236,10 +244,32 @@ export function ByokConnectPanel({
         </div>
       ))}
 
+      {/* Adding starts by choosing the provider: the form below opens
+          with it already selected. */}
       {mode === "settings" && !adding && (
         <div>
-          <Button size="sm" variant="outline" disabled={availableProviders.length === 0}
-            onClick={() => setAdding(true)}>{t("aiAddProvider")}</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" disabled={availableProviders.length === 0}>
+                {t("aiAddProvider")}
+                <HugeiconsIcon icon={ArrowDown01Icon} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {availableProviders.map((entry) => (
+                <DropdownMenuItem
+                  key={entry.id}
+                  onSelect={() => {
+                    selectProvider(entry.id);
+                    setAdding(true);
+                  }}
+                >
+                  <ProviderLogo provider={entry.id} size={16} />
+                  {providerLabel(entry)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 

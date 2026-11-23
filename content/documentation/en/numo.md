@@ -96,7 +96,7 @@
       "lib/server/numo/watch-prompt.ts",
       "lib/server/assistant/context-compaction.ts",
       "lib/server/assistant/conversation-config.ts",
-      "components/assistant/conversation-settings.tsx",
+      "components/settings/account-ai-keys-section.tsx",
       "components/settings/account-numo-section.tsx",
       "components/assistant/numo-intro.tsx",
       "lib/numo-cited-mentions.ts",
@@ -293,7 +293,7 @@ Numo works from your conversation’s context and your account’s permissions. 
 Open the issue or project you want to work on, then use the floating Numo button. The current page becomes conversation context. Contextual actions that hand work to Numo open this same panel. You need access to the project and available AI usage or a compatible personal key.
 
 1. Check the context shown in the composer. Name the issue explicitly if several items are relevant. To add an issue as context, type `@` in the composer or use **Add context**, which groups the context into the same sections as the `@` menu, issues under **Issues** and your connected MCP servers under **MCP servers**; a description also lists issues found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
-2. On minddy Cloud, Numo runs the model and reasoning level chosen by your instance's administrator, as Smart Fill and Smart Assign do, and the composer shows no model control. With a personal key for Numo, the provider logo next to the microphone chooses the conversation's provider, model and reasoning level; hovering it names the current model. When the model offers no reasoning control, the reasoning slider stays on **No reasoning**; on a model that always reasons, **No reasoning** runs its lightest level. The same logo switches the conversation back to **minddy Cloud**.
+2. On minddy Cloud, Numo runs the model and reasoning level chosen by your instance's administrator, as Smart Fill and Smart Assign do. With a personal key, Numo uses the model chosen for **Language model** in [AI settings](/docs/ai-settings-and-usage#ai-keys-and-models). The composer shows no model control in either case.
 3. Send a bounded request, for example: “Read this issue and propose acceptance criteria. Do not change its status.”
 4. Read the answer and follow its issue or source links. For an action request, open the changed object and check the result. Issues, objectives, projects, pages and members that Numo found appear in its answer as mention pills: a pill opens its target, and one you cannot see shows as **Unavailable**. Numo also writes these mentions into what it writes, such as issue descriptions and plans, objective descriptions, comments, pages and the notebook, only for items it identified; a member mentioned there is notified as with any mention. When you type `@` in the composer, what Numo mentioned in this conversation or in its [summary on **Home**](#home-word) comes first under **Mentioned by Numo**, starting with its latest message, up to eight items. The menu also lists the pages of all your projects except hidden ones: in a project, its own pages come first, and the others show their project's name.
 
@@ -311,7 +311,7 @@ When you paste a text longer than 12,000 characters into the composer, such as l
 
 When you ask for something to track, or for a list of items that share fields, such as job applications with their company, status and date, Numo creates a [database](/docs/databases) with those columns and its first entries rather than a page.
 
-With a personal key, the default Numo model comes from **Account settings → AI → Numo → Conversations**, saved for that provider: App default or a model you choose. A conversation's own choice takes precedence. On minddy Cloud there is no model to choose. See [AI settings and usage](/docs/ai-settings-and-usage#ai-keys-and-models).
+With a personal key, Numo uses the model chosen for **Language model** in account AI settings, saved for that provider: the app's default model or a model you choose. Conversations follow it, and the composer has no model control. On minddy Cloud there is no model to choose. See [AI settings and usage](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Numo demonstration conversation with page context, a priority-change request and its saved answer.](/documentation/en/work-with-numo-workflow.png)
 
@@ -409,7 +409,7 @@ A recurring reminder is yours; a routine belongs to a project. Only you see your
 
 ## Understand durable Numo turns {#numo-execution-model}
 
-Interactive messages, contextual actions and scheduled routines enter Numo conversations. On a personal key, the conversation's model and reasoning level are chosen in the composer; on minddy Cloud they come from the instance. Numo acts through its minddy tools and any personal MCP connections you added; it needs no repository. A routine creates a new occurrence conversation using its saved instruction and owner/project context. No desktop session needs to remain online.
+Interactive messages, contextual actions and scheduled routines enter Numo conversations. On a personal key, the model comes from your AI settings; on minddy Cloud the model and reasoning level come from the instance. Numo acts through its minddy tools and any personal MCP connections you added; it needs no repository. A routine creates a new occurrence conversation using its saved instruction and owner/project context. No desktop session needs to remain online.
 
 ![Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.](/documentation/en/numo-execution-model-flow.svg)
 
