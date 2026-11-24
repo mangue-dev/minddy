@@ -120,11 +120,10 @@ export async function captureServerException(
       // the anonymous public-upload analytics events).
       $process_person_profile: false,
     });
-    await posthog.captureExceptionImmediate(
-      error,
-      parsePostHogDistinctId(cookieHeader) ?? undefined,
+    await posthog.captureExceptionImmediate(error, {
+      distinctId: parsePostHogDistinctId(cookieHeader) ?? undefined,
       properties,
-    );
+    });
   } catch {
     // A tracking failure must never compound the error being reported.
   }

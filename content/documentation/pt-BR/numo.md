@@ -332,6 +332,8 @@ O Numo age dentro do acesso e do papel do usuário atual. Um pedido no chat não
 
 O Numo pode alterar as preferências da sua conta, ocultar ou voltar a mostrar projetos para você e, quando um projeto é seu, as configurações, os membros e as funções deles. Algumas ações continuam sendo suas: as chaves de provedores e os modelos de IA, as conexões Git, o login, a autenticação de dois fatores e os apps conectados, o avatar e o ícone do projeto, a transferência de propriedade, a exportação de dados e a exclusão da conta.
 
+Quando você pede uma alteração, o Numo a faz e depois diz o que mudou: uma tradução ou uma reescrita que você pede vai para a descrição em questão, não só para a resposta dele. Quando um detalhe não bloqueia o trabalho, como substituir um texto ou completá-lo, ele escolhe a opção mais razoável e diz qual, para que você possa corrigi-la. Ele só pergunta antes de uma alteração em massa ou destrutiva: editar muitos tickets de uma vez, recusar itens da Triagem, cancelar tickets, mandar algo para a lixeira, remover um membro, revogar uma integração, cancelar um convite, mudar a chave do projeto ou mesclar uma pull request.
+
 ### Autorizar a ação {#authorization}
 
 Descreva a alteração e seu alcance. Ler uma solicitação não autoriza respondê-la publicamente: o Numo só envia respostas públicas a feedback quando solicitado explicitamente. Instruções ou resultados de um MCP remoto não autorizam ações adicionais. Conecte apenas serviços aos quais confia as informações e ações previstas.

@@ -73,7 +73,7 @@ describe("server error tracking", () => {
     });
 
     expect(posthogMock.captureExceptionImmediate).toHaveBeenCalledTimes(1);
-    const [error, distinctId, properties] = posthogMock.captureExceptionImmediate.mock.calls[0];
+    const [error, { distinctId, properties }] = posthogMock.captureExceptionImmediate.mock.calls[0];
     expect(error).toBeInstanceOf(Error);
     expect(distinctId).toBe("acc-1");
     expect(properties).toEqual({
@@ -95,8 +95,10 @@ describe("server error tracking", () => {
 
     expect(posthogMock.captureExceptionImmediate).toHaveBeenCalledWith(
       expect.any(Error),
-      undefined,
-      expect.objectContaining({ $process_person_profile: false }),
+      {
+        distinctId: undefined,
+        properties: expect.objectContaining({ $process_person_profile: false }),
+      },
     );
   });
 
@@ -108,9 +110,12 @@ describe("server error tracking", () => {
       code: "PGRST205", message: "private-account-data", details: "private-row", hint: "private-hint",
     }, 404);
     await captureServerException(error, null);
-    expect(posthogMock.captureExceptionImmediate).toHaveBeenCalledExactlyOnceWith(error, undefined, {
-      failure_kind: "database_error", failure_code: "PGRST205", failure_status: 404,
-      $process_person_profile: false,
+    expect(posthogMock.captureExceptionImmediate).toHaveBeenCalledExactlyOnceWith(error, {
+      distinctId: undefined,
+      properties: {
+        failure_kind: "database_error", failure_code: "PGRST205", failure_status: 404,
+        $process_person_profile: false,
+      },
     });
     const serialized = JSON.stringify(posthogMock.captureExceptionImmediate.mock.calls);
     expect(serialized).not.toContain("private-account-data");
