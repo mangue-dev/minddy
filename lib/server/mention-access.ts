@@ -78,6 +78,9 @@ export interface ResolvedMention extends MentionRef {
   prState?: PullRequestState;
   seed?: string;
   issueStatus?: IssueStatus;
+  /** The project of an issue, objective or page, so its pill can link to it
+      on a surface that holds no list of them (Home's word). */
+  projectId?: string;
 }
 
 /** Resolve `refs` for `userId` into the pills' answer, in the order given. */
@@ -92,7 +95,8 @@ export async function resolvedMentionsForReader(
   const prStates = new Map<string, PullRequestState>();
   const seeds = new Map<string, string>();
   const issueStatuses = new Map<string, IssueStatus>();
-  const resolution = await resolveMentionTargets(userId, refs, service, statuses, services, pages, prStates, seeds, issueStatuses);
+  const targetProjects = new Map<string, string>();
+  const resolution = await resolveMentionTargets(userId, refs, service, statuses, services, pages, prStates, seeds, issueStatuses, targetProjects);
   return refs.map((ref) => {
     const key = mentionKey(ref);
     const status = statuses.get(key);
@@ -101,6 +105,7 @@ export async function resolvedMentionsForReader(
     const prState = prStates.get(key);
     const seed = seeds.get(key);
     const issueStatus = issueStatuses.get(key);
+    const projectId = targetProjects.get(key);
     return {
       ...ref,
       label: resolution.get(key) ?? null,
@@ -110,6 +115,7 @@ export async function resolvedMentionsForReader(
       ...(prState ? { prState } : {}),
       ...(seed ? { seed } : {}),
       ...(issueStatus ? { issueStatus } : {}),
+      ...(projectId ? { projectId } : {}),
     };
   });
 }
@@ -152,7 +158,9 @@ function rows(result: { data: unknown; error: unknown }, what: string): Row[] {
  glyph (MIN-879). `pullRequestStates` receives the state of each pull request
  the reader may open, for the color of its pill (MIN-906). `issueStatuses`
  receives the status of each issue the reader may open, for the glyph of its
- pill when the surface holds no issue list yet (MIN-1006). */
+ pill when the surface holds no issue list yet (MIN-1006). `targetProjects`
+ receives the project of each issue, objective and page the reader may open,
+ for the link of its pill. */
 export async function resolveMentionTargets(
   userId: string,
   refs: readonly MentionRef[],
@@ -163,6 +171,7 @@ export async function resolveMentionTargets(
   pullRequestStates?: Map<string, PullRequestState>,
   memberSeeds?: Map<string, string>,
   issueStatuses?: Map<string, IssueStatus>,
+  targetProjects?: Map<string, string>,
 ): Promise<MentionResolution> {
   const resolution: MentionResolution = new Map();
   const unique = new Map<string, MentionRef>();
@@ -259,6 +268,7 @@ export async function resolveMentionTargets(
     const key = keyOf.get(String(row.project_id));
     if (readable(row) && key) {
       resolution.set(`issue:${row.id}`, issueIdentifier(key, Number(row.number)));
+      targetProjects?.set(`issue:${row.id}`, String(row.project_id));
       if (isIssueStatus(row.status)) issueStatuses?.set(`issue:${row.id}`, row.status);
     }
   }
@@ -266,6 +276,7 @@ export async function resolveMentionTargets(
     // The objective store returns names already decoded.
     if (!readable(row) || typeof row.name !== "string") continue;
     resolution.set(`objective:${row.id}`, row.name);
+    targetProjects?.set(`objective:${row.id}`, String(row.project_id));
     if (isObjectiveStatus(row.status)) objectiveStatuses?.set(`objective:${row.id}`, row.status);
   }
   const visibleMembers = new Set<string>(
@@ -297,6 +308,7 @@ export async function resolveMentionTargets(
     // A page the reader may see but nobody titled yet (a subpage just
     // created): untitled, not unavailable.
     resolution.set(`page:${row.id}`, title || UNTITLED_PAGE_LABEL);
+    if (typeof row.project_id === "string") targetProjects?.set(`page:${row.id}`, row.project_id);
     pageFigures?.set(`page:${row.id}`, {
       icon: typeof row.icon === "string" && row.icon ? row.icon : null,
       database: Array.isArray(row.database_schema),

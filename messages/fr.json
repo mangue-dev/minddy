@@ -1583,6 +1583,7 @@
     "add": "Ajouter",
     "remove": "Retirer",
     "close": "Fermer",
+    "open": "Ouvrir",
     "create": "Créer",
     "manage": "Gérer",
     "loading": "Chargement…",
@@ -3063,6 +3064,7 @@
     "aiAddProvider": "Ajouter un fournisseur",
     "numoDefaultModel": "Modèle par défaut de Numo",
     "numoApplicationDefault": "Par défaut de l’app",
+    "numoModelReset": "Utiliser le modèle et le raisonnement par défaut",
     "numoModelSaveError": "Impossible d’enregistrer le modèle Numo. Réessayez.",
     "numoModelLoadError": "Impossible de charger le modèle Numo. Rechargez les paramètres.",
     "hiddenProjectsTitle": "Projets masqués",
@@ -3299,7 +3301,6 @@
   },
   "Agent": {
     "sectionTitle": "Numo",
-    "modelDefault": "Mon modèle par défaut",
     "modelSearchPlaceholder": "Rechercher un modèle…",
     "modelSearchEmpty": "Aucun modèle trouvé.",
     "modelSearchLoading": "Chargement des modèles…",
@@ -3341,7 +3342,6 @@
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Très poussé",
     "reasoningMax": "Maximum",
-    "modelSettingsReset": "Revenir aux valeurs du compte",
     "providerLabel": "Fournisseur"
   },
   "Projects": {
@@ -6633,7 +6633,6 @@
     "executionEnvironment": "Numo utilise vos outils minddy et vos services MCP connectés.",
     "workerModelHint": "Chaque exécution utilise votre modèle Numo par défaut, défini dans les paramètres du compte.",
     "promptLabel": "Instruction",
-    "modelDefault": "Mon modèle par défaut",
     "spendCapLabel": "Plafond de dépense",
     "spendCapHelp": "Chaque exécution s'arrête à cette part de votre usage mensuel. Sans effet avec votre propre clé API.",
     "spendCapValue": "{percent} % au plus",

@@ -20,10 +20,12 @@ import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { contentMentionScanner } from "@/lib/mention-scan";
+import { resolvedMentionProject } from "@/lib/mention-resolution";
 import {
   mentionNavigationTarget,
   mentionProjectLookup,
   mentionTargetPath,
+  type MentionTargetType,
 } from "@/lib/mention-target";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useProjects } from "@/lib/projects-context";
@@ -286,10 +288,17 @@ export function useMentionLinksFor(
   const members = sources.members ?? NO_MEMBERS;
   const projects = sources.projects ?? NO_PROJECTS;
 
-  const projectOf = useMemo(
-    () => mentionProjectLookup({ issues, objectives, pages, references }),
-    [issues, objectives, pages, references],
-  );
+  // What the surface holds first, then the project the server named when it
+  // resolved the pill: Home's word cites issues no list on Home holds, and
+  // its pills stayed inert without it. Read at call time, so a pill that
+  // re-renders on its resolution finds it.
+  const projectOf = useMemo(() => {
+    const local = mentionProjectLookup({ issues, objectives, pages, references });
+    return (type: MentionTargetType, id: string) =>
+      local(type, id) ?? (type === "issue" || type === "objective" || type === "page"
+        ? resolvedMentionProject(type, id)
+        : undefined);
+  }, [issues, objectives, pages, references]);
 
   return useMemo<MentionLinks>(() => {
     const href: MentionLinks["href"] = (type, id) =>

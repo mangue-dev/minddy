@@ -4,7 +4,7 @@ import { saveNumoPreferencesApi } from "./use-numo-preferences-query";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const patch = { provider: "openrouter" as const, default_model: null };
+const patch = { provider: "openrouter" as const, default_model: null, reasoning_level: null };
 
 it("keeps the HTTP status of a non-JSON gateway failure (MIN-722)", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>Gateway timeout</html>", { status: 504 })));

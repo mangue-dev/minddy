@@ -14,6 +14,7 @@ import { selectImportedAccountMetadata } from "./account-metadata-import";
 import { encodeIssue } from "@/lib/server/issue-store";
 
 import { isKnownAgentProvider } from "@/lib/agent-providers";
+import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { MINDDY_CLOUD_PROVIDER } from "@/lib/ai-surfaces";
 import { isDecisionEngine } from "@/lib/decision-engine";
 import { randomUUID } from "node:crypto";
@@ -843,11 +844,15 @@ async function importAccountTransferCore(
 
   for (const preference of document.numo_preferences ?? []) {
     if (typeof preference.provider !== "string" || !isKnownAgentProvider(preference.provider) ||
-      !(preference.model === null || typeof preference.model === "string" && /^[\w./:@-]{1,200}$/.test(preference.model))) {
+      !(preference.model === null || typeof preference.model === "string" && /^[\w./:@-]{1,200}$/.test(preference.model)) ||
+      // Exports made before the account chose a reasoning level carry none.
+      !(preference.reasoning_level === undefined || preference.reasoning_level === null ||
+        isReasoningLevel(preference.reasoning_level))) {
       throw new Error("Invalid imported Numo preference");
     }
     const { error } = await service.from("user_numo_preferences").upsert({
       user_id: userId, provider: preference.provider, model: preference.model,
+      reasoning_level: preference.reasoning_level ?? null,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,provider" });
     if (error) throw new Error("Could not import Numo preferences");

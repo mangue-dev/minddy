@@ -31,6 +31,8 @@ type Entry = {
   seed?: string;
   /** An issue's status, for its glyph before any issue list has loaded (MIN-1006). */
   issueStatus?: IssueStatus;
+  /** An issue's, objective's or page's project, for the link of its pill. */
+  projectId?: string;
   at: number;
 };
 
@@ -62,6 +64,7 @@ export interface ResolvedMentionAnswer {
   status?: unknown; service?: unknown; icon?: unknown; database?: unknown; prState?: unknown;
   seed?: unknown;
   issueStatus?: unknown;
+  projectId?: unknown;
 }
 
 function entryOf(mention: ResolvedMentionAnswer, at: number): Entry {
@@ -75,6 +78,7 @@ function entryOf(mention: ResolvedMentionAnswer, at: number): Entry {
     ...(isPullRequestState(mention.prState) ? { prState: mention.prState } : {}),
     ...(typeof mention.seed === "string" ? { seed: mention.seed } : {}),
     ...(isIssueStatus(mention.issueStatus) ? { issueStatus: mention.issueStatus } : {}),
+    ...(typeof mention.projectId === "string" ? { projectId: mention.projectId } : {}),
     at,
   };
 }
@@ -145,15 +149,27 @@ function subscribe(listener: () => void) {
 /**
  * Asks the server again for a target whose label or figure just changed,
  * keeping the pill as it is until the answer: a member who renamed
- * themselves or changed their avatar (MIN-964). A pill resolved behind the
- * profile screen otherwise kept the account's first name for a minute.
+ * themselves or changed their avatar (MIN-964), an issue Numo just moved
+ * (lib/mention-live.ts). A pill resolved earlier otherwise kept the old
+ * state for a minute, and longer when nothing re-rendered it. `known` is
+ * what the change already says, shown at once: an issue's or objective's
+ * new status.
  */
-export function refreshResolvedMention(type: MentionLinkType, id: string): void {
+export function refreshResolvedMention(
+  type: MentionLinkType,
+  id: string,
+  known?: Pick<Entry, "issueStatus" | "status">,
+): void {
   const key = keyOf(type, id);
   const entry = cache.get(key);
   if (!entry) return;
-  cache.set(key, { ...entry, at: 0 });
+  cache.set(key, { ...entry, ...known, at: 0 });
   notify();
+}
+
+/** The project the server named for a target, `undefined` when unknown. */
+export function resolvedMentionProject(type: MentionLinkType, id: string): string | undefined {
+  return cache.get(keyOf(type, id))?.projectId;
 }
 
 /** The resolution of one mention: `undefined` while it loads. */

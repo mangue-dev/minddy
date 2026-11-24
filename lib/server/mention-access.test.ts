@@ -192,6 +192,22 @@ describe("resolving mention targets", () => {
     expect(Object.fromEntries(statuses)).toEqual({ [`issue:${ISSUE_OK}`]: "in_review" });
   });
 
+  it("names the project of each issue, objective and page the reader can open, and of no hidden one", async () => {
+    const projects = new Map<string, string>();
+    await resolveMentionTargets("reader", [
+      { type: "issue", id: ISSUE_OK },
+      { type: "issue", id: ISSUE_HIDDEN },
+      { type: "objective", id: OBJECTIVE_OK },
+      { type: "page", id: PAGE_DATABASE },
+      { type: "page", id: PAGE_HIDDEN },
+    ], undefined, undefined, undefined, undefined, undefined, undefined, undefined, projects);
+    expect(Object.fromEntries(projects)).toEqual({
+      [`issue:${ISSUE_OK}`]: ALLOWED,
+      [`objective:${OBJECTIVE_OK}`]: ALLOWED,
+      [`page:${PAGE_DATABASE}`]: ALLOWED,
+    });
+  });
+
   it("gives the avatar seed of the members the reader can see, not their id", async () => {
     const seeds = new Map<string, string>();
     await resolveMentionTargets("reader", [

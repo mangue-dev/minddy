@@ -27,6 +27,8 @@ const uiStubs = vi.hoisted(() => {
     SelectTrigger: () => null, SelectValue: () => null, SelectLabel: () => null, SelectSeparator: () => null,
     SelectContent: content, SelectGroup: content,
     SelectItem: ({ value, children }: { value: string; children: ReactNode }) => <option value={value}>{children}</option>,
+    DropdownMenu: content, DropdownMenuTrigger: content, DropdownMenuContent: content,
+    DropdownMenuItem: ({ onSelect, children }: { onSelect: () => void; children: ReactNode }) => <button type="button" role="menuitem" onClick={onSelect}>{children}</button>,
     AlertDialog: ({ open, children }: { open: boolean; children: ReactNode }) => open ? <div>{children}</div> : null,
     AlertDialogAction: content, AlertDialogCancel: content, AlertDialogContent: content,
     AlertDialogDescription: content, AlertDialogFooter: content, AlertDialogHeader: content, AlertDialogTitle: content,
@@ -52,6 +54,10 @@ vi.mock("@/components/ui/spinner", async (importOriginal) => {
 vi.mock("@/components/ui/select", async (importOriginal) => {
   const stubs = await uiStubs();
   return { ...(await importOriginal<Record<string, unknown>>()), Select: stubs.Select, SelectTrigger: stubs.SelectTrigger, SelectValue: stubs.SelectValue, SelectLabel: stubs.SelectLabel, SelectSeparator: stubs.SelectSeparator, SelectContent: stubs.SelectContent, SelectGroup: stubs.SelectGroup, SelectItem: stubs.SelectItem };
+});
+vi.mock("@/components/ui/dropdown-menu", async (importOriginal) => {
+  const stubs = await uiStubs();
+  return { ...(await importOriginal<Record<string, unknown>>()), DropdownMenu: stubs.DropdownMenu, DropdownMenuTrigger: stubs.DropdownMenuTrigger, DropdownMenuContent: stubs.DropdownMenuContent, DropdownMenuItem: stubs.DropdownMenuItem };
 });
 vi.mock("@/components/ui/alert-dialog", async (importOriginal) => {
   const stubs = await uiStubs();
@@ -83,7 +89,13 @@ it("keeps several connected providers visible and offers only unconnected provid
   expect(host.textContent).toContain("OpenRouter"); expect(host.textContent).toContain("OpenAI");
   expect(host.querySelector("select")).toBeNull();
   expect(host.textContent).not.toContain(messages.Account.aiProviderMinddyHint);
-  await click(messages.Account.aiAddProvider);
+  // The Add provider menu lists only the providers not connected yet.
+  const offered = Array.from(host.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent);
+  expect(offered).toContain("Anthropic"); expect(offered).not.toContain("OpenRouter");
+  expect(offered).not.toContain("OpenAI"); expect(offered).not.toContain(messages.Account.aiProviderMinddy);
+  // Choosing one opens the form with that provider already selected.
+  await click("Anthropic");
+  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("anthropic");
   const choices = Array.from(host.querySelectorAll("option")).map((item) => item.value);
   expect(choices).toContain("anthropic"); expect(choices).not.toContain("openrouter");
   expect(choices).not.toContain("openai"); expect(choices).not.toContain("minddy");
@@ -93,14 +105,15 @@ it("keeps several connected providers visible and offers only unconnected provid
 });
 it("adds a provider without replacing or deleting existing connections", async () => {
   h.keys = [key("openrouter"), key("openai")];
-  await render("settings"); await click(messages.Account.aiAddProvider);
+  await render("settings"); await click("Google (Gemini)");
+  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("google");
   const input = host.querySelector<HTMLInputElement>('input[type="password"]')!;
   await act(() => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "fixture-key");
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
   await click(messages.Account.aiKeySave);
-  expect(h.add).toHaveBeenCalledWith({ provider: "anthropic", key: "fixture-key", baseUrl: undefined });
+  expect(h.add).toHaveBeenCalledWith({ provider: "google", key: "fixture-key", baseUrl: undefined });
   expect(h.remove).not.toHaveBeenCalled(); expect(host.querySelector("select")).toBeNull();
   expect(h.invalidate).toHaveBeenCalledWith({ queryKey: ["numo-preferences"] });
   expect(host.textContent).toContain("OpenRouter"); expect(host.textContent).toContain("OpenAI");

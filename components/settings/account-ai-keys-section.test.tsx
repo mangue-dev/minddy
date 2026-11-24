@@ -55,6 +55,16 @@ vi.mock("@/components/agent/model-combobox", () => ({
     </select>
   ),
 }));
+// The language model's picker, as the model and level it hands back.
+vi.mock("@/components/settings/llm-model-picker", () => ({
+  LlmModelPicker: ({ provider, value, onChange, disabled }: { provider: string; value: { model: string | null; reasoningLevel: string | null }; onChange: (next: { model: string | null; reasoningLevel: string | null }) => void; disabled?: boolean }) => (
+    <select aria-label="Fixture model assistant" data-provider={provider} data-reasoning={value.reasoningLevel ?? ""}
+      value={value.model ?? ""} disabled={disabled}
+      onChange={(event) => onChange({ model: event.target.value || null, reasoningLevel: event.target.value ? "high" : null })}>
+      <option value="">App default</option><option value="provider/model">Specific model</option>
+    </select>
+  ),
+}));
 vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ title, children }: { title: string; children: ReactNode }) => <section><h3>{title}</h3>{children}</section>,
   SettingsRow: ({ label, hint, control, children }: { label: ReactNode; hint?: ReactNode; control: ReactNode; children: ReactNode }) => <article>{label}<p>{hint}</p>{control}{children}</article>,
@@ -123,17 +133,17 @@ it("moves Numo conversations to another provider and restarts on that provider's
   h.numo = { ...h.numo!, default_model: "provider/model" };
   await render();
   await change(providerSelects()[0]!, "anthropic");
-  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: null });
+  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: null, reasoning_level: null });
   expect(h.setRoute).not.toHaveBeenCalled();
 });
 
-it("saves Numo's default model for its current provider", async () => {
+it("saves Numo's default model and reasoning level for its current provider", async () => {
   h.numo = { ...h.numo!, provider: "anthropic" };
   await render();
   const model = host.querySelector<HTMLSelectElement>('select[aria-label="Fixture model assistant"]')!;
   expect(model.dataset.provider).toBe("anthropic");
   await change(model, "provider/model");
-  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: "provider/model" });
+  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: "provider/model", reasoning_level: "high" });
 });
 
 it("offers no Numo model on minddy Cloud, where the instance sets it (MIN-954)", async () => {

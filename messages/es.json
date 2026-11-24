@@ -1583,6 +1583,7 @@
     "add": "Añadir",
     "remove": "Eliminar",
     "close": "Cerrar",
+    "open": "Abrir",
     "create": "Crear",
     "manage": "Gestionar",
     "loading": "Cargando…",
@@ -3063,6 +3064,7 @@
     "aiAddProvider": "Añadir proveedor",
     "numoDefaultModel": "Modelo predeterminado de Numo",
     "numoApplicationDefault": "Predeterminado de la app",
+    "numoModelReset": "Usar el modelo y el razonamiento predeterminados",
     "numoModelSaveError": "No se pudo guardar el modelo de Numo. Inténtalo de nuevo.",
     "numoModelLoadError": "No se pudo cargar el modelo de Numo. Recarga los ajustes.",
     "hiddenProjectsTitle": "Proyectos ocultos",
@@ -3299,7 +3301,6 @@
   },
   "Agent": {
     "sectionTitle": "Numo",
-    "modelDefault": "Mi modelo predeterminado",
     "modelSearchPlaceholder": "Buscar un modelo…",
     "modelSearchEmpty": "No se encontró ningún modelo.",
     "modelSearchLoading": "Cargando modelos…",
@@ -3341,7 +3342,6 @@
     "reasoningMinimal": "Mínimo",
     "reasoningXhigh": "Muy profundo",
     "reasoningMax": "Máximo",
-    "modelSettingsReset": "Restablecer los valores de la cuenta",
     "providerLabel": "Proveedor"
   },
   "Projects": {
@@ -6633,7 +6633,6 @@
     "executionEnvironment": "Numo usa tus herramientas de minddy y tus servicios MCP conectados.",
     "workerModelHint": "Cada ejecución usa tu modelo predeterminado de Numo, definido en la cuenta.",
     "promptLabel": "Instrucción",
-    "modelDefault": "Mi modelo predeterminado",
     "spendCapLabel": "Límite de gasto",
     "spendCapHelp": "Cada ejecución se detiene al llegar a este porcentaje de tu uso mensual. No se aplica si usas tu propia clave de API.",
     "spendCapValue": "{percent} % máximo",

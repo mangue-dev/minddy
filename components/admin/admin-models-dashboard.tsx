@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
@@ -22,6 +21,7 @@ import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {HelpHint} from "@/components/settings/help-hint";
 import {ModelCombobox} from "@/components/agent/model-combobox";
 import {ByokModelCombobox} from "@/components/admin/byok-model-combobox";
+import {LlmModelPicker, type LlmChoice} from "@/components/settings/llm-model-picker";
 
 import {formatModelName} from "@/lib/model-display";
 import {getAgentProvider} from "@/lib/agent-providers";
@@ -31,6 +31,7 @@ import type {ByokCatalogProvider} from "@/lib/byok-model-catalog";
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_GROUPS,
+  ASSISTANT_REASONING_CONFIG_KEY,
   getAiConfigField,
 } from "@/lib/ai-model-config";
 import type {AiConfigField, AiConfigGroup} from "@/lib/ai-model-config";
@@ -39,7 +40,7 @@ import {
   type ModelConfigChange,
   type ModelConfigFileError,
 } from "@/lib/ai-model-config-file";
-import {REASONING_LEVELS, toReasoningLevel, type ReasoningLevel} from "@/lib/agent-reasoning";
+import {isReasoningLevel, toReasoningLevel} from "@/lib/agent-reasoning";
 import {DECISION_ENGINE_CONFIG_KEY, toDecisionEngine} from "@/lib/decision-engine";
 import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import type {AdminSectionId} from "@/lib/admin-sections";
@@ -243,18 +244,33 @@ function ModelGroupCard({
       title={t(`groups.${group}.title`)}
       help={t.has(descKey) ? t(descKey) : undefined}
     >
-      {visibleFields(fields, values).map((field) =>
-        values === null ? (
-          <RowSkeleton key={field.key} />
-        ) : (
+      {visibleFields(fields, values).map((field) => {
+        if (values === null) return <RowSkeleton key={field.key} />;
+        // The language model and its reasoning level share one picker, as
+        // in the account's settings.
+        const reasoningField = field.key === "assistant_model"
+          ? fields.find((candidate) => candidate.key === ASSISTANT_REASONING_CONFIG_KEY)
+          : undefined;
+        if (reasoningField) {
+          return (
+            <LlmRow
+              key={field.key}
+              modelField={field}
+              reasoningField={reasoningField}
+              values={values}
+              onSaved={onSaved}
+            />
+          );
+        }
+        return (
           <ConfigRow
             key={field.key}
             field={field}
             value={values[field.key] ?? null}
             onSaved={onSaved}
           />
-        ),
-      )}
+        );
+      })}
     </SettingsGroup>
   );
 }
@@ -262,10 +278,12 @@ function ModelGroupCard({
 /**
  * The decision model only answers in decision-model mode (MIN-980): with the
  * language model as the engine, its picker would set a model nothing runs.
+ * The reasoning level is set in the language model's row.
  */
 function visibleFields(fields: AiConfigField[], values: ConfigValues | null): AiConfigField[] {
-  if (toDecisionEngine(values?.[DECISION_ENGINE_CONFIG_KEY]) !== "llm") return fields;
-  return fields.filter((field) => field.catalogCapability !== "decision");
+  const llmEngine = toDecisionEngine(values?.[DECISION_ENGINE_CONFIG_KEY]) === "llm";
+  return fields.filter((field) =>
+    field.kind !== "reasoning" && !(llmEngine && field.catalogCapability === "decision"));
 }
 
 /** Personal-key provider defaults, folded: they only concern BYOK members. */
@@ -676,9 +694,8 @@ function ConfigRow({
 
   switch (field.kind) {
     case "reasoning":
-      return (
-        <ReasoningRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
-      );
+      // Set with the language model, in `LlmRow`.
+      return null;
     case "modelId":
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
     case "count":
@@ -755,44 +772,54 @@ function EngineRow({
   );
 }
 
-/** The reasoning levels' labels, shared with the composer's picker. */
-const REASONING_LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
-  off: "reasoningOff",
-  minimal: "reasoningMinimal",
-  low: "reasoningLow",
-  medium: "reasoningMedium",
-  high: "reasoningHigh",
-  xhigh: "reasoningXhigh",
-  max: "reasoningMax",
-};
-
-function ReasoningRow({
-  field,
-  label,
-  desc,
-  value,
+/**
+ * The instance's language model and its reasoning level, in the account's
+ * picker (`LlmModelPicker`) over the platform catalog: the model, a reset,
+ * then the levels this model offers. Each value saves on its own; an
+ * emptied one returns to its built-in default.
+ */
+function LlmRow({
+  modelField,
+  reasoningField,
+  values,
   onSaved,
 }: {
-  field: AiConfigField;
-  label: string;
-  desc: string | null;
-  value: string | null;
+  modelField: AiConfigField;
+  reasoningField: AiConfigField;
+  values: ConfigValues;
   onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
-  const tAgent = useTranslations("Agent");
-  const saved = toReasoningLevel(value ?? field.fallback);
+  const tAccount = useTranslations("Account");
+  const label = useFieldLabel()(modelField);
+  const hint = [modelField, reasoningField]
+    .map((field) => `fields.${field.key}.desc` as AdminKey)
+    .filter((key) => t.has(key))
+    .map((key) => t(key))
+    .join(" ");
+  const savedModel = values[modelField.key]?.trim() || null;
+  const storedLevel = values[reasoningField.key];
+  const savedLevel = isReasoningLevel(storedLevel) ? storedLevel : null;
   const [busy, setBusy] = useState(false);
 
-  const select = async (next: string) => {
-    if (busy || next === saved) return;
+  const save = async (next: LlmChoice) => {
+    if (busy) return;
+    const changes: [string, string][] = [];
+    if (next.model !== savedModel) changes.push([modelField.key, next.model ?? ""]);
+    if (next.reasoningLevel !== savedLevel) changes.push([reasoningField.key, next.reasoningLevel ?? ""]);
+    if (changes.length === 0) return;
     setBusy(true);
     try {
-      await patchConfig(field.key, next);
-      onSaved(field.key, next);
+      for (const [key, value] of changes) {
+        await patchConfig(key, value);
+        // Only a save the server accepted moves the picker.
+        onSaved(key, value);
+      }
       toast.success(t("saved"));
     } catch (e) {
-      toast.error((e as Error).message);
+      const code = e instanceof ConfigSaveError ? e.code : null;
+      const key = code ? DECISION_MODEL_ERROR_KEYS[code] : undefined;
+      toast.error(key ? t(key) : (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -801,22 +828,23 @@ function ReasoningRow({
   return (
     <SettingsRow
       label={label}
-      hint={desc ?? undefined}
-      htmlFor={`cfg-${field.key}`}
+      hint={hint || undefined}
       control={
-        <>
-          <Select value={saved} onValueChange={(next) => void select(next)} disabled={busy}>
-            <SelectTrigger id={`cfg-${field.key}`} className="w-64">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {REASONING_LEVELS.map((level) => (
-                <SelectItem key={level} value={level}>{tAgent(REASONING_LABEL_KEYS[level])}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="w-64 min-w-0">
+            <LlmModelPicker
+              scope="platform"
+              value={{ model: savedModel, reasoningLevel: savedLevel }}
+              applicationModel={modelField.fallback}
+              defaultReasoning={toReasoningLevel(reasoningField.fallback)}
+              onChange={(next) => void save(next)}
+              disabled={busy}
+              ariaLabel={label}
+              labels={{ default: t("fieldDefault"), reset: tAccount("numoModelReset"), model: label }}
+            />
+          </div>
           {busy ? <Spinner className="shrink-0" /> : null}
-        </>
+        </div>
       }
     />
   );

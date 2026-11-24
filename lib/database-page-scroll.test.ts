@@ -20,10 +20,10 @@ function wheel(target: Element, options: WheelEventInit) {
   target.dispatchEvent(event);
   return event;
 }
-function touch(type: string, points: Array<[number, number]>) {
+function touch(type: string, points: Array<[number, number]>, target: Element = document.getElementById("blank")!) {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(event, "touches", { value: points.map(([clientX, clientY]) => ({ clientX, clientY })) });
-  document.getElementById("blank")!.dispatchEvent(event);
+  target.dispatchEvent(event);
   return event;
 }
 
@@ -75,7 +75,17 @@ describe("page-wide database gestures", () => {
     expect(touch("touchmove", [[50, 100]]).defaultPrevented).toBe(false);
     expect(viewport.scrollLeft).toBe(130);
   });
-  it("does not capture multi-touch zoom or reuse a cancelled gesture", () => {
+  it("leaves touch drags on the table to native scrolling, which keeps its momentum", () => {
+    const cell = document.createElement("span");
+    viewport.append(cell);
+    viewport.scrollLeft = 0;
+    touch("touchstart", [[250, 200]], cell);
+    expect(touch("touchmove", [[150, 202]], cell).defaultPrevented).toBe(false);
+    expect(touch("touchmove", [[100, 203]], cell).defaultPrevented).toBe(false);
+    expect(viewport.scrollLeft).toBe(0);
+    touch("touchend", [], cell);
+  });
+    it("does not capture multi-touch zoom or reuse a cancelled gesture", () => {
     touch("touchstart", [[250, 200]]);
     expect(touch("touchmove", [[200, 200], [300, 200]]).defaultPrevented).toBe(false);
     expect(touch("touchmove", [[150, 200]]).defaultPrevented).toBe(false);

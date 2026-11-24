@@ -1583,6 +1583,7 @@
     "add": "Add",
     "remove": "Remove",
     "close": "Close",
+    "open": "Open",
     "create": "Create",
     "manage": "Manage",
     "loading": "Loading…",
@@ -3063,6 +3064,7 @@
     "aiAddProvider": "Add provider",
     "numoDefaultModel": "Default Numo model",
     "numoApplicationDefault": "App default",
+    "numoModelReset": "Use the default model and reasoning",
     "numoModelSaveError": "Could not save the Numo model. Try again.",
     "numoModelLoadError": "Could not load the Numo model. Reload settings.",
     "hiddenProjectsTitle": "Hidden projects",
@@ -3299,7 +3301,6 @@
   },
   "Agent": {
     "sectionTitle": "Numo",
-    "modelDefault": "My default model",
     "modelSearchPlaceholder": "Search a model…",
     "modelSearchEmpty": "No model found.",
     "modelSearchLoading": "Loading models…",
@@ -3341,7 +3342,6 @@
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Very deep",
     "reasoningMax": "Maximum",
-    "modelSettingsReset": "Reset to account defaults",
     "providerLabel": "Provider"
   },
   "Projects": {
@@ -6633,7 +6633,6 @@
     "executionEnvironment": "Numo uses your connected minddy tools and MCP services.",
     "workerModelHint": "Each run uses your default Numo model from Account settings.",
     "promptLabel": "Instruction",
-    "modelDefault": "My default model",
     "spendCapLabel": "Spending cap",
     "spendCapHelp": "Every run stops at this share of your monthly usage. It does not apply when you run on your own API key.",
     "spendCapValue": "{percent}% max",

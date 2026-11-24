@@ -43,6 +43,8 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName as resolveDisplayName } from "@/lib/display-name";
 import { isMemberRole, type MemberRole, type ProjectRole } from "@/lib/project-roles";
+import { PROJECT_ROLE_BADGE_CLASS, PROJECT_ROLE_PICKER_CLASS } from "@/lib/project-role-styles";
+import { cn } from "@/lib/utils";
 import type { Collaborator, Member } from "@/lib/types";
 import { useCollaboratorsQuery } from "@/lib/use-collaborators-query";
 import { matchCollaborators } from "@/lib/collaborator-search";
@@ -103,7 +105,8 @@ function RoleSelect({
       <SelectTrigger
         id={id}
         size={shape === "badge" ? "sm" : "default"}
-        className={ROLE_TRIGGER_CLASS[shape]}
+        // A badge-shaped picker wears its role's color, as the role badges do.
+        className={cn(ROLE_TRIGGER_CLASS[shape], shape === "badge" && PROJECT_ROLE_PICKER_CLASS[value])}
         // The name keeps the visible role (WCAG 2.5.3).
         aria-label={tIssueUI("fieldValueAria", {
           field: ariaLabel,
@@ -443,7 +446,10 @@ export function ProjectMembers({
                           </DropdownMenu>
                         </>
                       ) : (
-                        <Badge variant={m.is_owner ? "secondary" : "outline"}>
+                        <Badge
+                          variant="secondary"
+                          className={PROJECT_ROLE_BADGE_CLASS[m.is_owner ? "owner" : m.role]}
+                        >
                           {m.role === "reader" && m.can_comment
                             ? t("roleReaderCanComment")
                             : roleLabel(t, m.is_owner ? "owner" : m.role)}

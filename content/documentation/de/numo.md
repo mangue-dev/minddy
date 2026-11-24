@@ -96,7 +96,8 @@
       "lib/server/numo/watch-prompt.ts",
       "lib/server/assistant/context-compaction.ts",
       "lib/server/assistant/conversation-config.ts",
-      "components/assistant/conversation-settings.tsx",
+      "components/settings/account-ai-keys-section.tsx",
+      "components/settings/llm-model-picker.tsx",
       "components/settings/account-numo-section.tsx",
       "components/assistant/numo-intro.tsx",
       "lib/numo-cited-mentions.ts",
@@ -293,7 +294,7 @@ Numo arbeitet mit dem Kontext deiner Unterhaltung und den Berechtigungen deines 
 Öffne das betreffende Ticket oder Projekt und klicke auf die schwebende Numo-Schaltfläche. Die aktuelle Seite wird zum Gesprächskontext. Kontextaktionen, die Arbeit an Numo übergeben, öffnen dasselbe Panel. Du benötigst Projektzugriff und verfügbares KI-Budget oder einen kompatiblen eigenen Schlüssel.
 
 1. Prüfe den Kontext im Eingabebereich. Nenne das Ticket ausdrücklich, wenn mehrere Einträge relevant sind. Um ein Ticket als Kontext hinzuzufügen, tippe `@` im Eingabebereich oder verwende **Kontext hinzufügen**, das den Kontext in dieselben Abschnitte wie das Menü `@` gliedert, Tickets unter **Tickets** und deine verbundenen MCP-Server unter **MCP-Server**; eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf.
-2. Auf minddy Cloud nutzt Numo das Modell und die Denkintensität, die die Administration deiner Instanz gewählt hat, wie bei Smart Fill und Smart Assign; das Eingabefeld zeigt dann keine Modellauswahl. Mit einem persönlichen Schlüssel für Numo wählst du über das Anbieterlogo neben dem Mikrofon Anbieter, Gesprächsmodell und Denkintensität; beim Darüberfahren siehst du das aktuelle Modell. Bietet das Modell keine Einstellung der Denkintensität, bleibt der Regler auf **Kein Reasoning**; bei einem Modell, das immer nachdenkt, nutzt **Kein Reasoning** dessen leichteste Stufe. Über dasselbe Logo wechselt das Gespräch zurück zu **minddy Cloud**.
+2. Auf minddy Cloud nutzt Numo das Modell und die Reasoning-Stufe, die die Administration deiner Instanz gewählt hat, wie bei Smart Fill und Smart Assign. Mit einem persönlichen Schlüssel nutzt Numo das Modell und die Reasoning-Stufe, die du unter **Sprachmodell** in den [KI-Einstellungen](/docs/ai-settings-and-usage#ai-keys-and-models) gewählt hast. In beiden Fällen zeigt das Eingabefeld keine Modellauswahl.
 3. Sende einen begrenzten Auftrag, etwa: „Lies dieses Ticket und schlage Abnahmekriterien vor. Ändere seinen Status nicht.“
 4. Lies die Antwort und öffne Ticket- oder Quellenlinks. Prüfe nach einer Änderung das betroffene Objekt. Tickets, Ziele, Projekte, Seiten und Mitglieder, die Numo gefunden hat, erscheinen in der Antwort als Erwähnungs-Chips: Ein Chip öffnet, worauf er verweist, und was du nicht sehen kannst, erscheint als **Nicht verfügbar**. Numo setzt diese Erwähnungen auch in das, was es schreibt, etwa Ticketbeschreibungen und Pläne, Zielbeschreibungen, Kommentare, Seiten und das Notizbuch, nur für Elemente, die es eindeutig ermittelt hat; ein dort erwähntes Mitglied wird wie bei jeder Erwähnung benachrichtigt. Wenn du im Eingabebereich `@` tippst, steht oben unter **Von Numo erwähnt**, was Numo in dieser Unterhaltung oder in seiner [Zusammenfassung auf der **Startseite**](#home-word) erwähnt hat, beginnend mit seiner letzten Nachricht, höchstens acht Einträge. Das Menü bietet außerdem die Seiten aller deiner Projekte an, außer ausgeblendeten: In einem Projekt stehen seine eigenen Seiten zuerst, die anderen zeigen den Namen ihres Projekts.
 
@@ -311,7 +312,7 @@ Fügst du einen Text mit mehr als 12.000 Zeichen in das Eingabefeld ein, etwa Lo
 
 Bittest du um etwas zum Nachverfolgen oder um eine Liste von Einträgen mit gemeinsamen Feldern, etwa Bewerbungen mit Firma, Status und Datum, erstellt Numo eine [Datenbank](/docs/databases) mit diesen Spalten und ihren ersten Einträgen statt einer Seite.
 
-Mit einem persönlichen Schlüssel stammt das Standardmodell von Numo aus **Kontoeinstellungen → KI → Numo → Unterhaltungen**, gespeichert für diesen Anbieter: App-Standard oder ein Modell deiner Wahl. Die eigene Auswahl eines Gesprächs hat Vorrang. Auf minddy Cloud gibt es kein Modell zu wählen. Siehe [KI-Einstellungen und Nutzung](/docs/ai-settings-and-usage#ai-keys-and-models).
+Mit einem persönlichen Schlüssel nutzt Numo das Modell und die Reasoning-Stufe, die unter **Sprachmodell** in den KI-Einstellungen des Kontos für diesen Anbieter gespeichert sind: das Standardmodell der App oder ein Modell deiner Wahl, und die Reasoning-Stufe der Instanz, solange du keine gewählt hast. Gespräche folgen dieser Einstellung, und das Eingabefeld hat keine Modellauswahl. Auf minddy Cloud gibt es weder Modell noch Reasoning-Stufe zu wählen. Siehe [KI-Einstellungen und Nutzung](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.](/documentation/de/work-with-numo-workflow.png)
 
@@ -409,7 +410,7 @@ Eine wiederkehrende Wiedervorlage gehört dir; eine Routine gehört zu einem Pro
 
 ## Dauerhafte Numo-Turns verstehen {#numo-execution-model}
 
-Interaktive Nachrichten, Kontextaktionen und Routinen gelangen in Numo-Konversationen. Mit einem persönlichen Schlüssel werden Gesprächsmodell und Denkstufe im Eingabefeld gewählt; auf minddy Cloud kommen sie von der Instanz. Numo handelt über seine minddy-Werkzeuge und die persönlichen MCP-Verbindungen, die du hinzugefügt hast; es benötigt kein Repository. Eine Routine erzeugt eine neue Konversation mit gespeicherter Anweisung und Eigentümer-/Projektkontext. Eine Desktopsitzung muss nicht geöffnet bleiben.
+Interaktive Nachrichten, Kontextaktionen und Routinen gelangen in Numo-Konversationen. Mit einem persönlichen Schlüssel kommen Modell und Reasoning-Stufe aus deinen KI-Einstellungen; auf minddy Cloud kommen Modell und Reasoning-Stufe von der Instanz. Numo handelt über seine minddy-Werkzeuge und die persönlichen MCP-Verbindungen, die du hinzugefügt hast; es benötigt kein Repository. Eine Routine erzeugt eine neue Konversation mit gespeicherter Anweisung und Eigentümer-/Projektkontext. Eine Desktopsitzung muss nicht geöffnet bleiben.
 
 ![Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.](/documentation/de/numo-execution-model-flow.svg)
 

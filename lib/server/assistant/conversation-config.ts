@@ -19,7 +19,7 @@ import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import { conversationReasoningLevels } from "@/lib/conversation-settings";
 
-import { getNumoDefaultModel, getNumoProvider, numoModelIsInstanceDefined } from "./model-preferences";
+import { getNumoProvider, getNumoProviderPreference, numoModelIsInstanceDefined } from "./model-preferences";
 
 const MAX_MODEL_LENGTH = 300;
 
@@ -131,10 +131,13 @@ export async function resolveNumoTurnConfiguration(input: {
   let persistedModel = modelLocked ? null : requestedModel;
   let persistedReasoningLevel = modelLocked ? null : requestedReasoning;
 
-  // Without a model, the provider's saved default applies.
-  let defaultModel = !modelLocked && persistedModel === null
-    ? await getNumoDefaultModel(input.userId, effectiveProvider)
+  // Without a model, the provider's saved default applies; without a level,
+  // the account's for that provider, then the instance's.
+  const accountPreference = !modelLocked
+    ? await getNumoProviderPreference(input.userId, effectiveProvider)
     : null;
+  let defaultModel = persistedModel === null ? accountPreference?.model ?? null : null;
+  let accountReasoning = accountPreference?.reasoningLevel ?? null;
   const resolveRuntime = (modelOverride: string | null) => resolveAiRuntime({
     userId: input.userId,
     modelKey: "assistant_model",
@@ -156,6 +159,7 @@ export async function resolveNumoTurnConfiguration(input: {
       persistedReasoningLevel = null;
       if (requestedModel !== null || defaultModel !== null) runtime = await resolveRuntime(null);
       defaultModel = null;
+      accountReasoning = null;
     }
   } catch (error) {
     if (error instanceof ChosenProviderUnavailableError) {
@@ -205,9 +209,11 @@ export async function resolveNumoTurnConfiguration(input: {
     );
   }
 
+  // The account's level was checked against the model it chose, which may
+  // have changed since: it is placed on this model's nearest level.
   const chosenReasoning = persistedReasoningLevel !== null
     ? persistedReasoningLevel
-    : nearestReasoningLevel(configuredReasoning ?? DEFAULT_REASONING_LEVEL, allowedReasoning);
+    : nearestReasoningLevel(accountReasoning ?? configuredReasoning ?? DEFAULT_REASONING_LEVEL, allowedReasoning);
   return {
     persistedProvider,
     modelLocked,

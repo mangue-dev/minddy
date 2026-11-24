@@ -2,20 +2,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice } from "./ai-surfaces";
 import type { AiProviderOption } from "./ai-provider-options";
+import type { ReasoningLevel } from "./agent-reasoning";
 import { apiErrorCode, HttpResponseError } from "./backend-availability";
 import { agentModelsQueryKey } from "./use-agent-models-query";
 import { aiRoutesQueryKey } from "./use-ai-routes-query";
 
-/** Numo's account defaults: its provider (the Numo usage route) and that provider's model. */
+/** Numo's account defaults: its provider (the Numo usage route), that provider's model and reasoning level. */
 export type NumoPreferences = {
   provider: AiProviderChoice;
   default_model: string | null;
+  /** Null follows the instance's reasoning level. */
+  reasoning_level: ReasoningLevel | null;
   application_model: string | null;
   /** The instance sets Numo's model and reasoning on this provider (MIN-954). */
   model_locked: boolean;
   providers: AiProviderOption[];
 };
-export type NumoPreferencesPatch = Pick<NumoPreferences, "provider" | "default_model">;
+export type NumoPreferencesPatch = Pick<NumoPreferences, "provider" | "default_model" | "reasoning_level">;
 export const numoPreferencesQueryKey = ["numo-preferences"] as const;
 
 async function requestNumoPreferences(patch?: NumoPreferencesPatch): Promise<NumoPreferences> {
@@ -29,7 +32,7 @@ async function requestNumoPreferences(patch?: NumoPreferencesPatch): Promise<Num
     throw new HttpResponseError(body?.error ?? (patch ? "Could not save Numo preferences" : "Could not load Numo preferences"),
       response.status, apiErrorCode(body));
   }
-  return { providers: [], model_locked: false, ...body };
+  return { providers: [], model_locked: false, reasoning_level: null, ...body };
 }
 export const saveNumoPreferencesApi = (patch: NumoPreferencesPatch) => requestNumoPreferences(patch);
 export function useNumoPreferencesQuery() {
@@ -37,7 +40,7 @@ export function useNumoPreferencesQuery() {
 }
 
 /**
- * Saves Numo's default provider and model optimistically: the settings show
+ * Saves Numo's default provider, model and reasoning level optimistically: the settings show
  * the choice at once and roll back if the server refuses it.
  */
 export function useSaveNumoPreferences(onError: (error: Error) => void) {

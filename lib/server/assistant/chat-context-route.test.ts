@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/server/assistant/model-preferences", () => ({
   getNumoProvider: vi.fn(async () => "openrouter"),
-  getNumoDefaultModel: vi.fn(async () => null),
+  getNumoProviderPreference: vi.fn(async () => ({ model: null, reasoningLevel: null })),
   numoModelIsInstanceDefined: (provider: string | null | undefined) => provider === "minddy",
 }));
 

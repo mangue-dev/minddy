@@ -441,11 +441,6 @@ export interface ChatInputProps {
   /** Shared upload queue paired with the retained Numo draft. */
   attachmentUploads?: AttachmentUploads;
   /**
-   * Extra controls placed just before the dictation and send buttons, on the
-   * right (MIN-827): Numo's model picker.
-   */
-  leadingControls?: ReactNode;
-  /**
    * Animated “response in progress” border around the surface (same effect as the
    * exit cards). Numo chat and agent chat activates it so much
    * that a response is generated.
@@ -506,7 +501,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onEmptyChange,
       restoreCaretAtEnd = false,
       attachmentUploads,
-      leadingControls,
       beam,
       sendWhileStreaming,
       sendDisabled,
@@ -2119,7 +2113,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 expandedLayout ? "pb-2.5 pr-2.5 pt-1" : "py-2.5 pr-2.5",
               )}
             >
-              {leadingControls}
               {/* Dictation stays during a response: the next message can be
                   spoken while Numo is still writing this one. */}
               <DictateButton

@@ -25,6 +25,7 @@ import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { ROUTINE_STATE_ICONS, ROUTINE_STATE_STYLES } from "@/components/routines/routine-detail-sections";
 import { Badge } from "@/components/ui/badge";
 import type { ProjectRole } from "@/lib/project-roles";
+import { PROJECT_ROLE_BADGE_CLASS } from "@/lib/project-role-styles";
 import { displayName } from "@/lib/display-name";
 import type { MentionPreview, PreviewProject } from "@/lib/mention-preview";
 import { workProgress } from "@/lib/use-objectives-query";
@@ -102,17 +103,11 @@ function StateBadge({ className, icon, children }: { className: string; icon?: I
   );
 }
 
-const ROLE_STYLES: Record<ProjectRole, string> = {
-  owner: "bg-violet-500/10 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
-  member: "bg-blue-500/10 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300",
-  reader: "bg-slate-500/10 text-slate-700 dark:bg-slate-400/15 dark:text-slate-300",
-};
-
 /** A person's role in a project, colored by role. */
 function RoleBadge({ role }: { role: ProjectRole }) {
   const t = useTranslations("Members");
   return (
-    <StateBadge className={ROLE_STYLES[role]}>
+    <StateBadge className={PROJECT_ROLE_BADGE_CLASS[role]}>
       {role === "owner" ? t("owner") : role === "reader" ? t("roleReader") : t("roleMember")}
     </StateBadge>
   );

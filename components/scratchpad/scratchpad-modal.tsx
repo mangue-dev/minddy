@@ -199,14 +199,16 @@ function ScratchpadBody() {
   return (
     <>
       {showSaveState && (
-        <div className="absolute top-3.5 left-3.5 z-30 flex size-8 items-center justify-center">
+        // On a phone the check is read at arm's length, as the page's save
+        // state beside its header buttons (components/pages/page-view.tsx).
+        <div data-mobile-sheet-save className="absolute top-3.5 left-3.5 z-30 flex size-8 items-center justify-center app-mobile:size-11">
           <Tooltip>
             <TooltipTrigger asChild>
               <span
                 role="status"
                 aria-label={saveLabel}
                 className={cn(
-                  "flex transition-colors",
+                  "flex transition-colors app-mobile:[&_svg]:size-5",
                   saveFailed
                     ? "text-destructive"
                     : "text-muted-foreground/60 hover:text-muted-foreground"
