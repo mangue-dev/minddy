@@ -80,6 +80,10 @@ export async function PUT(request: NextRequest) {
     if (isPlanLimitError(error)) return planLimitResponse(error);
     if (isNumoConversationConfigError(error)) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     if (error instanceof AiRouteError) return NextResponse.json({ error: error.message }, { status: error.status });
+    // Same as GET: a handled 503 never reaches `onRequestError`.
+    await captureServerException(error, request.headers.get("cookie"), {
+      routePath: "/api/account/numo-preferences", routeType: "route", httpMethod: "PUT",
+    });
     return NextResponse.json({ error: "Could not save Numo preferences" }, { status: 503 });
   }
 }

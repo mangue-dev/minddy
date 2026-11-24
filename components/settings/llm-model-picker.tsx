@@ -21,7 +21,7 @@ import type { AiProviderChoice } from "@/lib/ai-surfaces";
 import { conversationReasoningLevels } from "@/lib/conversation-settings";
 import { formatModelName } from "@/lib/model-display";
 import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
-import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
+import { useAgentModelsQuery, useReasoningLevelsFor, type AgentModelsScope } from "@/lib/use-agent-models-query";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 const REASONING_LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
@@ -37,38 +37,53 @@ const REASONING_LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
 export type LlmChoice = { model: string | null; reasoningLevel: ReasoningLevel | null };
 
 /**
- * The account's language model and reasoning level on a personal key: the
- * popover the Numo composer used to open (the model, a reset, then the
- * reasoning slider), behind a trigger shaped like the other selects of the
- * row. `null` follows the application's default model and the instance's
- * reasoning level. A model change keeps the chosen level, placed on the new
- * model's nearest one.
+ * A language model and its reasoning level: the popover the Numo composer
+ * used to open (the model, a reset, then the reasoning slider), behind a
+ * trigger shaped like the other selects of the row. `null` follows the
+ * default model and the default reasoning level. A model change keeps the
+ * chosen level, placed on the new model's nearest one.
+ *
+ * The account's settings list one provider's models for a personal key
+ * (scope `assistant`); the instance administration lists the platform's
+ * (scope `platform`), with its own labels and built-in level.
  */
 export function LlmModelPicker({
+  scope = "assistant",
   provider,
   value,
   applicationModel,
   onChange,
   disabled,
   ariaLabel,
+  labels,
+  defaultReasoning,
 }: {
-  provider: AiProviderChoice;
+  scope?: Extract<AgentModelsScope, "assistant" | "platform">;
+  /** The provider whose models are listed; the account's scope only. */
+  provider?: AiProviderChoice;
   value: LlmChoice;
   applicationModel: string | null;
   onChange: (next: LlmChoice) => void;
   disabled?: boolean;
   ariaLabel: string;
+  /** Overrides the account's wording of the default, the reset and the model list. */
+  labels?: { default?: string; reset?: string; model?: string };
+  /** The level a `null` reasoning follows; the catalog's when omitted. */
+  defaultReasoning?: ReasoningLevel;
 }) {
   const t = useTranslations("Agent");
   const tAccount = useTranslations("Account");
+  const defaultLabel = labels?.default ?? tAccount("numoApplicationDefault");
+  const resetLabel = labels?.reset ?? tAccount("numoModelReset");
+  const modelLabel = labels?.model ?? tAccount("numoDefaultModel");
   const [open, setOpen] = useState(false);
-  const catalog = useAgentModelsQuery("assistant", "text", provider);
+  const catalog = useAgentModelsQuery(scope, "text", provider);
   const resolvedModel = value.model || applicationModel;
   const reasoningLevels = conversationReasoningLevels(
-    useReasoningLevelsFor(resolvedModel, "assistant", provider),
+    useReasoningLevelsFor(resolvedModel, scope, provider),
   );
   const displayedReasoning = nearestReasoningLevel(
-    value.reasoningLevel ?? catalog.defaultReasoning ?? DEFAULT_REASONING_LEVEL,
+    value.reasoningLevel ?? defaultReasoning ?? catalog.defaultReasoning ?? DEFAULT_REASONING_LEVEL,
     reasoningLevels,
   );
   // A drag moves the slider here; the level saves once it is released.
@@ -112,7 +127,7 @@ export function LlmModelPicker({
           <span className="flex min-w-0 items-center gap-2">
             {resolvedModel ? logoFor(resolvedModel) : null}
             <span className="truncate">
-              {resolvedModel ? formatModelName(resolvedModel) : tAccount("numoApplicationDefault")}
+              {resolvedModel ? formatModelName(resolvedModel) : defaultLabel}
             </span>
             <span className="shrink-0 text-muted-foreground">· {reasoningLabel}</span>
           </span>
@@ -131,14 +146,14 @@ export function LlmModelPicker({
             <ModelCombobox
               value={value.model ?? ""}
               onChange={changeModel}
-              defaultLabel={tAccount("numoApplicationDefault")}
+              defaultLabel={defaultLabel}
               defaultModelId={applicationModel}
               placeholder={t("modelSearchPlaceholder")}
               emptyLabel={t("modelSearchEmpty")}
               loadingLabel={t("modelSearchLoading")}
               freeTextLabel={(query) => t("modelUseCustom", { model: query })}
               variant="compact"
-              ariaLabel={tAccount("numoDefaultModel")}
+              ariaLabel={modelLabel}
               triggerClassName="group/model-trigger h-auto min-w-0 flex-col gap-0 rounded-md px-3 py-0.5 hover:bg-transparent"
               triggerContent={(
                 <span className="flex min-w-0 flex-col items-center leading-tight">
@@ -151,7 +166,8 @@ export function LlmModelPicker({
                   </span>
                 </span>
               )}
-              scope="assistant"
+              scope={scope}
+              capability="text"
               providerChoice={provider}
             />
           </div>
@@ -162,14 +178,14 @@ export function LlmModelPicker({
                 variant="ghost"
                 size="icon"
                 className="shrink-0 app-desktop:absolute app-desktop:top-1.5 app-desktop:right-1.5"
-                aria-label={tAccount("numoModelReset")}
+                aria-label={resetLabel}
                 disabled={value.model === null && value.reasoningLevel === null}
                 onClick={reset}
               >
                 <HugeiconsIcon icon={Undo02Icon} className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{tAccount("numoModelReset")}</TooltipContent>
+            <TooltipContent>{resetLabel}</TooltipContent>
           </Tooltip>
         </div>
         <div className="mt-4 px-1 pb-1">

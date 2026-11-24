@@ -12,24 +12,31 @@ type SliderProps = {
 };
 const h = vi.hoisted(() => ({
   slider: null as null | SliderProps,
-  combobox: null as null | { value: string; onChange: (value: string) => void },
+  combobox: null as null | { value: string; onChange: (value: string) => void; scope: string; defaultLabel: string },
+  scopes: [] as string[],
   levels: ["off", "low", "medium", "high"] as string[],
 }));
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/lib/use-agent-models-query", () => ({
-  useAgentModelsQuery: () => ({
-    provider: "anthropic",
-    defaultReasoning: "medium",
-    models: [
-      { id: "app-model", reasoning: { efforts: ["low", "medium", "high"], mandatory: false } },
-      { id: "light-model", reasoning: { efforts: ["low"], mandatory: false } },
-    ],
-  }),
-  useReasoningLevelsFor: () => h.levels.filter((level) => level !== "off"),
+  useAgentModelsQuery: (scope: string) => {
+    h.scopes.push(scope);
+    return {
+      provider: "anthropic",
+      defaultReasoning: "medium",
+      models: [
+        { id: "app-model", reasoning: { efforts: ["low", "medium", "high"], mandatory: false } },
+        { id: "light-model", reasoning: { efforts: ["low"], mandatory: false } },
+      ],
+    };
+  },
+  useReasoningLevelsFor: (_model: string, scope: string) => {
+    h.scopes.push(scope);
+    return h.levels.filter((level) => level !== "off");
+  },
 }));
 vi.mock("@/components/agent/model-combobox", () => ({
-  ModelCombobox: (props: { value: string; onChange: (value: string) => void }) => {
+  ModelCombobox: (props: { value: string; onChange: (value: string) => void; scope: string; defaultLabel: string }) => {
     h.combobox = props;
     return null;
   },
@@ -60,6 +67,7 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   onChange.mockReset();
   h.slider = null;
+  h.scopes = [];
   h.levels = ["off", "low", "medium", "high"];
   host = document.createElement("div");
   document.body.append(host);
@@ -111,4 +119,17 @@ it("resets both choices to the defaults", async () => {
   await render({ model: "light-model", reasoningLevel: "low" });
   await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="numoModelReset"]')!.click());
   expect(onChange).toHaveBeenCalledWith({ model: null, reasoningLevel: null });
+});
+
+it("lists the platform's models with the administration's labels and built-in level", async () => {
+  await act(() => root.render(createElement(LlmModelPicker, {
+    scope: "platform", value: { model: null, reasoningLevel: null }, applicationModel: "app-model", onChange,
+    ariaLabel: "Model", defaultReasoning: "high", labels: { default: "Default model", reset: "Reset", model: "Model" },
+  })));
+  expect(h.scopes).not.toContain("assistant");
+  expect(h.combobox).toMatchObject({ scope: "platform", defaultLabel: "Default model" });
+  // The built-in level wins over the catalog's medium.
+  expect(host.querySelector('button[role="combobox"]')!.textContent).toContain("reasoningHigh");
+  await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Reset"]')!.click());
+  expect(onChange).not.toHaveBeenCalled();
 });
