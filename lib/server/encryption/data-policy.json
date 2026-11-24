@@ -3989,7 +3989,8 @@
         "provider"
       ],
       "operational_configuration": [
-        "model"
+        "model",
+        "reasoning_level"
       ],
       "timestamp": [
         "updated_at"
