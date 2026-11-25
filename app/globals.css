@@ -4480,14 +4480,20 @@ html[data-integrated-caption-controls] {
     transition-duration: var(--mobile-keyboard-duration);
     transition-timing-function: var(--mobile-keyboard-ease);
   }
-  /* A sheet attaching to the screen's edges, or leaving them, does it over
-     the same movement: it widens and its bottom corners square off. */
+  /* A sheet attaching to the screen's bottom, or leaving it, does it over
+     the same movement: it settles on the keyboard and its bottom corners
+     square off. Its sides attach at once (MIN-1029). They widen the sheet by
+     its gutter and grow a border as wide, which keeps the content box still
+     only when both are whole: the browser rounds a border to device pixels
+     and not the width, so animated together, the text column changed width
+     and place by a fraction of a pixel on every frame, and a description
+     being opened for writing reflowed its lines while the keyboard rose. */
   &[data-mobile-keyboard-moving] :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"],
   &[data-mobile-keyboard-moving] [data-slot="alert-dialog-content"] {
     /* The padding too: its foot steps back from the home indicator without
        the keyboard and hugs the keyboard with it, and that change, made at
        once, resized the sheet in the middle of the movement. */
-    transition-property: bottom, height, max-height, left, right, width, border-width, border-radius, clip-path, padding-bottom;
+    transition-property: bottom, height, max-height, border-bottom-width, border-radius, clip-path, padding-bottom;
   }
   /* A docked comment composer gives its room to the field being typed in,
      and comes back with the keyboard down. */

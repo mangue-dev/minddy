@@ -163,6 +163,22 @@ describe("bottom sheets on wide screens (MIN-841) and beside a side column", () 
     const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
     expect(bottomInsets).toEqual([]);
   });
+
+  it("attaches a sheet's sides at once while the keyboard moves (MIN-1029)", () => {
+    // The side border is rounded to device pixels and the width is not:
+    // animated together, the content box changed width on every frame and a
+    // description being opened for writing reflowed its lines.
+    const transitions = css
+      .split("\n")
+      .filter((line) => line.trim().startsWith("transition-property:") && line.includes("clip-path"));
+    expect(transitions.length).toBeGreaterThan(0);
+    for (const line of transitions) {
+      const properties = line.slice(line.indexOf(":") + 1).replace(";", "").split(",").map((p) => p.trim());
+      for (const side of ["left", "right", "width", "border-width", "inset", "border-left-width", "border-right-width"]) {
+        expect(properties, line).not.toContain(side);
+      }
+    }
+  });
 });
 
 describe("touch targets", () => {
