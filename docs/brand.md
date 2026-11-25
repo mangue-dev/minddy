@@ -224,6 +224,7 @@ mark, the mark at about 72 % of the icon body. Paths starting with
 | Favicon | `app/icon.tsx` (vector, tinted per environment), `app/favicon.ico`, `app/icon1.png` |
 | PWA | `public/web-app-manifest-*.png` (rounded tiles, `any`), `public/web-app-manifest-maskable-512x512.png` (full bleed, `maskable`), `public/apple-icon.png`; each has a blue `-preview` twin served by preview builds (`lib/pwa-icons.ts`) |
 | Share card | `app/og/route.tsx`; reference composition `exemples/carte-partage-og-1200x630.*` |
+| Invitation email | `lib/server/invitation-email.ts`: the landing's lavender pastel panel, the project's orb as a PNG painted by `app/og/orb/route.ts` (`lib/server/project-orb-image.ts`), the inviter's portrait before their name (`app/og/avatar/route.ts`), a lavender pill button |
 | Social post | `exemples/post-social-1080.*` |
 | GitHub banner | `exemples/banniere-github-1280x320.*` |
 
