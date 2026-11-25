@@ -18,6 +18,7 @@ import { isPushConfigured } from "@/lib/server/push/vapid";
 import { isApnsConfigured } from "@/lib/server/push/apns";
 import { sendPushToUser } from "@/lib/server/push/send";
 import { sendInvitationEmail } from "@/lib/server/invitation-email";
+import { findAvatarSeed } from "@/lib/server/avatar-seeds";
 import { capability } from "@/lib/server/capabilities";
 import type { Invitation } from "@/lib/types";
 import { isMemberRole, type MemberRole } from "@/lib/project-roles";
@@ -267,11 +268,18 @@ export async function inviteMember({
   if (capability("transactionalEmail").configured || consoleEmail) {
     const token = invitationToken?.raw ?? raw.token;
     afterOrNow(async () => {
-      const inviters = await fetchAuthUsersById(getServiceClient(), [actorId]);
+      const service = getServiceClient();
+      // `findAvatarSeed`, not `fetchAvatarSeed`: the latter falls back to the
+      // account id, which would then appear in the email's image URL.
+      const [inviters, inviterAvatar] = await Promise.all([
+        fetchAuthUsersById(service, [actorId]),
+        findAvatarSeed(service, actorId),
+      ]);
       const named = toNamed(inviters.get(actorId));
       await sendInvitationEmail({
         to: normalized,
         inviterName: displayName(named, ""),
+        inviterAvatar,
         projectName: access.project.name,
         projectId: access.project.id,
         projectOrbSeed: access.project.orb_seed,

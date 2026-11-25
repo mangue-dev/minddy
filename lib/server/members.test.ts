@@ -257,6 +257,7 @@ vi.mock("@/lib/server/auth-users", () => ({
 vi.mock("@/lib/server/avatar-seeds", () => ({
   fetchAvatarSeeds: async (_service: unknown, ids: string[]) =>
     new Map(ids.map((id) => [id, `seed-${id}`])),
+  findAvatarSeed: async (_service: unknown, id: string) => `seed-${id}`,
 }));
 
 vi.mock("@/lib/server/entitlements", () => ({
@@ -371,6 +372,8 @@ describe("inviteMember — an address without an account", () => {
       locale: "fr",
       origin: "http://localhost:3000",
     });
+    // The inviter's avatar comes along, for the mention-style title.
+    expect(sendInvitationEmail.mock.calls[0][0].inviterAvatar).toMatch(/^seed-/);
   });
 
   it("ne rend PAS le token à qui invite", async () => {

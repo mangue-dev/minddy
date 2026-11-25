@@ -134,33 +134,39 @@ export function projectOrbBaseColor(seed: string): string {
 }
 
 /**
- * OKLCH → hexadecimal sRGB. The app paints the orb in OKLCH, which no mail
- * client reads: we convert once here so that the email shows EXACTLY the
- * color of the app, rather than a hand-written approximation which would age
- * poorly. Classic path OKLab → LMS → linear sRGB → gamma.
+ * OKLCH → gamma-encoded sRGB channels in `[0, 1]`, clamped to the gamut. The
+ * app paints the orb in OKLCH, which no mail client reads: the email converts
+ * here so that it shows EXACTLY the color of the app, rather than a
+ * hand-written approximation that would age poorly.
  */
-export function oklchToHex(l: number, c: number, hue: number): string {
+export function oklchToRgb(l: number, c: number, hue: number): [number, number, number] {
   const rad = (hue * Math.PI) / 180;
-  const a = c * Math.cos(rad);
-  const b = c * Math.sin(rad);
+  return oklabToRgb(l, c * Math.cos(rad), c * Math.sin(rad));
+}
 
+/** OKLab → gamma-encoded sRGB in `[0, 1]`. Classic path OKLab → LMS → linear sRGB → gamma. */
+export function oklabToRgb(l: number, a: number, b: number): [number, number, number] {
   const lCube = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
   const mCube = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
   const sCube = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
 
-  const channels = [
+  const linear = [
     4.0767416621 * lCube - 3.3077115913 * mCube + 0.2309699292 * sCube,
     -1.2684380046 * lCube + 2.6097574011 * mCube - 0.3413193965 * sCube,
     -0.0041960863 * lCube - 0.7034186147 * mCube + 1.707614701 * sCube,
   ];
+  const [r, g, bl] = linear.map((value) => {
+    const encoded =
+      value <= 0.0031308 ? 12.92 * value : 1.055 * value ** (1 / 2.4) - 0.055;
+    return Math.min(1, Math.max(0, encoded));
+  });
+  return [r, g, bl];
+}
 
-  return `#${channels
-    .map((value) => {
-      const encoded =
-        value <= 0.0031308 ? 12.92 * value : 1.055 * value ** (1 / 2.4) - 0.055;
-      const byte = Math.round(Math.min(1, Math.max(0, encoded)) * 255);
-      return byte.toString(16).padStart(2, "0");
-    })
+/** OKLCH → hexadecimal sRGB, for the inline styles of an email. */
+export function oklchToHex(l: number, c: number, hue: number): string {
+  return `#${oklchToRgb(l, c, hue)
+    .map((value) => Math.round(value * 255).toString(16).padStart(2, "0"))
     .join("")}`;
 }
 
