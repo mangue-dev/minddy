@@ -73,6 +73,17 @@ vi.mock("next/og", () => ({
   },
 }));
 
+// Painting an orb or a portrait costs real work; what matters here is only
+// whether the call gets that far.
+vi.mock("@/lib/server/project-orb-image", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/server/project-orb-image")>()),
+  renderOrbPng: () => Buffer.from("png"),
+}));
+vi.mock("@/lib/server/avatar-image", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/server/avatar-image")>()),
+  renderAvatarPng: async () => Buffer.from("png"),
+}));
+
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const PAGE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
@@ -98,6 +109,9 @@ const pageFilesRoute = await import(
 const projectIconRoute = await import("@/app/api/projects/[id]/icon/route");
 const accountIconRoute = await import("@/app/api/account/project-icon/route");
 const ogRoute = await import("@/app/og/route");
+const orbRoute = await import("@/app/og/orb/route");
+const avatarRoute = await import("@/app/og/avatar/route");
+const { projectOrbImagePath } = await import("@/lib/server/project-orb-image");
 
 /** A multipart request carrying a tiny file. */
 function upload(): never {
@@ -195,5 +209,24 @@ describe("newly rate-limited surfaces", () => {
     expect(response.headers.get("location")).toBe(
       "https://minddy.app/og?route=home&locale=en"
     );
+  });
+
+  it("limits /og/orb per IP address — the invitation email's orb (MIN-963)", async () => {
+    const path = projectOrbImagePath("07b14964-0def-4941-8ddf-686572d6345d");
+    const request = () =>
+      new NextRequest(`https://minddy.app${path}`, {
+        headers: { "x-forwarded-for": "203.0.113.11" },
+      });
+    const rank = await refusedAt(120, async () => await orbRoute.GET(request()));
+    expect(rank).toBe(121);
+  });
+
+  it("limits /og/avatar per IP address — the inviter's portrait (MIN-963)", async () => {
+    const request = () =>
+      new NextRequest("https://minddy.app/og/avatar?s=33333333-3333-4333-8333-333333333333", {
+        headers: { "x-forwarded-for": "203.0.113.12" },
+      });
+    const rank = await refusedAt(120, async () => await avatarRoute.GET(request()));
+    expect(rank).toBe(121);
   });
 });

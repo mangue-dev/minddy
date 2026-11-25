@@ -146,16 +146,4 @@ describe("GET /og/orb", () => {
     const response = await orbRoute.GET(request("o=red", "198.51.100.4"));
     expect(response.status).toBe(404);
   });
-
-  it("limits each address", async () => {
-    let refusedAt: number | null = null;
-    for (let i = 1; i <= 121; i++) {
-      const response = await orbRoute.GET(request(canonical, "198.51.100.5"));
-      if (response.status === 429) {
-        refusedAt = i;
-        break;
-      }
-    }
-    expect(refusedAt).toBe(121);
-  });
 });

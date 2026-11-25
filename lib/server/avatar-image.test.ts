@@ -50,16 +50,4 @@ describe("GET /og/avatar", () => {
   it("answers 404 to anything but a seed", async () => {
     expect((await avatarRoute.GET(request("s=alice", "198.51.100.22"))).status).toBe(404);
   });
-
-  it("limits each address", async () => {
-    let refusedAt: number | null = null;
-    for (let i = 1; i <= 121; i++) {
-      const response = await avatarRoute.GET(request(`s=${SEED}`, "198.51.100.23"));
-      if (response.status === 429) {
-        refusedAt = i;
-        break;
-      }
-    }
-    expect(refusedAt).toBe(121);
-  });
 });
