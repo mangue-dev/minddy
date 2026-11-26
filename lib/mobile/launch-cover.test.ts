@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { markFirstContent, resetFirstContentForTests } from "@/lib/first-content";
-import { markPageContentShown, releaseLaunchCoverOnFirstContent, resetLaunchCoverForTests } from "./launch-cover";
+import { LAUNCH_HOLD_MAX_MS, holdLaunchCover, markPageContentShown, releaseLaunchCoverOnFirstContent, resetLaunchCoverForTests } from "./launch-cover";
 
 function stubShell(shell: Record<string, unknown>) {
   vi.stubGlobal("window", {
@@ -112,5 +112,56 @@ describe("releaseLaunchCoverOnFirstContent", () => {
       frames.flush();
       frames.flush();
     }).not.toThrow();
+  });
+});
+
+describe("holdLaunchCover", () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("keeps the cover after the first content until the hold is released", () => {
+    const contentShown = vi.fn(() => Promise.resolve());
+    stubShell({ contentShown });
+    const frames = manualFrames();
+    const barDrawn = holdLaunchCover();
+    releaseLaunchCoverOnFirstContent(frames.frame, frames.cancel);
+    markFirstContent();
+    frames.flush();
+    frames.flush();
+    expect(contentShown).not.toHaveBeenCalled();
+
+    barDrawn();
+    frames.flush();
+    frames.flush();
+    expect(contentShown).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops waiting for a hold after the limit", () => {
+    const contentShown = vi.fn(() => Promise.resolve());
+    stubShell({ contentShown });
+    const frames = manualFrames();
+    holdLaunchCover();
+    releaseLaunchCoverOnFirstContent(frames.frame, frames.cancel);
+    markFirstContent();
+    vi.advanceTimersByTime(LAUNCH_HOLD_MAX_MS - 1);
+    frames.flush();
+    expect(contentShown).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    frames.flush();
+    frames.flush();
+    expect(contentShown).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not delay a cover nothing holds any more", () => {
+    const contentShown = vi.fn(() => Promise.resolve());
+    stubShell({ contentShown });
+    const frames = manualFrames();
+    holdLaunchCover()();
+    releaseLaunchCoverOnFirstContent(frames.frame, frames.cancel);
+    markFirstContent();
+    frames.flush();
+    frames.flush();
+    expect(contentShown).toHaveBeenCalledTimes(1);
   });
 });

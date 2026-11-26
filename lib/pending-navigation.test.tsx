@@ -151,3 +151,24 @@ it("switches at once from one pending destination to the next", () => {
   expect(skeleton()).toBe("/inbox");
   expect(displayed()).toBe("/inbox");
 });
+
+it("follows a retained destination at once, ahead of its address", () => {
+  act(() => {
+    beginPendingNavigation("/trash", { immediate: true });
+    // The tab session writes the address itself; the router commits later.
+    window.history.pushState(null, "", "/trash");
+  });
+  expect(displayed()).toBe("/trash");
+
+  // A second activation before the router has committed the first.
+  act(() => {
+    beginPendingNavigation("/inbox", { immediate: true });
+    window.history.pushState(null, "", "/inbox");
+  });
+  expect(displayed()).toBe("/inbox");
+
+  h.pathname = "/inbox";
+  render();
+  expect(displayed()).toBe("/inbox");
+  expect(page()).toBe("/inbox");
+});

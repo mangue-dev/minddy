@@ -157,6 +157,18 @@ describe("keeping the shell's bar in step", () => {
     expect(document.documentElement.hasAttribute("data-native-navigation")).toBe(false);
   });
 
+  it("reports once that the shell has drawn the bar", async () => {
+    const { plugin } = shell();
+    const shown = vi.fn();
+    const stop = syncNativeNavigationBar(nav, plugin, async () => null, shown)!;
+    expect(shown).not.toHaveBeenCalled();
+    await nextFrame();
+    await nextFrame();
+    await Promise.resolve();
+    expect(shown).toHaveBeenCalledOnce();
+    stop();
+  });
+
   it("sends the buttons once, then only the bar's place while it moves", async () => {
     const { plugin, sent } = shell();
     const stop = syncNativeNavigationBar(nav, plugin, async () => null)!;

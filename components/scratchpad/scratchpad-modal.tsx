@@ -281,10 +281,14 @@ function ScratchpadBody() {
         </Tooltip>
       </div>
 
+      {/* On a phone the save state, the menu and the close button form the
+          sheet's title bar: the note starts under it and scrolls there, as a
+          page does under its header, instead of sliding behind the buttons. */}
+      <div aria-hidden data-mobile-sheet-bar className="hidden h-11 shrink-0 app-mobile:block" />
       <div
         ref={fadeRef}
         {...scrollProps}
-        className="flex flex-1 flex-col overflow-y-auto px-6 pt-48 pb-12"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-48 pb-12 app-mobile:pt-36"
       >
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
           {isLoading || noteDocument === undefined ? (

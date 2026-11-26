@@ -586,6 +586,10 @@ export function ThreadComment({
     job does not pin the card forever. */
 const NUMO_MERGE_WAIT_MS = 5 * 60_000;
 
+/** A tab of the merge confirmation: on a phone it may shrink, and takes the
+    room its label needs rather than half the sheet. */
+const MERGE_TAB_TRIGGER = "min-w-0 gap-1.5 app-mobile:flex-auto app-mobile:shrink app-mobile:py-1.5 app-mobile:whitespace-normal";
+
 /** The pending "generate then merge" marker, kept in sessionStorage: the
     job runs server-side and survives navigation, the marker must too.
     Session scope (not local): a job is a gesture of THIS tab, and a stale
@@ -2187,14 +2191,17 @@ export function PrDetail({
               value={mergeTab}
               onValueChange={(v) => setMergeTab(v as "numo" | "manual")}
             >
-              <TabsList variant="line" className={TAB_LIST_DENSE}>
-                <TabsTrigger value="numo" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                  <NumoIcon animated={false} />
-                  {t("mergeTabNumo")}
+              {/* On a phone the two labels and their icons are wider than the
+                  sheet: the tabs share its width by their text, without the
+                  icons, and a label that still does not fit is cut short. */}
+              <TabsList variant="line" className={cn(TAB_LIST_DENSE, "min-w-0 app-mobile:h-auto app-mobile:min-h-11")}>
+                <TabsTrigger value="numo" className={cn(TAB_TRIGGER_DENSE, MERGE_TAB_TRIGGER)}>
+                  <NumoIcon animated={false} className="app-mobile:hidden" />
+                  <span className="min-w-0 text-balance">{t("mergeTabNumo")}</span>
                 </TabsTrigger>
-                <TabsTrigger value="manual" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                  <HugeiconsIcon icon={Edit04Icon} />
-                  {t("mergeTabManual")}
+                <TabsTrigger value="manual" className={cn(TAB_TRIGGER_DENSE, MERGE_TAB_TRIGGER)}>
+                  <HugeiconsIcon icon={Edit04Icon} className="app-mobile:hidden" />
+                  <span className="min-w-0 text-balance">{t("mergeTabManual")}</span>
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="numo" className="mt-4 flex flex-col gap-3">
