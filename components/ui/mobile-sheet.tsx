@@ -20,14 +20,65 @@ import { useMergedRef } from "./menu-scroll-fade";
 export function MobileSheetContent({ children, className, onOpenAutoFocus, showCloseButton = true, ref, ...props }: React.ComponentProps<typeof SheetContent>) {
   const mobile = useMobileLayout() === true;
   const swipeRef = useSwipeToDismiss(mobile);
-  const mergedRef = useMergedRef(ref, swipeRef, mobile ? holdEntranceUntilPainted : undefined);
+  // A sheet taller than the screen scrolls as a whole: its content fades at
+  // the edge that hides some (SheetEdgeFade). Lists inside a sheet have their
+  // own edges, with chevrons (MobileSheetScrollArea).
+  const fade = useScrollFade<HTMLDivElement>();
+  const mergedRef = useMergedRef(ref, swipeRef, mobile ? holdEntranceUntilPainted : undefined, mobile ? fade.ref : undefined);
+  const onScroll = props.onScroll;
   return <SheetContent {...props} ref={mergedRef} showCloseButton={mobile ? false : showCloseButton}
     onOpenAutoFocus={(event) => { onOpenAutoFocus?.(event); if (mobile) focusMobileSheet(event); }}
+    onScroll={mobile ? (event) => { onScroll?.(event); fade.scrollProps.onScroll(); } : onScroll}
     data-mobile-sheet={mobile ? "" : undefined}
     className={cn(mobile && "mobile-bottom-sheet", className)}>
+    {mobile && <SheetEdgeFade edge="start" visible={fade.edges.start} />}
     {children}
+    {mobile && <SheetEdgeFade edge="end" visible={fade.edges.end} />}
     {mobile && showCloseButton && <MobileSheetClose />}
   </SheetContent>;
+}
+
+/**
+ * The fade at an edge of a sheet that scrolls as a whole, over the content
+ * that edge hides. The sheet is itself the scroller, so the fade is a sticky
+ * child of it, of no height (a mask on the sheet would fade its surface too).
+ *
+ * It only shows in the layout every sheet has by default, a column that
+ * starts at the top, where an empty child can give back the gap it adds: it
+ * stays out of a sheet laid out otherwise rather than shift its content.
+ */
+function SheetEdgeFade({ edge, visible }: { edge: "start" | "end"; visible: boolean }) {
+  const anchor = React.useRef<HTMLDivElement>(null);
+  const [box, setBox] = React.useState<{ gap: number; left: number; right: number } | null>(null);
+  React.useLayoutEffect(() => {
+    const sheet = anchor.current?.parentElement;
+    if (!sheet) return;
+    const style = getComputedStyle(sheet);
+    const column = style.display === "flex" && style.flexDirection === "column"
+      && ["normal", "flex-start", "start"].includes(style.justifyContent);
+    const scrolls = style.overflowY === "auto" || style.overflowY === "scroll";
+    setBox(column && scrolls ? {
+      gap: parseFloat(style.rowGap) || 0,
+      left: parseFloat(style.paddingLeft) || 0,
+      right: parseFloat(style.paddingRight) || 0,
+    } : null);
+  }, []);
+  return <div ref={anchor} aria-hidden hidden={!box} data-sheet-edge-fade={edge}
+    className={cn("pointer-events-none sticky z-10 h-0 shrink-0", edge === "start" ? "top-0" : "bottom-0")}
+    style={box ? { [edge === "start" ? "marginBottom" : "marginTop"]: -box.gap } : undefined}>
+    <div
+      className={cn(
+        "absolute h-8 from-card to-transparent transition-opacity duration-150 motion-reduce:transition-none",
+        // A sticky child stops at the sheet's padding: the fade reaches
+        // over it, to the sheet's own edge (the sheet tokens, app/globals.css).
+        edge === "start"
+          ? "top-[calc(-1*var(--mobile-sheet-top))] bg-gradient-to-b"
+          : "bottom-[calc(-1*var(--mobile-sheet-bottom))] bg-gradient-to-t",
+        visible ? "opacity-100" : "opacity-0",
+      )}
+      style={{ left: -(box?.left ?? 0), right: -(box?.right ?? 0) }}
+    />
+  </div>;
 }
 
 /**
