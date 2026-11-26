@@ -273,9 +273,15 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       const url = new URL(href, window.location.origin);
       const shortened = shortenLegacyAppUrl(url.pathname, url.search);
       const address = shortened ? shortened + url.hash : href;
-      if (session.isRetainedDestination(session.getSnapshot().activeId, href) || isPreparedAppTabDestination(client, href) ||
-          (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`)))) window.history.pushState(null, "", address);
-      else {
+      const retained = session.isRetainedDestination(session.getSnapshot().activeId, href);
+      if (retained || isPreparedAppTabDestination(client, href) ||
+          (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`)))) {
+        // A retained view shows at once, ahead of the router's commit of this
+        // address: the shell (sidebar, bottom bar) follows it in the same
+        // frame instead of staying on the tab being left.
+        if (retained) beginPendingNavigation(address, { immediate: true });
+        window.history.pushState(null, "", address);
+      } else {
         // A cold destination waits on the router: the shell shows it now.
         beginPendingNavigation(address);
         router.push(address, { scroll: false });

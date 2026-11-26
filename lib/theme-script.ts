@@ -135,8 +135,12 @@ export function buildThemeScript({
   // from the first frame instead of flashing opaque over the blur.
   const desktop = `try{var b=window.minddy;if(b){r.setAttribute("data-desktop-app","");var n=navigator.platform,q=b.platform||(/^mac/i.test(n)?"darwin":/^win/i.test(n)?"win32":/linux/i.test(n)?"linux":"");if(q==="darwin"||q==="win32"||q==="linux")r.setAttribute("data-desktop-platform",q);var w=b.windowMaterial&&b.windowMaterial.kind;if(w==="vibrancy"||w==="acrylic")r.setAttribute("data-desktop-material",w);}}catch(e){}`;
   // The mobile app (MIN-907) is marked the same way, from the object Capacitor
-  // injects before any page script; the platform is allowlisted.
-  const mobile = `try{var c=window.Capacitor;if(c&&c.isNativePlatform&&c.isNativePlatform()){var k=c.getPlatform&&c.getPlatform();if(k==="ios"||k==="android")r.setAttribute("data-native-mobile",k);}}catch(e){}`;
+  // injects before any page script; the platform is allowlisted. A shell that
+  // draws the bottom bar itself is marked too (`data-native-navigation`, the
+  // attribute lib/mobile/native-navigation.ts keeps while it runs): the web
+  // bar is hidden from the first frame, instead of showing in the server's
+  // HTML until React mounts and hands it over to the native one.
+  const mobile = `try{var c=window.Capacitor;if(c&&c.isNativePlatform&&c.isNativePlatform()){var k=c.getPlatform&&c.getPlatform();if(k==="ios"||k==="android"){r.setAttribute("data-native-mobile",k);var s=c.Plugins&&c.Plugins.MinddyShell;if(s&&s.setNavigationBar&&s.addListener)r.setAttribute("data-native-navigation","");}}}catch(e){}`;
   return `(function(){var r=document.documentElement;${desktop}${mobile}var C=${scriptLiteral(CHROME_COLORS)};function u(n,v){var m=document.querySelector('meta[name="'+n+'"]');if(!m){m=document.createElement("meta");m.setAttribute("name",n);document.head.appendChild(m);}m.setAttribute("content",v);}function p(){var d=r.classList.contains("dark");u("theme-color",C[r.getAttribute(d?"${THEME_PRESET_ATTRIBUTES.dark}":"${THEME_PRESET_ATTRIBUTES.light}")]||(d?"${DEFAULT_CHROME.dark}":"${DEFAULT_CHROME.light}"));u("color-scheme",d?"dark":"light");}${appearanceStatements(appearance)}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
     fallbackExpression(defaultTheme)
   });}p();try{new MutationObserver(p).observe(r,{attributes:true,attributeFilter:["class","${THEME_PRESET_ATTRIBUTES.light}","${THEME_PRESET_ATTRIBUTES.dark}"]});}catch(e){}})();`;

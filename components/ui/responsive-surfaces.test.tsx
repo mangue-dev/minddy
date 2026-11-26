@@ -89,16 +89,20 @@ it.each([false, true])("forwards handlers and fades hidden content (asChild: %s)
     await act(() => { scroller.scrollTop = top; scroller.dispatchEvent(new Event("scroll")); });
     await act(() => new Promise((resolve) => requestAnimationFrame(resolve)));
   };
+  // Each edge that hides content shows its fade and chevron, the other does not.
+  const shown = () => [...container.querySelectorAll("[data-sheet-scroll-fade][data-visible]")]
+    .map((edge) => edge.getAttribute("data-sheet-scroll-fade"));
   await scroll(0);
   expect(scrolled).toHaveBeenCalled();
-  expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1);
+  expect(shown()).toEqual(["end"]);
   await scroll(100);
-  expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(2);
+  expect(shown()).toEqual(["start", "end"]);
   await scroll(200);
-  expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1);
+  expect(shown()).toEqual(["start"]);
+  expect(container.querySelectorAll("[data-sheet-scroll-fade] svg")).toHaveLength(2);
   await act(() => scroller.querySelector<HTMLButtonElement>("button")!.click());
   expect(clicked).toHaveBeenCalledOnce();
-  expect(scroller.querySelector('[aria-hidden="true"]')).toBeNull();
+  expect(scroller.querySelector("[data-sheet-scroll-fade]")).toBeNull();
 });
 
 it("closes a mobile view picker before opening its creation form", async () => {

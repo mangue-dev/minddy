@@ -29,6 +29,7 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useMobileSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { getMobileBridge } from "@/lib/mobile/bridge";
 import { syncNativeNavigationBar } from "@/lib/mobile/native-navigation";
+import { holdLaunchCover } from "@/lib/mobile/launch-cover";
 import { watchSideChrome } from "@/lib/mobile/side-chrome";
 
 export type MobileMenuPanel = {
@@ -156,7 +157,12 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
   useEffect(() => {
     const shell = getMobileBridge()?.shell;
     if (!shell || !navRef.current) return;
-    return syncNativeNavigationBar(navRef.current, shell) ?? undefined;
+    // At launch the app appears with its bar: the launch screen waits for
+    // the shell to have drawn it (lib/mobile/launch-cover.ts).
+    const barDrawn = holdLaunchCover();
+    const stop = syncNativeNavigationBar(navRef.current, shell, undefined, barDrawn);
+    if (!stop) barDrawn();
+    return () => { barDrawn(); stop?.(); };
   }, []);
   // Where the system's controls stand on a side (iPhone Duo), the bar stands
   // there too, vertical (lib/mobile/side-chrome.ts, app/globals.css).

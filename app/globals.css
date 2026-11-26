@@ -1927,10 +1927,14 @@ html[data-app-shell] textarea {
     color: var(--foreground);
   }
 }
-/* Nothing hovers a heading on touch: the copy button is always there. */
+/* Nothing hovers a heading on touch: the copy button is always there, and
+   the title keeps clear of it instead of running under it. */
 @media (hover: none), (pointer: coarse) {
   .scratchpad-editor .ProseMirror .scratchpad-section-copy {
     opacity: 1;
+  }
+  .scratchpad-editor .ProseMirror :is(h1, h2, h3):has(> .scratchpad-section-copy) {
+    padding-right: 2rem;
   }
 }
 
