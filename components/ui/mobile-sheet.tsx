@@ -4,6 +4,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { useTranslations } from "next-intl";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Button } from "./button";
 import { SheetClose, SheetContent } from "./sheet";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,6 @@ import { AppIcon } from "@/components/icon";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { attachSheetSwipeDismiss } from "@/lib/sheet-swipe-dismiss";
 import { useOverlayState } from "./overlay-freeze";
 import { useMergedRef } from "./menu-scroll-fade";
@@ -77,6 +77,23 @@ export function MobileSheetScrollArea({ children, asChild = false, className, ..
   return <div data-mobile-sheet-scroll className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
     <Content {...props} ref={ref} onScroll={(event) => { props.onScroll?.(event); scrollProps.onScroll(); }}
       className={cn("min-h-0 overflow-y-auto overscroll-contain", className)}>{children}</Content>
-    <ScrollFadeEdges edges={edges} from="from-card" className="z-10 h-4" />
+    <SheetScrollEdge edge="start" visible={edges.start} />
+    <SheetScrollEdge edge="end" visible={edges.end} />
+  </div>;
+}
+
+/**
+ * The edge of a sheet's list that hides rows: the same fade and chevron as a
+ * menu's (components/ui/menu-scroll-fade.tsx), in the sheet's own colour,
+ * only on the side more rows wait.
+ */
+function SheetScrollEdge({ edge, visible }: { edge: "start" | "end"; visible: boolean }) {
+  return <div aria-hidden data-sheet-scroll-fade={edge} data-visible={visible ? "" : undefined}
+    className={cn(
+      "pointer-events-none absolute inset-x-0 z-10 flex h-8 justify-center from-card to-transparent text-muted-foreground transition-opacity duration-150 motion-reduce:transition-none",
+      edge === "start" ? "top-0 items-start bg-gradient-to-b" : "bottom-0 items-end bg-gradient-to-t",
+      visible ? "opacity-100" : "opacity-0",
+    )}>
+    {edge === "start" ? <ChevronUpIcon className="mt-0.5 size-4" /> : <ChevronDownIcon className="mb-0.5 size-4" />}
   </div>;
 }
