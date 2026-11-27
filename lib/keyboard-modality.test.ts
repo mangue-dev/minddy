@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { INPUT_MODALITY_ATTRIBUTE, keyboardAimsLast, trackKeyboardModality } from "@/lib/keyboard-modality";
-import { innermostFocused, keyboardAnchorIn } from "@/lib/keyboard/hover-keys";
+import { innermostFocused, innermostHovered, keyboardAnchorIn } from "@/lib/keyboard/hover-keys";
 
 const root = document.documentElement;
 const tab = (init: KeyboardEventInit = {}) =>
@@ -104,5 +104,37 @@ describe("keyboardAnchorIn", () => {
     window.dispatchEvent(new Event("pointerdown"));
     expect(keyboardAnchorIn(card)).toBeNull();
     stop();
+  });
+});
+
+// A tooltip renders in a portal, outside its card: the pointer resting on the
+// bubble has left the card, and the card's shortcuts must still reach it.
+describe("innermostHovered under a tooltip", () => {
+  function board() {
+    document.body.innerHTML = `
+      <div id="card"><button id="assignee" aria-describedby="hint tip">A</button></div>
+      <div id="other"><button aria-describedby="elsewhere">B</button></div>
+      <div data-slot="tooltip-content" id="tip">Assignee</div>`;
+    const byId = (id: string) => document.getElementById(id)!;
+    const registry = new Map<Element, string>([[byId("card"), "card"], [byId("other"), "other"]]);
+    return { byId, registry };
+  }
+
+  it("targets the card whose tooltip is under the pointer", () => {
+    const { byId, registry } = board();
+    expect(innermostHovered(registry, (el) => el === byId("tip"))).toBe("card");
+  });
+
+  it("follows a tooltip named by a hidden label", () => {
+    const { byId, registry } = board();
+    const tip = byId("tip");
+    tip.removeAttribute("id");
+    tip.innerHTML = `Assignee<span role="tooltip" id="tip">Assignee</span>`;
+    expect(innermostHovered(registry, (el) => el === tip)).toBe("card");
+  });
+
+  it("targets nothing when no tooltip is under the pointer", () => {
+    const { registry } = board();
+    expect(innermostHovered(registry, () => false)).toBeUndefined();
   });
 });

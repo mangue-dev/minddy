@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/fr.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/fr.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude-code (view dropdown sentence mirrored from en revision 23; labels checked against messages/fr.json; no figure affected; agent review, not human acceptance)",
+    "language": "agent:claude-code (fr translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr translation of the view dropdown sentence; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "pages"
@@ -100,7 +100,7 @@
       "src": "/documentation/fr/database-setup-cards.png",
       "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
       "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, date, personnes, case à cocher et les quatre types en lecture seule.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -134,7 +134,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +182,7 @@
       "src": "/documentation/fr/database-options.png",
       "alt": "Aperçu du composant Modifier les options avec des statuts en français, des poignées de déplacement, des corbeilles et l’explication de la suppression.",
       "caption": "Modifiez ensemble les noms, les couleurs et l’ordre des options. Faites glisser une poignée pour réordonner ; la corbeille retire une option des modifications en cours ; Enregistrer applique les changements. Données de démonstration.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/fr/database-date-time.png",
       "alt": "Aperçu du sélecteur de date avec le 24 juillet 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 02:00 AM.",
       "caption": "Activez Préciser l’heure pour saisir une heure. Cet aperçu du composant utilise des données de démonstration et le fuseau horaire de l’appareil.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +282,7 @@ Depuis ce menu, le propriétaire ou un Membre peut choisir **Promouvoir en ticke
 
 ### Vues de la base {#database-display}
 
-Une base présente ses entrées à travers des vues, listées au-dessus du tableau. Chaque vue garde son propre classement, son filtre et ses colonnes masquées, et tous les membres du projet voient les mêmes vues. Le propriétaire ou un Membre ajoute une vue avec **Nouvelle vue** (+), qui part de la vue affichée, fait un clic droit sur une vue pour choisir **Renommer la vue** ou **Supprimer la vue**, et fait glisser les vues pour les réordonner. Les changements de classement, de filtre et de colonnes sont enregistrés dans la vue active pour tout le monde. Une base garde au moins une vue ; avant son premier changement, elle affiche la vue **Tableau** par défaut. Les lecteurs passent d’une vue à l’autre et peuvent en ajuster une pour eux-mêmes jusqu’à ce qu’ils quittent la page. Le navigateur retient la dernière vue ouverte ; la recherche n’est jamais enregistrée. L’ordre manuel est partagé avec l’arbre. Faites défiler horizontalement avec le pavé tactile, Maj et molette ou la barre de défilement en bas de la zone de contenu, qui s’affiche pendant le défilement du tableau. Un écran tactile n’affiche pas cette barre : faites glisser le tableau du doigt. Un aperçu tronqué ne raccourcit pas la valeur stockée. Une entrée avec des valeurs peut se réordonner dans sa base, mais pas sortir de celle-ci. Numo peut lister les vues d’une base et, à votre demande, en créer, les renommer, les réordonner ou les supprimer (jamais la dernière), ou changer leur classement, leurs filtres (tous ou au moins un), leurs colonnes masquées et les calculs sous les colonnes Nombre. Si la base n’a pas encore de vue enregistrée, ce changement enregistre sa vue par défaut, comme le fait votre première modification. Sur la page d’une base, Numo comprend « une vue » comme une vue de la base, et non du tableau des tickets. L’ordre des colonnes ne fait pas partie d’une vue : il relève du schéma de la base. Les clients minddy MCP peuvent gérer les vues de la même façon.
+Une base présente ses entrées à travers des vues, listées au-dessus du tableau. Chaque vue garde son propre classement, son filtre et ses colonnes masquées, et tous les membres du projet voient les mêmes vues. Le propriétaire ou un Membre ajoute une vue avec **Nouvelle vue** (+), qui part de la vue affichée, fait un clic droit sur une vue pour choisir **Renommer la vue** ou **Supprimer la vue**, et fait glisser les vues pour les réordonner. Lorsque les vues ne tiennent plus sur une ligne, une liste déroulante les remplace ; son menu propose **Nouvelle vue**, **Renommer la vue** et **Supprimer la vue**. Les changements de classement, de filtre et de colonnes sont enregistrés dans la vue active pour tout le monde. Une base garde au moins une vue ; avant son premier changement, elle affiche la vue **Tableau** par défaut. Les lecteurs passent d’une vue à l’autre et peuvent en ajuster une pour eux-mêmes jusqu’à ce qu’ils quittent la page. Le navigateur retient la dernière vue ouverte ; la recherche n’est jamais enregistrée. L’ordre manuel est partagé avec l’arbre. Faites défiler horizontalement avec le pavé tactile, Maj et molette ou la barre de défilement en bas de la zone de contenu, qui s’affiche pendant le défilement du tableau. Un écran tactile n’affiche pas cette barre : faites glisser le tableau du doigt. Un aperçu tronqué ne raccourcit pas la valeur stockée. Une entrée avec des valeurs peut se réordonner dans sa base, mais pas sortir de celle-ci. Numo peut lister les vues d’une base et, à votre demande, en créer, les renommer, les réordonner ou les supprimer (jamais la dernière), ou changer leur classement, leurs filtres (tous ou au moins un), leurs colonnes masquées et les calculs sous les colonnes Nombre. Si la base n’a pas encore de vue enregistrée, ce changement enregistre sa vue par défaut, comme le fait votre première modification. Sur la page d’une base, Numo comprend « une vue » comme une vue de la base, et non du tableau des tickets. L’ordre des colonnes ne fait pas partie d’une vue : il relève du schéma de la base. Les clients minddy MCP peuvent gérer les vues de la même façon.
 
 Ouvrez **Trier par** pour choisir une colonne, puis un sens formulé selon ce que la colonne contient : **A à Z** ou **Z à A** pour le texte et les personnes, **Première option d’abord** ou **Dernière option d’abord** pour une colonne Sélection ou Sélection multiple, triée dans l’ordre de ses options, **Plus petit d’abord** ou **Plus grand d’abord** pour un nombre, **Plus ancien d’abord** ou **Plus récent d’abord** pour une date, **Décochées d’abord** ou **Cochées d’abord** pour une case à cocher, et **De haut en bas** ou **De bas en haut** pour l’ordre manuel. Les listes de colonnes de **Trier par** et de **Filtrer** affichent l’icône du type de chaque colonne.
 
