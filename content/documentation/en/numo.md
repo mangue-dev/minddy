@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 43,
-  "sourceRevision": 43,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-16",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -105,10 +105,10 @@
     ]
   },
   "review": {
-    "revision": 43,
-    "fact": "agent:claude-code (MIN-1004: the pull request sentence of #continue, Numo finding and reading any pull request of the project repository from any page, source audit against lib/server/assistant/pull-request-list.ts, lib/server/assistant/pull-request-writes.ts and lib/server/assistant/tools.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-988: new section #project-instructions, source audit against lib/server/numo/project-instructions-prompt.ts, lib/server/numo/memory-prompt.ts, lib/server/assistant/tools.ts and lib/server/update-project.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-982: personal reminders paragraph of #reminders and the notification-only sentence of #recurring-reminders, source audit against lib/server/numo/watches.ts, watch-clock.ts, watch-prompt.ts, lib/server/numo-notes.ts, lib/server/assistant/execute-tool.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-969: the composer's `@` menu listing what Numo mentioned in the conversation or in its Home summary under Mentioned by Numo, newest first and at most eight, and offering every non-hidden project's pages with the open project's first, checked against lib/numo-cited-mentions.ts, lib/numo-cited-mentions.test.ts, components/assistant/assistant-shell.tsx, app/(app)/home/page.tsx, lib/use-numo-mentionables.ts and lib/use-numo-mentionables.test.tsx; rest of the article unchanged since the previous review; no figure recaptured, no figure shows the `@` menu); agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-953: recurring reminders section and the last paragraph of #reminders, source audit against lib/numo-watches.ts, lib/server/numo/watches.ts, watch-clock.ts, watch-proposal.ts, lib/server/assistant/proactive-guard.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: step 2 of #work-with-numo, the default-model paragraph, the compaction paragraph of #continue and the model sentence of #numo-execution-model, source audit against lib/server/assistant/conversation-config.ts, lib/server/assistant/context-compaction.ts, components/assistant/conversation-settings.tsx and messages/*.json; no browser walkthrough; no figure shows the model control or the compaction step; existing figures kept, not recaptured); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-955: the paragraph on what Numo can change in #numo-permissions-and-approvals, source audit against lib/server/assistant/settings-coverage.ts, lib/server/account-settings.ts and the update_member_role tool; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-956: search in earlier conversations paragraph and memory switch sentence of #memory, source audit against lib/server/numo/conversation-search.ts, lib/server/numo/turns.ts, lib/server/assistant/execute-tool.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-907 Numo introduction: the message shown on Home and in an empty Numo panel when there is no summary, checked against components/assistant/numo-intro.tsx, app/(app)/home/page.tsx, components/assistant-panel.tsx, components/assistant/assistant-shell.tsx and messages/*.json; no browser walkthrough; no figure shows Home without a summary; existing figures kept, not recaptured); agent:claude-code (MIN-1001: tool-loading paragraph of #continue, after the compaction paragraph, source audit against lib/server/assistant/tool-loading.ts, lib/server/assistant/loop.ts, components/assistant/tool-call-display.tsx and messages/*.json; no browser walkthrough; no figure shows the step; existing figures kept, not recaptured); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; 2 screenshot(s) recaptured on 2026-11-17 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1001 tool-loading passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 44,
+    "fact": "agent:claude-code (MIN-1030: Numo places an image in a text with embed_image, from a conversation file or a file resource, and cites resources as mentions; checked against lib/server/assistant/tools.ts, lib/server/assistant/execute-tool.ts and lib/server/assistant/prompt.ts; agent review, not human acceptance)",
+    "language": "agent:claude-code (en MIN-1030 sentences written from the code; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "code-work",
@@ -138,7 +138,7 @@
       "src": "/documentation/en/work-with-numo-workflow.png",
       "alt": "Numo demonstration conversation with page context, a priority-change request and its saved answer.",
       "caption": "Existing demonstration thread, localized for display. The saved answer names AUR-11 and AUR-7; this capture does not prove a new execution.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-11-17",
       "viewport": [
@@ -155,7 +155,7 @@
       "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -216,7 +216,7 @@
       "src": "/documentation/en/numo-execution-model-flow.svg",
       "alt": "Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
       "caption": "Read the stages in order. Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/en/numo-mcp-connections-workflow.png",
       "alt": "Personal MCP settings, empty connection list and Add another MCP server control.",
       "caption": "Numo connections are personal; project routines use the project owner’s connections.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-11-17",
       "viewport": [
@@ -265,7 +265,7 @@
       "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
       "alt": "Notion connection wizard showing the sign-in method known from the catalog.",
       "caption": "Sign-in step for a catalog service. No credentials were entered and no server was contacted.",
-      "revision": 43,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -304,7 +304,7 @@ On **Home**, and in the Numo panel when it is expanded or has focus, you can sta
 
 To ask about a passage, select it in an editor, such as a page or an issue description, then choose **Ask Numo** in the selection toolbar on desktop. The panel opens without sending anything: next to the page or issue it comes from, the passage appears as a context pill showing its first words, and hovering the pill shows the whole passage. Type your question, for example “Rewrite this more concisely” or “Make issues from this”, and send it. The passage goes with that message only. To leave it out, remove its pill with its cross.
 
-Numo can also look at the images in an issue or objective description, a plan, a comment, a page or your notebook when the conversation model accepts images. Without that capability, Numo says it could not view an image instead of describing it.
+Numo can also look at the images in an issue or objective description, a plan, a comment, a page or your notebook when the conversation model accepts images. Without that capability, Numo says it could not view an image instead of describing it. Numo can also put an image in what it writes: a comment, a description, a plan or a page. It reuses an image already shown in a text, or copies one from a file you added to the conversation or from a file attached to an issue or objective. It can cite an attached file, link or page as a mention too.
 
 Numo can also write a file for you to download: a report or a document as PDF, an export as CSV, or a text, Markdown, HTML, JSON, XML, SVG or calendar file. Ask for it in your request; Numo can build it from files you added to the conversation. The file appears as a card under its answer: selecting the card opens its preview when the format allows it, **Download** saves it, and the menu next to it offers **Preview** and **Copy contents**. The file stays in your conversation’s private storage; to share it with the project, ask Numo to attach it to an issue, an objective or a comment it posts there. A PDF uses the standard fonts: characters outside Western European alphabets, and emoji, are left out.
 

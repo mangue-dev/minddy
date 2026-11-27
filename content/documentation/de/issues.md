@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 54,
-  "sourceRevision": 54,
+  "revision": 55,
+  "sourceRevision": 55,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -143,10 +143,10 @@
     ]
   },
   "review": {
-    "revision": 54,
-    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 55,
+    "fact": "agent:claude-code (MIN-1030: images pasted or dropped into issue, objective and page comments land in the text and open in the viewer, a feedback thread keeps them as attachments; checked against components/editor/comment-editor.tsx, components/issue-timeline.tsx and components/markdown.tsx; agent review, not human acceptance)",
+    "language": "agent:claude-code (de MIN-1030 sentences translated from en with the locale register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "feedback",
@@ -191,7 +191,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -208,7 +208,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -225,7 +225,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -242,7 +242,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -259,7 +259,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -276,7 +276,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Unterticket-Bereich eines Demo-Elterntickets mit der Schaltfläche „Unterticket erstellen“ und ihrem Optionspfeil.",
       "caption": "„Unterticket erstellen“ öffnet die Erstellung mit diesem Ticket als Elternticket; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -293,7 +293,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -310,7 +310,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -327,7 +327,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -344,7 +344,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -477,7 +477,7 @@ Prüfe Filter, wenn ein Ticket nach dem Schließen verschwindet. Öffne es über
 
 ## Arbeit besprechen und Kontext hinzufügen {#issue-discussion-and-resources}
 
-Öffne den Diskussionsverlauf des Tickets, um einen Kommentar hinzuzufügen. Erkläre eine Entscheidung, Frage oder ein Prüfergebnis, damit ein anderes Mitglied die Änderung verstehen kann. Verwende Erwähnungen, wenn du eine Person oder ein verknüpftes Objekt im Kontext brauchst; Benachrichtigungen hängen weiterhin von den Einstellungen der empfangenden Person und der Zustellung auf ihrem Gerät ab. Ein Leser kann nur kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Dann kann er antworten, Personen erwähnen, Dateien an seine eigenen Kommentare anhängen und seine eigenen Kommentare bearbeiten oder löschen.
+Öffne den Diskussionsverlauf des Tickets, um einen Kommentar hinzuzufügen. Erkläre eine Entscheidung, Frage oder ein Prüfergebnis, damit ein anderes Mitglied die Änderung verstehen kann. Verwende Erwähnungen, wenn du eine Person oder ein verknüpftes Objekt im Kontext brauchst; Benachrichtigungen hängen weiterhin von den Einstellungen der empfangenden Person und der Zustellung auf ihrem Gerät ab. Ein Leser kann nur kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Dann kann er antworten, Personen erwähnen, Dateien an seine eigenen Kommentare anhängen und seine eigenen Kommentare bearbeiten oder löschen. Füge ein Bild in einen Kommentar ein oder ziehe es hinein, um es in den Text zu setzen; ein Klick öffnet es in voller Größe. Andere Dateitypen werden als Ressourcen an den Kommentar angehängt. Kommentare zu Zielen und Seiten nehmen Bilder genauso auf. Ein Feedback-Thread kann auf dem öffentlichen Board erscheinen, deshalb bleibt ein dort hinzugefügtes Bild ein Anhang.
 
 Füge eine passende Projektseite, Datei oder einen Link über die Ressourcenfunktionen hinzu. Eine verknüpfte Seite ist eine aktuelle Ressource: Ihr Titel folgt einer Umbenennung und ihr Inhalt kann sich ändern. Eine Datei ist ein gespeicherter Anhang, keine Garantie für die Erreichbarkeit einer externen URL. **Seite** öffnet die Befehlspalette mit den Seiten des Projekts in der Reihenfolge der Seitenleiste; wähle eine, um sie anzuhängen. Um eine Seite zu schreiben, die es noch nicht gibt, wähle **Neue Seite** am Ende der Liste; ein zuvor in die Suche getippter Titel wird ihr Titel. Die Seite wird im Projekt erstellt, dem Ticket angehängt und in einem Seitenbereich geöffnet, in dem **Erweitern** die ganze Seite öffnet.
 

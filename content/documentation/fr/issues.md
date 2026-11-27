@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 54,
-  "sourceRevision": 54,
+  "revision": 55,
+  "sourceRevision": 55,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -143,10 +143,10 @@
     ]
   },
   "review": {
-    "revision": 54,
-    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 55,
+    "fact": "agent:claude-code (MIN-1030: images pasted or dropped into issue, objective and page comments land in the text and open in the viewer, a feedback thread keeps them as attachments; checked against components/editor/comment-editor.tsx, components/issue-timeline.tsx and components/markdown.tsx; agent review, not human acceptance)",
+    "language": "agent:claude-code (fr MIN-1030 sentences translated from en with the locale register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "feedback",
@@ -191,7 +191,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -207,7 +207,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -224,7 +224,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -241,7 +241,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -258,7 +258,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -275,7 +275,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Section des sous-tickets d’un ticket parent de démonstration, avec le bouton Créer un sous-ticket et son chevron d’options.",
       "caption": "Créer un sous-ticket ouvre la création avec ce ticket comme parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -292,7 +292,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -309,7 +309,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -326,7 +326,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -343,7 +343,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -483,7 +483,7 @@ Vérifiez les filtres si un ticket disparaît après clôture. Ouvrez-le par ide
 
 ## Discuter du travail et joindre son contexte {#issue-discussion-and-resources}
 
-Ouvrez le fil du ticket pour ajouter un commentaire. Expliquez une décision, posez une question ou décrivez un résultat de vérification pour qu’un autre membre comprenne le changement. Les mentions ajoutent une personne ou un objet au contexte ; les notifications dépendent toujours des préférences et de la livraison sur ses appareils. Un lecteur ne peut commenter que si le propriétaire a activé **Peut commenter** pour lui. Il peut alors répondre, mentionner des personnes, joindre des fichiers à ses propres commentaires, et modifier ou supprimer ses propres commentaires.
+Ouvrez le fil du ticket pour ajouter un commentaire. Expliquez une décision, posez une question ou décrivez un résultat de vérification pour qu’un autre membre comprenne le changement. Les mentions ajoutent une personne ou un objet au contexte ; les notifications dépendent toujours des préférences et de la livraison sur ses appareils. Un lecteur ne peut commenter que si le propriétaire a activé **Peut commenter** pour lui. Il peut alors répondre, mentionner des personnes, joindre des fichiers à ses propres commentaires, et modifier ou supprimer ses propres commentaires. Collez ou déposez une image dans un commentaire pour l’insérer dans le texte, où un clic l’ouvre en grand ; les autres types de fichiers se joignent au commentaire comme ressources. Les commentaires des objectifs et des pages acceptent les images de la même façon. Le fil d’un retour peut publier sur le tableau public : une image ajoutée là reste une pièce jointe.
 
 Joignez une page du projet, un fichier ou un lien depuis les ressources. Une page liée est une ressource vivante : son titre suit les renommages et son contenu évolue. Un fichier est une pièce jointe stockée, pas la garantie qu’une URL externe restera disponible. **Page** ouvre la palette de commandes sur les pages du projet, dans l’ordre de la barre latérale ; choisissez-en une pour la joindre. Pour rédiger une page qui n’existe pas encore, choisissez **Nouvelle page** en bas de la liste ; un titre tapé d’abord dans la recherche devient son titre. La page est créée dans le projet, jointe au ticket et ouverte dans un panneau latéral, où **Agrandir** ouvre la page entière.
 

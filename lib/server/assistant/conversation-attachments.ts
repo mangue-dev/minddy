@@ -8,6 +8,7 @@ import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { readDocumentImage, resolveDocumentImage } from "@/lib/server/document-images";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { BULK_WRITE_CONCURRENCY, mapWithConcurrency } from "@/lib/map-with-concurrency";
+import { storeInlineImage } from "@/lib/server/inline-images";
 import { downloadAttachment, insertAttachments, MAX_ATTACHMENT_BYTES,
   opaqueAttachmentPath, removeStorageObjects, uploadPrivateAttachmentObject,
   type AttachmentParent } from "@/lib/server/attachments";
@@ -280,6 +281,19 @@ export async function copyConversationAttachment(ctx: ToolContext, reference: un
     await removeStorageObjects(ctx.service, [path]);
     throw error;
   }
+}
+
+/**
+ * `embed_image` (MIN-1030): a conversation file as an image of `projectId`,
+ * ready to write into a text. The bytes are copied out of the chat, so the
+ * text keeps its image when the conversation is deleted.
+ */
+export async function embedConversationImage(ctx: ToolContext, reference: unknown,
+  projectId: string, alt?: string | null) {
+  const file = await resolveConversationAttachment(ctx, reference);
+  const bytes = await downloadAttachment(ctx.service, file.storage_path!);
+  if (!bytes) throw new Error("Attachment file is unavailable.");
+  return storeInlineImage(ctx.service, { projectId, data: bytes, alt: alt ?? file.file_name });
 }
 
 /**

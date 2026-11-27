@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 54,
-  "sourceRevision": 54,
+  "revision": 55,
+  "sourceRevision": 55,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -143,10 +143,10 @@
     ]
   },
   "review": {
-    "revision": 54,
-    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 55,
+    "fact": "agent:claude-code (MIN-1030: images pasted or dropped into issue, objective and page comments land in the text and open in the viewer, a feedback thread keeps them as attachments; checked against components/editor/comment-editor.tsx, components/issue-timeline.tsx and components/markdown.tsx; agent review, not human acceptance)",
+    "language": "agent:claude-code (pt-BR MIN-1030 sentences translated from en with the locale register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "feedback",
@@ -192,7 +192,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-21.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -209,7 +209,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -226,7 +226,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -243,7 +243,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -260,7 +260,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "A paleta de comandos lista os tickets que podem bloquear este, com a pergunta da relação no campo de busca.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -277,7 +277,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Seção de subtickets de um ticket pai de demonstração, com o botão Criar um subticket e sua seta de opções.",
       "caption": "Criar um subticket abre a criação com este ticket como pai; cada filho mantém seu próprio status e discussão.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -294,7 +294,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -311,7 +311,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -328,7 +328,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -345,7 +345,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -482,7 +482,7 @@ Confira os filtros se um ticket desaparecer depois de encerrado. Abra-o novament
 
 ## Discutir o trabalho e anexar seu contexto {#issue-discussion-and-resources}
 
-Abra a linha do tempo da discussão do ticket para adicionar um comentário. Explique uma decisão, pergunta ou resultado de verificação para que outro membro entenda o que mudou. Use menções quando precisar de uma pessoa ou objeto vinculado no contexto; as notificações ainda dependem das preferências do destinatário e da entrega no dispositivo. Um leitor só pode comentar quando o proprietário ativou **Pode comentar** para ele. Nesse caso, ele pode responder, mencionar pessoas, anexar arquivos aos próprios comentários e editar ou excluir os próprios comentários.
+Abra a linha do tempo da discussão do ticket para adicionar um comentário. Explique uma decisão, pergunta ou resultado de verificação para que outro membro entenda o que mudou. Use menções quando precisar de uma pessoa ou objeto vinculado no contexto; as notificações ainda dependem das preferências do destinatário e da entrega no dispositivo. Um leitor só pode comentar quando o proprietário ativou **Pode comentar** para ele. Nesse caso, ele pode responder, mencionar pessoas, anexar arquivos aos próprios comentários e editar ou excluir os próprios comentários. Cole ou solte uma imagem em um comentário para inseri-la no texto, onde um clique a abre em tamanho real; os outros tipos de arquivo são anexados ao comentário como recursos. Os comentários de objetivos e páginas aceitam imagens da mesma forma. A conversa de um feedback pode ir para o quadro público, então uma imagem adicionada ali continua sendo um anexo.
 
 Anexe uma página relevante do projeto, um arquivo ou um link pelos controles de recursos. Uma página vinculada é um recurso atualizado: seu título acompanha renomeações e o conteúdo pode evoluir. Um arquivo é um anexo armazenado, não uma garantia de que uma URL externa continuará disponível. **Página** abre a paleta de comandos com as páginas do projeto, na ordem da barra lateral; escolha uma para anexá-la. Para escrever uma página que ainda não existe, escolha **Nova página** no fim da lista; um título digitado antes na busca vira o título dela. A página é criada no projeto, anexada ao ticket e aberta em um painel lateral, onde **Expandir** abre a página inteira.
 

@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { readTextEdits, TEXT_EDIT_FIELDS } from "./text-edit-input";
-import { MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
+import { MCP_IMAGES_IN_MARKDOWN, MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
 import { DATABASE_ENTRY_VALUES, DATABASE_TOOL_SCHEMA, databaseToolDescription } from "@/lib/server/database-tool-schema";
 import {
   DATABASE_VIEWS_TOOL_SCHEMA,
@@ -86,8 +86,9 @@ const PAGE_ID = z
 const IMAGES_AND_FILES =
   "An image reads '![caption](url)' and a file '[name](url)' — those are REAL " +
   "files stored by minddy. Keep such lines exactly as you read them when you " +
-  "rewrite a body: dropping one detaches the file from the page. You cannot " +
-  "upload a file yourself, and you must never invent one of those urls.";
+  "rewrite a body: dropping one detaches the file from the page. To add an " +
+  "image, get its markdown from minddy_upload_image; you cannot add another " +
+  "kind of file, and you must never invent one of those urls.";
 
 /** The body of a page, in markdown. The same prose on both sides of the writing:
  this field is the only instructions the model reads before writing. */
@@ -540,7 +541,7 @@ export function registerPageTools(server: McpServer): void {
         markdown: BODY.describe(
           "The block to ADD, in markdown (a '## heading' and its paragraphs, a " +
             "list, a task list…). ONLY what is new — everything already on the " +
-            "page is kept as-is, so never repeat it here."
+            "page is kept as-is, so never repeat it here." + MCP_IMAGES_IN_MARKDOWN
         ),
       }),
       annotations: WRITE,
@@ -630,7 +631,7 @@ export function registerPageTools(server: McpServer): void {
           .min(1)
           .describe(
             "The comment, in markdown. Short and specific — it is read next to " +
-              "the text it is about, not instead of it."
+              "the text it is about, not instead of it." + MCP_IMAGES_IN_MARKDOWN
           ),
         block_id: z
           .string()

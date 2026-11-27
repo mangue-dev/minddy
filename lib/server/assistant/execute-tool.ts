@@ -95,7 +95,9 @@ import {
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentOffset, attachmentReadLimit, listConversationAttachments, readConversationAttachment,
-  copyConversationAttachment, createGeneratedFile, viewDocumentImage } from "./conversation-attachments";
+  copyConversationAttachment, createGeneratedFile, embedConversationImage,
+  viewDocumentImage } from "./conversation-attachments";
+import { inlineImageFromResource } from "@/lib/server/inline-images";
 import { GeneratedFileError } from "./generated-files";
 import { insertAttachments } from "@/lib/server/attachments";
 import { imagesIn } from "@/lib/server/document-images";
@@ -2441,6 +2443,31 @@ async function executeProjectTool(
       });
       if (!result.ok) return libError(result);
       return { result: { comment: result.comment }, success: true };
+    }
+
+    case "embed_image": {
+      const attachmentId = typeof args.attachment_id === "string" ? args.attachment_id.trim() : "";
+      const resourceId = typeof args.resource_id === "string" ? args.resource_id.trim() : "";
+      const alt = typeof args.alt === "string" ? args.alt : null;
+      if (!!attachmentId === !!resourceId) {
+        return toolError("Send exactly one of attachment_id or resource_id.");
+      }
+      let embedded;
+      try {
+        embedded = attachmentId
+          ? await embedConversationImage(ctx, attachmentId, projectId, alt)
+          : await inlineImageFromResource(ctx.service, { projectId, resourceId, alt });
+      } catch (error) {
+        return toolError((error as Error).message);
+      }
+      if (!embedded.ok) return toolError(embedded.message);
+      return {
+        result: {
+          image: embedded.image,
+          note: "Put `markdown` on its own line in the text you write next.",
+        },
+        success: true,
+      };
     }
 
     case "add_resource": {

@@ -215,7 +215,8 @@ import {
   type ToolResult,
 } from "@/lib/server/mcp/tool-helpers";
 import { withoutMentionLabels } from "@/lib/mention-link";
-import { MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
+import { inlineImageFromResource, storeInlineImage } from "@/lib/server/inline-images";
+import { MCP_IMAGES_IN_MARKDOWN, MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
 import { registerPageTools } from "@/lib/server/mcp/page-tools";
 import { registerTrashTools } from "@/lib/server/mcp/trash-tools";
 import { captureServerEvent } from "@/lib/server/posthog";
@@ -2094,7 +2095,8 @@ export function registerMinddyTools(
           .string()
           .optional()
           .describe(
-            "Markdown. WHAT and WHY — write one on every issue you create." + MCP_MENTIONS_IN_MARKDOWN,
+            "Markdown. WHAT and WHY — write one on every issue you create." + MCP_MENTIONS_IN_MARKDOWN +
+              MCP_IMAGES_IN_MARKDOWN,
           ),
         plan: PLAN_FIELD.optional(),
         status: z.enum(ISSUE_STATUSES).optional().describe("Default: backlog."),
@@ -2805,7 +2807,8 @@ export function registerMinddyTools(
         "The timeline shows the agent as the author (this API " +
         "key's name with an '(mcp)' marker), not the key's owner. To attach a " +
         "resource to the comment, call minddy_add_resource with the returned " +
-        "comment id. To answer a comment, reply INSIDE its thread by passing " +
+        "comment id; an image that illustrates the comment goes in its body " +
+        "instead (minddy_upload_image). To answer a comment, reply INSIDE its thread by passing " +
         "parent_comment_id; a new root comment leaves the thread unanswered.",
       inputSchema: z.object({
         project_id: ISSUE_PROJECT_ID,
@@ -2815,7 +2818,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
-              "at most, no headings." + MCP_MENTIONS_IN_MARKDOWN,
+              "at most, no headings." + MCP_MENTIONS_IN_MARKDOWN + MCP_IMAGES_IN_MARKDOWN,
           ),
         parent_comment_id: z
           .string()
@@ -3067,6 +3070,86 @@ export function registerMinddyTools(
       } catch (e) {
         return fail("database_error", (e as Error).message);
       }
+    },
+  );
+
+  server.registerTool(
+    "minddy_upload_image",
+    {
+      title: "Upload image",
+      description:
+        "Store an image to show it INSIDE a text you write (a comment, a " +
+        "description, a plan, a page), and get its Markdown. The result's " +
+        "`markdown` ('![alt](src)') goes on its own line in the body you then " +
+        "write with minddy_add_comment, minddy_create_issue, " +
+        "minddy_append_to_page and the other writing tools, from ONE source: " +
+        "content_base64, the image itself (PNG, JPEG, GIF, WebP or AVIF, 10 MB " +
+        "max after decoding), or resource_id, a file resource of this project " +
+        "(from minddy_get_issue or minddy_list_objectives) whose image is copied. An " +
+        "image already shown in a text needs no upload: reuse its src as read. " +
+        "This does not attach a resource; minddy_add_resource does that, for a " +
+        "file of any kind. An image left out of every text is removed after a " +
+        "few days.",
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        content_base64: z
+          .string()
+          .min(1)
+          .max(14_000_000)
+          .optional()
+          .describe("The image, base64-encoded (no 'data:' prefix). Leave out with resource_id."),
+        resource_id: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            "A FILE resource of this project that is an image, to show it in a " +
+              "text. Leave out with content_base64.",
+          ),
+        alt: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("What the image shows, in a few words: its alt text in the returned markdown."),
+      }),
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      if (!!args.content_base64 === !!args.resource_id) {
+        return fail(
+          "invalid_params",
+          "Send exactly one of content_base64 (the image) and resource_id (a file resource).",
+        );
+      }
+      const projectId = scope.access.project.id;
+      let result;
+      if (args.resource_id) {
+        result = await inlineImageFromResource(getServiceClient(), {
+          projectId, resourceId: args.resource_id, alt: args.alt,
+        });
+      } else {
+        const normalized = (args.content_base64 as string).replace(/\s/g, "");
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+          return fail("invalid_params", "content_base64 is not valid base64.");
+        }
+        result = await storeInlineImage(getServiceClient(), {
+          projectId, data: Buffer.from(normalized, "base64"), alt: args.alt,
+        });
+      }
+      if (!result.ok) {
+        return fail(
+          result.code === "not_found" ? "not_found"
+            : result.code === "storage" ? "database_error"
+            : result.code === "quota" ? "forbidden" : "invalid_params",
+          result.message,
+        );
+      }
+      return ok({
+        image: result.image,
+        write_it: "Put `markdown` on its own line in the text you write next.",
+      });
     },
   );
 
@@ -3553,7 +3636,8 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "Markdown. The goal, what counts as done, what is out of scope — " +
-              "write one on every objective you create." + MCP_MENTIONS_IN_MARKDOWN,
+              "write one on every objective you create." + MCP_MENTIONS_IN_MARKDOWN +
+              MCP_IMAGES_IN_MARKDOWN,
           ),
         status: z
           .enum(OBJECTIVE_STATUS_VALUES)
@@ -3718,7 +3802,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
-              "at most, no headings." + MCP_MENTIONS_IN_MARKDOWN,
+              "at most, no headings." + MCP_MENTIONS_IN_MARKDOWN + MCP_IMAGES_IN_MARKDOWN,
           ),
       }),
       annotations: WRITE,
@@ -4715,7 +4799,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: two or three sentences, 1000 characters at most, " +
-              "no headings.",
+              "no headings." + MCP_IMAGES_IN_MARKDOWN,
           ),
       }),
       annotations: WRITE,

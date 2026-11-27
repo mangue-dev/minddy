@@ -2593,105 +2593,105 @@
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 33,
+    "line": 34,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 89,
+    "line": 90,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 131,
+    "line": 132,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 162,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "rpc",
     "resource": "account_storage_quota_allows",
-    "line": 244,
+    "line": 245,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 835,
+    "line": 839,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 858,
+    "line": 862,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 911,
+    "line": 915,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 916,
+    "line": 920,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 934,
+    "line": 938,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 974,
+    "line": 978,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1990,
+    "line": 1994,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 2039,
+    "line": 2043,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2499,
+    "line": 2530,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2671,
+    "line": 2702,
     "storage": false
   },
   {
@@ -7112,6 +7112,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/inline-images.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 108,
+    "storage": false
+  },
+  {
     "file": "lib/server/instance-variables.ts",
     "operation": "rpc",
     "resource": "get_admin_account",
@@ -7710,56 +7717,56 @@
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 787,
+    "line": 788,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 1250,
+    "line": 1251,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 1260,
+    "line": 1261,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1841,
+    "line": 1842,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2955,
+    "line": 2958,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 3114,
+    "line": 3197,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 5181,
+    "line": 5265,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 5195,
+    "line": 5279,
     "storage": false
   },
   {

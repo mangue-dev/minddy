@@ -83,6 +83,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_update_plan_task",
   "minddy_update_routine",
   "minddy_update_scratchpad_task",
+  "minddy_upload_image",
 ] as const;
 
 interface ListedTool {
@@ -253,7 +254,9 @@ describe("MCP cold-start discovery", () => {
       MCP_DISCOVERY_INSTRUCTIONS.length * EXPECTED_TOOL_NAMES.length;
 
     expect(MCP_DISCOVERY_INSTRUCTIONS.length).toBeLessThanOrEqual(400);
-    expect(descriptions).toBeLessThanOrEqual(25_000);
+    // 71 tools at about 350 characters each: the ceiling rose from 25,000
+    // with minddy_upload_image (MIN-1030).
+    expect(descriptions).toBeLessThanOrEqual(25_500);
     expect(repeatedInitializationCost).toBeLessThanOrEqual(50_000);
     expect(MCP_FULL_USAGE_GUIDE.length).toBeGreaterThan(10_000);
     expect(MCP_FULL_USAGE_GUIDE).toContain("minddy_update_plan_task");
