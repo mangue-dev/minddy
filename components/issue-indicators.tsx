@@ -160,12 +160,18 @@ export function ObjectiveStatusIndicator({
 }
 
 /* ── Priority ────────────────────────────────────────────────────────────
-   Signal bars filled from the bottom (none = all grey, per design); urgent is
-   a red rounded square with a "!". The 14×14 glyph is inset in a padded
-   viewBox: a solid block reads heavier than the status ring's outline, so it
-   needs to be optically smaller at the same box size. */
+   Three pill-shaped bars of rising height, bottom-aligned like a phone's signal meter
+   (MIN-1033): low fills the first, medium two, high all three, none leaves
+   them grey. Urgent is a red rounded square with a "!". The 14×14 glyph is
+   inset in a padded viewBox: a solid block reads heavier than the status
+   ring's outline, so it needs to be optically smaller at the same box size. */
 
 const PRIORITY_VIEWBOX = "-1.25 -1.25 16.5 16.5";
+
+/** Bar heights, left to right; the tallest spans the full 14-unit glyph. */
+const PRIORITY_BAR_HEIGHTS = [5, 9.5, 14] as const;
+const PRIORITY_BAR_WIDTH = 3.5;
+const PRIORITY_BAR_GAP = 1.75;
 
 const PRIORITY_BARS: Record<
   Exclude<IssuePriority, "urgent">,
@@ -187,7 +193,7 @@ export function PriorityIndicator({
   if (priority === "urgent") {
     return (
       <svg viewBox={PRIORITY_VIEWBOX} className={cn("size-[17px] shrink-0", className)}>
-        <rect width="14" height="14" rx="2" fill="#FA2828" />
+        <rect width="14" height="14" rx="3.5" fill="#FA2828" />
         <rect x="6.25" y="3" width="1.5" height="5" rx="0.75" fill="#fff" />
         <circle cx="7" cy="10.2" r="0.9" fill="#fff" />
       </svg>
@@ -196,16 +202,17 @@ export function PriorityIndicator({
   const { filled, color } = PRIORITY_BARS[priority];
   return (
     <svg viewBox={PRIORITY_VIEWBOX} className={cn("size-[17px] shrink-0", className)}>
-      {[0, 1, 2, 3].map((i) => {
-        const on = filled > 0 && i >= 4 - filled;
+      {PRIORITY_BAR_HEIGHTS.map((height, i) => {
+        const on = i < filled;
         return (
           <rect
             key={i}
-            x="0"
-            y={i * 3.75}
-            width="14"
-            height="2.75"
-            rx="1"
+            x={i * (PRIORITY_BAR_WIDTH + PRIORITY_BAR_GAP)}
+            y={14 - height}
+            width={PRIORITY_BAR_WIDTH}
+            height={height}
+            // Fully rounded ends: each bar is a pill, not a rounded rectangle.
+            rx={PRIORITY_BAR_WIDTH / 2}
             fill={on ? color : undefined}
             // fill-* (not currentColor) so hovered dropdown rows — which repaint
             // svg `color` via CommandItem's data-selected rule — can't tint them.
