@@ -61,12 +61,16 @@ const REVEAL_CAP_MS = 1500;
  * (a mentioned project's icon) are ready to paint. Once shown it stays shown:
  * a later version of the word replaces the old one in place.
  *
- * Until then the intro counts as loading content (`data-pending-content`),
- * so in the mobile app the launch screen stays over Home and crossfades into
- * the finished page while the intro rises (lib/mobile/launch-cover.ts).
+ * Until it has all its parts the intro counts as loading content
+ * (`data-pending-content`), so in the mobile app the launch screen stays over
+ * Home and crossfades into the finished page while the intro rises
+ * (lib/mobile/launch-cover.ts). A reveal forced by the cap shows the page in
+ * a browser, but does not lift the launch screen: a part is still missing.
  */
-function useHomeReveal(inputsReady: boolean, intro: RefObject<HTMLElement | null>): boolean {
+function useHomeReveal(inputsReady: boolean, intro: RefObject<HTMLElement | null>): { revealed: boolean; complete: boolean } {
   const [ready, setReady] = useState(false);
+  // Revealed with all its parts, and not by the cap with what it had.
+  const [complete, setComplete] = useState(false);
   useEffect(() => {
     if (ready) return;
     const cap = setTimeout(() => setReady(true), REVEAL_CAP_MS);
@@ -83,7 +87,9 @@ function useHomeReveal(inputsReady: boolean, intro: RefObject<HTMLElement | null
         .then(() => new Promise<void>((next) => requestAnimationFrame(() => next())))
         .then(() => (intro.current ? mediaSettled(intro.current) : undefined))
         .then(() => {
-          if (!cancelled) setReady(true);
+          if (cancelled) return;
+          setReady(true);
+          setComplete(true);
         });
     });
     return () => {
@@ -91,7 +97,7 @@ function useHomeReveal(inputsReady: boolean, intro: RefObject<HTMLElement | null
       cancelAnimationFrame(frame);
     };
   }, [inputsReady, ready, intro]);
-  return ready;
+  return { revealed: ready, complete };
 }
 
 /**
@@ -159,12 +165,14 @@ function HomeConversation() {
   const aiAvailability = useAiSurfaceAvailability("assistant");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
   const introRef = useRef<HTMLDivElement>(null);
-  const revealed = useHomeReveal(!!user && greetingSettled && !briefLoading && !aiAvailability.loading, introRef);
+  const { revealed, complete } = useHomeReveal(!!user && greetingSettled && !briefLoading && !aiAvailability.loading, introRef);
   // Complete: the mobile app's launch screen need not wait for the shell's
-  // other startup reads (lib/mobile/launch-cover.ts).
+  // other startup reads (lib/mobile/launch-cover.ts). Revealed by the cap,
+  // Home is still missing a part (the name, Numo's word): the launch screen
+  // then stays until the startup reads have settled, or the shell's limit.
   useEffect(() => {
-    if (revealed) markPageContentShown();
-  }, [revealed]);
+    if (complete) markPageContentShown();
+  }, [complete]);
   // Hidden, the page takes no tap either: the composer is already there.
   const reveal = cn(REVEAL_CLASS, revealed ? "opacity-100" : "pointer-events-none translate-y-1.5 opacity-0 blur-[6px]");
 
@@ -215,9 +223,10 @@ function HomeConversation() {
               ref={introRef}
               className={cn("flex flex-col", PAGE_HEADING_GAP)}
               aria-busy={!revealed}
-              // Loading content until revealed: the page's first content,
-              // and the mobile app's launch cover, wait for it.
-              data-pending-content={revealed ? undefined : ""}
+              // Loading content until it has all its parts: the page's
+              // first content, and the mobile app's launch cover, wait for
+              // it, past a reveal forced by the cap.
+              data-pending-content={complete ? undefined : ""}
             >
               {welcome}
               {/* Until Numo has a word of its own, it introduces itself. */}
@@ -243,7 +252,7 @@ function HomeConversation() {
             <div className="scrollbar-pane-inset h-full overflow-y-auto">
               <div
                 className={cn("mx-auto box-content flex max-w-content min-w-0 flex-col", PAGE_SCROLL, PAGE_HEADING_GAP)}
-                data-pending-content={revealed ? undefined : ""}
+                data-pending-content={complete ? undefined : ""}
               >
                 {welcome}
                 <div className="flex flex-col gap-3">

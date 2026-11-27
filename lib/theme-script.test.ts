@@ -15,6 +15,8 @@ interface ScriptEnv {
   localStorageThrows?: boolean;
   /** The desktop preload's bridge, when the page runs in the app. */
   desktopBridge?: { platform?: string; windowMaterial?: { kind: string } };
+  /** What Capacitor injects in the mobile app's WebView. */
+  capacitor?: { isNativePlatform: () => boolean; getPlatform: () => string; Plugins?: { MinddyShell?: Record<string, unknown> } };
   navigatorPlatform?: string;
 }
 
@@ -55,7 +57,7 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
   if (env.storedTheme !== null) storage.set("mangue-ui-theme", env.storedTheme);
 
   const sandbox: Record<string, unknown> = {
-    window: { minddy: env.desktopBridge },
+    window: { minddy: env.desktopBridge, Capacitor: env.capacitor },
     navigator: { platform: env.navigatorPlatform ?? "MacIntel" },
     document: {
       documentElement: {
@@ -355,5 +357,29 @@ describe("buildThemeScript — desktop app marking", () => {
   it("leaves a browser page unmarked", () => {
     const browser = run(buildThemeScript({ defaultTheme: "dark" }), { storedTheme: null, osPrefersDark: false });
     expect(browser.attributes["data-desktop-app"]).toBeUndefined();
+  });
+});
+
+describe("buildThemeScript — mobile app marking", () => {
+  const native = (shell?: Record<string, unknown>) => ({
+    isNativePlatform: () => true,
+    getPlatform: () => "ios",
+    Plugins: shell ? { MinddyShell: shell } : {},
+  });
+  const marked = (capacitor: ScriptEnv["capacitor"]) =>
+    run(buildThemeScript({ defaultTheme: "dark" }), { storedTheme: null, osPrefersDark: false, capacitor }).attributes;
+
+  it("hides the web bottom bar before the first paint when the shell draws it", () => {
+    const attributes = marked(native({ setNavigationBar: () => {}, addListener: () => {} }));
+    expect(attributes["data-native-mobile"]).toBe("ios");
+    expect(attributes["data-native-navigation"]).toBe("");
+  });
+
+  it("keeps the web bar in a shell that cannot draw it, and in a browser", () => {
+    const older = marked(native({ haptic: () => {} }));
+    expect(older["data-native-mobile"]).toBe("ios");
+    expect(older["data-native-navigation"]).toBeUndefined();
+    expect(marked(native())["data-native-navigation"]).toBeUndefined();
+    expect(marked(undefined)["data-native-navigation"]).toBeUndefined();
   });
 });

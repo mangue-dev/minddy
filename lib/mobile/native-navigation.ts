@@ -145,12 +145,14 @@ export async function rasterizeIcon(icon: SVGElement | HTMLImageElement): Promis
 /**
  * Keeps the shell's bar in step with `nav` until the returned function is
  * called. Returns `null` when the shell cannot draw the bar, and the web bar
- * then stays visible.
+ * then stays visible. `onFirstShown` runs once, when the shell has answered
+ * the first request that shows the bar.
  */
 export function syncNativeNavigationBar(
   nav: HTMLElement,
   shell: MobileShellPlugin,
   rasterize: (icon: SVGElement | HTMLImageElement) => Promise<string | null> = rasterizeIcon,
+  onFirstShown?: () => void,
 ): (() => void) | null {
   const setNavigationBar = shell.setNavigationBar?.bind(shell);
   const addListener = shell.addListener?.bind(shell);
@@ -167,6 +169,7 @@ export function syncNativeNavigationBar(
   // The shell starts without a bar: a first "hidden" would tell it nothing.
   let lastFrame = JSON.stringify({ visible: false });
   let lastItems = "";
+  let firstShown = onFirstShown;
 
   // Icons are drawn once per drawing, keyed by their markup.
   const icons = new Map<string, string | null | undefined>();
@@ -193,7 +196,12 @@ export function syncNativeNavigationBar(
     const payload = itemsKey === lastItems ? placement : state;
     lastFrame = frameKey;
     lastItems = itemsKey;
-    setNavigationBar(payload).catch(() => {});
+    const sent = setNavigationBar(payload).catch(() => {});
+    if (state.visible && firstShown) {
+      const shown = firstShown;
+      firstShown = undefined;
+      void sent.then(shown);
+    }
   };
   const measure = () => {
     frame = 0;

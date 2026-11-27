@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
+import { usePromptActionLabel } from "@/components/prompt-action";
 
 /**
  * The dialog for the “Custom” entry of a ticket's “Copy as prompt” submenu.
@@ -31,6 +32,9 @@ export function CustomPromptDialog({
   const t = useTranslations("Agent");
   const isSend = useIsSendShortcut();
   const tIssueUI = useTranslations("IssueUI");
+  // "Send to <agent>" when the account opens prompts in an agent's app, as
+  // on the menu entry that opened this dialog (MIN-951).
+  const promptLabel = usePromptActionLabel();
   const [instructions, setInstructions] = useState("");
 
   // Each opening starts from an empty field: an instruction is written for ONE
@@ -58,7 +62,7 @@ export function CustomPromptDialog({
         onMouseDown: (e) => e.stopPropagation(),
         onContextMenu: (e) => e.stopPropagation(),
       }}
-      submitLabel={tIssueUI("copyAsPrompt")}
+      submitLabel={promptLabel(tIssueUI("copyAsPrompt"))}
       submitDisabled={!instructions.trim()}
       onSubmit={submit}
       dictation={{

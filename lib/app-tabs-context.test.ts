@@ -24,9 +24,10 @@ const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null,
 const pendingStarts = vi.hoisted(() => vi.fn());
 vi.mock("./pending-navigation", async (original) => {
   const actual = await original<typeof import("./pending-navigation")>();
-  return { ...actual, beginPendingNavigation: (href: string) => {
-    pendingStarts(href);
-    actual.beginPendingNavigation(href);
+  return { ...actual, beginPendingNavigation: (href: string, options?: { immediate?: boolean }) => {
+    // A retained view shown at once is not a cold start.
+    if (!options?.immediate) pendingStarts(href);
+    actual.beginPendingNavigation(href, options);
   } };
 });
 vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));

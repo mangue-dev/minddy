@@ -29,6 +29,9 @@ export const PENDING_NAVIGATION_TIMEOUT_MS = 15_000;
 
 let started: PendingNavigation | null = null;
 let shown: PendingNavigation | null = null;
+/** `started` was shown at once and its address written before the router's
+ * commit: the router may still stand on the page it left. */
+let startedAhead = false;
 let delayTimer: ReturnType<typeof setTimeout> | undefined;
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 let listeningToHistory = false;
@@ -47,16 +50,25 @@ function clearTimers() {
 }
 
 /** Record the destination of a navigation that is starting now. A destination
- * on the current pathname is an in-page update, not a page change. */
-export function beginPendingNavigation(href: string): void {
+ * on the current pathname is an in-page update, not a page change.
+ *
+ * `immediate` is for a destination whose view is already on screen (a tab's
+ * retained view, activated before the router commits its address): the shell
+ * follows it in the same frame, with no delay to wait out, or the content
+ * changed while the sidebar stayed on the page being left. Call it before
+ * writing the address. */
+export function beginPendingNavigation(href: string, options: { immediate?: boolean } = {}): void {
   if (typeof window === "undefined") return;
   let url: URL;
   try { url = new URL(href, window.location.href); } catch { return; }
-  const from = window.location.pathname;
-  if (url.origin !== window.location.origin || url.pathname === from) {
+  const location = window.location.pathname;
+  if (url.origin !== window.location.origin || url.pathname === location) {
     clearPendingNavigation();
     return;
   }
+  // The address already shows a destination the router has not committed:
+  // this one still leaves the page the router stands on.
+  const from = startedAhead && started?.pathname === location ? started.from : location;
   if (!listeningToHistory) {
     // Back and forward replace whatever destination was pending.
     window.addEventListener("popstate", clearPendingNavigation);
@@ -70,10 +82,18 @@ export function beginPendingNavigation(href: string): void {
     from,
   };
   started = next;
+  startedAhead = !!options.immediate;
+  if (options.immediate) {
+    publish(next);
+    expiryTimer = setTimeout(() => {
+      if (started === next) clearPendingNavigation();
+    }, PENDING_NAVIGATION_TIMEOUT_MS);
+    return;
+  }
   const settle = () => {
     if (started !== next) return;
     // The window may be gone by then (a torn-down test environment).
-    if (typeof window !== "undefined" && window.location.pathname === next.from) publish(next);
+    if (typeof window !== "undefined" && window.location.pathname === location) publish(next);
     else clearPendingNavigation();
   };
   // A destination replacing one already on screen shows at once.
@@ -87,6 +107,7 @@ export function beginPendingNavigation(href: string): void {
 export function clearPendingNavigation(): void {
   clearTimers();
   started = null;
+  startedAhead = false;
   publish(null);
 }
 

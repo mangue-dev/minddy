@@ -72,7 +72,11 @@ it answers, ends without a URL and is ignored. The page calls `contentShown` onc
 (`lib/mobile/launch-cover.ts`, on top of `lib/first-content.ts`); Home counts
 as loading until its greeting and Numo's word are revealed together, and
 releases the launch screen as soon as they are, without waiting for the
-shell's other startup reads. The `/home` document carries Numo's word, with
+shell's other startup reads. When Home shows itself before one of them has
+arrived (its own 1.5 second cap), it still counts as loading, so the launch
+screen stays until the startup reads settle. The launch screen also waits,
+for at most a second, until the shell has drawn the bottom bar, so the page
+does not appear without it. The `/home` document carries Numo's word, with
 the names of the mentions it makes, so Home waits for neither request. The
 shell stops waiting 4 seconds after the load, so a slow read never keeps
 the app on its launch screen. Sign-in pages, the bundled pages and a server
@@ -85,7 +89,9 @@ The web app keeps its bottom bar in the page, invisible, and stays the owner of
 what each button does. `lib/mobile/native-navigation.ts` reports the bar's
 place, its buttons and their badges to the shell, which draws a Liquid Glass
 capsule exactly over it (`NavigationBar.swift`). A tap on the native bar clicks
-the web button of the same slot.
+the web button of the same slot. The web bar is hidden before the first paint
+(`data-native-navigation`, set by the pre-paint script of
+`lib/theme-script.ts`), so the server's HTML never shows it in the shell.
 
 A native view sits above the whole page, so the shell must know when a sheet or
 a dialog hides the bar. The page asks the browser what is on top at the bar's
