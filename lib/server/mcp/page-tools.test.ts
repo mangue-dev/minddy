@@ -241,6 +241,11 @@ vi.mock("@/lib/supabase-service", async () => {
  * PostgREST of this file ignores the targeted TABLE, so a line `issue_events`
  * would land among the pages and the search index would count false.
  */
+// The key that writes is named after its agent (minddy's identity rule).
+vi.mock("@/lib/server/api-key-actors", () => ({
+  resolveApiKeyActors: async (ids: Array<string | null | undefined>) =>
+    new Map(ids.filter((id): id is string => !!id).map((id) => [id, { name: "Claude Code", agent: "claude" }])),
+}));
 vi.mock("@/lib/server/page-activity", () => ({
   recordPageEvent: async () => {},
 }));
@@ -868,11 +873,38 @@ describe("les fils de discussion d'une page", () => {
     // The extract is RE-READ in the document, not dictated by the agent: that’s good
     // the text of the page which will be shown to the human under his comment.
     expect(threads[0].quote).toBe("Le quota est mensuel.");
+    // Written through a key: the thread names its agent, not the key's owner.
     expect(threads[0].messages).toEqual([
       expect.objectContaining({
-        author: "Clément",
+        author: "Claude Code (mcp)",
         body: "Mensuel ou glissant ? Le code fait glissant.",
       }),
+    ]);
+  });
+
+  it("names each reply after whoever wrote it: the person, Numo or the key's agent", async () => {
+    const page = await createPage("Spec", "a body");
+    const root = await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "a question",
+    });
+    const threadId = root.payload.comment_id as string;
+    const reply = (id: string, body: string, extra: Record<string, unknown>) =>
+      h.comments.push({
+        id, page_id: page, parent_id: threadId, block_id: null, quote: null, body,
+        author_id: ACTOR, via_assistant: false, via_mcp: false, api_key_id: null,
+        created_at: `2026-08-10T00:01:0${h.comments.length}Z`, ...extra,
+      });
+    reply("human-reply", "from the person", {});
+    reply("numo-reply", "from Numo", { via_assistant: true });
+
+    const { payload } = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    const [thread] = payload.threads as Array<{ messages: Array<{ author: string; body: string }> }>;
+    expect(thread.messages.map((m) => [m.author, m.body])).toEqual([
+      ["Claude Code (mcp)", "a question"],
+      ["Clément", "from the person"],
+      ["Numo", "from Numo"],
     ]);
   });
 

@@ -28,7 +28,9 @@ import {
   addPageComment,
   resolvePageThread,
   openPageThreadsForAgent,
+  type PageThreadAuthor,
 } from "@/lib/server/page-comments";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { pageBlockTexts } from "@/lib/pages-mentions";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -381,20 +383,28 @@ export async function readPageForAgent({
  * The threads of a page, authors NAMED.
  *
  * The names come out of the accounts, like everywhere else — never the raw email
- * (lib/display-name.ts) —, and an agent's writing is called "minddy": the rule
- * of identity is valid for what an agent reads as well as for what a human reads.
+ * (lib/display-name.ts) —, and an agent's writing is named after the agent
+ * (Numo, or the key's agent): the rule of identity is valid for what an agent
+ * reads as well as for what a human reads.
  */
 async function readThreads(pageId: string, actorId: string): Promise<PageThreadForAgent[]> {
   const service = getServiceClient();
-  const raw = await openPageThreadsForAgent(service, pageId, (id) => id ?? "", actorId);
-  const ids = [
-    ...new Set(
-      raw.flatMap((thread) => thread.messages.map((m) => m.author)).filter(Boolean)
-    ),
+  const raw = await openPageThreadsForAgent(service, pageId, actorId);
+  const authors = raw.flatMap((thread) => thread.messages.map((m) => m.author));
+  const userIds = [
+    ...new Set(authors.map((a) => a.authorId).filter((id): id is string => !!id)),
   ];
-  const users = ids.length ? await fetchAuthUsersById(service, ids) : new Map();
-  const name = (id: string) => {
-    const user = users.get(id);
+  const [users, keyActors] = await Promise.all([
+    userIds.length ? fetchAuthUsersById(service, userIds) : Promise.resolve(new Map()),
+    resolveApiKeyActors(authors.map((a) => a.apiKeyId)),
+  ]);
+  // Same attribution as the comments of an issue (lib/server/issue-reads.ts):
+  // Numo's replies are Numo's, a key's are its agent's, never the account's.
+  // Without it, an agent rereading a thread takes its own reply for the user's.
+  const name = (author: PageThreadAuthor) => {
+    if (author.viaAssistant) return "Numo";
+    if (author.apiKeyId) return `${keyActors.get(author.apiKeyId)?.name ?? "Agent"} (mcp)`;
+    const user = author.authorId ? users.get(author.authorId) : undefined;
     return user ? displayName(toNamed(user), "") || SITE_NAME : SITE_NAME;
   };
   return raw.map((thread) => ({
@@ -428,8 +438,8 @@ const COMMENT_REFUSALS: Record<
     ok: false,
     code: "invalid_params",
     message:
-      "That comment is not on this page — reply to a thread you read with " +
-      "minddy_get_page.",
+      "That comment is not on this page — pass a thread_id from the threads " +
+      "the page read returned.",
   },
   databaseError: {
     ok: false,

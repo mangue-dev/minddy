@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 25,
+  "revision": 26,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-01",
   "compatibility": {
@@ -83,6 +83,8 @@
       "components/public-page-body.tsx",
       "components/pages/page-comment-thread.tsx",
       "components/pages/page-comment-margin.tsx",
+      "lib/server/assistant/execute-tool.ts",
+      "lib/server/assistant/tools.ts",
       "lib/keyboard/shortcuts.ts",
       "components/editor/find-bar.tsx",
       "components/editor/find-replace.ts",
@@ -115,10 +117,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 4 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude (MIN-1002: block comment thread rewritten against components/pages/page-comment-thread.tsx, components/pages/block-comments.ts and components/pages/page-comment-layer.tsx, and walked through in a browser on a local build: popover under the passage, badge and passage clicks, unsent text, phone sheet; thread resolution and margin threads then documented against components/pages/page-comment-margin.tsx and components/pages/page-activity.tsx, walked through at a wide and a narrow window; existing figures unaffected and kept)",
-    "language": "agent:claude (en sentences added with catalog UI labels; agent self-review, not human acceptance); agent:claude (en context-mention and link-menu sentences with catalog UI labels; agent self-review, not human acceptance); agent:claude (en comment-thread sentences with catalog UI labels; agent self-review, not human acceptance)",
-    "date": "2026-11-26"
+    "revision": 26,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 4 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude (MIN-1002: block comment thread rewritten against components/pages/page-comment-thread.tsx, components/pages/block-comments.ts and components/pages/page-comment-layer.tsx, and walked through in a browser on a local build: popover under the passage, badge and passage clicks, unsent text, phone sheet; thread resolution and margin threads then documented against components/pages/page-comment-margin.tsx and components/pages/page-activity.tsx, walked through at a wide and a narrow window; existing figures unaffected and kept); agent:claude (MIN-1031: Numo answering and resolving page threads documented against lib/server/assistant/tools.ts, lib/server/assistant/execute-tool.ts and lib/server/assistant/tool-policy.ts; covered by tests, no browser walkthrough; no figure affected)",
+    "language": "agent:claude (en sentences added with catalog UI labels; agent self-review, not human acceptance); agent:claude (en context-mention and link-menu sentences with catalog UI labels; agent self-review, not human acceptance); agent:claude (en comment-thread sentences with catalog UI labels; agent self-review, not human acceptance); agent:claude (en Numo thread sentence; agent self-review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "notifications-and-inbox",
@@ -153,7 +155,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -169,7 +171,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -186,7 +188,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -203,7 +205,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -219,7 +221,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -235,7 +237,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -252,7 +254,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -269,7 +271,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -367,7 +369,7 @@ Markdown exports and agent page reads preserve callout icons and colors in their
 
 ## Discuss a page and handle conflicts {#page-comments-and-collaboration}
 
-Open a project page and its comment controls. Select relevant content when creating an anchored comment, explain the question or proposed change, and use mentions to involve a project member. A reader can comment when the owner turned on **Can comment** for them. Reply in the thread to keep the decision with the context it concerns. Once a thread's question is settled, choose **Resolve**, beside its reply field or in the **Comment actions** menu of one of its comments, which a right-click on the comment also opens: the thread leaves the page and stays in the page's activity, marked **Resolved**, where **Reopen** puts it back. Anyone who can comment can resolve or reopen a thread. Deleting the first comment of a thread deletes its replies. On a computer, a block's thread opens in a small panel under the passage it is about, and you can keep reading and editing the page around it. On a phone, it opens in a bottom sheet that also shows the quoted passage. When the window leaves enough room to the right of the text, open threads appear there as cards beside their blocks and replace the badges: click a card or its passage to open it and reply. The **Comments** button of the page header then has a menu: **Show comments beside the text** turns the cards off or back on, for every page in this browser. With the cards off, the badges return. Pointing at a commented passage highlights its card. A commented passage is underlined and tinted in yellow on the page, more strongly while its thread is open or the pointer is over its card. A comment on a whole block marks all of its text, and a block with no text, such as a divider, an image or an equation, gets a yellow outline. Click the passage or the block's comment badge to open the thread; click the badge again, press Escape or click elsewhere to close it. A thread holding text you have not sent stays open when you click elsewhere. To write a comment, choose **Comment** in the selection toolbar or the block menu: the field opens under the selected passage, which is highlighted while you write. On a computer, hovering a block without comments shows a **Comment on this block** button at its right, at the height of the block handle; a commented block shows its comment badge there instead. Hovering that button highlights its block like a selection. This button is not shown on a phone.
+Open a project page and its comment controls. Select relevant content when creating an anchored comment, explain the question or proposed change, and use mentions to involve a project member. A reader can comment when the owner turned on **Can comment** for them. Reply in the thread to keep the decision with the context it concerns. Once a thread's question is settled, choose **Resolve**, beside its reply field or in the **Comment actions** menu of one of its comments, which a right-click on the comment also opens: the thread leaves the page and stays in the page's activity, marked **Resolved**, where **Reopen** puts it back. Anyone who can comment can resolve or reopen a thread. Numo can do both when you ask it, with your right to comment: it answers a thread inside it, under its own name, and resolves the thread once its question is settled. Deleting the first comment of a thread deletes its replies. On a computer, a block's thread opens in a small panel under the passage it is about, and you can keep reading and editing the page around it. On a phone, it opens in a bottom sheet that also shows the quoted passage. When the window leaves enough room to the right of the text, open threads appear there as cards beside their blocks and replace the badges: click a card or its passage to open it and reply. The **Comments** button of the page header then has a menu: **Show comments beside the text** turns the cards off or back on, for every page in this browser. With the cards off, the badges return. Pointing at a commented passage highlights its card. A commented passage is underlined and tinted in yellow on the page, more strongly while its thread is open or the pointer is over its card. A comment on a whole block marks all of its text, and a block with no text, such as a divider, an image or an equation, gets a yellow outline. Click the passage or the block's comment badge to open the thread; click the badge again, press Escape or click elsewhere to close it. A thread holding text you have not sent stays open when you click elsewhere. To write a comment, choose **Comment** in the selection toolbar or the block menu: the field opens under the selected passage, which is highlighted while you write. On a computer, hovering a block without comments shows a **Comment on this block** button at its right, at the height of the block handle; a commented block shows its comment badge there instead. Hovering that button highlights its block like a selection. This button is not shown on a phone.
 
 Presence `avatars` identify people viewing the page. While someone edits, their caret and selection appear in the body and in the title, in a color of their own and labeled with their name. A reader's caret is not shown. A caret shows where someone is working, not that their text is saved: the save indicator reflects your own changes only.
 

@@ -852,7 +852,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
     function: {
       name: "get_page",
       description:
-        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. is_database says whether the page IS a database: true even when database_schema is an empty array and database_revision is 0 — that is a database with no properties yet, to fill with update_page_database, never to recreate with create_page. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and, for each entry in subpages, property_values plus what the read-only metadata columns show (created_at, updated_at, created_by, updated_by as member ids; updated_by is \"minddy\" when an agent made the last edit). A date value written R/YYYY-MM-DD/P1W recurs from that date (P1D daily, P1W weekly, P1M monthly, P1Y yearly). Its saved views (sort, filter, hidden columns, and the calculation under each number column: sum, average, min, max or count) are read with list_page_database_views and changed with update_page_database_views. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A page mention '[@Title](mention:page/<id>)' — how a page cites its subpages — is a LINK, never its content: read that page too if you need it.",
+        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. is_database says whether the page IS a database: true even when database_schema is an empty array and database_revision is 0 — that is a database with no properties yet, to fill with update_page_database, never to recreate with create_page. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and, for each entry in subpages, property_values plus what the read-only metadata columns show (created_at, updated_at, created_by, updated_by as member ids; updated_by is \"minddy\" when an agent made the last edit). A date value written R/YYYY-MM-DD/P1W recurs from that date (P1D daily, P1W weekly, P1M monthly, P1Y yearly). Its saved views (sort, filter, hidden columns, and the calculation under each number column: sum, average, min, max or count) are read with list_page_database_views and changed with update_page_database_views. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A page mention '[@Title](mention:page/<id>)' — how a page cites its subpages — is a LINK, never its content: read that page too if you need it. It also returns THREADS: the open discussion on the page (resolved threads are left out), each with the passage it hangs off. The body says what was decided; the threads say what is contested. Rewriting a passage under a thread settles a debate nobody asked you to settle — answer it with add_page_comment instead, and close it with resolve_page_thread once it is settled.",
       parameters: {
         type: "object",
         properties: {
@@ -1088,6 +1088,59 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
           edits: TEXT_EDITS_PROPERTY,
         },
         required: ["page_id", "old_string", "new_string"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_page_comment",
+      description:
+        "Say something ABOUT a page without touching a single byte of it: answer an open thread, raise an objection, explain why you did not do what the page asks. When a passage looks wrong, a comment asks the person who wrote it; an edit overwrites them. Reply inside a thread by passing its thread_id from get_page as parent_comment_id. To open a thread on a block, pass the block_id of a thread you read in get_page; never invent a block_id — they are not in the markdown, and a made-up one produces a thread pointing at nothing. Omit both to comment on the page as a whole. The page's author and everyone already in the thread are notified.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          body: {
+            type: "string",
+            description:
+              "The comment, in markdown. Short and specific — it is read next to the text it is about, not instead of it." + MENTIONS_IN_MARKDOWN,
+          },
+          block_id: {
+            type: "string",
+            description:
+              "Anchor the comment to that block, copied VERBATIM from the threads of get_page. Omit to comment on the whole page.",
+          },
+          parent_comment_id: {
+            type: "string",
+            description:
+              "Reply INSIDE an existing thread instead of opening a new one: the thread_id of a thread you read in get_page. The reply inherits the thread's anchor, so block_id is then ignored.",
+          },
+        },
+        required: ["page_id", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resolve_page_thread",
+      description:
+        "Mark a page thread as RESOLVED once its question is settled, or reopen it with resolved: false. Pass the thread_id of a thread you read in get_page: the thread then leaves the page and the threads get_page returns, and stays in the page's activity, where anyone who can comment reopens it. Resolve only a thread whose question is actually answered — you made the change it called for, or the people in it agreed. When the answer is yours, say it in the thread first with add_page_comment: a thread closed without a word reads as a question nobody wanted. Never resolve a thread to make room for an edit.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          thread_id: {
+            type: "string",
+            description: "The thread_id of a thread you read in get_page.",
+          },
+          resolved: {
+            type: "boolean",
+            description: "true (default) resolves the thread; false reopens it.",
+          },
+        },
+        required: ["page_id", "thread_id"],
       },
     },
   },
