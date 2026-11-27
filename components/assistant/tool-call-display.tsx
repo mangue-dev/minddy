@@ -372,6 +372,22 @@ const TOOL_META: Record<NumoToolName, ToolMeta> & Record<string, ToolMeta | unde
       return success ? t("pageTextEdited") : t("editPageTextFailed");
     },
   },
+  add_page_comment: {
+    icon: Message01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("addingComment");
+      return success ? t("commentAdded") : t("addCommentFailed");
+    },
+  },
+  resolve_page_thread: {
+    icon: CheckIcon,
+    getLabel: (args, _result, success, status, t) => {
+      const reopen = args.resolved === false;
+      if (status === "running") return t(reopen ? "reopeningPageThread" : "resolvingPageThread");
+      if (!success) return t("resolvePageThreadFailed");
+      return t(reopen ? "pageThreadReopened" : "pageThreadResolved");
+    },
+  },
   set_issue_categories: {
     icon: TagsIcon,
     getLabel: (_args, _result, success, status, t) => {
@@ -1239,6 +1255,8 @@ const PAGE_TOOLS = toolSet(
   "update_page_database",
   "append_to_page",
   "edit_page_text",
+  "add_page_comment",
+  "resolve_page_thread",
 );
 const OBJECTIVE_TOOLS = toolSet("create_objective", "get_objective", "update_objective");
 

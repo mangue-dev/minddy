@@ -874,6 +874,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
     lines.push(
       `- Open wiki page: "${ctx.pageTitle?.trim() || "(untitled)"}" (page id: ${ctx.pageId}).`,
       `When the user says "cette page", "this page", "ce document", "cette doc" — or gives an instruction with no explicit target while on it ("résume", "transforme ça en tickets", "corrige ce paragraphe", "ajoute une section") — they mean the page above. Read it with get_page on that exact id, do not search for it. Write with append_to_page / edit_page_text rather than update_page: the user may be typing in that very document, and a full rewrite would overwrite them.`,
+      `get_page also returns the page's open comment threads. When the user asks you to deal with them ("réponds aux commentaires", "traite les objections"), answer each thread inside it with add_page_comment (parent_comment_id: its thread_id) rather than rewriting a contested passage on your own; when you did change the text, say so in the thread. Resolve a thread with resolve_page_thread only once its question is settled, never to make room for an edit.`,
       `When they ask for a database, a table or a tracker while on it ("crée cette base", "fais-en une base pour suivre…"), read it with get_page first. If is_database is true — even with an empty database_schema and database_revision 0 — this page IS the database: add the properties to it with update_page_database and create no other page. If it is a document, ask before creating a new database page.`,
     );
     if (ctx.pageIsDatabase) {

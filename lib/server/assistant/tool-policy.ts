@@ -264,6 +264,8 @@ export const NUMO_TOOL_POLICY = {
   add_comment: { scope: "project", capability: "comment", touches: ISSUE_ID },
   add_objective_comment: { scope: "project", capability: "comment", touches: OBJECTIVE_ID },
   add_feedback_comment: { scope: "project", capability: "comment", touches: FEEDBACK_ID },
+  add_page_comment: { scope: "project", capability: "comment", touches: PAGE_ID },
+  resolve_page_thread: { scope: "project", capability: "comment", touches: PAGE_ID },
 
   // ── Content writes ──────────────────────────────────────────────────
   // Read-only, but integration summaries (webhook URLs) are hidden from readers.

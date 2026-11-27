@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 25,
+  "revision": 28,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-01",
   "compatibility": {
@@ -83,6 +83,8 @@
       "components/public-page-body.tsx",
       "components/pages/page-comment-thread.tsx",
       "components/pages/page-comment-margin.tsx",
+      "lib/server/assistant/execute-tool.ts",
+      "lib/server/assistant/tools.ts",
       "lib/keyboard/shortcuts.ts",
       "components/editor/find-bar.tsx",
       "components/editor/find-replace.ts",
@@ -115,10 +117,10 @@
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude (MIN-1002: block comment thread rewritten against components/pages/page-comment-thread.tsx, components/pages/block-comments.ts and components/pages/page-comment-layer.tsx, and walked through in a browser on a local build: popover under the passage, badge and passage clicks, unsent text, phone sheet; thread resolution and margin threads then documented against components/pages/page-comment-margin.tsx and components/pages/page-activity.tsx, walked through at a wide and a narrow window; existing figures unaffected and kept)",
-    "language": "agent:claude (pt-BR sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (pt-BR context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance); agent:claude (pt-BR comment-thread sentences translated from en revision 25 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-26"
+    "revision": 28,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude (MIN-1002: block comment thread rewritten against components/pages/page-comment-thread.tsx, components/pages/block-comments.ts and components/pages/page-comment-layer.tsx, and walked through in a browser on a local build: popover under the passage, badge and passage clicks, unsent text, phone sheet; thread resolution and margin threads then documented against components/pages/page-comment-margin.tsx and components/pages/page-activity.tsx, walked through at a wide and a narrow window; existing figures unaffected and kept); agent:claude (MIN-1031: Numo answering and resolving page threads documented against lib/server/assistant/tools.ts, lib/server/assistant/execute-tool.ts and lib/server/assistant/tool-policy.ts; covered by tests, no browser walkthrough; no figure affected)",
+    "language": "agent:claude (pt-BR sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (pt-BR context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance); agent:claude (pt-BR comment-thread sentences translated from en revision 25 with catalog UI labels, glossary and register; agent self-review, not human acceptance); agent:claude (pt-BR Numo thread sentence translated from en revision 26 with glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "notifications-and-inbox",
@@ -154,7 +156,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -170,7 +172,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -187,7 +189,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página ainda sem eventos e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -204,7 +206,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -220,7 +222,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -236,7 +238,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -253,7 +255,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -270,7 +272,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -368,7 +370,7 @@ Exportações Markdown e leituras de páginas por agentes preservam ícones e co
 
 ## Discutir uma página e lidar com conflitos {#page-comments-and-collaboration}
 
-Abra uma página do projeto e os controles de comentários. Selecione o conteúdo relevante ao criar um comentário ancorado, explique a pergunta ou mudança proposta e use menções para envolver um membro. Um leitor pode comentar quando o proprietário ativou **Pode comentar** para ele. Responda na discussão para manter a decisão junto ao contexto. Quando a pergunta de uma discussão estiver resolvida, escolha **Resolver**, ao lado do campo de resposta ou no menu **Ações do comentário** de um dos comentários dela, que um clique com o botão direito no comentário também abre: a discussão sai da página e fica na atividade da página, marcada como **Resolvida**, onde **Reabrir** a coloca de volta. Qualquer pessoa que possa comentar pode resolver ou reabrir uma discussão. Excluir o primeiro comentário de uma discussão exclui as respostas dela. No computador, a discussão de um bloco abre em um pequeno painel abaixo do trecho a que se refere, e você pode continuar lendo e editando a página ao redor. No celular, ela abre em uma folha inferior que também mostra o trecho citado. Quando a janela deixa espaço suficiente à direita do texto, as discussões abertas aparecem ali como cartões ao lado dos blocos e substituem os selos: clique em um cartão ou no trecho dele para abri-lo e responder. O botão **Comentários** do cabeçalho da página passa a ter um menu: **Mostrar os comentários ao lado do texto** desativa ou reativa os cartões, para todas as páginas neste navegador. Sem os cartões, os selos voltam. Apontar para um trecho comentado destaca o cartão dele. Um trecho comentado fica sublinhado e tingido de amarelo na página, com mais intensidade enquanto a discussão dele está aberta ou o ponteiro está sobre o cartão dela. Um comentário sobre um bloco inteiro marca todo o texto dele, e um bloco sem texto, como um divisor, uma imagem ou uma equação, recebe um contorno amarelo. Clique no trecho ou no selo de comentários do bloco para abrir a discussão; clique de novo no selo, pressione Esc ou clique em outro lugar para fechá-la. Uma discussão com texto que você ainda não enviou continua aberta quando você clica em outro lugar. Para escrever um comentário, escolha **Comentário** na barra de seleção ou no menu do bloco: o campo abre abaixo do trecho selecionado, que fica destacado enquanto você escreve. No computador, passar o ponteiro sobre um bloco sem comentários mostra à direita um botão **Comentar este bloco**, na altura da alça do bloco; um bloco comentado mostra ali seu selo de comentários. Passar o ponteiro sobre esse botão destaca o bloco dele como uma seleção. Esse botão não aparece no celular.
+Abra uma página do projeto e os controles de comentários. Selecione o conteúdo relevante ao criar um comentário ancorado, explique a pergunta ou mudança proposta e use menções para envolver um membro. Um leitor pode comentar quando o proprietário ativou **Pode comentar** para ele. Responda na discussão para manter a decisão junto ao contexto. Quando a pergunta de uma discussão estiver resolvida, escolha **Resolver**, ao lado do campo de resposta ou no menu **Ações do comentário** de um dos comentários dela, que um clique com o botão direito no comentário também abre: a discussão sai da página e fica na atividade da página, marcada como **Resolvida**, onde **Reabrir** a coloca de volta. Qualquer pessoa que possa comentar pode resolver ou reabrir uma discussão. O Numo pode fazer as duas coisas quando você pede, com a sua permissão para comentar: ele responde dentro da discussão, com o próprio nome, e a marca como resolvida quando a pergunta tiver resposta. Excluir o primeiro comentário de uma discussão exclui as respostas dela. No computador, a discussão de um bloco abre em um pequeno painel abaixo do trecho a que se refere, e você pode continuar lendo e editando a página ao redor. No celular, ela abre em uma folha inferior que também mostra o trecho citado. Quando a janela deixa espaço suficiente à direita do texto, as discussões abertas aparecem ali como cartões ao lado dos blocos e substituem os selos: clique em um cartão ou no trecho dele para abri-lo e responder. O botão **Comentários** do cabeçalho da página passa a ter um menu: **Mostrar os comentários ao lado do texto** desativa ou reativa os cartões, para todas as páginas neste navegador. Sem os cartões, os selos voltam. Apontar para um trecho comentado destaca o cartão dele. Um trecho comentado fica sublinhado e tingido de amarelo na página, com mais intensidade enquanto a discussão dele está aberta ou o ponteiro está sobre o cartão dela. Um comentário sobre um bloco inteiro marca todo o texto dele, e um bloco sem texto, como um divisor, uma imagem ou uma equação, recebe um contorno amarelo. Clique no trecho ou no selo de comentários do bloco para abrir a discussão; clique de novo no selo, pressione Esc ou clique em outro lugar para fechá-la. Uma discussão com texto que você ainda não enviou continua aberta quando você clica em outro lugar. Para escrever um comentário, escolha **Comentário** na barra de seleção ou no menu do bloco: o campo abre abaixo do trecho selecionado, que fica destacado enquanto você escreve. No computador, passar o ponteiro sobre um bloco sem comentários mostra à direita um botão **Comentar este bloco**, na altura da alça do bloco; um bloco comentado mostra ali seu selo de comentários. Passar o ponteiro sobre esse botão destaca o bloco dele como uma seleção. Esse botão não aparece no celular.
 
 Avatares de presença identificam quem está vendo a página. Enquanto alguém edita, o cursor e a seleção dessa pessoa aparecem no corpo e no título, em uma cor própria e identificados com o nome dela. O cursor de um leitor não é exibido. Um cursor mostra onde alguém está trabalhando, não que o texto dessa pessoa esteja salvo: o indicador de salvamento reflete apenas as suas alterações.
 

@@ -64,6 +64,8 @@ import {
   createPageForAgent,
   editPageTextForAgent,
   listPagesForAgent,
+  addPageCommentForAgent,
+  resolvePageThreadForAgent,
   readPageForAgent,
   searchPagesForAgent,
   updatePageForAgent,
@@ -2179,6 +2181,8 @@ async function executeProjectTool(
     case "update_page":
     case "append_to_page":
     case "edit_page_text":
+    case "add_page_comment":
+    case "resolve_page_thread":
       return executePageTool(toolName, args, ctx, projectId);
 
     case "append_to_plan": {
@@ -4025,6 +4029,34 @@ async function executePageTool(
           tools: { read: "get_page", replaceWhole: "update_page { markdown }" },
         }),
       );
+    case "add_page_comment":
+      // Signed Numo (via_assistant), like a comment on an issue: the thread
+      // names the agent that wrote, not the account that asked.
+      return render(
+        await addPageCommentForAgent({
+          pageId,
+          projectId,
+          actorId,
+          body: str(args.body) ?? "",
+          blockId: str(args.block_id) ?? null,
+          parentCommentId: str(args.parent_comment_id) ?? null,
+          viaAssistant: true,
+        }),
+      );
+    case "resolve_page_thread": {
+      const threadId = str(args.thread_id);
+      if (!threadId)
+        return toolError("thread_id is required (read the threads with get_page).");
+      return render(
+        await resolvePageThreadForAgent({
+          pageId,
+          projectId,
+          actorId,
+          threadId,
+          resolved: typeof args.resolved === "boolean" ? args.resolved : true,
+        }),
+      );
+    }
     default:
       return toolError(`Unknown page tool: ${toolName}`);
   }

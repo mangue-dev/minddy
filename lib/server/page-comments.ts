@@ -291,21 +291,29 @@ export async function resolvePageThread({
  * Rendered by `minddy_get_page`: an agent who rereads a spec must see the
  * ongoing objections, this is often where the real constraint lies.
  */
+/** Who wrote a thread message: the account, and the agent it wrote through. */
+export interface PageThreadAuthor {
+  authorId: string | null;
+  viaAssistant: boolean;
+  apiKeyId: string | null;
+}
+
 export async function openPageThreadsForAgent(
   client: SupabaseClient,
   pageId: string,
-  names: (userId: string | null) => string,
   actorId: string | null = null,
 ): Promise<
   {
     thread_id: string;
     quote: string | null;
     block_id: string | null;
-    messages: { author: string; body: string; at: string }[];
+    messages: { author: PageThreadAuthor; body: string; at: string }[];
   }[]
 > {
   const { data, error } = await commentStore(client, "page_comments", actorId)
-    .select("id, parent_id, block_id, quote, body, author_id, created_at, resolved_at")
+    .select(
+      "id, parent_id, block_id, quote, body, author_id, via_assistant, via_mcp, api_key_id, created_at, resolved_at"
+    )
     .eq("page_id", pageId)
     .order("created_at", { ascending: true });
 
@@ -321,7 +329,11 @@ export async function openPageThreadsForAgent(
     quote: (root.quote as string | null) ?? null,
     block_id: (root.block_id as string | null) ?? null,
     messages: [root, ...rows.filter((r) => r.parent_id === root.id)].map((r) => ({
-      author: names(r.author_id as string | null),
+      author: {
+        authorId: (r.author_id as string | null) ?? null,
+        viaAssistant: Boolean(r.via_assistant),
+        apiKeyId: r.via_mcp ? ((r.api_key_id as string | null) ?? null) : null,
+      },
       body: r.body as string,
       at: r.created_at as string,
     })),
