@@ -489,3 +489,47 @@ describe("catalogue MCP — les pages", () => {
     }
   });
 });
+
+/**
+ * MIN-1030: an image goes INTO a text. The catalog must give an agent the
+ * whole path: a tool that returns an address, and the instruction to use it in
+ * every field that shows images. A field that stays silent is a surface where
+ * the agent keeps describing a screenshot instead of showing it.
+ */
+describe("MCP catalog: images in texts", () => {
+  it("offers minddy_upload_image with two exclusive, optional sources", () => {
+    const upload = tool("minddy_upload_image");
+    expect(upload.readOnly).toBe(false);
+    expect(param("minddy_upload_image", "project_id").required).toBe(true);
+    for (const source of ["content_base64", "resource_id", "alt"]) {
+      expect(param("minddy_upload_image", source).required).toBe(false);
+    }
+    expect(upload.description).toMatch(/markdown/i);
+    expect(upload.description).toContain("minddy_add_resource");
+  });
+
+  it("tells every comment body how to show an image", () => {
+    const bodies: [string, string][] = [
+      ["minddy_add_comment", "body"],
+      ["minddy_add_objective_comment", "body"],
+      ["minddy_add_feedback_comment", "body"],
+      ["minddy_add_page_comment", "body"],
+    ];
+    for (const [name, field] of bodies) {
+      expect(param(name, field).description, name).toContain("minddy_upload_image");
+    }
+  });
+
+  it("tells descriptions and page bodies too, and no longer says a page takes no upload", () => {
+    expect(param("minddy_create_issue", "description").description).toContain("minddy_upload_image");
+    expect(param("minddy_create_objective", "description").description).toContain("minddy_upload_image");
+    const body = param("minddy_create_page", "markdown").description ?? "";
+    expect(body).toContain("minddy_upload_image");
+    expect(body).not.toMatch(/cannot upload a file yourself/i);
+  });
+
+  it("keeps the public feedback reply free of image guidance", () => {
+    // The board is read without a session: a stored image would not load there.
+    expect(param("minddy_respond_feedback", "response").description).not.toContain("minddy_upload_image");
+  });
+});

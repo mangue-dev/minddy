@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, type ElementType, type JSX, type ReactNode } from "react";
+import { memo, useMemo, type ComponentPropsWithoutRef, type ElementType, type JSX, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import ReactMarkdown, { defaultUrlTransform, type ExtraProps, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -346,6 +346,38 @@ function rehypeChain(
  * region needs a name. Its own component so only this rare branch reads the
  * translations (`Common` is in the public client feed too).
  */
+/** An image served by minddy's own routes: an attachment object or a page file. */
+function isStoredImageSrc(src: unknown): boolean {
+  return typeof src === "string" &&
+    (src.startsWith("/api/attachments/file?") || /^\/api\/projects\/[^/]+\/pages\/files\//.test(src));
+}
+
+/**
+ * An image of a Markdown text. Markdown and raw HTML images share the
+ * authenticated PR preview source inside a PR view; an image minddy stores
+ * opens in the viewer wherever it is written (MIN-1030).
+ *
+ * Declared at module level on purpose: a renderer written inline in
+ * `components` is a new component on every render of the text, which remounts
+ * the image, reloads it and closes its viewer.
+ */
+function MarkdownImg({ node: _node, ...props }: ComponentPropsWithoutRef<"img"> & { node?: unknown }) {
+  // null outside of a PR view: images in a ticket comment are already
+  // served by minddy, they have nothing to proxify.
+  const imageEndpoint = usePrEndpoint();
+  return (
+    <MarkdownImage
+      {...props}
+      previewable={!!imageEndpoint || isStoredImageSrc(props.src)}
+      src={
+        imageEndpoint && typeof props.src === "string"
+          ? forgeImageSrc(props.src, imageEndpoint)
+          : props.src
+      }
+    />
+  );
+}
+
 function ScrollablePre({ children }: { children: ReactNode }) {
   const t = useTranslations("Common");
   return (
@@ -390,9 +422,6 @@ function MarkdownRenderer({
   /** Forge-authored PR content keeps conventional links and image buttons intact. */
   linkVariant?: "app" | "plain";
 }) {
-  // null outside of a PR view: images in a ticket comment are already
-  // served by minddy, they have nothing to proxify.
-  const imageEndpoint = usePrEndpoint();
   const inheritedMentionLinks = useMentionLinks();
   const links = mentionLinks ?? inheritedMentionLinks;
   // No members = surface without mentions: the rehype channel stops at
@@ -474,18 +503,7 @@ function MarkdownRenderer({
             "kbd",
             "rounded border border-border bg-muted px-1 font-mono text-[0.85em]",
           ),
-          // Markdown and raw HTML images share the authenticated PR preview source.
-          img: ({ node: _node, ...props }) => (
-            <MarkdownImage
-              {...props}
-              previewable={!!imageEndpoint}
-              src={
-                imageEndpoint && typeof props.src === "string"
-                  ? forgeImageSrc(props.src, imageEndpoint)
-                  : props.src
-              }
-            />
-          ),
+          img: MarkdownImg,
           details: styled("details", "my-3"),
           summary: styled("summary", "font-medium"),
           /* GFM tables can be arbitrarily wide: keep them in their own scroll

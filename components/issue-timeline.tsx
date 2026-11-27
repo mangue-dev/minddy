@@ -269,6 +269,15 @@ function agentOwner(members: Member[], id: string | null, name: string) {
   return { name, avatarSeed: member?.avatar_seed ?? id };
 }
 
+/**
+ * Where an image pasted or dropped into a comment is stored (MIN-1030): it
+ * lands in the text, like in a description. Files of any other kind stay
+ * attachments of the comment.
+ */
+function inlineImageScope(projectId: string): string {
+  return `projects/${projectId}`;
+}
+
 /** The project an activity is read in: a person's card gives their role there. */
 const ActivityProject = createContext<string | null>(null);
 
@@ -594,6 +603,10 @@ export function CommentBlock({
   // The keyboard submit bypasses the disabled Save button, and `saving` only
   // updates on the next render: the ref blocks a second save while one runs.
   const savingRef = useRef(false);
+  // An image pasted while editing goes into the text (MIN-1030), except in a
+  // public comment: the board is read without a session.
+  const editProject = useContext(ActivityProject);
+  const [editUploading, setEditUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const mine = !!currentUserId && comment.author_id === currentUserId;
@@ -634,7 +647,7 @@ export function CommentBlock({
 
   const saveEdit = async () => {
     const body = draft.trim();
-    if (savingRef.current) return;
+    if (savingRef.current || editUploading) return;
     if (!body || body === comment.body) {
       setEditing(false);
       return;
@@ -821,6 +834,8 @@ export function CommentBlock({
             mentions={scopedMentions}
             onSubmit={() => void saveEdit()}
             onEscape={() => setEditing(false)}
+            uploadScope={editProject && !isPublic ? inlineImageScope(editProject) : null}
+            onUploadingChange={setEditUploading}
             autoFocus
           />
           <div className="flex justify-end gap-2">
@@ -836,7 +851,7 @@ export function CommentBlock({
               <Button
                 size="sm"
                 className="rounded-full px-4"
-                disabled={saving || !draft.trim()}
+                disabled={saving || editUploading || !draft.trim()}
                 onClick={() => void saveEdit()}
               >
                 {saving && <Spinner />}
@@ -1012,6 +1027,7 @@ export function ReplyComposer({
   const postingRef = useRef(false);
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
+  const [imagesUploading, setImagesUploading] = useState(false);
   const meName = actorName(members, currentUserId, t);
   // A reply cites the attachments added to it (MIN-742).
   const replyMentions = useResourceMentions(mentions, landedResources(uploads.pending));
@@ -1022,7 +1038,8 @@ export function ReplyComposer({
     setOpen(false);
   };
 
-  const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
+  const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading &&
+    !imagesUploading;
 
   const submit = async () => {
     if (!canPost || postingRef.current) return;
@@ -1092,6 +1109,9 @@ export function ReplyComposer({
         placeholder={placeholderText}
         // Opened by a tap on "Reply": the field is what that tap asked for.
         autoFocus="requested"
+        // A public thread is read without a session: no image in its text.
+        uploadScope={threadIsPublic ? null : inlineImageScope(projectId)}
+        onUploadingChange={setImagesUploading}
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
       />
@@ -1508,6 +1528,7 @@ export const CommentComposer = memo(function CommentComposer({
     landedResources(uploads.pending),
   );
   const drop = useFileDrop(uploads.addFiles);
+  const [imagesUploading, setImagesUploading] = useState(false);
   const isPublic = visibility === "public";
   const rootRef = useRef<HTMLDivElement>(null);
   const [focusSignal, setFocusSignal] = useState(0);
@@ -1516,7 +1537,8 @@ export const CommentComposer = memo(function CommentComposer({
     revealLatestComment(rootRef.current);
   });
 
-  const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
+  const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading &&
+    !imagesUploading;
   const gridRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const leadRef = useRef<HTMLDivElement>(null);
@@ -1620,6 +1642,10 @@ export const CommentComposer = memo(function CommentComposer({
             }
             autoFocus={autoFocus}
             focusSignal={focusSignal}
+            // A feedback thread can post to the public board, read without a
+            // session: its images stay attachments.
+            uploadScope={publicOption ? null : inlineImageScope(projectId)}
+            onUploadingChange={setImagesUploading}
             includeNumo
             className="rounded-none border-0 bg-transparent p-0 focus-within:border-0 focus-within:ring-0"
             // In the row the line box itself is centred: the one-row minimum

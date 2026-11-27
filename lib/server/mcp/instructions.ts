@@ -20,11 +20,24 @@ export const MCP_DISCOVERY_INSTRUCTIONS =
  */
 export const MCP_MENTIONS_IN_MARKDOWN =
   " Cite each record you name as a typed mention '[@Label](mention:<type>/<id>)': type issue, " +
-  "objective, project, page, member (their user_id), pull_request, routine, cycle, mcp (a " +
+  "objective, project, page, member (their user_id), resource (a file, link or page attached to " +
+  "an issue, an objective or a comment), pull_request, routine, cycle, mcp (a " +
   "connection) or skill ('mention:skill/<folder of its SKILL.md>?project=<project_id>'); the " +
   "notebook is '[@Task notebook](mention:scratchpad/notebook)', and a specific day is " +
   "'[@](mention:date/YYYY-MM-DD)' ('?time=HH:MM' for a time, '&end=YYYY-MM-DD' for a range). " +
   "Never invent an id: leave what you did not resolve as plain text.";
+
+/**
+ * How an agent illustrates what it writes (MIN-1030), appended to the
+ * Markdown fields that show images: comments, descriptions and pages. An
+ * image is written by address, and the only addresses that work are those a
+ * read returned and those minddy_upload_image creates.
+ */
+export const MCP_IMAGES_IN_MARKDOWN =
+  " When an image illustrates what you write (a screenshot, a diagram, an image a read listed " +
+  "under `images`), show it in the text, on its own line, as '![what it shows](src)': reuse a " +
+  "src exactly as you read it, or get one from minddy_upload_image for a file you hold or a " +
+  "file resource. Never invent a src.";
 
 /**
  * Complete operating guide rendered by `/llms-full.txt`.
@@ -120,7 +133,14 @@ export const MCP_FULL_USAGE_GUIDE =
       "page_id from minddy_list_pages), " +
       "and minddy_get_resource reads one by id (a file's signed URL or its bytes " +
       "inline; a link's url and title; a page's id and title, whose document " +
-      "minddy_get_page then reads). An issue can carry a PULL REQUEST: " +
+      "minddy_get_page then reads). A resource sits BESIDE a text; an IMAGE can " +
+      "also sit IN it. Every description, plan, comment and page shows Markdown " +
+      "images ('![alt](src)'), reads list them under `images`, and " +
+      "minddy_get_image opens one by its src. To write one, call " +
+      "minddy_upload_image (the image inline as base64, or the resource_id of a " +
+      "file resource to reuse) and put the markdown it returns in your text. When " +
+      "a screenshot or a diagram shows what a comment says, include it rather " +
+      "than describing it. An issue can carry a PULL REQUEST: " +
       "minddy_get_pull_request reads it from the issue: " +
       "state, branches, description and per-file diffs. A pull request of a linked " +
       "repository normally finds its issue by CONVENTION (the identifier in the branch, " +

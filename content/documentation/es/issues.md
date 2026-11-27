@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 54,
-  "sourceRevision": 54,
+  "revision": 55,
+  "sourceRevision": 55,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-14",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -143,10 +143,10 @@
     ]
   },
   "review": {
-    "revision": 54,
-    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 55,
+    "fact": "agent:claude-code (MIN-1030: images pasted or dropped into issue, objective and page comments land in the text and open in the viewer, a feedback thread keeps them as attachments; checked against components/editor/comment-editor.tsx, components/issue-timeline.tsx and components/markdown.tsx; agent review, not human acceptance)",
+    "language": "agent:claude-code (es MIN-1030 sentences translated from en with the locale register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "feedback",
@@ -191,7 +191,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -208,7 +208,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -225,7 +225,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -242,7 +242,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -259,7 +259,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -276,7 +276,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Sección de subincidencias de una incidencia principal de demostración, con el botón Crear una subincidencia y su flecha de opciones.",
       "caption": "Crear una subincidencia abre la creación con esta incidencia como principal; cada hija conserva su estado y conversación.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -293,7 +293,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -310,7 +310,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -327,7 +327,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -344,7 +344,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 54,
+      "revision": 55,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -477,7 +477,7 @@ Comprueba los filtros si una incidencia desaparece después de cerrarla. Ábrela
 
 ## Discutir el trabajo y adjuntar su contexto {#issue-discussion-and-resources}
 
-Abre la cronología de discusión de la incidencia para añadir un comentario. Explica una decisión, pregunta o resultado de verificación para que otro miembro comprenda qué cambió. Usa menciones cuando necesites una persona o un objeto vinculado en el contexto; las notificaciones siguen dependiendo de las preferencias del destinatario y de la entrega en su dispositivo. Un lector solo puede comentar si el propietario le ha activado **Puede comentar**. Entonces puede responder, mencionar a personas, adjuntar archivos a sus propios comentarios, y editar o eliminar sus propios comentarios.
+Abre la cronología de discusión de la incidencia para añadir un comentario. Explica una decisión, pregunta o resultado de verificación para que otro miembro comprenda qué cambió. Usa menciones cuando necesites una persona o un objeto vinculado en el contexto; las notificaciones siguen dependiendo de las preferencias del destinatario y de la entrega en su dispositivo. Un lector solo puede comentar si el propietario le ha activado **Puede comentar**. Entonces puede responder, mencionar a personas, adjuntar archivos a sus propios comentarios, y editar o eliminar sus propios comentarios. Pega o suelta una imagen en un comentario para insertarla en el texto, donde un clic la abre a tamaño completo; los demás tipos de archivo se adjuntan al comentario como recursos. Los comentarios de objetivos y páginas aceptan imágenes de la misma forma. El hilo de una sugerencia puede publicarse en el tablero público, así que una imagen añadida allí sigue siendo un adjunto.
 
 Adjunta una página relevante del proyecto, un archivo o un enlace mediante los controles de recursos. Una página vinculada es un recurso actualizado: su título sigue los cambios de nombre y su contenido puede evolucionar. Un archivo es un adjunto almacenado, no una garantía de que una URL externa seguirá disponible. **Página** abre la paleta de comandos con las páginas del proyecto, en el orden de la barra lateral; elige una para adjuntarla. Para redactar una página que aún no existe, elige **Nueva página** al final de la lista; un título escrito antes en la búsqueda se convierte en su título. La página se crea en el proyecto, se adjunta a la incidencia y se abre en un panel lateral, donde **Ampliar** abre la página completa.
 

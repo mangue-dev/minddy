@@ -33,7 +33,7 @@ export const CORE_TOOL_NAMES: ReadonlySet<NumoToolName> = new Set<NumoToolName>(
   "triage_decision", "add_comment", "add_resource",
   "list_members", "list_categories", "list_objectives", "get_objective",
   "search_pages", "get_page", "list_pages",
-  "list_conversation_attachments", "read_conversation_attachment", "view_image", "create_file",
+  "list_conversation_attachments", "read_conversation_attachment", "view_image", "embed_image", "create_file",
   "web_search", "list_mcp_tools", "call_mcp_tool",
   "get_scratchpad", "add_scratchpad_tasks",
   "list_routines", "read_pull_request", "link_pull_request", "list_pull_requests",

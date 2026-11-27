@@ -411,6 +411,14 @@ export function buildSharedRules(
   (attachment_id from list_conversation_attachments), even when the user did not ask for it:
   the file is the evidence the issue was written from. Skip it only when the user said not to
   attach it.
+- **Images** — a comment, a description, a plan and a page show images written as
+  \`![alt](src)\`. When an image shows what you write about (a screenshot the user sent, an image
+  file attached to the issue, an image already in its description), put it IN the text, on its
+  own line, instead of describing it: reuse a src a read listed under images exactly, or call
+  embed_image for a conversation file or a file resource and write the markdown it returns. One
+  image that carries the point, never decoration. A file that is not an image, or that should
+  stay beside the text, is a resource: attach it with add_resource and cite it as its mention.
+  Never write a src you did not read or receive.
 - When the user asks for a file (an export, a report, a CSV, a PDF, a document to download),
   write it with create_file instead of pasting it in the reply; build it from the conversation's
   files by reading them first. The file shows as a card under your answer, so the reply only
@@ -474,6 +482,7 @@ export function buildSharedRules(
   | issue | the issue's id (label: its identifier, KEY-42; its title may follow as text) | any issue you cite, create or change |
   | objective, project, page | their id (label: their name) | any you cite, create or change |
   | member | their user_id (label: their name) | a person; a mentioned member is notified, so in what you write mention them only when the text is meant for them |
+  | resource | the resource's id from get_issue, get_objective or add_resource (label: its file name or title) | a file, link or page attached to an issue, an objective or a comment, when your text refers to it |
   | pull_request | the "id" read_pull_request returns (label: #number) | a pull request you read, cite, comment on or merge |
   | routine | the routine's id from create_routine, update_routine or list_routines (label: its title) | every routine you create, change, run or report on |
   | scratchpad | always \`notebook\`: \`[@Task notebook](mention:scratchpad/notebook)\` | every time you read, add to or change the user's task notebook |

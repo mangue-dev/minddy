@@ -82,6 +82,22 @@ describe("Numo tool contracts", () => {
     expect(settings.theme_dark.enum).toEqual([...DARK_THEME_PRESETS, null]);
   });
 
+  it("lets Numo show an image inside what it writes (MIN-1030)", () => {
+    const embed = tool("embed_image");
+    expect(embed?.function.parameters.properties).toHaveProperty("attachment_id");
+    expect(embed?.function.parameters.properties).toHaveProperty("resource_id");
+    // Either source: the handler requires exactly one.
+    expect(embed?.function.parameters.required).toEqual([]);
+
+    for (const name of ["add_comment", "add_objective_comment", "add_page_comment", "add_feedback_comment"]) {
+      const body = tool(name)?.function.parameters.properties.body as { description?: string };
+      expect(body.description, name).toContain("embed_image");
+    }
+    const page = tool("create_page")?.function.parameters.properties.markdown as { description?: string };
+    expect(page.description).toContain("embed_image");
+    expect(page.description).not.toMatch(/cannot upload a file yourself/i);
+  });
+
   it("advertises the internal feedback comment tool", () => {
     const comment = tool("add_feedback_comment");
 

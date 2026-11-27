@@ -528,6 +528,11 @@ const TOOL_META: Record<NumoToolName, ToolMeta> & Record<string, ToolMeta | unde
     getLabel: (_a, _r, success, status, t) => status === "running"
       ? t("viewingImage") : success ? t("imageViewed") : t("viewImageFailed"),
   },
+  embed_image: {
+    icon: Image01Icon,
+    getLabel: (_a, _r, success, status, t) => status === "running"
+      ? t("embeddingImage") : success ? t("imageEmbedded") : t("embedImageFailed"),
+  },
   add_resource: {
     icon: Link02Icon,
     getLabel: (_args, _result, success, status, t) => {

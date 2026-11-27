@@ -320,6 +320,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   } | null>(null);
   const [message, setMessage] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [messageUploading, setMessageUploading] = useState(false);
   // One confirmation run at a time: Enter in the editor bypasses the
   // disabled button.
   const confirmRunRef = useRef({ busy: false });
@@ -411,7 +412,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   };
 
   const runConfirm = async () => {
-    if (!confirming || confirmRunRef.current.busy) return;
+    if (!confirming || confirmRunRef.current.busy || messageUploading) return;
     const run = confirmRunRef.current;
     const { action, issue } = confirming;
     run.busy = true;
@@ -917,6 +918,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
             rows={3}
             autoFocus={allowInputAutoFocus()}
             includeNumo
+            // A pasted image goes into the message itself (MIN-1030).
+            uploadScope={`projects/${projectId}`}
+            onUploadingChange={setMessageUploading}
             className="border-0 bg-control focus-within:bg-control-hover focus-within:ring-0"
             onSubmit={() => void runConfirm()}
           />
@@ -930,7 +934,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
             </Button>
             <Button
               variant={confirming?.action === "decline" ? "destructive" : "default"}
-              disabled={confirmBusy}
+              disabled={confirmBusy || messageUploading}
               onClick={() => void runConfirm()}
             >
               {confirmBusy && <Spinner />}

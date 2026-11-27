@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-22",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -62,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-952: issue tools without project_id described from lib/server/mcp/tool-helpers.ts, lib/server/mcp/tools.ts and lib/server/issue-reads.ts; covered by lib/server/mcp/issue-scope.test.ts; no figure affected; not checked against a running server); agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 connection wizard: the install step's Copy the prompt action and the collapsible Set it up by hand section checked against components/settings/mcp-connect-panel.tsx and messages/*.json; no browser walkthrough; the client-picker figure caption updated; the install-step figure still shows the former layout and needs recapture); agent:claude-code (MIN-907 Other client: the Other entry copying the general prompt with the instance's /api/mcp address, and the two-column cards in the phone tour's sheet, checked against components/settings/mcp-connect-panel.tsx, components/first-run/onboarding-screen.tsx and messages/*.json; no browser walkthrough; the client-picker figure does not show the Other entry and needs recapture); agent:claude-code (MIN-964 tour on every platform: Connect a coding agent opens the client cards in a sheet on a phone and in a dialog on a computer, checked against components/first-run/onboarding-screen.tsx; no browser walkthrough; no figure recaptured); agent:claude-code (MIN-1012 change mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it MIN-952 passages on optional project_id, translated from en revision 22 in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (it paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (it paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance); agent:claude-code (it MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 connection wizard paragraph and figure caption with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 Other client paragraph with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-964 changed passages on the tour on every platform, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it translation of the MIN-1012 views sentence; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-22"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-1030: minddy_upload_image (base64 or resource_id, bitmap types, 10 MB, comment capability) and the resource mention; checked against lib/server/mcp/tools.ts, lib/server/mcp/tool-capabilities.ts and lib/server/inline-images.ts; agent review, not human acceptance)",
+    "language": "agent:claude-code (it MIN-1030 sentences translated from en with the locale register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "numo",
@@ -88,7 +88,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per aprire i suoi due passaggi di collegamento.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -105,7 +105,7 @@
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
       "alt": "Passaggio di installazione di Codex nella procedura di collegamento al MCP di minddy, con l’endpoint minddy Cloud.",
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -176,6 +176,8 @@ Quando un prompt di minddy indica un brief (`plan`, `implement`, `verify`, `comm
 Per modificare più ticket, invia una sola chiamata a `minddy_update_issues`: `issues` con `fields` applica la stessa modifica a ogni ticket, e `updates` aggiunge ticket che ricevono ciascuno i propri campi. Una chiamata accetta fino a 50 ticket, ciascuno citato una sola volta, e restituisce `updated` e `failed` per ticket, così un errore non blocca gli altri. Le altre scritture ripetute accettano un elenco di elementi aggiuntivi accanto ai loro campi abituali: `links` per `minddy_link_issues`, `edits` per `minddy_edit_issue_text` e `minddy_edit_page_text` (applicate in ordine; se una non corrisponde, non viene scritto nulla), `pages` per `minddy_create_page` (pagine sotto lo stesso genitore, come le voci di un database) e `feedback_post_ids` per `minddy_update_feedback`. `minddy_update_page` con `parent_page_id` sposta una pagina nell’albero, o alla radice con `null`. Il taccuino delle attività e le descrizioni degli obiettivi si correggono allo stesso modo: `minddy_edit_scratchpad_text` riscrive o elimina passaggi del taccuino, e `minddy_update_objective` accetta `description_edits` invece di una `description` intera. `minddy_append_to_plan` con `field: "description"` aggiunge un blocco alla fine della descrizione di un ticket, e `description_append` fa lo stesso per un obiettivo; una modifica a un obiettivo viene rifiutata, anziché applicata, se l’obiettivo è cambiato dopo la lettura.
 
 Le letture che restituiscono testo con immagini (`minddy_get_issue`, `minddy_get_objective`, `minddy_get_page`, `minddy_get_feedback`, `minddy_get_scratchpad`) le elencano in `images`, ognuna con il suo `src` e il testo alternativo. Passa quel `src` così com’è a `minddy_get_image`: lo strumento verifica il tuo accesso al progetto dell’immagine, o che un’immagine del taccuino sia tua, e restituisce l’immagine fino a 10 MB con un `download_url` firmato valido circa dieci minuti. Un’immagine ospitata fuori da minddy torna solo come URL.
+
+Per mostrare un’immagine in un testo, chiama `minddy_upload_image` con l’immagine in base64 (PNG, JPEG, GIF, WebP o AVIF, al massimo 10 MB) o con il `resource_id` di una risorsa file da copiare. Lo strumento restituisce `markdown`, la riga `![alt](src)` da mettere nel commento, nella descrizione, nel piano o nella pagina che scrivi subito dopo. Richiede il permesso di commentare nel progetto. Non allega una risorsa: lo fa `minddy_add_resource`, e una risorsa si cita in un testo con una menzione, `[@nome](mention:resource/<id>)`.
 
 ### Rispettare revisioni e proprietà {#pages-and-routines}
 

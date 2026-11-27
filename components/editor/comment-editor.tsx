@@ -61,6 +61,14 @@ export interface CommentEditorProps {
    *  just opened (Reply), which the keyboard follows. */
   autoFocus?: boolean | "requested";
   disabled?: boolean;
+  /**
+   * Where a pasted or dropped image is stored, so it lands IN the text
+   * (MIN-1030): `projects/<projectId>`. Absent, the field takes no image and
+   * the surface around it keeps the file as an attachment. Read at mount.
+   */
+  uploadScope?: string | null;
+  /** Whether images are still being sent: the caller waits before posting. */
+  onUploadingChange?: (uploading: boolean) => void;
   className?: string;
 }
 
@@ -86,6 +94,8 @@ export function CommentEditor({
   contentClassName,
   autoFocus = false,
   disabled = false,
+  uploadScope,
+  onUploadingChange,
   className,
 }: CommentEditorProps) {
   // The identity of `members` is not stable across callers (an unanswered
@@ -184,6 +194,8 @@ export function CommentEditor({
       ariaLabel={ariaLabel}
       autoFocus={autoFocus}
       readOnly={disabled}
+      uploadScope={uploadScope}
+      onUploadingChange={onUploadingChange}
       className={cn(
         // `placeholder-grows` (app/globals.css): a placeholder that wraps on a
         // narrow screen makes the field taller instead of being clipped.

@@ -81,8 +81,9 @@ export type AssistantToolDef<Name extends string = string> = {
 const PAGE_FILES_DESCRIPTION =
   "An image reads '![caption](url)' and a file '[name](url)' — those are REAL " +
   "files stored by minddy. Keep such lines exactly as you read them when you " +
-  "rewrite a body: dropping one detaches the file from the page. You cannot " +
-  "upload a file yourself, and you must never invent one of those urls.";
+  "rewrite a body: dropping one detaches the file from the page. To add an " +
+  "image, get its markdown from embed_image; you cannot add another kind of " +
+  "file, and you must never invent one of those urls.";
 
 /**
  * Numo cites what it writes about as typed mentions (MIN-734), in every
@@ -95,6 +96,14 @@ const MENTIONS_IN_MARKDOWN =
   " Cite each record whose id you resolved, and each specific day, as a typed mention " +
   "('[@Label](mention:<type>/<id>)', '[@](mention:date/YYYY-MM-DD)'; see the Mentions rule). " +
   "Never invent an id.";
+
+/**
+ * Numo illustrates what it writes (MIN-1030): appended to the Markdown fields
+ * that show images. The rule itself is in the prompt (Images).
+ */
+const IMAGES_IN_MARKDOWN =
+  " When an image illustrates the text, show it on its own line as '![alt](src)', with a src " +
+  "from a read or from embed_image (see the Images rule).";
 
 const PAGE_BODY_DESCRIPTION =
   "The page BODY in markdown. Supported: headings (## and ###, since a single " +
@@ -561,6 +570,23 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
       parameters: { type: "object", properties: {
         src: { type: "string", description: "The image address exactly as written in the Markdown, e.g. /api/attachments/file?path=… or /api/projects/…/pages/files/…" },
       }, required: ["src"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "embed_image",
+      description:
+        "Get an image ready to show INSIDE a text you write: a comment, an issue or objective description, a plan, a page. Send exactly one source: attachment_id, an image of this conversation (from list_conversation_attachments), or resource_id, an image file attached to an issue, an objective or a comment (from get_issue or get_objective). The image is copied into the project and the result gives its markdown, '![alt](src)': put that line in the body you write next. An image already shown in a text (listed under images by a read) needs no call: reuse its src exactly. This does not attach a file; add_resource does. Never write an image src you did not get from a read or from this tool.",
+      parameters: {
+        type: "object",
+        properties: {
+          attachment_id: { type: "string", description: "An image of this conversation: exact reference from list_conversation_attachments. Exclusive with resource_id." },
+          resource_id: { type: "string", description: "An image file resource of this project: its id from get_issue or get_objective. Exclusive with attachment_id." },
+          alt: { type: "string", description: "What the image shows, in a few words, in the language of the text." },
+        },
+        required: [],
+      },
     },
   },
   {
@@ -1053,7 +1079,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
           markdown: {
             type: "string",
             description:
-              "The block to ADD, in markdown. Only what is new — everything already on the page is kept as-is, so never repeat it here." + MENTIONS_IN_MARKDOWN,
+              "The block to ADD, in markdown. Only what is new — everything already on the page is kept as-is, so never repeat it here." + MENTIONS_IN_MARKDOWN + IMAGES_IN_MARKDOWN,
           },
         },
         required: ["page_id", "markdown"],
@@ -1104,7 +1130,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
           body: {
             type: "string",
             description:
-              "The comment, in markdown. Short and specific — it is read next to the text it is about, not instead of it." + MENTIONS_IN_MARKDOWN,
+              "The comment, in markdown. Short and specific — it is read next to the text it is about, not instead of it." + MENTIONS_IN_MARKDOWN + IMAGES_IN_MARKDOWN,
           },
           block_id: {
             type: "string",
@@ -1198,7 +1224,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
         type: "object",
         properties: {
           issue_id: { type: "string", description: "Issue id." },
-          body: { type: "string", description: "Comment body, markdown." + MENTIONS_IN_MARKDOWN },
+          body: { type: "string", description: "Comment body, markdown." + MENTIONS_IN_MARKDOWN + IMAGES_IN_MARKDOWN },
         },
         required: ["issue_id", "body"],
       },
@@ -1509,7 +1535,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
         type: "object",
         properties: {
           objective_id: { type: "string", description: "Objective UUID, from list_objectives." },
-          body: { type: "string", description: "Comment body, markdown." + MENTIONS_IN_MARKDOWN },
+          body: { type: "string", description: "Comment body, markdown." + MENTIONS_IN_MARKDOWN + IMAGES_IN_MARKDOWN },
         },
         required: ["objective_id", "body"],
       },
@@ -1910,7 +1936,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef<NumoToolName>[] = [
           body: {
             type: "string",
             description:
-              "Short markdown triage note: two or three sentences or a few one-line bullets.",
+              "Short markdown triage note: two or three sentences or a few one-line bullets." + IMAGES_IN_MARKDOWN,
           },
         },
         required: ["body"],

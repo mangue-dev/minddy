@@ -266,6 +266,8 @@ export const NUMO_TOOL_POLICY = {
   add_feedback_comment: { scope: "project", capability: "comment", touches: FEEDBACK_ID },
   add_page_comment: { scope: "project", capability: "comment", touches: PAGE_ID },
   resolve_page_thread: { scope: "project", capability: "comment", touches: PAGE_ID },
+  // Stores an image for a text written next; it changes no record by itself.
+  embed_image: { scope: "project", capability: "comment", background: "changes_nothing" },
 
   // ── Content writes ──────────────────────────────────────────────────
   // Read-only, but integration summaries (webhook URLs) are hidden from readers.

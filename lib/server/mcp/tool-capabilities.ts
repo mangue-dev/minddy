@@ -72,6 +72,9 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_add_feedback_comment: "comment",
   minddy_add_page_comment: "comment",
   minddy_resolve_page_thread: "comment",
+  // An image for a text: whoever may comment may illustrate their comment,
+  // like the browser's upload route (MIN-1030).
+  minddy_upload_image: "comment",
 
   // Content writes.
   minddy_link_pull_request: "write",
