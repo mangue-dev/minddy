@@ -14,6 +14,8 @@ vi.mock("./analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("./last-create-project", () => ({ rememberCreateProject: mocks.remember }));
 vi.mock("./optimistic/issue-writes", () => ({
   insertIssueEverywhere: mocks.insert, mergeServerIssue: mocks.merge,
+  cachedProjectIssues: () => [], removeIssueEverywhere: vi.fn(),
+  issueWrites: { begin: () => ({}), settle: vi.fn(), fail: vi.fn() },
 }));
 vi.mock("./global-issues-api", () => ({ reconcileProjectIssuesInGlobalCache: vi.fn() }));
 vi.mock("./undo/undo-core", () => ({ snapshotIssue: (issue: unknown) => issue }));
@@ -100,17 +102,17 @@ describe("relations selected during creation", () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 
-  it("preserves selections through deferred Smart Fill creation without using a provisional id", async () => {
+  it("saves Smart Fill selections only once the filled issue exists, against the card's id", async () => {
     let finish!: (response: Response) => void;
     request.mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
     const record = vi.fn();
     const client = {} as QueryClient;
-    createIssueDeferred({ queryClient: client, projectId: "project", input: { title: "New issue", smart_fill: true, relations }, record });
+    const card = createIssueDeferred({ queryClient: client, projectId: "project", input: { title: "New issue", smart_fill: true, relations }, record });
     expect(request).toHaveBeenCalledTimes(1);
-    expect(mocks.insert).not.toHaveBeenCalled();
-    finish(json({ id: "server-id" }));
+    expect(JSON.parse(request.mock.calls[0][1].body).id).toBe(card.id);
+    finish(json({ id: card.id }));
     await vi.waitFor(() => expect(record).toHaveBeenCalled());
-    expect(mocks.insert).toHaveBeenCalledWith(client, "project", { id: "server-id" });
-    expect(JSON.parse(request.mock.calls[1][1].body).source_id).toBe("server-id");
+    expect(mocks.insert).toHaveBeenLastCalledWith(client, "project", { id: card.id });
+    expect(JSON.parse(request.mock.calls[1][1].body).source_id).toBe(card.id);
   });
 });

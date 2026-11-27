@@ -44,8 +44,8 @@ export type IssueMovePatch = { status?: IssueStatus; position: number };
  * the cross-project board call every writer with the same arguments.
  */
 export interface IssueMutations {
-  /** Resolves to the optimistic card, or null for a Smart Fill creation,
-   *  which shows no card until the server has filled it (MIN-260). */
+  /** Resolves to the optimistic card. A Smart Fill creation's card shows the
+   *  issue as the author left it until the server has filled it (MIN-1032). */
   createIssue: (projectId: string, input: CreateIssueInput) => Promise<Issue | null>;
   updateIssue: (issueId: string, updates: IssueUpdateInput) => Promise<Issue | null>;
   /** Drag and drop, and its keyboard twin in the card menu. */
@@ -237,8 +237,13 @@ export function createIssueMutations({
   return {
     async createIssue(projectId, input) {
       if (input.smart_fill) {
-        createIssueDeferred({ queryClient, projectId, input, record });
-        return null;
+        return createIssueDeferred({
+          queryClient,
+          projectId,
+          input,
+          record,
+          userId: viewer()?.id ?? null,
+        });
       }
       const optimistic = buildOptimisticIssue(
         input,

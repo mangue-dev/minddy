@@ -5,6 +5,7 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-m
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { IssueCardFace } from "@/components/issue-card-face";
+import { SmartFillSweep } from "@/components/smart-fill-sweep";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
 import { McpAvatar, SmartAssignAvatar, SmartFillAvatar } from "@/components/actor-avatars";
@@ -13,6 +14,8 @@ import type { IssueStatus } from "@/lib/issue-constants";
 import type { IssuePr } from "@/lib/issue-pr";
 import type { IssueCardIssue } from "@/lib/types";
 import { FIGURE_CATEGORIES, FIGURE_MEMBERS, FIGURE_PROJECT_KEY, figureIssue, useFigureMaps } from "./figure-world";
+
+type FigureMaps = ReturnType<typeof useFigureMaps>;
 import { useLandingMotionPaused } from "./motion-pause";
 
 /**
@@ -21,7 +24,8 @@ import { useLandingMotionPaused } from "./motion-pause";
  * created, Smart Fill writes it, Smart Assign picks someone, a coding agent
  * opens a pull request, the pull request goes to review and is merged. A pill
  * on the card names who did it. Done issues leave the board as new ones come
- * in, so the loop never ends. The cards are the app's `IssueCardFace`.
+ * in, so the loop never ends. The cards are the app's `IssueCardFace`, and
+ * Smart Fill writes a new one under the app's own sweep (MIN-1032).
  */
 
 const TICK_MS = 1300;
@@ -149,9 +153,9 @@ function issueOf(card: Card, title: string): IssueCardIssue {
   const filled = card.stage >= 1;
   return figureIssue({
     number: n,
-    // The card shows the title alone (MIN-987): before Smart Fill, the text
-    // stands in as the title, as the description's first line does in the app.
-    title,
+    // Before Smart Fill, the card shows the text as its description, muted,
+    // as the app does until Smart Fill has written the title (MIN-1032).
+    title: filled ? title : "",
     status: STAGE_STATUS[card.stage],
     priority: filled ? PRIORITIES[n % PRIORITIES.length] : "none",
     effort: filled ? EFFORTS[n % EFFORTS.length] : null,
@@ -164,6 +168,53 @@ function prOf(card: Card): IssuePr | null {
   if (card.stage < 3) return null;
   const state = card.stage === 5 ? "merged" : card.stage === 4 ? "open" : "draft";
   return { prId: `hero-${card.number}`, prNumber: card.number + 80, state };
+}
+
+/**
+ * One card. A new card shows its text muted, then Smart Fill writes it under
+ * the sweep the board plays (MIN-1032). The card keeps its instance from
+ * created to assigned, all three in Todo, so the sweep survives Smart Assign
+ * stepping in while it runs.
+ */
+function HeroCard({
+  card,
+  pr,
+  memberMap,
+  categoryMap,
+}: {
+  card: Card;
+  pr: IssuePr | null;
+  memberMap: FigureMaps["memberMap"];
+  categoryMap: FigureMaps["categoryMap"];
+}) {
+  const t = useTranslations("Landing");
+  const title = t(card.title);
+  const [sweeping, setSweeping] = useState(false);
+  const [wasCreated, setWasCreated] = useState(card.stage === 0);
+  // Adjusting state during render, React's pattern for reacting to a prop.
+  if (card.stage === 0 && !wasCreated) setWasCreated(true);
+  if (card.stage >= 1 && wasCreated) {
+    setWasCreated(false);
+    setSweeping(true);
+  }
+  const face = (issue: IssueCardIssue, description?: string) => (
+    <IssueCardFace
+      issue={issue}
+      projectKey={FIGURE_PROJECT_KEY}
+      memberMap={memberMap}
+      categoryMap={categoryMap}
+      pr={pr}
+      description={description}
+    />
+  );
+  const empty = face(issueOf({ ...card, stage: 0 }, title), title);
+  if (card.stage === 0) return empty;
+  if (!sweeping) return face(issueOf(card, title));
+  return (
+    <SmartFillSweep revealing placeholder={empty} onDone={() => setSweeping(false)}>
+      {face(issueOf(card, title))}
+    </SmartFillSweep>
+  );
 }
 
 /** Who did the card's last step, and what it changed. */
@@ -211,7 +262,6 @@ export const FRESH_CARD =
   "[&>[data-card-surface]]:border-primary/55 [&>[data-card-surface]]:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_55%,transparent)]";
 
 export function HeroBoard() {
-  const t = useTranslations("Landing");
   const ts = useTranslations("Status");
   const { memberMap, categoryMap } = useFigureMaps();
   const reduced = useReducedMotion();
@@ -268,13 +318,7 @@ export function HeroBoard() {
                           fresh && FRESH_CARD,
                         )}
                       >
-                        <IssueCardFace
-                          issue={issueOf(card, t(card.title))}
-                          projectKey={FIGURE_PROJECT_KEY}
-                          memberMap={memberMap}
-                          categoryMap={categoryMap}
-                          pr={prOf(card)}
-                        />
+                        <HeroCard card={card} pr={prOf(card)} memberMap={memberMap} categoryMap={categoryMap} />
                         <AnimatePresence>
                           {fresh && <StepPill key={`${card.number}-${pill.stage}`} card={card} stage={pill.stage} />}
                         </AnimatePresence>

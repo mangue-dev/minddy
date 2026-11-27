@@ -712,9 +712,9 @@ export function CreateIssueDialog({
         await onCreate(activeProjectId, { ...input, copy_resources: uploads.inputs });
       }
       announceIssueSubmitted();
-      // Smart-fill: the card is not yet there (the server fills before
-      // inserting), and the toast is the only thing that says it's coming.
-      // Without it, we close a form on a board that has not moved.
+      // Smart Fill: the card is already on the board but still empty (the
+      // server fills before inserting), and the toast says why it is about
+      // to change. Created from another page, it is the only sign at all.
       toast.success(
         smartFill
           ? t("smartFillPendingToast")
