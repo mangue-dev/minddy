@@ -104,7 +104,7 @@ afterEach(async () => { await flush(() => root.unmount()); host.remove(); vi.uns
 
 describe("account count (MIN-829)", () => {
   it("shows the number of accounts and nothing else about them", () => {
-    expect(host.querySelector("[data-metric]")?.textContent).toContain("1,234");
+    expect(host.querySelector("[data-account-count]")?.parentElement?.textContent).toBe("1,234 accounts on this instance");
     expect(host.textContent).not.toMatch(/Onboarding|Sign-ups|Active today|Projects|Internal/);
   });
 });

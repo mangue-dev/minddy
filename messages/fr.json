@@ -4889,8 +4889,7 @@
       "undoToast": "Remise à zéro annulée pour {name}."
     },
     "users": {
-      "subtitle": "Recherchez un compte avec son adresse e-mail exacte, puis ouvrez-le pour gérer son offre ou son budget.",
-      "searchPlaceholder": "Adresse e-mail du compte",
+      "subtitle": "Recherchez un compte par son adresse e-mail exacte pour gérer son offre ou son budget. Son activité et ses contenus ne sont pas affichés.",
       "clearSearch": "Effacer la recherche",
       "empty": "Aucun compte trouvé pour cette adresse e-mail.",
       "emailStatus": "E-mail",
@@ -4904,7 +4903,6 @@
       "emailLabel": "Adresse e-mail",
       "findAccount": "Rechercher",
       "openAccount": "Ouvrir le compte",
-      "supportPurpose": "Consultez les comptes uniquement pour une demande d’assistance ou de facturation. L’activité et les contenus personnels ne sont pas affichés ici.",
       "lookupFailed": "La recherche a échoué. Vérifiez l’adresse et réessayez.",
       "detailsFailed": "Impossible de charger l’offre et le budget. Ouvrez le compte pour réessayer."
     },
@@ -4992,9 +4990,9 @@
     },
     "accounts": {
       "countLabel": "Comptes",
-      "countHint": "Tous les comptes de cette instance.",
+      "countSentence": "{count, plural, one {compte sur cette instance} other {comptes sur cette instance}}",
       "countFailed": "Impossible de compter les comptes.",
-      "supportTitle": "Assistance aux comptes"
+      "supportTitle": "Assistance"
     },
     "modelsFile": {
       "title": "Export et import",

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -61,10 +61,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts); agent:claude-code (MIN-954: sentence on Numo's model on minddy Cloud in #models, source audit against lib/server/assistant/conversation-config.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954 model roles: #models, #models-file, #decision-model and #smart-fill-relations rewritten for one model per role, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot still shows the former category cards and needs a recapture); agent:claude-code (MIN-954: recommended models and routing shortcuts removed from #models and #models-file, checked against components/admin/admin-models-dashboard.tsx and lib/ai-model-config-file.ts); agent:claude-code (MIN-980: decision engine switch in #decision-model, per-member decision model and the models file's decision engine in #models-file, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot does not show the new switch and was not recaptured); agent:claude-code (MIN-1001: Smart Fill leaves the decision model out of #decision-model, source audit against lib/server/decisions/runner.ts and lib/server/decisions/llm.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta; correction applied: Models figure text rewritten for one card per kind of model, checked against components/admin/admin-models-dashboard.tsx; 2 screenshot(s) recaptured on 2026-11-17 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-1001 Smart Fill decision passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-970 changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 23,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts); agent:claude-code (MIN-954: sentence on Numo's model on minddy Cloud in #models, source audit against lib/server/assistant/conversation-config.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954 model roles: #models, #models-file, #decision-model and #smart-fill-relations rewritten for one model per role, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot still shows the former category cards and needs a recapture); agent:claude-code (MIN-954: recommended models and routing shortcuts removed from #models and #models-file, checked against components/admin/admin-models-dashboard.tsx and lib/ai-model-config-file.ts); agent:claude-code (MIN-980: decision engine switch in #decision-model, per-member decision model and the models file's decision engine in #models-file, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot does not show the new switch and was not recaptured); agent:claude-code (MIN-1001: Smart Fill leaves the decision model out of #decision-model, source audit against lib/server/decisions/runner.ts and lib/server/decisions/llm.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta; correction applied: Models figure text rewritten for one card per kind of model, checked against components/admin/admin-models-dashboard.tsx; 2 screenshot(s) recaptured on 2026-11-17 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (Accounts tab reworded, mirrored from en revision 23: article text unchanged, labels checked against messages/es.json; instance-administration-flow recaptured in es and reviewed; agent review, not human acceptance)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-1001 Smart Fill decision passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-970 changed passage; self-reviewed; agent review, not human acceptance); agent:claude-code (es text unchanged; figure alt and caption reread against the new capture; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "authentication-and-email",
@@ -82,9 +82,9 @@
       "src": "/documentation/es/instance-administration-overview.png",
       "alt": "Pestaña Cuentas con el número de cuentas y la búsqueda de una cuenta por su correo exacto.",
       "caption": "Cuentas muestra el número de cuentas y la búsqueda de soporte; la captura procede de una instancia de demostración.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
-      "capturedAt": "2026-11-17",
+      "capturedAt": "2026-11-27",
       "viewport": [
         1488,
         1148
@@ -99,7 +99,7 @@
       "src": "/documentation/es/instance-administration-models.png",
       "alt": "Pestaña Modelos con una tarjeta por tipo de modelo: modelo de lenguaje, embeddings, voz y decisiones.",
       "caption": "Modelos muestra un modelo por tipo para toda la instancia. No se cambió ningún ajuste de modelo ni de proveedor para esta captura.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-17",
       "viewport": [
@@ -116,7 +116,7 @@
       "src": "/documentation/es/instance-administration-instance.png",
       "alt": "Pestaña Instancia con el origen de cada variable, una clave de OpenRouter enmascarada definida aquí y las direcciones de administradores del archivo.",
       "caption": "Instancia muestra de dónde viene cada valor; los secretos solo muestran sus últimos caracteres. Esta captura procede de una instancia autoalojada local desechable.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
