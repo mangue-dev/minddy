@@ -17,6 +17,8 @@ import { useDraggable } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { SmartFillReveal } from "@/components/smart-fill-reveal";
+import type { SmartFillRevealEntry } from "@/lib/smart-fill-reveal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useIssueMenuActionsWithNavigation, type IssueMenuSelection } from "@/components/use-issue-menu-actions";
@@ -1113,6 +1115,22 @@ const IssueCardContent = memo(function IssueCardContent({
   ]);
   lastMenuActions.current = menuActions;
 
+  // An untitled creation shows its description, muted, until Smart Fill has
+  // written the title.
+  const renderSmartFillPlaceholder = ({ placeholder, description }: SmartFillRevealEntry) => (
+    <IssueCardFace
+      issue={description ? { ...placeholder, title: "" } : placeholder}
+      description={description}
+      projectKey={projectKey}
+      project={project}
+      memberMap={memberMap}
+      categoryMap={categoryMap}
+      objectiveMap={objectiveMap}
+      parentNumber={parent?.number}
+      inCurrentCycle={inCurrentCycle}
+    />
+  );
+
   return (
     <div
       ref={setCardRef}
@@ -1190,7 +1208,13 @@ const IssueCardContent = memo(function IssueCardContent({
             menuOpen={menuOpen}
           />
         );
-        return body;
+        // A Smart Fill creation shows its empty face, then sweeps to the
+        // filled card (MIN-1032); every other card renders its body as is.
+        return (
+          <SmartFillReveal issue={issue} renderPlaceholder={renderSmartFillPlaceholder}>
+            {body}
+          </SmartFillReveal>
+        );
       })()}
       <IssueContextMenu
         position={menuPosition}

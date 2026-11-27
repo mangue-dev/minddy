@@ -5,6 +5,7 @@ import { applyPendingIssues, issueWrites } from "./optimistic/issue-writes";
 import type { GlobalBoardResponse, Issue } from "./types";
 import type { UndoRecord } from "./undo/undo-context";
 import { GLOBAL_BOARD_KEY } from "./query-keys";
+import { getSmartFillReveal } from "./smart-fill-reveal";
 
 const mocks = vi.hoisted(() => ({
   updateIssue: vi.fn(),
@@ -200,6 +201,53 @@ describe("issue creation", () => {
     fail(new Error("Quota"));
     await vi.waitFor(() => expect(mocks.toastError).toHaveBeenCalled());
     expect(projectRows().map((row) => row.id)).toEqual(["issue"]);
+    expect(record).not.toHaveBeenCalled();
+  });
+  it("places an empty Smart Fill card at once, freezes it, then reveals the filled row", async () => {
+    let finish!: (row: Issue) => void;
+    mocks.createIssue.mockReturnValue(new Promise<Issue>((resolve) => { finish = resolve; }));
+    const card = await writers().createIssue("project", {
+      title: "",
+      description: "## Export **fails** on long reports\nMore detail.",
+      smart_fill: true,
+    } as never);
+    // The description's first line stands in for the title Smart Fill writes.
+    expect(card).toMatchObject({ title: "Export fails on long reports", priority: "none", effort: null });
+    expect(projectRows().map((row) => row.id)).toContain(card!.id);
+    expect(boardRows().map((row) => row.id)).toContain(card!.id);
+    // The row is born with the card's id, so the echo and the POST land on it.
+    expect(mocks.createIssue.mock.calls[0][1]).toMatchObject({ id: card!.id, smart_fill: true });
+    // The card itself shows the description, muted, until the title is written.
+    expect(getSmartFillReveal(card!.id)).toMatchObject({
+      phase: "filling",
+      placeholder: { title: card!.title },
+      description: "## Export **fails** on long reports\nMore detail.",
+    });
+
+    finish(issue({ id: card!.id, number: 7, title: "PDF export fails past 40 pages", priority: "high" }));
+    await vi.waitFor(() => expect(record).toHaveBeenCalled());
+    expect(projectRows().find((row) => row.id === card!.id)).toMatchObject({
+      title: "PDF export fails past 40 pages",
+      priority: "high",
+      number: 7,
+    });
+    // The reveal plays from the frozen placeholder, not from the filled row.
+    expect(getSmartFillReveal(card!.id)).toMatchObject({
+      phase: "revealing",
+      placeholder: { title: "Export fails on long reports" },
+    });
+  });
+
+  it("removes the Smart Fill card and its reveal when the POST fails", async () => {
+    let fail!: (error: Error) => void;
+    mocks.createIssue.mockReturnValue(new Promise((_resolve, reject) => { fail = reject; }));
+    const card = await writers().createIssue("project", { title: "New", smart_fill: true } as never);
+    // A titled creation shows its title: no description stands in for it.
+    expect(getSmartFillReveal(card!.id)?.description).toBeNull();
+    fail(new Error("Quota"));
+    await vi.waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith("Quota"));
+    expect(projectRows().map((row) => row.id)).toEqual(["issue"]);
+    expect(getSmartFillReveal(card!.id)).toBeUndefined();
     expect(record).not.toHaveBeenCalled();
   });
 });

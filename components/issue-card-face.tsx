@@ -35,6 +35,7 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier, type IssueEffort, type IssuePriority, type IssueStatus } from "@/lib/issue-constants";
 import { planProgress, type PlanProgress } from "@/lib/plan";
+import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
 import type {
@@ -315,6 +316,20 @@ function IssueCardPullRequest({ state, number }: { state: IssuePr["state"]; numb
   );
 }
 
+/** The description's first lines, in the style cards had before MIN-987:
+    smaller than the title and muted. Plain text only: typed mentions need a
+    resolver too heavy for this module. */
+function IssueCardDescription({ description }: { description: string }) {
+  // Three truncated lines need no more than the first 400 characters.
+  const parts = plainMarkdownParts(description.slice(0, 400));
+  if (!parts.length) return null;
+  return (
+    <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+      {parts.filter((part) => typeof part === "string")}
+    </p>
+  );
+}
+
 export interface IssueCardFaceSlots {
   /** Who filed the issue: an integration's indicator. */
   integration?: ReactNode;
@@ -358,6 +373,11 @@ export interface IssueCardFaceProps {
   /** A menu or picker of this card is open: the card keeps its hover tint. */
   menuOpen?: boolean;
   commentFollowUp?: CommentFollowUp | null;
+  /** The description, shown under the title. Only the card of a Smart Fill
+      creation passes it, while Smart Fill has yet to write the title
+      (MIN-1032): board cards otherwise show the title alone (MIN-987), and
+      `IssueCardIssue` does not carry the description at all. */
+  description?: string | null;
   slots?: IssueCardFaceSlots;
 }
 
@@ -375,6 +395,7 @@ export function IssueCardFace({
   selected,
   menuOpen,
   commentFollowUp,
+  description,
   slots,
 }: IssueCardFaceProps) {
   const t = useTranslations("IssueUI");
@@ -486,7 +507,16 @@ export function IssueCardFace({
 
       {/* The title alone, two lines at most, tight to the row above: the
           description stays in the side panel (MIN-987). */}
-      <TruncatedText text={issue.title} className="-mt-1 line-clamp-2 text-sm font-semibold leading-snug" />
+      {description ? (
+        <div className="-mt-1 flex flex-col gap-0.5">
+          {issue.title && (
+            <TruncatedText text={issue.title} className="line-clamp-2 text-sm font-semibold leading-snug" />
+          )}
+          <IssueCardDescription description={description} />
+        </div>
+      ) : (
+        <TruncatedText text={issue.title} className="-mt-1 line-clamp-2 text-sm font-semibold leading-snug" />
+      )}
 
       {/* Indicators — spread edge-to-edge: status · priority · effort · category */}
       {/* Last line of a card without objective or due date: 4px more keeps

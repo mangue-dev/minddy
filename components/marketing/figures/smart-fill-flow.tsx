@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -19,13 +19,8 @@ import { StatusIndicator } from "@/components/issue-indicators";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { cn } from "@/lib/utils";
 import { DATE_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
-import {
-  IssueCardAssigneeAvatar,
-  IssueCardCategories,
-  IssueCardEffort,
-  IssueCardFace,
-  IssueCardPriority,
-} from "@/components/issue-card-face";
+import { IssueCardAssigneeAvatar, IssueCardFace } from "@/components/issue-card-face";
+import { SmartFillSweep } from "@/components/smart-fill-sweep";
 import { ProjectOrb } from "@/components/project-orb";
 import { SmartAssignAvatar, SmartFillAvatar } from "@/components/actor-avatars";
 import type { IssueCardIssue } from "@/lib/types";
@@ -35,11 +30,11 @@ import { FIGURE_CATEGORIES, FIGURE_MEMBERS, FIGURE_PROJECT_KEY, figureIssue, use
 /**
  * The AI chapter's figure, on a loop: someone types a problem in the issue
  * composer, the issue is created empty, Smart Fill writes its title and
- * properties, then Smart Assign picks who takes it. The card leaves, and the
- * composer comes back with the next of five examples. The composer is drawn
- * after the app's own `create-issue-dialog.tsx`; the card is the
- * app's `IssueCardFace`, its empty assignee showing Smart Assign as the app
- * does when the project has it on.
+ * properties under the app's own sweep (MIN-1032), then Smart Assign picks
+ * who takes it. The card leaves, and the composer comes back with the next of
+ * five examples. The composer is drawn after the app's own
+ * `create-issue-dialog.tsx`; the card is the app's `IssueCardFace`, its empty
+ * assignee showing Smart Assign as the app does when the project has it on.
  */
 
 const AURORA_ORB = "bdd736ea-c04b-49f0-9217-6965c2339364";
@@ -102,17 +97,14 @@ const EXAMPLES: readonly Example[] = [
   },
 ];
 
-/** typing → created (empty card) → filled (Smart Fill) → assigned (Smart Assign) → leaving. */
+/** typing → created (empty card, Smart Fill at work) → filled (the sweep) → assigned (Smart Assign) → leaving. */
 type Phase = "typing" | "created" | "filled" | "assigned" | "leaving";
 
 const CHAR_MS = 32;
-/** Smart Fill sets the title, then the priority, the effort and the category, one after another. */
-const FILL_STEPS = 4;
-const FILL_STEP_MS = 320;
-/** How long each phase lasts once reached. */
+/** How long each phase lasts once reached; `filled` holds the sweep. */
 const PHASE_MS: Record<Exclude<Phase, "typing">, number> = {
-  created: 1100,
-  filled: 1700,
+  created: 1400,
+  filled: 2100,
   assigned: 2200,
   leaving: 700,
 };
@@ -214,7 +206,7 @@ function Composer({ text, typed, number }: { text: string; typed: number; number
   );
 }
 
-/** A value Smart Fill or Smart Assign just set: it fades in where it is, without moving. */
+/** The assignee Smart Assign just set: it fades in where it is, without moving. */
 function Landed({ value, children }: { value: string; children: ReactNode }) {
   return (
     <motion.span
@@ -229,31 +221,6 @@ function Landed({ value, children }: { value: string; children: ReactNode }) {
   );
 }
 
-/** Follows its content's height, so the card grows smoothly as Smart Fill writes it. */
-function AutoHeight({ children, className }: { children: ReactNode; className?: string }) {
-  const inner = useRef<HTMLDivElement | null>(null);
-  const [height, setHeight] = useState<number | "auto">("auto");
-  useLayoutEffect(() => {
-    const el = inner.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => setHeight(el.offsetHeight));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return (
-    <motion.div
-      initial={false}
-      animate={{ height }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="overflow-hidden rounded-2xl"
-    >
-      <div ref={inner} className={className}>
-        {children}
-      </div>
-    </motion.div>
-  );
-}
-
 export function SmartFillFlow() {
   const t = useTranslations("Landing");
   const tField = useTranslations("Field");
@@ -264,7 +231,8 @@ export function SmartFillFlow() {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("typing");
   const [typed, setTyped] = useState(0);
-  const [fillStep, setFillStep] = useState(0);
+  /** The sweep of this example is over: the filled card shows as is. */
+  const [swept, setSwept] = useState(false);
 
   const example = EXAMPLES[index];
   const description = t(example.description);
@@ -280,8 +248,7 @@ export function SmartFillFlow() {
     return () => io.disconnect();
   }, []);
 
-  // One timer drives the loop: a letter at a time, Smart Fill a field at a
-  // time, then each phase in turn.
+  // One timer drives the loop: a letter at a time, then each phase in turn.
   useEffect(() => {
     if (reduced || !visible) return;
     let delay: number;
@@ -294,9 +261,6 @@ export function SmartFillFlow() {
         delay = TYPING_HOLD_MS;
         next = () => setPhase("created");
       }
-    } else if (phase === "filled" && fillStep < FILL_STEPS) {
-      delay = fillStep === 0 ? 450 : FILL_STEP_MS;
-      next = () => setFillStep(fillStep + 1);
     } else {
       delay = PHASE_MS[phase];
       next = {
@@ -306,40 +270,50 @@ export function SmartFillFlow() {
         leaving: () => {
           setIndex((index + 1) % EXAMPLES.length);
           setTyped(0);
-          setFillStep(0);
+          setSwept(false);
           setPhase("typing");
         },
       }[phase];
     }
     const id = window.setTimeout(next, delay);
     return () => window.clearTimeout(id);
-  }, [description.length, fillStep, index, phase, reduced, typed, visible]);
+  }, [description.length, index, phase, reduced, typed, visible]);
 
   // Reduced motion: the first example, filled and assigned.
   const shown: Phase = reduced ? "assigned" : phase;
-  const step = reduced || shown === "assigned" || shown === "leaving" ? FILL_STEPS : shown === "filled" ? fillStep : 0;
+  const filled = shown !== "created";
   const assigned = shown === "assigned" || shown === "leaving";
   const assignee = assigned ? FIGURE_MEMBERS[example.assignee] : null;
-  const { priority, effort, category_ids } = example.fields;
 
-  const issue = useMemo(
-    () =>
-      figureIssue({
+  const face = (issueFilled: boolean) => (
+    <IssueCardFace
+      issue={figureIssue({
         number: example.number,
-        // Smart Fill writes the title from the description, as in the app;
-        // until then the description stands in as the title (MIN-987).
-        title: step >= 1 ? t(example.title) : description,
+        // Until Smart Fill has written the title, the card shows the
+        // description, muted, as the app does (MIN-1032).
+        title: issueFilled ? t(example.title) : "",
         status: "todo",
-        priority: step >= 2 ? priority : "none",
-        effort: step >= 3 ? effort : null,
-        category_ids: step >= 4 ? category_ids : [],
+        priority: issueFilled ? example.fields.priority : "none",
+        effort: issueFilled ? example.fields.effort : null,
+        category_ids: issueFilled ? example.fields.category_ids : [],
         assignee_id: assignee?.user_id ?? null,
-      }),
-    [assignee, category_ids, description, effort, example, priority, step, t],
+      })}
+      description={issueFilled ? null : description}
+      projectKey={FIGURE_PROJECT_KEY}
+      memberMap={memberMap}
+      categoryMap={categoryMap}
+      slots={{
+        assignee: (
+          <Landed value={assignee?.user_id ?? "none"}>
+            <IssueCardAssigneeAvatar assignee={assignee} smartAssign emptyLabel={tField("smartAssign")} />
+          </Landed>
+        ),
+      }}
+    />
   );
 
   const pill =
-    shown === "filled" ? (
+    shown === "created" || shown === "filled" ? (
       <ActorPill key="fill" avatar={<SmartFillAvatar className="size-5" />}>
         Smart Fill
       </ActorPill>
@@ -381,36 +355,13 @@ export function SmartFillFlow() {
             }
             className="relative w-[min(100%,24rem)]"
           >
-            <AutoHeight className={cn("rounded-2xl", pill && FRESH_CARD)}>
-              <IssueCardFace
-                issue={issue}
-                projectKey={FIGURE_PROJECT_KEY}
-                memberMap={memberMap}
-                categoryMap={categoryMap}
-                slots={{
-                  assignee: (
-                    <Landed value={assignee?.user_id ?? "none"}>
-                      <IssueCardAssigneeAvatar assignee={assignee} smartAssign emptyLabel={tField("smartAssign")} />
-                    </Landed>
-                  ),
-                  priority: (
-                    <Landed value={issue.priority}>
-                      <IssueCardPriority value={issue.priority} />
-                    </Landed>
-                  ),
-                  effort: (
-                    <Landed value={issue.effort ?? "none"}>
-                      <IssueCardEffort value={issue.effort} />
-                    </Landed>
-                  ),
-                  categories: (
-                    <Landed value={issue.category_ids.join() || "none"}>
-                      <IssueCardCategories categories={[...categoryMap.values()]} selectedIds={issue.category_ids} />
-                    </Landed>
-                  ),
-                }}
-              />
-            </AutoHeight>
+            {shown === "filled" && !swept ? (
+              <SmartFillSweep revealing placeholder={face(false)} onDone={() => setSwept(true)}>
+                {face(true)}
+              </SmartFillSweep>
+            ) : (
+              <div className={cn("rounded-2xl", assigned && pill && FRESH_CARD)}>{face(filled)}</div>
+            )}
             <AnimatePresence>{pill}</AnimatePresence>
           </motion.div>
         )}
