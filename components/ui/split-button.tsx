@@ -11,17 +11,20 @@ import {
   DropdownMenuTrigger,
 } from "./dropdown-menu"
 
-type SplitButtonVariant = "default" | "outline" | "destructive"
-type SplitButtonSize = "sm" | "default" | "lg"
+type SplitButtonVariant = "default" | "outline" | "destructive" | "ghost"
+/** `icon-sm` is an icon-only action, as in a header's row of icon buttons. */
+type SplitButtonSize = "icon-sm" | "sm" | "default" | "lg"
 
 /** The chevron trigger is a compact icon-button matching the action's height. */
 const TRIGGER_SIZE: Record<SplitButtonSize, "icon-sm" | "icon" | "icon-lg"> = {
+  "icon-sm": "icon-sm",
   sm: "icon-sm",
   default: "icon",
   lg: "icon-lg",
 }
 
-const TRIGGER_WIDTH: Record<SplitButtonSize, "w-8" | "w-9" | "w-10"> = {
+const TRIGGER_WIDTH: Record<SplitButtonSize, "w-5" | "w-8" | "w-9" | "w-10"> = {
+  "icon-sm": "w-5",
   sm: "w-8",
   default: "w-9",
   lg: "w-10",
@@ -83,7 +86,9 @@ export function SplitButton({
   ...actionProps
 }: SplitButtonProps) {
   const resolvedVariant: SplitButtonVariant =
-    variant === "outline" || variant === "destructive" ? variant : "default"
+    variant === "outline" || variant === "destructive" || variant === "ghost"
+      ? variant
+      : "default"
 
   return (
     <div

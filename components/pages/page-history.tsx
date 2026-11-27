@@ -93,10 +93,14 @@ export function PageHistorySheet({
   tabRequest = 0,
   onOpenChange,
   onRestored,
+  liveBlockIds,
 }: {
   projectId: string;
   pageId: string;
   open: boolean;
+  /** The blocks of the document on screen, for the activity to tell a live
+      thread from a detached one. */
+  liveBlockIds?: ReadonlySet<string>;
   /** Which question opened the panel: comments/activity, or saved versions. */
   initialTab?: PageHistoryTab;
   /** Changes on every header request, so asking again for the tab already
@@ -232,6 +236,7 @@ export function PageHistorySheet({
                 projectId={projectId}
                 pageId={pageId}
                 currentUserId={user?.id ?? null}
+                liveBlockIds={liveBlockIds}
                 enabled={open && tab === "activity"}
               />
             </TabsContent>

@@ -1536,7 +1536,7 @@
     "file": "lib/realtime-provider.tsx",
     "operation": "rpc",
     "resource": "realtime_topics_changed_since",
-    "line": 108,
+    "line": 109,
     "storage": false
   },
   {
@@ -1767,98 +1767,98 @@
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 121,
+    "line": 122,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 285,
+    "line": 286,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 369,
+    "line": 370,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 390,
+    "line": 391,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 406,
+    "line": 407,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 431,
+    "line": 432,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 558,
+    "line": 559,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 566,
+    "line": 567,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 568,
+    "line": 569,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 574,
+    "line": 575,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 581,
+    "line": 582,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 583,
+    "line": 584,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 849,
+    "line": 853,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "user_ai_decision_preferences",
-    "line": 871,
+    "line": 876,
     "storage": false
   },
   {
@@ -2775,14 +2775,14 @@
     "file": "lib/server/assistant/model-preferences.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 18,
+    "line": 34,
     "storage": false
   },
   {
     "file": "lib/server/assistant/model-preferences.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 82,
+    "line": 116,
     "storage": false
   },
   {
@@ -3328,35 +3328,21 @@
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 165,
+    "line": 167,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 169,
+    "line": 171,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 178,
-    "storage": false
-  },
-  {
-    "file": "lib/server/comment-store.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 185,
-    "storage": false
-  },
-  {
-    "file": "lib/server/comment-store.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 186,
+    "line": 180,
     "storage": false
   },
   {
@@ -3369,113 +3355,127 @@
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
-    "resource": "comments",
-    "line": 238,
+    "resource": null,
+    "line": 188,
+    "storage": false
+  },
+  {
+    "file": "lib/server/comment-store.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 189,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 245,
+    "line": 240,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 246,
+    "line": 247,
+    "storage": false
+  },
+  {
+    "file": "lib/server/comment-store.ts",
+    "operation": "from",
+    "resource": "comments",
+    "line": 248,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "rpc",
     "resource": "sync_github_issue_comment_atomic",
-    "line": 263,
+    "line": 265,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 267,
+    "line": 269,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 278,
+    "line": 280,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "rpc",
     "resource": "sync_github_issue_comment_encrypted_url",
-    "line": 291,
+    "line": 293,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "rpc",
     "resource": "sync_github_issue_comment_atomic",
-    "line": 294,
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 317,
+    "line": 319,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 321,
+    "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 327,
+    "line": 329,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 334,
+    "line": 336,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 353,
+    "line": 355,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 357,
+    "line": 359,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 368,
+    "line": 370,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 382,
+    "line": 384,
     "storage": false
   },
   {
@@ -7773,112 +7773,98 @@
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 151,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "create_project_invitation_encrypted_role_guarded",
-    "line": 184,
+    "line": 185,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "create_project_invitation_role_guarded",
-    "line": 198,
+    "line": 199,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 310,
+    "line": 318,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 370,
+    "line": 378,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 465,
+    "line": 473,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 501,
+    "line": 509,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 514,
+    "line": 522,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "update_project_member_role_guarded",
-    "line": 574,
+    "line": 582,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "update_project_invitation_role_guarded",
-    "line": 615,
+    "line": 623,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "rpc",
     "resource": "transfer_project_ownership_guarded",
-    "line": 652,
+    "line": 660,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 702,
+    "line": 710,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 742,
+    "line": 750,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 201,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mention-access.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 206,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mention-access.ts",
-    "operation": "from",
-    "resource": "project_members",
-    "line": 213,
+    "line": 210,
     "storage": false
   },
   {
@@ -7891,29 +7877,43 @@
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
-    "resource": "attachments",
-    "line": 221,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mention-access.ts",
-    "operation": "from",
-    "resource": "agent_routines",
-    "line": 226,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mention-access.ts",
-    "operation": "from",
-    "resource": "cycles",
-    "line": 232,
+    "resource": "project_members",
+    "line": 222,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 251,
+    "line": 224,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-access.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 230,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-access.ts",
+    "operation": "from",
+    "resource": "agent_routines",
+    "line": 235,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-access.ts",
+    "operation": "from",
+    "resource": "cycles",
+    "line": 241,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-access.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 260,
     "storage": false
   },
   {
@@ -8662,14 +8662,14 @@
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 243,
+    "line": 288,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 284,
+    "line": 329,
     "storage": false
   },
   {
@@ -9663,7 +9663,14 @@
     "file": "lib/server/page-comments.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 97,
+    "line": 95,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-comments.ts",
+    "operation": "from",
+    "resource": "pages",
+    "line": 246,
     "storage": false
   },
   {

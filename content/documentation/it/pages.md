@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 24,
+  "revision": 27,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
@@ -81,7 +81,8 @@
       "lib/pages-subpage.ts",
       "lib/pages-export.ts",
       "components/public-page-body.tsx",
-      "components/pages/page-comment-dialog.tsx",
+      "components/pages/page-comment-thread.tsx",
+      "components/pages/page-comment-margin.tsx",
       "lib/keyboard/shortcuts.ts",
       "components/editor/find-bar.tsx",
       "components/editor/find-replace.ts",
@@ -114,10 +115,10 @@
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 27,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude (MIN-1002: block comment thread rewritten against components/pages/page-comment-thread.tsx, components/pages/block-comments.ts and components/pages/page-comment-layer.tsx, and walked through in a browser on a local build: popover under the passage, badge and passage clicks, unsent text, phone sheet; thread resolution and margin threads then documented against components/pages/page-comment-margin.tsx and components/pages/page-activity.tsx, walked through at a wide and a narrow window; existing figures unaffected and kept)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude (it comment-thread sentences translated from en revision 25 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-26"
   },
   "related": [
     "notifications-and-inbox",
@@ -154,7 +155,7 @@
       "src": "/documentation/it/page-create-menu.png",
       "alt": "Menu di creazione con Nuova pagina e Nuovo database.",
       "caption": "Usa i controlli delle pagine del progetto per scegliere un documento o un database.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -170,7 +171,7 @@
       "src": "/documentation/it/page-editor.png",
       "alt": "Pagina dimostrativa con titoli, paragrafi, caselle delle attività e una menzione a un ticket.",
       "caption": "Titoli, blocchi di attività e la menzione AUR-2 organizzano la pagina. Il contenuto è un esempio dimostrativo.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -187,7 +188,7 @@
       "src": "/documentation/it/page-comments.png",
       "alt": "Attività della pagina ancora senza eventi e campo del commento vuoto.",
       "caption": "Leggi l’attività e scrivi un commento nel campo. In questo esempio non è stato inviato alcun commento.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -204,7 +205,7 @@
       "src": "/documentation/it/page-file-states.png",
       "alt": "Pagina dimostrativa con un caricamento incompleto e un file salvato di 67 byte con il comando Scarica.",
       "caption": "Controlla lo stato effettivo del file: il secondo allegato è disponibile, il primo caricamento incompleto no.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -220,7 +221,7 @@
       "src": "/documentation/it/page-history-preview.png",
       "alt": "Scheda Versioni con uno stato precedente espanso, autore, Ripristina e avviso di conservazione per 30 giorni.",
       "caption": "Esamina l’anteprima di uno stato salvato e confrontalo con la pagina attuale prima di ripristinarlo.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -236,7 +237,7 @@
       "src": "/documentation/it/page-publish.png",
       "alt": "Finestra di pubblicazione con Privato selezionato e opzioni con password o link.",
       "caption": "Privato mantiene la pagina nel progetto. Controlla chi deve leggerla prima di cambiare la pubblicazione.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -253,7 +254,7 @@
       "src": "/documentation/it/page-export.png",
       "alt": "Menu di esportazione del documento con Markdown (.md) e Stampa / PDF.",
       "caption": "Scegli Markdown per scaricare il documento oppure Stampa / PDF per aprire la vista di stampa.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -270,7 +271,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -368,7 +369,7 @@ Le esportazioni Markdown e le letture delle pagine da parte degli agenti conserv
 
 ## Discutere una pagina e gestire conflitti {#page-comments-and-collaboration}
 
-Apri una pagina del progetto e i suoi controlli dei commenti. Seleziona il contenuto pertinente quando crei un commento ancorato, spiega la domanda o modifica proposta e usa le menzioni per coinvolgere un membro. Un lettore può commentare se il proprietario ha attivato **Può commentare** per lui. Rispondi nella discussione per mantenere la decisione con il contesto che riguarda. Risolvila quando la domanda è stata effettivamente affrontata. La discussione di un blocco si apre in una finestra di dialogo sul computer e in un pannello inferiore sul telefono, invece che accanto al blocco: mostra il passaggio citato, le discussioni esistenti con le loro risposte e un campo per un nuovo commento. Aprila dal badge dei commenti del blocco, da **Commento** nella barra di selezione o dal menu del blocco. Sul computer, passando il puntatore su un blocco senza commenti compare alla sua destra un pulsante **Commenta questo blocco**, all’altezza della maniglia del blocco; un blocco commentato mostra lì il suo badge dei commenti. Passando il puntatore su quel pulsante, il suo blocco viene evidenziato come una selezione. Questo pulsante non compare sul telefono.
+Apri una pagina del progetto e i suoi controlli dei commenti. Seleziona il contenuto pertinente quando crei un commento ancorato, spiega la domanda o modifica proposta e usa le menzioni per coinvolgere un membro. Un lettore può commentare se il proprietario ha attivato **Può commentare** per lui. Rispondi nella discussione per mantenere la decisione con il contesto che riguarda. Quando la domanda di una discussione è risolta, scegli **Risolvi**, accanto al suo campo di risposta o nel menu **Azioni del commento** di uno dei suoi commenti, che si apre anche con un clic destro sul commento: la discussione lascia la pagina e resta nell’attività della pagina, contrassegnata come **Risolta**, dove **Riapri** la rimette al suo posto. Chiunque possa commentare può risolvere o riaprire una discussione. Eliminando il primo commento di una discussione elimini anche le sue risposte. Sul computer, la discussione di un blocco si apre in un piccolo pannello sotto il passaggio a cui si riferisce, e puoi continuare a leggere e modificare la pagina intorno. Sul telefono si apre in un pannello inferiore che mostra anche il passaggio citato. Quando la finestra lascia abbastanza spazio a destra del testo, le discussioni aperte compaiono lì come schede accanto ai loro blocchi e sostituiscono i badge: fai clic su una scheda o sul suo passaggio per aprirla e rispondere. Il pulsante **Commenti** nell'intestazione della pagina ha allora un menu: **Mostra i commenti accanto al testo** disattiva o riattiva le schede, per tutte le pagine in questo browser. Senza le schede tornano i badge. Puntando un passaggio commentato si evidenzia la sua scheda. Un passaggio commentato è sottolineato e colorato di giallo nella pagina, in modo più marcato finché la sua discussione è aperta o il puntatore è sulla sua scheda. Un commento su un blocco intero ne marca tutto il testo, e un blocco senza testo, come un separatore, un'immagine o un'equazione, riceve un contorno giallo. Fai clic sul passaggio o sul badge dei commenti del blocco per aprire la discussione; fai di nuovo clic sul badge, premi Esc o fai clic altrove per chiuderla. Una discussione con un testo non ancora inviato resta aperta quando fai clic altrove. Per scrivere un commento, scegli **Commento** nella barra di selezione o nel menu del blocco: il campo si apre sotto il passaggio selezionato, che resta evidenziato mentre scrivi. Sul computer, passando il puntatore su un blocco senza commenti compare alla sua destra un pulsante **Commenta questo blocco**, all’altezza della maniglia del blocco; un blocco commentato mostra lì il suo badge dei commenti. Passando il puntatore su quel pulsante, il suo blocco viene evidenziato come una selezione. Questo pulsante non compare sul telefono.
 
 Gli avatar di presenza identificano chi sta guardando la pagina. Mentre qualcuno modifica, il suo cursore e la sua selezione compaiono nel corpo e nel titolo, in un colore proprio e con il suo nome. Il cursore di un lettore non viene mostrato. Un cursore indica dove qualcuno sta lavorando, non che il suo testo sia salvato: l’indicatore di salvataggio riflette solo le tue modifiche.
 

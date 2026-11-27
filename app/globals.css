@@ -2564,14 +2564,18 @@ html.marquee-drawing * {
   .page-editor .drag-handle { transition: none; }
 }
 
+/* The reserves are the document's own. The margin cards live in the editor's
+   box (components/pages/page-comment-margin.tsx) and their fields are editors
+   too: with a reserve they would be wider than their card and scroll
+   sideways. */
 :root[data-app-layout="desktop"] {
-  .page-editor[data-gutter] .ProseMirror {
+  .page-editor[data-gutter] .ProseMirror:not(.page-comment-margin *) {
     padding-left: 96px;
     margin-left: -96px;
   }
   /* The part of a page column's right reserve (components/pages/page-column.ts)
      where the hovered block's comment button sits. */
-  .page-editor[data-comment-gutter] .ProseMirror {
+  .page-editor[data-comment-gutter] .ProseMirror:not(.page-comment-margin *) {
     padding-right: 40px;
     margin-right: -40px;
   }
@@ -2758,6 +2762,13 @@ html.marquee-drawing * {
    margin and its passages say it. */
 .page-block-commented {
   position: relative;
+}
+/* A block whose first comment is being written has no thread yet, and already
+   shows the passage that comment will quote. */
+.page-block-commented,
+.page-block-comment-open,
+/* The badge of a block with no text stands beside it, not inside. */
+.page-block-comment-host {
   /* The tint behind a commented passage, and the badge's ink. */
   --page-comment-accent: var(--page-ink-amber);
   --page-comment-ink: var(--page-color-amber);
@@ -2774,9 +2785,38 @@ html.marquee-drawing * {
   /* One unbroken line, drawn over the descenders of y, g or q. */
   text-decoration-skip-ink: none;
   border-radius: 0.2em;
-  background-color: color-mix(in oklab, var(--page-comment-accent) 26%, transparent);
+  background-color: color-mix(in oklab, var(--page-comment-accent) 40%, transparent);
+  transition: background-color 120ms ease-out;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
+}
+
+/* The passages of the thread that is open (MIN-1002): a stronger tint, so the
+   popover under them says what it is about without quoting it. While a
+   comment is being written, only the passage it will quote. The passages of
+   the margin card under the pointer take the same tint: a card says which
+   text it is about before it is opened. */
+.page-block-comment-open:not(.page-block-comment-draft) .page-commented-passage,
+.page-block-comment-hover .page-commented-passage,
+.page-commented-passage-draft {
+  background-color: color-mix(in oklab, var(--page-comment-accent) 72%, transparent);
+}
+
+/* A commented block with no text to tint (a divider, an image, an equation)
+   is outlined in the same yellow, stronger while its thread is open or its
+   margin card is under the pointer. */
+.page-block-comment-outline {
+  outline: 2px solid color-mix(in oklab, var(--page-comment-accent) 55%, transparent);
+  outline-offset: 3px;
+  border-radius: 0.375rem;
+}
+.page-block-comment-outline.page-block-comment-open,
+.page-block-comment-outline.page-block-comment-hover {
+  outline-color: var(--page-comment-accent);
+}
+hr.page-block-comment-outline {
+  outline: none;
+  border-top: 2px solid var(--page-comment-accent);
 }
 
 /* The BADGE of a commented block: the new-comment button's twin
@@ -2805,6 +2845,11 @@ html.marquee-drawing * {
   }
 }
 
+/* The badge of the open thread stays lit: pressing it closes the thread. */
+.page-block-comment-open .page-block-comment-badge {
+  background-color: color-mix(in oklab, var(--page-comment-accent) 18%, transparent);
+}
+
 .page-block-comment-count {
   position: absolute;
   top: -0.25rem;
@@ -2830,6 +2875,66 @@ html.marquee-drawing * {
 }
 @media (hover: hover) and (pointer: fine) {
   :root:has([data-page-toc]:hover) .page-block-comment-host {
+    visibility: hidden;
+  }
+}
+
+/* THREADS IN THE MARGIN (MIN-1002, components/pages/page-comment-margin.tsx):
+   where the pane has room beside the text, each open thread is a card level
+   with its block. The script writes each card's place; the cards are out of
+   flow, in the editor's own box, and scroll with the document. */
+.page-comment-margin {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  font-size: 0.875rem;
+  /* The margin itself takes no press: only its cards do. */
+  pointer-events: none;
+}
+.page-comment-card {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  pointer-events: auto;
+}
+/* While cards are shown the document's column stands left of centre: the text
+   and its cards are centred together instead of the cards being pushed
+   against the pane's edge, and narrows where the pane cannot hold both
+   (lib/page-comment-margin.ts computes the shift and the width). */
+.page-column {
+  left: calc(var(--page-comment-shift, 0px) * -1);
+  transition: left 200ms ease-out, max-width 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-column { transition: none; }
+}
+/* Cards glide to their place once placed, never from the top of the page. */
+.page-comment-margin[data-placed] .page-comment-card {
+  transition: top 160ms ease-out, background-color 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-comment-margin[data-placed] .page-comment-card { transition: none; }
+}
+/* A card that is not open shows the start of its threads, and fades out
+   where they are cut. */
+.page-comment-card-preview {
+  max-height: 10.5rem;
+  overflow: hidden;
+}
+.page-comment-card[data-clipped] .page-comment-card-preview {
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 2rem), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 2rem), transparent);
+}
+/* The cards say what the badges count: one or the other. */
+.page-editor[data-comment-margin] .page-block-comment-host {
+  display: none;
+}
+/* Like the badges, the cards step aside while the table of contents is open. */
+:root:has([data-page-toc]:focus-within) .page-comment-margin {
+  visibility: hidden;
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:has([data-page-toc]:hover) .page-comment-margin {
     visibility: hidden;
   }
 }

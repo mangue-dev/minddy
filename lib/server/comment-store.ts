@@ -25,7 +25,7 @@ type Result<T> = { data: T | null; error: { code: string; message: string } | nu
 type Query = ReturnType<ReturnType<SupabaseClient["from"]>["select"]>;
 const metadata = new Set(["id", "author_id", "issue_id", "objective_id", "feedback_post_id", "page_id", "project_id",
   "parent_id", "block_id", "created_at", "updated_at", "via_assistant", "via_mcp", "api_key_id", "feedback_user_id",
-  "visibility", "assistant_status", "assistant_tool"]);
+  "visibility", "assistant_status", "assistant_tool", "resolved_at", "resolved_by"]);
 const joins = new Set(["attachments(*)", "feedback_users!feedback_user_id(pseudonym)",
   "feedback_users!feedback_user_id(name,email,pseudonym)", "feedback_users!feedback_user_id(id,name,email,pseudonym)"]);
 const legacyWrites = () => !isContentEncryptionEnabled() && !process.env.MINDDY_DATA_ROOT_KEY;
@@ -120,7 +120,9 @@ class CommentQuery implements PromiseLike<Result<CommentRecord[]>> {
   }
   insert(row: Row) { this.mode = "insert"; this.payload = row; return this; }
   update(row: Row) {
-    if (Object.keys(row).some((key) => !["body", "assistant_status", "assistant_tool", "updated_at"].includes(key))) {
+    // A page thread's resolution is metadata of its root, never content.
+    const resolution = this.table === "page_comments" ? ["resolved_at", "resolved_by"] : [];
+    if (Object.keys(row).some((key) => !["body", "assistant_status", "assistant_tool", "updated_at", ...resolution].includes(key))) {
       throw new Error("Unsupported comment update");
     }
     this.mode = "update"; this.payload = row; return this;

@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-01",
   "compatibility": {
@@ -81,7 +81,8 @@
       "lib/pages-subpage.ts",
       "lib/pages-export.ts",
       "components/public-page-body.tsx",
-      "components/pages/page-comment-dialog.tsx",
+      "components/pages/page-comment-thread.tsx",
+      "components/pages/page-comment-margin.tsx",
       "lib/keyboard/shortcuts.ts",
       "components/editor/find-bar.tsx",
       "components/editor/find-replace.ts",
@@ -114,10 +115,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude (es sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (es context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 26,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude (MIN-1002: block comment thread rewritten against components/pages/page-comment-thread.tsx, components/pages/block-comments.ts and components/pages/page-comment-layer.tsx, and walked through in a browser on a local build: popover under the passage, badge and passage clicks, unsent text, phone sheet; thread resolution and margin threads then documented against components/pages/page-comment-margin.tsx and components/pages/page-activity.tsx, walked through at a wide and a narrow window; existing figures unaffected and kept)",
+    "language": "agent:claude (es sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (es context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance); agent:claude (es comment-thread sentences translated from en revision 25 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-26"
   },
   "related": [
     "notifications-and-inbox",
@@ -152,7 +153,7 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -168,7 +169,7 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -185,7 +186,7 @@
       "src": "/documentation/es/page-comments.png",
       "alt": "Actividad de la página todavía sin eventos y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -202,7 +203,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -218,7 +219,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -234,7 +235,7 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -251,7 +252,7 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -268,7 +269,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -366,7 +367,7 @@ Las exportaciones Markdown y las lecturas de páginas por agentes conservan icon
 
 ## Discutir una página y resolver conflictos {#page-comments-and-collaboration}
 
-Abre una página del proyecto y sus controles de comentarios. Selecciona el contenido relevante al crear un comentario anclado, explica la pregunta o cambio propuesto y utiliza menciones para involucrar a un miembro. Un lector puede comentar si el propietario le ha activado **Puede comentar**. Responde en el hilo para mantener la decisión junto a su contexto. Resuélvelo cuando su pregunta se haya atendido realmente. El hilo de un bloque se abre en un diálogo en un ordenador y en una hoja inferior en un teléfono, en lugar de junto al bloque: muestra el pasaje citado, las discusiones existentes con sus respuestas y un campo para un comentario nuevo. Ábrelo desde la insignia de comentarios del bloque, **Comentar** en la barra de selección o el menú del bloque. En un ordenador, al pasar el puntero sobre un bloque sin comentarios aparece a su derecha un botón **Comentar este bloque**, a la altura del tirador del bloque; un bloque comentado muestra ahí su insignia de comentarios. Al pasar el puntero sobre ese botón, su bloque se resalta como una selección. Este botón no aparece en un teléfono.
+Abre una página del proyecto y sus controles de comentarios. Selecciona el contenido relevante al crear un comentario anclado, explica la pregunta o cambio propuesto y utiliza menciones para involucrar a un miembro. Un lector puede comentar si el propietario le ha activado **Puede comentar**. Responde en el hilo para mantener la decisión junto a su contexto. Cuando la pregunta de un hilo esté resuelta, elige **Resolver**, junto a su campo de respuesta o en el menú **Acciones del comentario** de uno de sus comentarios, que también se abre con un clic derecho sobre el comentario: el hilo sale de la página y se queda en la actividad de la página, marcado como **Resuelto**, donde **Reabrir** lo devuelve a su sitio. Cualquier persona que pueda comentar puede resolver o reabrir un hilo. Al eliminar el primer comentario de un hilo se eliminan sus respuestas. En un ordenador, el hilo de un bloque se abre en un panel flotante bajo el pasaje al que se refiere, y puedes seguir leyendo y editando la página a su alrededor. En un teléfono se abre en una hoja inferior que también muestra el pasaje citado. Cuando la ventana deja suficiente espacio a la derecha del texto, los hilos abiertos aparecen allí como tarjetas junto a sus bloques y sustituyen a las insignias: haz clic en una tarjeta o en su pasaje para abrirla y responder. El botón **Comentarios** de la cabecera de la página tiene entonces un menú: **Mostrar los comentarios junto al texto** desactiva o vuelve a activar las tarjetas, para todas las páginas en este navegador. Sin las tarjetas, vuelven las insignias. Al señalar un pasaje comentado se resalta su tarjeta. Un pasaje comentado aparece subrayado y teñido de amarillo en la página, con más intensidad mientras su hilo está abierto o el puntero está sobre su tarjeta. Un comentario sobre un bloque entero marca todo su texto, y un bloque sin texto, como un divisor, una imagen o una ecuación, recibe un contorno amarillo. Haz clic en el pasaje o en la insignia de comentarios del bloque para abrir el hilo; haz clic de nuevo en la insignia, pulsa Escape o haz clic en otro lugar para cerrarlo. Un hilo con texto que aún no has enviado sigue abierto cuando haces clic en otro lugar. Para escribir un comentario, elige **Comentar** en la barra de selección o en el menú del bloque: el campo se abre bajo el pasaje seleccionado, que sigue resaltado mientras escribes. En un ordenador, al pasar el puntero sobre un bloque sin comentarios aparece a su derecha un botón **Comentar este bloque**, a la altura del tirador del bloque; un bloque comentado muestra ahí su insignia de comentarios. Al pasar el puntero sobre ese botón, su bloque se resalta como una selección. Este botón no aparece en un teléfono.
 
 Los avatares de presencia identifican a las personas que ven la página. Mientras alguien edita, su cursor y su selección aparecen en el cuerpo y en el título, con un color propio y una etiqueta con su nombre. El cursor de un lector no se muestra. Un cursor indica dónde está trabajando alguien, no que su texto esté guardado: el indicador de guardado solo refleja tus propios cambios.
 

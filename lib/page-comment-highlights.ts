@@ -69,6 +69,33 @@ function normalizedCharacters(
 }
 
 /**
+ * A quote as it is searched in the block's collapsed text. A comment that was
+ * just posted still carries the line breaks and indentation of its selection
+ * (a code block), and a long one was cut with an ellipsis the text never had.
+ */
+function searchableQuote(quote: string): string {
+  return quote.replace(/\s+/g, " ").trim().replace(/…$/, "").trimEnd();
+}
+
+/**
+ * The text of a whole block, as inline ranges: one per non-empty text block
+ * it holds, through its containers (lists, a callout, a toggle). A block
+ * with no text (a divider, an image, an equation) has none.
+ */
+export function pageBlockContentRanges(block: Node, blockPos: number): PageCommentHighlightRange[] {
+  const ranges: PageCommentHighlightRange[] = [];
+  const visit = (node: Node, pos: number) => {
+    if (node.isTextblock) {
+      if (node.content.size > 0) ranges.push({ from: pos + 1, to: pos + 1 + node.content.size });
+      return;
+    }
+    node.forEach((child, offset) => visit(child, pos + 1 + offset));
+  };
+  visit(block, blockPos);
+  return ranges;
+}
+
+/**
  * Resolve frozen excerpts back to inline document ranges. Quotes that no
  * longer occur are intentionally ignored: stale comments still mark the block,
  * but must not underline unrelated text after an edit.
@@ -82,7 +109,7 @@ export function pageCommentHighlightRanges(
   const text = characters.map((character) => character.value).join("");
   const ranges: PageCommentHighlightRange[] = [];
 
-  for (const quote of new Set(quotes.map((value) => value.trim()).filter(Boolean))) {
+  for (const quote of new Set(quotes.map(searchableQuote).filter(Boolean))) {
     let searchFrom = 0;
     while (searchFrom <= text.length - quote.length) {
       const match = text.indexOf(quote, searchFrom);
@@ -106,4 +133,10 @@ export function pageCommentHighlightRanges(
   }
 
   return ranges;
+}
+
+/** Whether a frozen excerpt still reads in its block, so the page shows it. */
+export function pageCommentQuoteInBlock(block: Node, quote: string | null | undefined): boolean {
+  const text = quote?.trim();
+  return !!text && pageCommentHighlightRanges(block, 0, [text]).length > 0;
 }

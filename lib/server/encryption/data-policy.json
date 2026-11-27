@@ -2535,11 +2535,13 @@
         "id",
         "page_id",
         "parent_id",
-        "project_id"
+        "project_id",
+        "resolved_by"
       ],
       "timestamp": [
         "created_at",
         "encryption_attempted_at",
+        "resolved_at",
         "updated_at"
       ],
       "encryption_metadata": [

@@ -24,6 +24,7 @@ import {
   addPageCommentApi,
   deletePageCommentApi,
   fetchPageCommentsApi,
+  resolvePageThreadApi,
   updatePageCommentApi,
 } from "@/lib/pages-api";
 import {
@@ -49,6 +50,8 @@ export interface PageCommentsHandle {
   }) => Promise<void>;
   edit: (commentId: string, body: string) => Promise<void>;
   remove: (commentId: string) => Promise<void>;
+  /** Resolve the thread this root opens, or reopen it. */
+  resolve: (rootId: string, resolved: boolean) => Promise<void>;
 }
 
 export function usePageComments({
@@ -121,6 +124,31 @@ export function usePageComments({
     },
     [projectId, pageId, queryClient]
   );
+  const resolve = useCallback<PageCommentsHandle["resolve"]>(
+    async (rootId, resolved) => {
+      const key = pageCommentsKey(pageId);
+      // The thread leaves the page (or comes back) at once; the server's row
+      // replaces this guess, and a refusal puts the previous state back.
+      const previous = queryClient.getQueryData<PageComment[]>(key);
+      await queryClient.cancelQueries({ queryKey: key, exact: true });
+      queryClient.setQueryData<PageComment[]>(key, (comments) =>
+        comments?.map((comment) =>
+          comment.id === rootId
+            ? { ...comment, resolved_at: resolved ? new Date().toISOString() : null, resolved_by: resolved ? authorId : null }
+            : comment
+        )
+      );
+      try {
+        const saved = await resolvePageThreadApi(projectId, pageId, rootId, resolved);
+        await publishCommentWrite<PageComment>(queryClient, key, (comments) => mergeComment(comments, saved, false));
+      } catch (error) {
+        queryClient.setQueryData(key, previous);
+        void queryClient.invalidateQueries({ queryKey: key, exact: true });
+        throw error;
+      }
+    },
+    [projectId, pageId, authorId, queryClient]
+  );
   return {
     comments,
     threads,
@@ -128,5 +156,6 @@ export function usePageComments({
     add,
     edit,
     remove,
+    resolve,
   };
 }

@@ -27,11 +27,9 @@ import { normalizeQuote } from "@/lib/page-comments";
  * What it adds, and which only exists on one page: the ANCHOR (`block_id`) and
  * the frozen extract (`quote`).
  *
- * What he does NOT have either, and that is a choice: the RESOLUTION of a thread. She has
- * meaning on a code review remark — a point to address before
- * merge, and the threads of a pull request already carry it — not on a note
- * left in a doc, which has no deadline to meet. A comment from
- * page is deleted when it no longer exists.
+ * A thread can be RESOLVED (MIN-1002): the state lives on its root, any
+ * member who can comment sets or clears it, and a resolved thread leaves the
+ * page for its activity, where it can be reopened.
  *
  * What he does NOT have, on purpose: attachments. They hang from a
  * ticket, to an objective or to a return (`attachments_parent_ck`), and a
@@ -226,7 +224,69 @@ export async function addPageComment({
 }
 
 /**
- * The threads of a page, in compact markdown — what an agent reads.
+ * Resolve a thread, or reopen it: the same write in both directions.
+ *
+ * The state is carried by the ROOT, whichever message of the thread the
+ * request names. Anyone who can comment in the project can settle a thread,
+ * not only its author, so the write goes through the service client once
+ * access has been checked here.
+ */
+export async function resolvePageThread({
+  pageId,
+  commentId,
+  actorId,
+  resolved,
+}: {
+  pageId: string;
+  commentId: string;
+  actorId: string;
+  resolved: boolean;
+}): Promise<PageCommentResult> {
+  const service = getServiceClient();
+  const { data: page } = await service
+    .from("pages")
+    .select("project_id")
+    .is("deleted_at", null)
+    .eq("id", pageId)
+    .maybeSingle();
+  if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
+
+  const access = await getProjectAccess(actorId, page.project_id as string);
+  if (!access) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  if (!access.canComment) return { ok: false, status: 403, errorKey: "commentNotAllowed" };
+
+  const { data: comment, error: readError } = await commentStore(service, "page_comments", actorId)
+    .select("id, parent_id")
+    .eq("id", commentId)
+    .eq("page_id", pageId)
+    .maybeSingle();
+  if (readError) {
+    console.error("[page-comments] resolve read failed:", readError.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  if (!comment) return { ok: false, status: 404, errorKey: "commentNotFound" };
+
+  const rootId = (comment.parent_id as string | null) ?? (comment.id as string);
+  const { data, error } = await commentStore(service, "page_comments", actorId)
+    .update({
+      resolved_at: resolved ? new Date().toISOString() : null,
+      resolved_by: resolved ? actorId : null,
+    })
+    .eq("id", rootId)
+    .eq("page_id", pageId)
+    .select(COLUMNS)
+    .maybeSingle();
+  if (error) {
+    console.error("[page-comments] resolve failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  if (!data) return { ok: false, status: 404, errorKey: "commentNotFound" };
+  return { ok: true, comment: data as Record<string, unknown> };
+}
+
+/**
+ * The OPEN threads of a page, in compact markdown — what an agent reads.
+ * A resolved thread is a settled debate: noise for whoever comes to write.
  *
  * Rendered by `minddy_get_page`: an agent who rereads a spec must see the
  * ongoing objections, this is often where the real constraint lies.
@@ -245,13 +305,13 @@ export async function openPageThreadsForAgent(
   }[]
 > {
   const { data, error } = await commentStore(client, "page_comments", actorId)
-    .select("id, parent_id, block_id, quote, body, author_id, created_at")
+    .select("id, parent_id, block_id, quote, body, author_id, created_at, resolved_at")
     .eq("page_id", pageId)
     .order("created_at", { ascending: true });
 
   if (error) throw new Error("Unable to read page comment threads");
   const rows = data ?? [];
-  const roots = rows.filter((r) => !r.parent_id);
+  const roots = rows.filter((r) => !r.parent_id && !r.resolved_at);
   return roots.map((root) => ({
     // The root of the thread: it is SHE that we return to `parent_comment_id` to
     // answer in. Without this id, an agent could only respond to threads
