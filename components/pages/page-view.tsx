@@ -103,7 +103,10 @@ import { useLocalPageMetadata } from "@/components/pages/use-local-page-metadata
 import { useRegisterPagePromotionSource } from "@/components/pages/page-promotion-context";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
-import { PageCommentLayer } from "@/components/pages/page-comment-layer";
+import { PageCommentLayer, useDocumentBlockIds } from "@/components/pages/page-comment-layer";
+import { setMarginCommentsShown, useMarginCommentsShown } from "@/lib/page-comment-margin-pref";
+import { SplitButton } from "@/components/ui/split-button";
+import { DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
@@ -1009,6 +1012,13 @@ function PageSurface({
     setDraftAnchor(anchor);
   }, []);
   const clearDraftAnchor = useCallback(() => setDraftAnchor(null), []);
+  // Threads beside the text: whether this page could show them, and whether
+  // this browser wants them (a local preference, for every page).
+  const [marginAvailable, setMarginAvailable] = useState(false);
+  const commentsBeside = useMarginCommentsShown();
+  // The blocks on screen, for the activity panel to tell a live thread from a
+  // detached one without waiting for the next load of the page.
+  const liveBlockIds = useDocumentBlockIds(editor);
 
   /* ── The anchor of a block ───────────────────────────────────────────── */
   /** Margin above the block targeted by an anchor, once arrived. */
@@ -1094,19 +1104,45 @@ function PageSurface({
             }
             onOpenHistory={() => openHistory("versions")}
           />
+          {/* Where this page could show its threads beside the text, the
+              button also offers that choice (lib/page-comment-margin-pref.ts). */}
           <Tooltip disableHoverableContent>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("comments")}
-                className="text-muted-foreground hover:text-foreground"
-                onMouseEnter={warmPageActivity}
-                onFocus={warmPageActivity}
-                onClick={() => openHistory("activity")}
-              >
-                <HugeiconsIcon icon={Message01Icon} className="size-3.5" />
-              </Button>
+              {marginAvailable ? (
+                <SplitButton
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("comments")}
+                  actionClassName="text-muted-foreground hover:text-foreground"
+                  triggerClassName="text-muted-foreground hover:text-foreground"
+                  menuLabel={t("commentOptions")}
+                  onMouseEnter={warmPageActivity}
+                  onFocus={warmPageActivity}
+                  onClick={() => openHistory("activity")}
+                  menu={
+                    <DropdownMenuCheckboxItem
+                      checked={commentsBeside}
+                      onCheckedChange={(checked) => setMarginCommentsShown(checked === true)}
+                    >
+                      {t("showCommentsBeside")}
+                    </DropdownMenuCheckboxItem>
+                  }
+                >
+                  <HugeiconsIcon icon={Message01Icon} className="size-3.5" />
+                </SplitButton>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("comments")}
+                  className="text-muted-foreground hover:text-foreground"
+                  onMouseEnter={warmPageActivity}
+                  onFocus={warmPageActivity}
+                  onClick={() => openHistory("activity")}
+                >
+                  <HugeiconsIcon icon={Message01Icon} className="size-3.5" />
+                </Button>
+              )}
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("comments")}</TooltipContent>
           </Tooltip>
@@ -1134,7 +1170,7 @@ function PageSurface({
             the chrome is used to place itself there. Title and blocks therefore share the
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
-        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? page.database_schema != null ? PAGE_COLUMN.panelDatabase : PAGE_COLUMN.panelDocument : page.database_schema != null ? PAGE_COLUMN.database : PAGE_COLUMN.document)}>
+        <div data-page-column="" className={cn("page-column relative mx-auto w-full px-6 py-10", panel ? page.database_schema != null ? PAGE_COLUMN.panelDatabase : PAGE_COLUMN.panelDocument : page.database_schema != null ? PAGE_COLUMN.database : PAGE_COLUMN.document)}>
           {page.database_schema != null && canWrite && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}
@@ -1241,6 +1277,7 @@ function PageSurface({
           tabRequest={historyRequest}
           onOpenChange={setHistoryOpen}
           onRestored={onRestored}
+          liveBlockIds={liveBlockIds}
         />
       ) : null}
 
@@ -1255,6 +1292,7 @@ function PageSurface({
         currentUserId={user?.id ?? null}
         draftAnchor={draftAnchor}
         onDraftAnchorDone={clearDraftAnchor}
+        onMarginAvailable={setMarginAvailable}
       />
 
       <AlertDialog

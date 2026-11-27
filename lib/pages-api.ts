@@ -442,6 +442,26 @@ export async function updatePageCommentApi(
   );
 }
 
+/** Resolve a thread, or reopen it: the same request in both directions. */
+export async function resolvePageThreadApi(
+  projectId: string,
+  pageId: string,
+  commentId: string,
+  resolved: boolean
+): Promise<PageComment> {
+  return json(
+    await fetch(
+      `/api/projects/${projectId}/pages/${pageId}/comments/${commentId}/resolve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolved }),
+      }
+    ),
+    "Request failed"
+  );
+}
+
 export async function deletePageCommentApi(
   projectId: string,
   pageId: string,

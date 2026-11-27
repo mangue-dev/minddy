@@ -9,8 +9,8 @@ export const MCP_DISCOVERY_INSTRUCTIONS =
   "minddy is a stateless issue tracker MCP. Choose a minddy_* tool by its " +
   "action-specific description. An issue UUID or an identifier such as MIND-42 " +
   "names its project, so issue tools need no project_id; a bare issue number does " +
-  "(minddy_list_projects lists project ids). Read before writing; failures return " +
-  "stable error codes. Full usage guide: /llms-full.txt.";
+  "(minddy_list_projects lists them). Read before writing; failures return " +
+  "stable error codes. Full guide: /llms-full.txt.";
 
 /**
  * How an agent cites what it writes about (MIN-872), appended to every
@@ -165,11 +165,12 @@ export const MCP_FULL_USAGE_GUIDE =
       "minddy_edit_page_text rewrites passages in place (old_string → " +
       "new_string, unique match; more of them in `edits`). minddy_update_page replaces a whole body, so " +
       "pass the version you read to be refused rather than overwrite someone. " +
-      "A page is also DISCUSSED: minddy_get_page returns the threads on it — " +
+      "A page is also DISCUSSED: minddy_get_page returns the open threads on it — " +
       "objections and questions anchored to a passage — and " +
       "minddy_add_page_comment answers one, or raises one, without touching the " +
       "document. Prefer that to an edit when a passage looks wrong: a comment " +
-      "asks whoever wrote it, an edit overwrites them. " +
+      "asks whoever wrote it, an edit overwrites them. Once a thread's question " +
+      "is settled, minddy_resolve_page_thread closes it. " +
       "Pages are markdown on both sides, never ProseMirror JSON, and they are how " +
       "'turn this page into tickets' works: read the page, then create the issues " +
       "with the issue tools. minddy_trash_page moves a page and its subpages to " +

@@ -6,7 +6,7 @@ import { focusFieldIn } from "@/lib/focus-field";
 import { OneLine } from "@/components/one-line";
 import { MentionHover } from "@/components/mention-hover";
 import { AgentHoverCard } from "@/components/agent-hover-card";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
 import { memo, createContext, useContext, useMemo, useRef, useState } from "react";
 import { revealLatestComment, useCommentComposerFocus } from "@/lib/comment-focus";
@@ -491,6 +491,13 @@ function EventRow({
   );
 }
 
+/** An action a surface adds to a comment's "⋯" menu. */
+export interface CommentMenuAction {
+  label: string;
+  icon: IconSvgElement;
+  onSelect: () => void;
+}
+
 /** One comment inside a card (root or reply): header, markdown body, and —
     for the author — a hover "⋯" menu with inline edit and delete.
     Exported from MIN-282: the thread of a page mounts it as is. */
@@ -507,6 +514,8 @@ export function CommentBlock({
   liveTable = "comments",
   isReply = false,
   forgeThread = null,
+  menuActions,
+  contextMenu = false,
 }: {
   comment: ThreadMessage;
   /** Members identify authors; the optional mention model expands body chips
@@ -529,6 +538,11 @@ export function CommentBlock({
   /** Live forge state of the thread this root opens (MIN-802): its excerpt
       shows the Resolved / Outdated badges of the PR view. */
   forgeThread?: ForgeThread | null;
+  /** Actions of the surface that shows this comment, listed first in its
+      "⋯" menu (resolving a page thread, MIN-1002). */
+  menuActions?: CommentMenuAction[];
+  /** A right-click on the comment opens its "⋯" menu. */
+  contextMenu?: boolean;
 }) {
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
@@ -581,6 +595,7 @@ export function CommentBlock({
   // updates on the next render: the ref blocks a second save while one runs.
   const savingRef = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const mine = !!currentUserId && comment.author_id === currentUserId;
   // A mirrored GitHub comment is "edited" when GitHub says so: the local row is
   // rewritten by every sync, its own timestamps say nothing about the author.
@@ -637,8 +652,31 @@ export function CommentBlock({
     }
   };
 
+  const hasMenu =
+    (canEdit || canDelete || !!menuActions?.length) && !editing && !working && !comment.delivery;
+
   return (
-    <div className="group/comment flex flex-col gap-1.5" data-comment-id={comment.id} data-comment-state={comment.optimisticEdit ? "editing" : comment.delivery?.state ?? "confirmed"} aria-busy={comment.optimisticEdit || comment.delivery?.state === "sending"}>
+    <div
+      className="group/comment flex flex-col gap-1.5"
+      // The browser's own menu stays on a link, and on selected text to copy.
+      onContextMenu={
+        contextMenu && hasMenu
+          ? (event) => {
+              if (event.target instanceof Element && event.target.closest("a")) return;
+              if (!window.getSelection()?.isCollapsed) return;
+              event.preventDefault();
+              // Where the menu opens on press (macOS), the button is still
+              // down: its release over an item would choose that item. The
+              // menu waits for the release.
+              if (event.buttons & 2) {
+                window.addEventListener("pointerup", () => setMenuOpen(true), { once: true });
+              } else {
+                setMenuOpen(true);
+              }
+            }
+          : undefined
+      }
+      data-comment-id={comment.id} data-comment-state={comment.optimisticEdit ? "editing" : comment.delivery?.state ?? "confirmed"} aria-busy={comment.optimisticEdit || comment.delivery?.state === "sending"}>
       <div className="flex items-center gap-2">
         {viaNumo ? (
           <NumoAvatar />
@@ -702,8 +740,8 @@ export function CommentBlock({
             only). Numo's comments remain read-only until
             that they are internal; published, they withdraw like the rest — it
             Someone has to be able to unpublish what an agent has published. */}
-        {(canEdit || canDelete) && !editing && !working && !comment.delivery && (
-          <DropdownMenu>
+        {hasMenu && (
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -715,6 +753,12 @@ export function CommentBlock({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {menuActions?.map((action) => (
+                <DropdownMenuItem key={action.label} onSelect={action.onSelect}>
+                  <HugeiconsIcon icon={action.icon} />
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
               {canEdit && (
                 <DropdownMenuItem
                   onSelect={() => {

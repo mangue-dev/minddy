@@ -914,6 +914,51 @@ describe("les fils de discussion d'une page", () => {
     expect(threads[0].messages).toHaveLength(2);
   });
 
+  it("resolves a thread, which then leaves what the agent reads, and reopens it", async () => {
+    const page = await createPage("Spec", "a body");
+    const root = await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "a question",
+    });
+    const threadId = root.payload.comment_id as string;
+
+    const resolved = await call("minddy_resolve_page_thread", {
+      project_id: PROJECT,
+      page_id: page,
+      thread_id: threadId,
+    });
+    expect(resolved.ok, JSON.stringify(resolved.payload)).toBe(true);
+    expect(resolved.payload).toMatchObject({ thread_id: threadId, resolved: true });
+    const stored = h.comments.find((row) => row.id === threadId)!;
+    expect(stored.resolved_at).toEqual(expect.any(String));
+    expect(stored.resolved_by).toEqual(expect.any(String));
+    const after = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    expect(after.payload.threads).toEqual([]);
+
+    const reopened = await call("minddy_resolve_page_thread", {
+      project_id: PROJECT,
+      page_id: page,
+      thread_id: threadId,
+      resolved: false,
+    });
+    expect(reopened.payload).toMatchObject({ resolved: false });
+    expect(stored.resolved_at).toBeNull();
+    const again = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    expect(again.payload.threads).toHaveLength(1);
+  });
+
+  it("refuses a thread that is not on the page", async () => {
+    const page = await createPage("Spec", "a body");
+    const { ok, payload } = await call("minddy_resolve_page_thread", {
+      project_id: PROJECT,
+      page_id: page,
+      thread_id: "c0000000-0000-4000-8000-0000000000ff",
+    });
+    expect(ok).toBe(false);
+    expect((payload.error as { code: string }).code).toBe("invalid_params");
+  });
+
   /**
  * The thread that you haven't opened yourself is precisely the one that you need to
  * reply to. Without `thread_id` rendered by reading, an agent only had the address

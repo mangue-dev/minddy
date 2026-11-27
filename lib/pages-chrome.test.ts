@@ -656,8 +656,8 @@ describe("la palette et ses jetons CSS", () => {
 describe("the gutter hover surface", () => {
   const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
   const rule = css.slice(
-    css.indexOf(".page-editor[data-gutter] .ProseMirror {"),
-    css.indexOf("}", css.indexOf(".page-editor[data-gutter] .ProseMirror {"))
+    css.indexOf(".page-editor[data-gutter] .ProseMirror:not(.page-comment-margin *) {"),
+    css.indexOf("}", css.indexOf(".page-editor[data-gutter] .ProseMirror:not(.page-comment-margin *) {"))
   );
 
   it("covers the ENTIRE column reserve, not only the buttons", () => {

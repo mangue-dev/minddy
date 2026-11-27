@@ -3078,6 +3078,16 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "resolved_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "resolved_by": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -3117,6 +3127,11 @@
       {
         "table": "projects",
         "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "users",
+        "column": "resolved_by",
         "targetColumn": "id"
       }
     ]

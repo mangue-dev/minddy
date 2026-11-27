@@ -15,6 +15,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { MAX_EDIT_DIFF_CHARS } from "./surface-limits";
 import {
   addPageCommentForAgent,
+  resolvePageThreadForAgent,
   appendToPageForAgent,
   createPageForAgent,
   editPageTextForAgent,
@@ -226,13 +227,13 @@ export function registerPageTools(server: McpServer): void {
         "that cite this one, whether they attached it as a resource or mention " +
         "it in their text. Read them before changing a decision written here — " +
         "they are what depends on it, and nothing else in the API will tell you. " +
-        "Finally it carries THREADS: the discussion on this page — objections, " +
+        "Finally it carries THREADS: the open discussion on this page (resolved threads are left out) — objections, " +
         "questions, passages someone flagged, each with the text it hangs off. " +
         "Read them. The body says what was decided; the threads say what is " +
         "contested and not yet rewritten, and that is usually where the real " +
         "constraint is. Rewriting a passage under a thread settles a debate " +
         "nobody asked you to settle — answer it with minddy_add_page_comment " +
-        "instead.",
+        "instead, and close it with minddy_resolve_page_thread once it is settled.",
       inputSchema: z.object({ project_id: PROJECT_ID, page_id: PAGE_ID }),
       annotations: READ_ONLY,
     },
@@ -663,6 +664,50 @@ export function registerPageTools(server: McpServer): void {
         // The key that writes NAME the agent: the thread says “Claude Code (mcp)”, not
         // the name of the key holder (minddy's identity rule).
         mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return refusal(result);
+      return written(result.data);
+    }
+  );
+
+  server.registerTool(
+    "minddy_resolve_page_thread",
+    {
+      title: "Resolve a page thread",
+      description:
+        "Mark a page thread as RESOLVED once its question is settled, or reopen " +
+        "it with resolved: false. " +
+        "Pass the thread_id of a thread you read in minddy_get_page: the thread " +
+        "then leaves the page and the threads that tool returns, and stays in the " +
+        "page's activity, where anyone who can comment reopens it, so resolve " +
+        "only a thread whose question is actually answered — you made the change " +
+        "it called for, or the people in it agreed. When the answer is yours, say " +
+        "it in the thread first with minddy_add_page_comment: a thread closed " +
+        "without a word reads as a question nobody wanted. Never resolve a " +
+        "thread to make room for an edit.",
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        page_id: PAGE_ID,
+        thread_id: z
+          .string()
+          .uuid()
+          .describe("The thread_id of a thread you read in minddy_get_page."),
+        resolved: z
+          .boolean()
+          .optional()
+          .describe("true (default) resolves the thread; false reopens it."),
+      }),
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await resolvePageThreadForAgent({
+        pageId: args.page_id,
+        projectId: scope.access.project.id,
+        actorId: scope.userId,
+        threadId: args.thread_id,
+        resolved: args.resolved ?? true,
       });
       if (!result.ok) return refusal(result);
       return written(result.data);

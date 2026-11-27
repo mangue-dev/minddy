@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 24,
+  "revision": 28,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
@@ -81,7 +81,8 @@
       "lib/pages-subpage.ts",
       "lib/pages-export.ts",
       "components/public-page-body.tsx",
-      "components/pages/page-comment-dialog.tsx",
+      "components/pages/page-comment-thread.tsx",
+      "components/pages/page-comment-margin.tsx",
       "lib/keyboard/shortcuts.ts",
       "components/editor/find-bar.tsx",
       "components/editor/find-replace.ts",
@@ -114,10 +115,10 @@
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 28,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 5 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude (MIN-1002: block comment thread rewritten against components/pages/page-comment-thread.tsx, components/pages/block-comments.ts and components/pages/page-comment-layer.tsx, and walked through in a browser on a local build: popover under the passage, badge and passage clicks, unsent text, phone sheet; thread resolution and margin threads then documented against components/pages/page-comment-margin.tsx and components/pages/page-activity.tsx, walked through at a wide and a narrow window; existing figures unaffected and kept)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude (de comment-thread sentences translated from en revision 25 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-26"
   },
   "related": [
     "notifications-and-inbox",
@@ -152,7 +153,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -168,7 +169,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -185,7 +186,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -202,7 +203,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -218,7 +219,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -234,7 +235,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -251,7 +252,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -268,7 +269,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -366,7 +367,7 @@ Markdown-Exporte und Seitenzugriffe durch Agenten erhalten Symbole und Farben vo
 
 ## Eine Seite besprechen und Konflikte lösen {#page-comments-and-collaboration}
 
-Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Ein Leser kann kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Markiere den Verlauf erst als erledigt, wenn seine Frage tatsächlich beantwortet wurde. Der Verlauf eines Blocks öffnet sich am Computer in einem Dialog und auf dem Smartphone in einem unteren Blatt statt neben dem Block: Er zeigt die zitierte Passage, die vorhandenen Diskussionen mit ihren Antworten und ein Feld für einen neuen Kommentar. Öffne ihn über das Kommentar-Abzeichen des Blocks, **Kommentieren** in der Auswahlleiste oder das Blockmenü. Am Computer zeigt ein Block ohne Kommentare beim Darüberfahren rechts eine Schaltfläche **Diesen Block kommentieren** auf Höhe des Blockgriffs; ein kommentierter Block zeigt dort stattdessen sein Kommentar-Abzeichen. Fährst du mit dem Zeiger über diese Schaltfläche, wird ihr Block wie eine Auswahl hervorgehoben. Auf dem Smartphone erscheint diese Schaltfläche nicht.
+Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Ein Leser kann kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Ist die Frage eines Verlaufs geklärt, wähle **Als gelöst markieren** neben seinem Antwortfeld oder im Menü **Kommentaraktionen** eines seiner Kommentare, das sich auch mit einem Rechtsklick auf den Kommentar öffnet: Der Verlauf verschwindet von der Seite und bleibt in der Aktivität der Seite, mit **Gelöst** gekennzeichnet; **Erneut öffnen** holt ihn dort zurück. Jeder, der kommentieren darf, kann einen Verlauf als gelöst markieren oder erneut öffnen. Wenn du den ersten Kommentar eines Verlaufs löschst, werden auch seine Antworten gelöscht. Am Computer öffnet sich der Verlauf eines Blocks in einem Popover unter der Passage, um die es geht, und du kannst die Seite darum herum weiter lesen und bearbeiten. Auf dem Smartphone öffnet er sich in einem unteren Blatt, das auch die zitierte Passage zeigt. Lässt das Fenster rechts neben dem Text genug Platz, erscheinen offene Verläufe dort als Karten neben ihren Blöcken und ersetzen die Abzeichen: Klicke auf eine Karte oder ihre Passage, um sie zu öffnen und zu antworten. Die Schaltfläche **Kommentare** in der Kopfzeile der Seite hat dann ein Menü: **Kommentare neben dem Text anzeigen** schaltet die Karten aus oder wieder ein, für alle Seiten in diesem Browser. Ohne die Karten kehren die Abzeichen zurück. Zeigst du auf eine kommentierte Passage, wird ihre Karte hervorgehoben. Eine kommentierte Passage ist auf der Seite unterstrichen und gelb hinterlegt, stärker, solange ihr Verlauf geöffnet ist oder der Mauszeiger auf ihrer Karte steht. Ein Kommentar zu einem ganzen Block markiert seinen gesamten Text, und ein Block ohne Text, etwa eine Trennlinie, ein Bild oder eine Gleichung, erhält einen gelben Rahmen. Klicke auf die Passage oder auf das Kommentar-Abzeichen des Blocks, um den Verlauf zu öffnen; klicke erneut auf das Abzeichen, drücke Escape oder klicke an eine andere Stelle, um ihn zu schließen. Ein Verlauf mit Text, den du noch nicht gesendet hast, bleibt geöffnet, wenn du an eine andere Stelle klickst. Um einen Kommentar zu schreiben, wähle **Kommentieren** in der Auswahlleiste oder im Blockmenü: Das Feld öffnet sich unter der ausgewählten Passage, die hervorgehoben bleibt, während du schreibst. Am Computer zeigt ein Block ohne Kommentare beim Darüberfahren rechts eine Schaltfläche **Diesen Block kommentieren** auf Höhe des Blockgriffs; ein kommentierter Block zeigt dort stattdessen sein Kommentar-Abzeichen. Fährst du mit dem Zeiger über diese Schaltfläche, wird ihr Block wie eine Auswahl hervorgehoben. Auf dem Smartphone erscheint diese Schaltfläche nicht.
 
 Anwesenheitsavatare zeigen Personen, die die Seite ansehen. Während jemand bearbeitet, erscheinen sein Cursor und seine Auswahl im Inhalt und im Titel, in einer eigenen Farbe und mit seinem Namen beschriftet. Der Cursor eines Lesers wird nicht angezeigt. Ein Cursor zeigt, wo jemand arbeitet, nicht dass sein Text gespeichert ist: Die Speicheranzeige spiegelt nur deine eigenen Änderungen wider.
 

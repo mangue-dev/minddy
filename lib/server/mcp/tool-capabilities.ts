@@ -71,6 +71,7 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_add_objective_comment: "comment",
   minddy_add_feedback_comment: "comment",
   minddy_add_page_comment: "comment",
+  minddy_resolve_page_thread: "comment",
 
   // Content writes.
   minddy_link_pull_request: "write",

@@ -400,6 +400,16 @@ describe("catalogue MCP — les pages", () => {
     expect(MCP_SERVER_INSTRUCTIONS).toContain("minddy_add_page_comment");
   });
 
+  it("lets an agent close a thread it read, and names the tool where threads are read", () => {
+    for (const required of ["project_id", "page_id", "thread_id"]) {
+      expect(param("minddy_resolve_page_thread", required).required).toBe(true);
+    }
+    expect(param("minddy_resolve_page_thread", "resolved").required).toBe(false);
+    expect(tool("minddy_resolve_page_thread").readOnly).toBe(false);
+    expect(tool("minddy_get_page").description).toContain("minddy_resolve_page_thread");
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("minddy_resolve_page_thread");
+  });
+
   it("met dans `required` ce qu'un petit modèle ne répondrait pas sinon", () => {
     // A field outside `required` of a forced tool call is simply not
     // not filled: the title and body of a created page are part of it.

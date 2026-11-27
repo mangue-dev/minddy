@@ -41,6 +41,9 @@ export interface PageComment {
   api_key_id?: string | null;
   api_key_name?: string | null;
   api_key_agent?: string | null;
+  /** On a thread's root: when it was resolved, and by whom. Null while open. */
+  resolved_at?: string | null;
+  resolved_by?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +56,8 @@ export interface PageThread {
   anchored: boolean;
   /** Anchored on an ABSENT block of the document: the thread speaks of a text that has left. */
   detached: boolean;
+  /** Settled: off the page, kept in its activity where it can be reopened. */
+  resolved: boolean;
 }
 
 /**
@@ -64,8 +69,9 @@ export interface PageThread {
  *
  * The order: the DETACHED first (they talk about a text that no one sees anymore, so nothing on the page will remind them), then the rest by date.
  *
- * No “resolved” thread: a page comment is deleted when it no longer has
- * purpose, it is not closed. Resolving makes sense on a CODE REVIEW remark — a point to be addressed before merging, and this is already what the children of a pull request do — not on a note left in a doc, which has no deadline to pass.
+ * RESOLVED threads stay in the list, marked: the page stops showing them
+ * (`commentedBlockAnnotations`, `threadsOnBlock`) and its activity keeps them,
+ * with the way back (MIN-1002).
  */
 export function arrangeThreads(
   comments: PageComment[],
@@ -94,6 +100,7 @@ export function arrangeThreads(
       ),
       anchored,
       detached: anchored && !blockIds.has(root.block_id as string),
+      resolved: !!root.resolved_at,
     };
   });
 
@@ -108,7 +115,7 @@ export function arrangeThreads(
  * paints the border and the pastille (components/pages/block-comments.ts).
  *
  * A DETACHED thread does not light anything: its block no longer exists, there is nothing to
- * paint ; it's the page activity that shows it.
+ * paint ; it's the page activity that shows it. Nor does a RESOLVED one.
  */
 export function commentedBlockCounts(
   threads: PageThread[]
@@ -125,6 +132,8 @@ export interface CommentedBlockAnnotation {
   count: number;
   /** Frozen excerpts that still identify a particular passage in the block. */
   quotes: string[];
+  /** A thread is about the block as a whole: it quotes no passage. */
+  whole: boolean;
 }
 
 /** The visual annotations carried by each live commented block. */
@@ -133,17 +142,29 @@ export function commentedBlockAnnotations(
 ): Map<string, CommentedBlockAnnotation> {
   const annotations = new Map<string, CommentedBlockAnnotation>();
   for (const thread of threads) {
-    if (thread.detached || !thread.root.block_id) continue;
+    if (thread.detached || thread.resolved || !thread.root.block_id) continue;
     const id = thread.root.block_id;
-    const annotation = annotations.get(id) ?? { count: 0, quotes: [] };
+    const annotation = annotations.get(id) ?? { count: 0, quotes: [], whole: false };
     annotation.count += 1 + thread.replies.length;
     const quote = thread.root.quote?.trim();
-    if (quote && !annotation.quotes.includes(quote)) {
-      annotation.quotes.push(quote);
-    }
+    if (!quote) annotation.whole = true;
+    else if (!annotation.quotes.includes(quote)) annotation.quotes.push(quote);
     annotations.set(id, annotation);
   }
   return annotations;
+}
+
+/** The threads a block shows beside its text: anchored on it, alive and open. */
+export function threadsOnBlock(threads: PageThread[], blockId: string): PageThread[] {
+  return threads.filter(
+    (thread) => !thread.detached && !thread.resolved && thread.root.block_id === blockId
+  );
+}
+
+/** What the page cannot show beside a text, and its activity therefore does:
+    the page's own thread, a thread whose block is gone, a resolved thread. */
+export function threadsForActivity(threads: PageThread[]): PageThread[] {
+  return threads.filter((thread) => !thread.root.block_id || thread.detached || thread.resolved);
 }
 
 /** Ceiling of the frozen extract: enough to recognize the sentence, not enough to copy the block — a detached thread must fit on two lines in the list. */

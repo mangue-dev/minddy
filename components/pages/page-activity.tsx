@@ -25,15 +25,16 @@
 // section under the document would have made the page a discussion thread, this
 // that it is not — we open a page to READ it.
 //
-// What is NOT here: the wires anchored to a block and still alive. These
-// are read next to their text (components/pages/page-comment-dialog.tsx) —
+// What is NOT here: the wires anchored to a block, still alive and open. These
+// are read next to their text (components/pages/page-comment-thread.tsx) —
 // that's the whole reason for the anchor. A DETACHED thread returns here: its block
 // no longer exists, the page no longer has anywhere to show it, and it carries
-// l'extrait qui dit de quoi il parlait.
+// the extract that says what it was about. A RESOLVED thread is read here too
+// (MIN-1002): the page stopped showing it, and this is where it is reopened.
 
 import { useMemo } from "react";
 import { AppIcon } from "@/components/icon";
-import { LinkOffIcon as Link2Off } from "@hugeicons/core-free-icons";
+import { CheckmarkCircle02Icon, LinkOffIcon as Link2Off } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { RowsSkeleton } from "@/components/loading-skeletons";
 import { cn } from "@/lib/utils";
@@ -46,7 +47,8 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import type { ActivityItem, ThreadMessage } from "@/components/issue-timeline";
 import { usePageComments } from "@/lib/use-page-comments";
-import type { PageThread } from "@/lib/page-comments";
+import { threadsForActivity, type PageThread } from "@/lib/page-comments";
+import { PageThreadResolveButton, type ResolveThread } from "@/components/pages/page-comment-thread";
 import type { EventContext } from "@/lib/describe-event";
 import { PageBacklinks } from "@/components/pages/page-backlinks";
 import {
@@ -60,11 +62,16 @@ export function PageActivity({
   projectId,
   pageId,
   currentUserId,
+  liveBlockIds,
   enabled = true,
 }: {
   projectId: string;
   pageId: string;
   currentUserId: string | null;
+  /** The blocks of the document on screen, when this panel sits beside its
+      editor: a block typed since the last load exists, whatever the cache
+      says. Absent: the blocks are read from the loaded page. */
+  liveBlockIds?: ReadonlySet<string>;
   /** The panel is closed: nothing to load until you look at it. */
   enabled?: boolean;
 }) {
@@ -94,7 +101,7 @@ export function PageActivity({
     queryFn: () => fetchPageApi(projectId, pageId),
     enabled,
   });
-  const blockIds = useMemo(
+  const loadedBlockIds = useMemo(
     () =>
       new Set(
         pageBlockTexts(page.data?.content ?? null)
@@ -103,8 +110,10 @@ export function PageActivity({
       ),
     [page.data]
   );
+  // An editor that has not mounted its document yet reports no block at all.
+  const blockIds = liveBlockIds && liveBlockIds.size > 0 ? liveBlockIds : loadedBlockIds;
 
-  const { threads, edit, remove, add } = usePageComments({
+  const { threads, edit, remove, add, resolve } = usePageComments({
     projectId,
     pageId,
     blockIds,
@@ -116,15 +125,13 @@ export function PageActivity({
  *
  * • the page thread: it does not talk about any block;
  * • a DETACHED thread: its block is gone, and it carries the extract which says of
- * what he was talking about.
+ * what he was talking about;
+ * • a RESOLVED thread: the page stopped showing it.
  *
- * An anchored and living thread remains on his text: that is the whole reason for
+ * An anchored, living and open thread remains on his text: that is the whole reason for
  * the anchor, and showing it twice would make one doubt that it is the same.
  */
-  const shown = useMemo(
-    () => threads.filter((thread) => !thread.root.block_id || thread.detached),
-    [threads]
-  );
+  const shown = useMemo(() => threadsForActivity(threads), [threads]);
 
   const items = useMemo<ActivityItem[]>(() => {
     const merged: ActivityItem[] = [
@@ -190,7 +197,9 @@ export function PageActivity({
         allowAttachments={false}
         commentHeader={(comment) => {
           const thread = byId.get(comment.id);
-          return thread ? <ThreadHeader thread={thread} /> : null;
+          return thread ? (
+            <ThreadHeader thread={thread} onResolve={canComment ? resolve : undefined} />
+          ) : null;
         }}
         onReply={(parentId, body, mentionedUserIds) =>
           add({ body, parentId, mentionedUserIds })
@@ -250,32 +259,51 @@ export function PageCommentBar({
  each rendering for nothing. */
 const NO_BLOCKS: ReadonlySet<string> = new Set<string>();
 
-/** The band of a thread: what it speaks of, and what its anchor has become. */
-function ThreadHeader({ thread }: { thread: PageThread }) {
+/** The band of a thread: what it speaks of, what its anchor has become, and
+    whether it is settled — with the button that settles or reopens it. */
+function ThreadHeader({ thread, onResolve }: { thread: PageThread; onResolve?: ResolveThread }) {
   const t = useTranslations("Pages");
-  const { root, detached } = thread;
+  const { root, detached, resolved } = thread;
 
   return (
-    <div className="min-w-0">
-      {/* The thread talks about a text that no one sees anymore: saying it, and showing
- the extract, is the only trace of why the block was removed. */}
-      {detached && (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-500">
-          <AppIcon icon={Link2Off} className="size-3.5" />
-          {t("commentDetached")}
-        </span>
-      )}
-      {root.block_id ? (
-        <p
-          className={cn(
-            "border-l-2 border-brand/50 pl-2 text-xs italic text-muted-foreground line-clamp-2",
-            detached && "mt-1"
-          )}
-        >
-          {root.quote ?? t("commentOnBlock")}
-        </p>
-      ) : (
-        <span className="text-xs text-muted-foreground">{t("commentOnPage")}</span>
+    <div className="flex min-w-0 items-start gap-2">
+      <div className="min-w-0 flex-1">
+        {resolved && (
+          <span className="mr-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <AppIcon icon={CheckmarkCircle02Icon} className="size-3.5" />
+            {t("commentResolved")}
+          </span>
+        )}
+        {/* The thread talks about a text that no one sees anymore: saying it, and showing
+            the extract, is the only trace of why the block was removed. */}
+        {detached && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-500">
+            <AppIcon icon={Link2Off} className="size-3.5" />
+            {t("commentDetached")}
+          </span>
+        )}
+        {/* A thread about a whole block has no passage to show. Once
+            detached, saying so is all that is left of what it was about. */}
+        {root.block_id && !root.quote && !detached ? null : root.block_id ? (
+          <p
+            className={cn(
+              "border-l-2 border-brand/50 pl-2 text-xs italic text-muted-foreground line-clamp-2",
+              (detached || resolved) && "mt-1"
+            )}
+          >
+            {root.quote ?? t("commentOnBlock")}
+          </p>
+        ) : resolved ? null : (
+          <span className="text-xs text-muted-foreground">{t("commentOnPage")}</span>
+        )}
+      </div>
+      {onResolve && (
+        <PageThreadResolveButton
+          rootId={root.id}
+          resolved={resolved}
+          onResolve={onResolve}
+          className="-my-1.5 -mr-1.5"
+        />
       )}
     </div>
   );

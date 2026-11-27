@@ -26,6 +26,7 @@ import {
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
   addPageComment,
+  resolvePageThread,
   openPageThreadsForAgent,
 } from "@/lib/server/page-comments";
 import { pageBlockTexts } from "@/lib/pages-mentions";
@@ -219,7 +220,7 @@ export interface PageRead extends PageTreeEntry {
  */
   backlinks: PageBacklink[];
   /**
- * The threads of the page (MIN-282).
+ * The open threads of the page (MIN-282); resolved ones are left out.
  *
  * This is often where the real constraint is: a spec says what has been
  * decided, its comments say what is contested and has not yet been
@@ -498,6 +499,41 @@ export async function addPageCommentForAgent({
   return {
     ok: true,
     data: { page_id: pageId, comment_id: result.comment.id as string },
+  };
+}
+
+/**
+ * RESOLVE a thread of a page, or reopen it, as an agent (MIN-1002).
+ *
+ * The same gesture as the Resolve button beside a thread, under the same
+ * right: whoever can comment can settle a discussion. A resolved thread
+ * leaves the page and the threads an agent reads; it stays in the page's
+ * activity, where a person reopens it.
+ */
+export async function resolvePageThreadForAgent({
+  pageId,
+  projectId,
+  actorId,
+  threadId,
+  resolved,
+}: {
+  pageId: string;
+  projectId?: string;
+  actorId: string;
+  threadId: string;
+  resolved: boolean;
+}): Promise<PageToolResult<{ page_id: string; thread_id: string; resolved: boolean }>> {
+  // The page first, as for a comment: a refusal must not reveal a page the
+  // caller cannot read.
+  const found = await getPage(pageId, actorId);
+  if (!found.ok) return refuse(found.errorKey);
+  if (projectId && found.page.project_id !== projectId) return refuse("pageNotFound");
+
+  const result = await resolvePageThread({ pageId, commentId: threadId, actorId, resolved });
+  if (!result.ok) return COMMENT_REFUSALS[result.errorKey];
+  return {
+    ok: true,
+    data: { page_id: pageId, thread_id: result.comment.id as string, resolved },
   };
 }
 

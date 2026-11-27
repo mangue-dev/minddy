@@ -4,6 +4,8 @@ import {
   arrangeThreads,
   commentedBlockCounts,
   normalizeQuote,
+  threadsForActivity,
+  threadsOnBlock,
   type PageComment,
 } from "./page-comments";
 
@@ -114,6 +116,32 @@ describe("commentedBlockCounts", () => {
     ];
     const threads = arrangeThreads([root, ...replies], blocks("b1"));
     expect(commentedBlockCounts(threads).get("b1")).toBe(3);
+  });
+});
+
+describe("a resolved thread (MIN-1002)", () => {
+  const open = comment({ block_id: "b1", quote: "first passage" });
+  const settled = comment({ block_id: "b1", quote: "second passage", resolved_at: "2026-08-20T10:00:00.000Z", resolved_by: "u-bob" });
+  const reply = comment({ parent_id: settled.id });
+  const onPage = comment();
+  const threads = arrangeThreads([open, settled, reply, onPage], blocks("b1"));
+
+  it("is marked, with its replies, and stays in the list", () => {
+    const thread = threads.find((item) => item.root.id === settled.id);
+    expect(thread?.resolved).toBe(true);
+    expect(thread?.replies.map((item) => item.id)).toEqual([reply.id]);
+    expect(threads.find((item) => item.root.id === open.id)?.resolved).toBe(false);
+  });
+
+  it("leaves the page: no count, no passage, no thread beside its block", () => {
+    expect(commentedBlockCounts(threads)).toEqual(new Map([["b1", 1]]));
+    expect(threadsOnBlock(threads, "b1").map((thread) => thread.root.id)).toEqual([open.id]);
+  });
+
+  it("is read in the activity, with the page's own thread", () => {
+    expect(threadsForActivity(threads).map((thread) => thread.root.id).sort()).toEqual(
+      [settled.id, onPage.id].sort()
+    );
   });
 });
 
