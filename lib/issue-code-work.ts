@@ -42,11 +42,14 @@ export interface IssueBranch {
 }
 
 export interface IssueCodeWork {
+  /** The most recent commits: the list is cut past a size. */
   commits: IssueCommit[];
+  /** How many commits the issue carries, listed or not. */
+  commitCount: number;
   branches: IssueBranch[];
 }
 
-export const EMPTY_ISSUE_CODE_WORK: IssueCodeWork = { commits: [], branches: [] };
+export const EMPTY_ISSUE_CODE_WORK: IssueCodeWork = { commits: [], commitCount: 0, branches: [] };
 
 const WEB_HOSTS: Record<RepoProviderId, string> = {
   github: "https://github.com",

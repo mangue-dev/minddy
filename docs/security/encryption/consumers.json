@@ -6604,105 +6604,112 @@
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "rpc",
     "resource": "upsert_issue_commit",
-    "line": 325,
+    "line": 326,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_branches",
-    "line": 355,
+    "line": 357,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_branches",
-    "line": 368,
+    "line": 370,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_branches",
-    "line": 382,
+    "line": 384,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_branches",
-    "line": 390,
+    "line": 392,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_branches",
-    "line": 400,
+    "line": 402,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_commits",
-    "line": 429,
+    "line": 431,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_commits",
-    "line": 653,
+    "line": 568,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 671,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 680,
+    "line": 698,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 686,
+    "line": 704,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_commits",
-    "line": 701,
+    "line": 719,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "issue_commits",
-    "line": 720,
+    "line": 739,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 754,
+    "line": 773,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 779,
+    "line": 798,
     "storage": false
   },
   {
     "file": "lib/server/git/commit-ingest.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 787,
+    "line": 806,
     "storage": false
   },
   {

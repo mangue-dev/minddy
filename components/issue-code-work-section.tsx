@@ -23,6 +23,7 @@ import { parseForgeLogin } from "@/lib/repo-providers";
 import type { Member } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useIssueCodeWorkQuery } from "@/lib/use-agent-runs";
+import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import { useLiveNow } from "@/lib/use-live-now";
 
 /** Commits listed before "Show more". */
@@ -40,15 +41,20 @@ const COLLAPSED_COMMITS = 5;
  */
 export const IssueCodeWorkSection = memo(function IssueCodeWorkSection({
   issueId,
+  projectId,
   members,
 }: {
   issueId: string;
+  projectId: string;
   /** The people of the project: an author among them is shown as a member. */
   members: Member[];
 }) {
   const t = useTranslations("IssueUI");
   const tCommon = useTranslations("Common");
-  const { commits, branches } = useIssueCodeWorkQuery(issueId);
+  // Commits and branches only reach an issue through a linked repository: a
+  // project without one asks nothing. The link is read once per project.
+  const { link } = useProjectGitLinkQuery(projectId);
+  const { commits, commitCount, branches } = useIssueCodeWorkQuery(link ? issueId : null);
   const [expanded, setExpanded] = useState(false);
   const membersById = useMemo(
     () => new Map(members.map((member) => [member.user_id, member])),
@@ -73,7 +79,7 @@ export const IssueCodeWorkSection = memo(function IssueCodeWorkSection({
       {commits.length > 0 && (
         <div className="rounded-lg">
           <PropertyRow label={t("codeCommits")}>
-            <span className="text-sm text-muted-foreground tabular-nums">{commits.length}</span>
+            <span className="text-sm text-muted-foreground tabular-nums">{commitCount}</span>
           </PropertyRow>
           <ul className="flex flex-col gap-2 pb-2">
             {shown.map((commit) => (

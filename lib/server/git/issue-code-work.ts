@@ -135,7 +135,7 @@ export async function listIssueCodeWork(
   issue: { id: string; projectId: string },
 ): Promise<IssueCodeWork> {
   const [commitRead, branches, link, pullRequests] = await Promise.all([
-    client.from("issue_commits").select(COMMIT_COLUMNS)
+    client.from("issue_commits").select(COMMIT_COLUMNS, { count: "exact" })
       .eq("issue_id", issue.id).is("pull_request_id", null)
       .order("committed_at", { ascending: false, nullsFirst: false })
       .order("id", { ascending: false }).limit(200),
@@ -213,5 +213,5 @@ export async function listIssueCodeWork(
       provider,
     });
   }
-  return { commits, branches: shown };
+  return { commits, commitCount: commitRead.count ?? commits.length, branches: shown };
 }

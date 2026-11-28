@@ -282,7 +282,8 @@ interface StoredCommit {
   issueId: string;
   sha: string;
   closes: boolean;
-  committedAt: string | null;
+  /** When the row was stored: the instant its activity line is recorded at. */
+  storedAt: string | null;
   authorLogin: string | null;
   /** A push already recorded this commit's line and asked for the status. */
   announced: boolean;
@@ -336,8 +337,9 @@ async function storeCommit(opts: {
     issueId: opts.issueId,
     sha: commit.sha,
     closes: opts.closes,
-    committedAt,
-    authorLogin: commit.authorLogin,
+    storedAt: null,
+    // The account a no-reply address names counts for the line too.
+    authorLogin,
     // A database that does not say yet (the release applies the migration
     // first, a preview may not have it) falls back to the first sighting.
     announced: result?.announced ?? result?.inserted !== true,
@@ -560,6 +562,18 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
     }
   }
 
+  // When each new row was stored, to date its line (see below).
+  const unannounced = stored.flatMap((commit) => (commit.id && !commit.announced ? [commit.id] : []));
+  if (unannounced.length > 0) {
+    const { data: dated } = await getServiceClient().from("issue_commits")
+      .select("id, created_at").in("id", unannounced);
+    const storedAt = new Map(((dated ?? []) as Array<{ id: string; created_at: string }>)
+      .map((row) => [row.id, row.created_at]));
+    for (const commit of stored) {
+      if (commit.id) commit.storedAt = storedAt.get(commit.id) ?? null;
+    }
+  }
+
   // From here every step stands alone: the commits are stored, and a step
   // that fails must not keep the issues from their line and their status.
 
@@ -615,9 +629,13 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
     if (fresh.length === 0) continue;
     const authors = new Set(fresh.map((commit) => commit.authorLogin).filter(Boolean));
     const login = push.pusher.login ?? (authors.size === 1 ? [...authors][0] : null);
-    // The line is dated from its latest commit, which is also the key that
-    // lets a merge take it back (`reconcilePullRequestCommits`).
-    const at = fresh.map((commit) => commit.committedAt).filter(Boolean).sort().at(-1);
+    // The line is dated from when its latest commit was stored: the push as
+    // minddy saw it, not the day the commit was written. That instant is also
+    // the key that lets a merge take the line back
+    // (`reconcilePullRequestCommits`).
+    const at = fresh.map((commit) => commit.storedAt)
+      .filter((value): value is string => !!value)
+      .sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1);
     if (at) lines.set(issueId, at);
     events.push({
       issue_id: issueId,
@@ -648,7 +666,7 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
 
   // Said once: a push that stopped before this line leaves its commits
   // unannounced, and the next sighting (the sweep, a later push) speaks.
-  const announced = stored.flatMap((commit) => (commit.id && !commit.announced ? [commit.id] : []));
+  const announced = unannounced;
   if (announced.length > 0) {
     const { error } = await getServiceClient().from("issue_commits")
       .update({ announced_at: new Date().toISOString() })
@@ -705,14 +723,15 @@ export async function reconcilePullRequestCommits(
         .in("issue_id", issueIds)
         .in("sha", shas)
         .is("pull_request_id", null)
-        .select("issue_id, committed_at");
+        .select("issue_id, created_at");
       if (error) throw new Error("Unable to attach merge commits");
-      for (const row of (adopted ?? []) as Array<{ issue_id: string; committed_at: string | null }>) {
-        if (!row.committed_at) continue;
+      // The line of a push is recorded at the instant its commit was stored.
+      for (const row of (adopted ?? []) as Array<{ issue_id: string; created_at: string | null }>) {
+        if (!row.created_at) continue;
         await removeForgeIssueEvents(service, {
           issueIds: [row.issue_id],
           type: COMMITS_PUSHED_EVENT,
-          createdAt: row.committed_at,
+          createdAt: row.created_at,
         });
       }
     }

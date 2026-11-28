@@ -47,6 +47,9 @@ function link(issueId: string, id: string, number: number, stateOf = "open") {
   };
 }
 
+/** When the database says a commit row was stored. */
+const STORED_AT = "2026-11-30T09:00:00.123456+00:00";
+
 /** A chainable stand-in for one table: filters are recorded, rows come from `state`. */
 function table(name: string) {
   const filters: Record<string, unknown> = {};
@@ -76,7 +79,11 @@ function table(name: string) {
       if (action === "update" && values && "announced_at" in values) {
         state.announcedIds.push(...(filters.id as string[]));
       }
-      return { data: [], error: null };
+      const ids = Array.isArray(filters.id) ? (filters.id as string[]) : [];
+      return {
+        data: action === "select" ? ids.map((id) => ({ id, created_at: STORED_AT })) : [],
+        error: null,
+      };
     }
     if (name === "issue_branches") {
       if (state.failBranches) return { data: [], error: { code: "08006" } };
@@ -261,6 +268,24 @@ describe("ingestPush", () => {
     }]);
   });
 
+  it("dates the line from when the push was stored, not from the commit", async () => {
+    await ingestPush(push());
+    expect(events()[0].created_at).toBe(STORED_AT);
+  });
+
+  it("credits a swept commit to the account its no-reply address names", async () => {
+    state.memberLogins = { camille: "user-camille" };
+    await ingestPush(push({
+      provider: "github",
+      pusher: { accountId: null, login: null, avatarUrl: null },
+      commits: [{
+        ...commit("s1", "MIN-1 first pass"),
+        authorLogin: null, authorEmail: "123+camille@users.noreply.github.com",
+      }],
+    }));
+    expect(events()[0]).toMatchObject({ actor_id: "user-camille", from_value: "camille" });
+  });
+
   it("credits the push to the member of the project who connected that forge account", async () => {
     state.memberLogins = { camille: "user-camille" };
     await ingestPush(push());
@@ -350,9 +375,9 @@ describe("ingestPush", () => {
       branch: "main", onDefaultBranch: true, commits: [commit("s1", "Fixes MIN-1 (#7)")],
     }));
     expect(state.upserts[0].pull_request_id).toBeNull();
-    expect(state.removedLines).toEqual([expect.objectContaining({
-      issueIds: ["issue-1"], type: "commits_pushed",
-    })]);
+    expect(state.removedLines).toEqual([{
+      issueIds: ["issue-1"], type: "commits_pushed", createdAt: STORED_AT,
+    }]);
     expect(signals()).toEqual([]);
   });
 

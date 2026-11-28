@@ -1235,7 +1235,7 @@ export function IssueSidePanel({
                     readOnly={readOnly}
                   />
 
-                  <IssueCodeWorkSection issueId={issue.id} members={members} />
+                  <IssueCodeWorkSection issueId={issue.id} projectId={issue.project_id} members={members} />
 
                   {githubMetadata && (
                     <div className="border-t border-border/60 px-3 py-3 text-sm">
