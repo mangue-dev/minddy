@@ -81,6 +81,7 @@ import { useContextMentions } from "@/lib/use-context-mentions";
 import { CommentFollowUpButton } from "@/components/comment-follow-up-button";
 import { commentFollowUp } from "@/lib/comment-follow-up";
 import { IssueResourcesSection } from "@/components/issue-resources-section";
+import { IssueCodeWorkSection } from "@/components/issue-code-work-section";
 import { IssuePlan } from "@/components/issue-plan";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
 // this panel — see components/editor/document-editor-lazy.tsx. Warmed from idle time below.
@@ -1233,6 +1234,8 @@ export function IssueSidePanel({
                     projectId={issue.project_id}
                     readOnly={readOnly}
                   />
+
+                  <IssueCodeWorkSection issueId={issue.id} />
 
                   {githubMetadata && (
                     <div className="border-t border-border/60 px-3 py-3 text-sm">

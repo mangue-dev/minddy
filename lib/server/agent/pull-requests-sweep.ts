@@ -4,6 +4,7 @@ import { rememberReviewQueue } from "./pull-request-review-queue";
 import type { RepoSyncState, VisibleRepo } from "./pull-requests";
 import { resolveLinkedRepositoryForRepo } from "./repo-access";
 import { stampRepoSync, syncRepoPullRequests } from "./pull-requests";
+import { syncDefaultBranchCommits } from "@/lib/server/git/commit-ingest";
 
 /** What a sweep needs of a repository: the forge and its name. */
 type SweptRepo = Pick<VisibleRepo, "provider" | "repoFullName">;
@@ -59,6 +60,13 @@ async function performSweep(userId: string, repo: SweptRepo, previous?: RepoSync
       // reviewers of the PRs it did not reread.
       onObserved: updatedSince ? undefined : (pulls) => { rememberReviewQueue(userId, repo, pulls); },
     });
+    // Commits pushed straight to the default branch, at the same cadence
+    // (MIN-1037). Best effort: the pull request sweep stands without it.
+    try {
+      await syncDefaultBranchCommits(target);
+    } catch {
+      console.error("[pull-requests] default branch sweep failed");
+    }
     return truncated;
   } catch {
     console.error("[pull-requests] repository sweep failed");

@@ -222,7 +222,8 @@ describe("merge_pull_request", () => {
     expect(pullRequestIssueIds).toHaveBeenCalledWith(PR_ROW_ID);
     expect(syncIssueStatusFromPr.mock.calls.map(([input]) => input.issueId)).toEqual(ids);
     expect(syncIssueStatusFromPr).toHaveBeenCalledWith({
-      issueId: "issue-d", actorId: ctx.userId, prState: "merged", forgeSync: provider,
+      issueId: "issue-d", actorId: ctx.userId, prState: "merged", openedAt: null,
+      forgeSync: provider,
     });
   });
 

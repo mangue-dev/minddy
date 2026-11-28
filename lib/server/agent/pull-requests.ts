@@ -743,6 +743,7 @@ export async function syncRepoPullRequests(opts: {
     before: { state: PullRequestState; head_sha: string | null; updated_at: string } | undefined;
     state: PullRequestState;
     at: number;
+    mergeCommitShas: string[];
   }> = [];
   /** PR whose state has CHANGED since the last reading — the hole of a webhook.
  `at` = its last activity at the forge, the replay key (see below). */
@@ -792,6 +793,7 @@ export async function syncRepoPullRequests(opts: {
       before,
       state,
       at: Date.parse(pull.updatedAt ?? pull.createdAt ?? "") || 0,
+      mergeCommitShas: pull.mergeCommitShas ?? [],
     });
   }
 
@@ -831,6 +833,18 @@ export async function syncRepoPullRequests(opts: {
       const { backfillPendingPrComments } = await import("./pr-comment-sync");
       for (const row of linked) await backfillPendingPrComments(row);
     });
+  }
+
+  // A pull request seen merged takes back the commits its merge produced, and
+  // one seen alive takes the commits pushed on its branch before it existed
+  // (MIN-1037). Imported lazily: the ingestion module reads this one.
+  const reconciled = applied.flatMap(({ observation, outcome }) =>
+    outcome?.applied && outcome.row && observation.state !== "closed"
+      ? [{ row: outcome.row, shas: observation.mergeCommitShas }]
+      : []);
+  if (reconciled.length > 0) {
+    const { reconcilePullRequestCommits } = await import("@/lib/server/git/commit-ingest");
+    for (const { row, shas } of reconciled) await reconcilePullRequestCommits(row, shas);
   }
 
   // Live catch-up (MIN-595): the sweep just repaired rows a lost webhook (or a

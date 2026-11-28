@@ -23,6 +23,8 @@ import {
   verifyWebhookToken,
 } from "@/lib/server/git/webhook-secret";
 import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
+import { ingestPush, reconcilePullRequestCommits } from "@/lib/server/git/commit-ingest";
+import { normalizeGitlabPush } from "@/lib/server/git/push-core";
 import { isForgeTokenCryptoConfigured } from "@/lib/server/git/token-crypto";
 import { rotateGitlabWebhookSecret } from "@/lib/server/git/gitlab-app";
 import {
@@ -80,8 +82,12 @@ import { getServiceClient } from "@/lib/supabase-service";
  * does not write anything: it only exists for live broadcasts (MIN-161). This is the only way
  * real-time feedback from both forges — GitHub simply doesn't have
  * reaction event. The `Pipeline Hook` (object_kind `pipeline`) hook is
- * treated in the same way for the CI headband. Any other object_kind is acknowledged without
- * traitement.
+ * treated in the same way for the CI headband. The `Push Hook` (object_kind
+ * `push`) carries commit tracking (MIN-1037), for work pushed without a merge
+ * request: a commit that names an issue attaches it and starts it,
+ * `Fixes MIN-42` on the default branch completes it, and a branch named after
+ * an issue starts it (see `lib/server/git/commit-ingest`). Any other
+ * object_kind is acknowledged without processing.
  *
  * DIRECT (MIN-161): each path pushes a `changed` on the MR topic,
  * which NAMES the affected parts — the open panel goes to read again at the forge,
@@ -138,6 +144,9 @@ interface MergeRequestAttributes {
   /** THE TIME of the transition — present when the action carried it out. */
   merged_at?: string | null;
   closed_at?: string | null;
+  /** The commits a merge produced on the target branch. */
+  merge_commit_sha?: string | null;
+  squash_commit_sha?: string | null;
 }
 
 interface MergeRequestEvent {
@@ -293,6 +302,18 @@ async function handleMergeRequest(
   // Ignore an older or replayed delivery consistently across the PR row,
   // run state, issue status, activity, and notifications.
   if (ingestion && !ingestion.applied) return;
+
+  // The merge request takes the commits that are its own (MIN-1037): those
+  // pushed on its branch before it existed, and the commits its merge
+  // produced when the push reached minddy first.
+  if (ingested) {
+    await reconcilePullRequestCommits(
+      ingested,
+      ingested.state === "merged"
+        ? [attrs.merge_commit_sha, attrs.squash_commit_sha].filter((sha): sha is string => !!sha)
+        : [],
+    );
+  }
 
   // Background Numo (MIN-926): reviewers this update asked. The service
   // account asking is Numo's own gesture, which never wakes Numo.
@@ -557,6 +578,17 @@ async function handlePipeline(
  * the complete state rather than reading `changes`, which in passing catches a
  * hook perdu.
  */
+/** Commits pushed to the repository (MIN-1037). */
+async function handlePush(
+  payload: unknown,
+  repoId: string,
+  repoFullName: string,
+): Promise<void> {
+  const push = normalizeGitlabPush(payload);
+  if (!push) return;
+  await ingestPush({ ...push, provider: "gitlab", repoFullName, externalRepoId: repoId });
+}
+
 const SYNCED_ISSUE_ACTIONS = new Set(["open", "close", "reopen", "update"]);
 
 async function handleIssue(
@@ -654,8 +686,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Handle merge requests, notes, issues, emoji, and pipelines. Other event
-    // kinds are intentionally acknowledged without side effects.
+    // Handle merge requests, notes, issues, emoji, pipelines, and pushes. Other
+    // event kinds are intentionally acknowledged without side effects.
     if (payload.object_kind === "merge_request") {
       await handleMergeRequest(payload, repoFullName);
     } else if (payload.object_kind === "note") {
@@ -666,6 +698,8 @@ export async function POST(request: NextRequest) {
       await handlePipeline(payload, repoFullName);
     } else if (payload.object_kind === "issue") {
       await handleIssue(payload, repoId, repoFullName);
+    } else if (payload.object_kind === "push") {
+      await handlePush(payload, repoId, repoFullName);
     }
   } catch (err) {
     // Handler failures remain best-effort to preserve the existing webhook

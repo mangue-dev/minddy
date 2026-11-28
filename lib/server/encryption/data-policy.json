@@ -3249,9 +3249,11 @@
         "truncated"
       ],
       "routing_identity": [
+        "commits_synced_sha",
         "provider"
       ],
       "timestamp": [
+        "commits_synced_at",
         "repo_name_attempted_at",
         "repo_name_checked_at",
         "synced_at"
@@ -3305,6 +3307,7 @@
         "head_sha",
         "id",
         "issue_id",
+        "merge_commit_shas",
         "state"
       ],
       "timestamp": [
@@ -4656,6 +4659,68 @@
       "encryption_metadata": [
         "encrypted_content",
         "encryption_version"
+      ]
+    }
+  },
+  "issue_commits": {
+    "scope": {
+      "ancestors": [
+        "issues:issue_id"
+      ]
+    },
+    "encrypted": [
+      "author_name",
+      "title"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "closes",
+        "on_default_branch"
+      ],
+      "operational_configuration": [
+        "provider"
+      ],
+      "public_identity": [
+        "author_avatar_url",
+        "author_login"
+      ],
+      "routing_identity": [
+        "external_repo_id",
+        "id",
+        "issue_id",
+        "pull_request_id",
+        "sha"
+      ],
+      "timestamp": [
+        "committed_at",
+        "content_checked_at",
+        "created_at"
+      ]
+    }
+  },
+  "issue_branches": {
+    "scope": {
+      "ancestors": [
+        "issues:issue_id"
+      ]
+    },
+    "encrypted": [
+      "branch"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "provider"
+      ],
+      "routing_identity": [
+        "external_repo_id",
+        "head_sha",
+        "id",
+        "issue_id"
+      ],
+      "timestamp": [
+        "content_checked_at",
+        "created_at",
+        "pushed_at"
       ]
     }
   }

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 25,
+  "revision": 27,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-28",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "lib/pr-merge-intent.ts",
       "components/issue-pr-context.tsx",
       "components/issue-pr-chip.tsx",
-      "components/pull-requests/pr-hover-card.tsx"
+      "components/pull-requests/pr-hover-card.tsx",
+      "lib/forge-work-status.ts",
+      "lib/server/git/commit-ingest.ts",
+      "components/issue-code-work-section.tsx"
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-1001: usage sentence of the Merge with Numo paragraph, source audit against lib/server/agent/pr-state-actions.ts, lib/usage-features.ts, lib/billing-plans.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-1001 merge usage sentence translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 27,
+    "fact": "agent:claude-code (MIN-1037: commit tracking section #commits-without-pull-request written from lib/server/git/commit-ingest.ts, lib/forge-work-status.ts, lib/server/agent/pr-ingest-core.ts and components/issue-code-work-section.tsx; quoted labels checked against messages/*.json; the receiver was exercised against the preview database; no browser walkthrough; no figure shows this flow; existing figure kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (es MIN-1037 section translated from en with the locale register, glossary and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-28"
   },
   "related": [
     "issues",
@@ -88,7 +91,7 @@
       "src": "/documentation/es/review-pull-requests-workflow.png",
       "alt": "Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.",
       "caption": "PR de demostración que sigue abierta, sin fusionar. Las diferencias eliminan los espacios alrededor del nombre y usan World para un valor vacío. Esta instancia no puede solicitar autorización de usuario de GitHub; la indicación de disponibilidad no concede permisos para fusionar ni demuestra que la CI del proveedor haya pasado.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -136,6 +139,20 @@ Desde un tablero, haz clic derecho en una incidencia sin pull request abierta y 
 Cuando una incidencia tiene una pull request vinculada, su menú del clic derecho agrupa las acciones de esa pull request en un submenú **Pull request**. **Ver pull request** abre la pull request en una pestaña propia, o cambia a la pestaña que ya la muestra. **Fusionar** aparece cuando la pull request está abierta y puede fusionarse, y tu cuenta del proveedor puede escribir en el repositorio; abre la pull request en su confirmación de fusión habitual, donde eliges el método y el mensaje del commit, o usas **Fusionar con Numo**. **Activar la fusión automática** aparece mientras la pull request todavía no puede fusionarse y el repositorio permite la fusión automática; **Desactivar la fusión automática** lo sustituye cuando la fusión automática está activada. Cuando la pull request vinculada está fusionada o cerrada, **Vincular a una pull request** vincula la incidencia a otra pull request abierta del proyecto. **Desvincular de la pull request**, aparte y en rojo al final del submenú, quita el vínculo después de que lo confirmes.
 
 En **Ajustes de la cuenta → Incidencias → Iniciar una incidencia**, **Iniciar la incidencia o la tarea cuando copio su prompt** pasa a «En curso» una incidencia o una tarea del cuaderno que aún no ha empezado cuando copias su prompt. Déjalo desactivado si solo copias prompts para leerlos.
+
+### Trabajo subido sin pull request {#commits-without-pull-request}
+
+minddy también sigue el trabajo que se sube directamente al repositorio vinculado, con la misma convención de identificador:
+
+- Un commit cuyo mensaje cita `MIN-42`, en cualquier rama, se vincula a la incidencia y la pasa a **En curso** si no había empezado. Un mismo commit puede citar varias incidencias.
+- Un commit que llega a la rama predeterminada con una palabra de cierre delante del identificador, como `Fixes MIN-42`, `Closes MIN-42` o `Resolves MIN-42`, pasa la incidencia a **Hecha**. Una simple mención en la rama predeterminada no la completa.
+- Una rama subida cuyo nombre contiene el identificador, como `min-42-keyboard-navigation`, pasa la incidencia a **En curso**.
+
+El panel de la incidencia muestra estos commits en **Commits**, con su SHA corto, título, autor y fecha, y estas ramas en **Ramas**; cada línea lleva a la forja. La actividad de la incidencia registra cada push en una línea, por ejemplo «ha subido 3 commits». Para nombrar una rama a partir de una incidencia, abre el menú de acciones de la incidencia y elige **Copiar el nombre de la rama**.
+
+Una pull request tiene prioridad. Los commits subidos a la rama de una pull request abierta o en borrador, y el commit que produce su fusión, pertenecen a esa pull request: aparecen en ella, y el estado de la incidencia sigue a la pull request. Un commit nunca hace retroceder una incidencia, no la saca de **Cancelada** ni de **Duplicada** y no sustituye un estado más avanzado. Una pull request cerrada no devuelve a **Pendiente** una incidencia que un commit completó mientras la pull request estaba abierta.
+
+minddy ve un commit una vez subido; el trabajo que solo existe en tu ordenador no se sigue. Si un push pasó desapercibido, minddy vuelve a leer la rama predeterminada cuando actualiza las pull requests del repositorio, lo que ocurre al abrir **Revisión de código**. Los commits reescritos por un rebase o un push forzado siguen en la lista. En GitHub, la GitHub App debe estar suscrita al evento Push; en GitLab, minddy activa los eventos de push en el hook del proyecto que gestiona.
 
 ## Revisar una pull request vinculada {#review-pull-requests}
 

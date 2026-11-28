@@ -341,6 +341,7 @@ export async function applyForgePrToIssue(opts: {
           issueId,
           actorId,
           prState: opts.prState,
+          openedAt: pr.opened_at,
           forgeSync: opts.provider,
         });
       }

@@ -6,7 +6,7 @@ import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Delete02Icon, LinkSquare01Icon, GitMergeIcon, GitPullRequestIcon, Link02Icon, Target01Icon, Unlink01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Delete02Icon, GitBranchIcon, LinkSquare01Icon, GitMergeIcon, GitPullRequestIcon, Link02Icon, Target01Icon, Unlink01Icon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { RelationIcon } from "@/components/issue-indicators";
 import { KEY_FOR_FIELD, RELATION_SHORTCUT_HINT, type ShortcutField } from "@/components/issue-field-shortcuts";
@@ -24,7 +24,7 @@ import type { Issue } from "@/lib/types";
 import { DATE_ICON } from "@/components/feature-icons";
 import { promptSubmenu } from "@/components/agent/use-agent-menu-actions";
 import { usePromptActionLabel } from "@/components/prompt-action";
-import type { MultiIssueAction } from "@/lib/issue-prompt";
+import { suggestedBranchName, type MultiIssueAction } from "@/lib/issue-prompt";
 
 /**
  * The right-clicked card belongs to a selection of several tickets (MIN-833):
@@ -303,10 +303,27 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
         );
       },
     };
-    if (readOnly) return [copyId, ...(pr ? prMenu() : [])];
+    // The branch name that links future work to this issue by convention
+    // (MIN-1037): a pushed branch named this way starts the issue, and a pull
+    // request opened from it attaches itself.
+    const copyBranch: ContextMenuAction = {
+      id: "copy-branch-name",
+      label: tPr("copyBranch"),
+      keywords: ["copy", "copier", "branch", "branche", "git", "checkout"],
+      icon: <HugeiconsIcon icon={GitBranchIcon} className="size-4" />,
+      onSelect: () => {
+        const branchName = suggestedBranchName(identifier, issue.title);
+        void navigator.clipboard.writeText(branchName).then(
+          () => toast.success(branchName),
+          () => toast.error(tCommon("copyFailed")),
+        );
+      },
+    };
+    if (readOnly) return [copyId, copyBranch, ...(pr ? prMenu() : [])];
     return [
       ...agentActions,
       copyId,
+      copyBranch,
       ...prMenu(),
       ...relationsAction(),
       ...(!issue.objective_id && hasObjectives ? [objectiveAction] : []),

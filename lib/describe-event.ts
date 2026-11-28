@@ -1,6 +1,6 @@
 import { EFFORT_MAP, issueIdentifier, type IssueEffort } from "./issue-constants";
 import { displayName } from "./display-name";
-import { forgePrActor } from "./pr-events";
+import { COMMITS_PUSHED_EVENT, forgePrActor } from "./pr-events";
 import type { Category, Issue, IssueEvent, Member, Objective } from "./types";
 
 /** Translator scoped to the "Activity" namespace (next-intl useTranslations). */
@@ -183,6 +183,9 @@ export function describeEvent(
     return t(prEventKey(e, "Reopened"), { number: e.to_value ?? "" });
   if (e.type === "pr_committed")
     return t(prEventKey(e, "Committed"), { number: e.to_value ?? "" });
+  // Commits pushed without a pull request (MIN-1037): `to_value` counts them.
+  if (e.type === COMMITS_PUSHED_EVENT)
+    return t("commitsPushed", { count: Number.parseInt(e.to_value ?? "", 10) || 1 });
   if (e.type === "pr_commented")
     return t(prEventKey(e, "Commented"), { number: e.to_value ?? "" });
   if (e.type === "pr_code_commented")

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { issueRefFromPr, parseIssueRef, parsePullRequestRef } from "./pr-ingest-core";
+import {
+  issueRefFromPr,
+  issueRefsFromCommit,
+  parseIssueRef,
+  parsePullRequestRef,
+} from "./pr-ingest-core";
 
 /**
  * MIN-143 — PR ↔ issue linking is the only logic here that truly merits a
@@ -151,5 +156,65 @@ describe("parsePullRequestRef", () => {
     expect(parsePullRequestRef(0)).toBeNull();
     expect(parsePullRequestRef(-1)).toBeNull();
     expect(parsePullRequestRef(4.2)).toBeNull();
+  });
+});
+
+/**
+ * MIN-1037: a commit message is the only signal a direct push carries, so a
+ * mention attaches the issue and only a closing keyword completes it.
+ */
+describe("issueRefsFromCommit", () => {
+  const refs = (message: string, projectKeys = KEYS) =>
+    issueRefsFromCommit({ projectKeys, message });
+
+  it("attaches every issue the message names, once each", () => {
+    expect(refs("MIN-42 rename the column\n\nSee also min-7 and MIN-42.")).toEqual([
+      { ref: "MIN-42", closes: false },
+      { ref: "MIN-7", closes: false },
+    ]);
+  });
+
+  it("closes only the references a closing keyword introduces", () => {
+    expect(refs("Fixes MIN-42, follow-up of MIN-7")).toEqual([
+      { ref: "MIN-42", closes: true },
+      { ref: "MIN-7", closes: false },
+    ]);
+    expect(refs("fix(board): keep the order\n\nCloses: MIN-3")).toEqual([
+      { ref: "MIN-3", closes: true },
+    ]);
+  });
+
+  it("keeps the keyword over a list of references", () => {
+    expect(refs("Resolves MIN-1, MIN-2 and MIN-3 & MIN-4")).toEqual([
+      { ref: "MIN-1", closes: true },
+      { ref: "MIN-2", closes: true },
+      { ref: "MIN-3", closes: true },
+      { ref: "MIN-4", closes: true },
+    ]);
+  });
+
+  it("closes an issue as soon as one of its mentions does", () => {
+    expect(refs("MIN-42 first pass\n\nfixes MIN-42")).toEqual([
+      { ref: "MIN-42", closes: true },
+    ]);
+  });
+
+  it("does not take a keyword that is part of another word, or far from the reference", () => {
+    expect(refs("prefixes MIN-42 with the key")).toEqual([{ ref: "MIN-42", closes: false }]);
+    expect(refs("fix the board, as asked in MIN-42")).toEqual([{ ref: "MIN-42", closes: false }]);
+  });
+
+  it("ignores keys of projects that do not link the repository", () => {
+    expect(refs("Fixes ACME-42 and ADMIN-42")).toEqual([]);
+    expect(refs("Fixes MIN-421x")).toEqual([]);
+    expect(refs("Fixes MIN-42", [])).toEqual([]);
+    expect(issueRefsFromCommit({ projectKeys: KEYS, message: null })).toEqual([]);
+  });
+
+  it("reads several project keys of the same repository", () => {
+    expect(refs("Fixes MIN-1 and web-2", ["MIN", "WEB"])).toEqual([
+      { ref: "MIN-1", closes: true },
+      { ref: "WEB-2", closes: true },
+    ]);
   });
 });

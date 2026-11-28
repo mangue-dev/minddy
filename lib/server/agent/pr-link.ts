@@ -77,6 +77,7 @@ export async function linkPullRequestToIssue(opts: {
     issueId: issue.id,
     actorId,
     prState: pr.state,
+    openedAt: pr.opened_at,
   });
 
   // The discussion that already happened on the PR joins the ticket (MIN-802);
