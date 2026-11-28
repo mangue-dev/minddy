@@ -68,6 +68,9 @@ export interface PullRequestRef {
   /** Last activity at the forge; the "(edited)" marker of the body reads it. */
   updatedAt?: string;
   mergedAt?: string | null;
+  /** Commits the merge produced on the base branch (the merge commit, and the
+      squash commit when the forge makes both). Only set on a merged PR. */
+  mergeCommitShas?: string[];
   /** GraphQL identifier of the PR, the only key GitHub's draft/ready
       mutations accept. Never set on GitLab. */
   nodeId?: string;

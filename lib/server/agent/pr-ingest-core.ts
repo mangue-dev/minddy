@@ -94,6 +94,67 @@ export function issueRefFromPr(input: IssueRefInput): string | null {
   );
 }
 
+/** One ticket a commit message names. */
+export interface CommitIssueRef {
+  /** Normalized identifier, `"MIN-42"`. */
+  ref: string;
+  /** A closing keyword introduces this reference (`Fixes MIN-42`). */
+  closes: boolean;
+}
+
+/**
+ * Every ticket a commit message names, in order of appearance (MIN-1037).
+ *
+ * A commit differs from a pull request on one point: its message is the only
+ * signal it carries, so a plain mention anywhere in it attaches the ticket,
+ * where the body of a pull request only counts on its closing lines.
+ *
+ * `closes` follows the forges: the keyword must introduce the reference
+ * (`Fixes MIN-42`, `closes: MIN-42`), and a list keeps it (`Fixes MIN-42,
+ * MIN-43 and MIN-44`). A ticket named twice is returned once, and closes as
+ * soon as one of its mentions does.
+ */
+export function issueRefsFromCommit(input: {
+  projectKeys: readonly string[];
+  message: string | null | undefined;
+}): CommitIssueRef[] {
+  const pattern = referencePattern(input.projectKeys);
+  if (!pattern || !input.message) return [];
+  const keyByLower = new Map(
+    input.projectKeys.filter(Boolean).map((k) => [k.trim().toLowerCase(), k.trim()]),
+  );
+  const normalize = (key: string, digits: string): string | null => {
+    const known = keyByLower.get(key.toLowerCase());
+    const number = Number.parseInt(digits, 10);
+    if (!known || !Number.isSafeInteger(number) || number < 1) return null;
+    return `${known}-${number}`;
+  };
+
+  const reference = pattern.source;
+  const closing = new RegExp(
+    `(?<![A-Za-z0-9])(?:${CLOSING_KEYWORDS})\\s*:?\\s+` +
+      `(${reference}(?:(?:\\s*,\\s*(?:and\\s+)?|\\s+and\\s+|\\s*&\\s*)${reference})*)`,
+    "gi",
+  );
+  const closed = new Set<string>();
+  for (const list of input.message.matchAll(closing)) {
+    for (const match of list[1].matchAll(new RegExp(reference, "gi"))) {
+      const ref = normalize(match[1], match[2]);
+      if (ref) closed.add(ref);
+    }
+  }
+
+  const refs: CommitIssueRef[] = [];
+  const seen = new Set<string>();
+  for (const match of input.message.matchAll(pattern)) {
+    const ref = normalize(match[1], match[2]);
+    if (!ref || seen.has(ref)) continue;
+    seen.add(ref);
+    refs.push({ ref, closes: closed.has(ref) });
+  }
+  return refs;
+}
+
 /**
  * Number of a HAND DESIGNATED pull request, or null (MIN-163bis).
  *

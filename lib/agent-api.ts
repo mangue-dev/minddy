@@ -1,5 +1,6 @@
 "use client";
 
+import type { IssueCodeWork } from "@/lib/issue-code-work";
 import type { IssuePr } from "@/lib/issue-pr";
 import { fetchClientRead } from "./client-read";
 
@@ -118,6 +119,11 @@ export async function fetchIssuePullRequestApi(
   issueId: string,
 ): Promise<{ pullRequest: IssuePr | null }> {
   return parseJson(await fetchClientRead(`/api/issues/${issueId}/pull-request`));
+}
+
+/** The commits and branches tracked for an issue (MIN-1037). */
+export async function fetchIssueCodeWorkApi(issueId: string): Promise<IssueCodeWork> {
+  return parseJson(await fetchClientRead(`/api/issues/${issueId}/code-work`));
 }
 
 export async function fetchPullRequestApi(

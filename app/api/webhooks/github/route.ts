@@ -34,6 +34,8 @@ import {
 } from "@/lib/server/git/issue-sync";
 import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
 import { reconcileRepoRename } from "@/lib/server/git/repo-rename";
+import { ingestPush, reconcilePullRequestCommits } from "@/lib/server/git/commit-ingest";
+import { normalizeGithubPush } from "@/lib/server/git/push-core";
 import {
   findPullRequestByNumber,
   findPullRequestsByHeadSha,
@@ -101,7 +103,12 @@ import type { PrActionEventType } from "@/lib/pr-events";
  *  - `issues` (opened/closed/reopened) → one-way synchronization of
  * from the repository to the projects that activated it (MIN-97). One Way :
  * minddy never writes at GitHub.
- * Any other event (ping, push, etc.) is simply acknowledged.
+ *  - `push` → commit tracking (MIN-1037), for work pushed without a pull
+ * request: a commit that names an issue attaches it and starts it,
+ * `Fixes MIN-42` on the default branch completes it, and a branch named after
+ * an issue starts it. Commits of a live pull request, and the commit its merge
+ * produced, are that pull request's (see `lib/server/git/commit-ingest`).
+ * Any other event (ping, etc.) is simply acknowledged.
  *
  * DIRECT (MIN-161): each path also pushes a `changed` on the topic of
  * the PR (`broadcastPrChanged*`), which NAMES the affected parts — the panel
@@ -119,6 +126,7 @@ import type { PrActionEventType } from "@/lib/pr-events";
  * the corresponding activity lines do not appear;
  * `pull_request_review_thread` — the resolution of a live thread;
  * `issues`, `issue_dependencies` — the issue sync (Issues permission);
+ * `push` — commit tracking (Contents permission, read-only);
  * `check_run`, `check_suite` (Checks), `status` (Commit statuses),
  * `deployment_status` (Deployments) — the live CI and deployment card.
  * `check_suite` alone is not enough: GitHub Actions sends it only when the
@@ -173,6 +181,8 @@ interface PullRequestPayload {
   number?: number;
   merged?: boolean;
   merged_at?: string | null;
+  /** Before the merge this is GitHub's test merge commit: only read once merged. */
+  merge_commit_sha?: string | null;
   html_url?: string;
   state?: string;
   draft?: boolean;
@@ -332,6 +342,18 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // receives the comments the PR already carries, dated from GitHub (MIN-802).
   // Off the response path; each link is imported once.
   if (ingested) afterOrNow(() => backfillPendingPrComments(ingested));
+
+  // The pull request takes the commits that are its own (MIN-1037): those
+  // pushed on its branch before it existed, and the commit its merge produced
+  // when the push reached minddy first.
+  if (ingested && ingestion?.applied) {
+    await reconcilePullRequestCommits(
+      ingested,
+      ingested.state === "merged" && payload.pull_request?.merge_commit_sha
+        ? [payload.pull_request.merge_commit_sha]
+        : [],
+    );
+  }
 
   // Edit history (MIN-548): GitHub delivers the PREVIOUS body on `edited`
   // (`changes.body.from`), so the snapshot of the thread's opening message is
@@ -876,6 +898,15 @@ const SYNCED_ISSUE_ACTIONS = new Set([
   "typed",
 ]);
 
+/** Commits pushed to the repository (MIN-1037). */
+async function handlePush(payload: unknown, externalRepoId: string | null): Promise<void> {
+  const repoFullName = (payload as { repository?: { full_name?: string } } | null)
+    ?.repository?.full_name;
+  const push = normalizeGithubPush(payload);
+  if (!push || !repoFullName || !externalRepoId) return;
+  await ingestPush({ ...push, provider: "github", repoFullName, externalRepoId });
+}
+
 async function handleIssues(payload: unknown): Promise<void> {
   const remote = normalizeGithubIssueEvent(payload);
   if (!remote || !SYNCED_ISSUE_ACTIONS.has(remote.action)) return;
@@ -1066,6 +1097,8 @@ export async function POST(request: NextRequest) {
       await handleDeploymentStatus(JSON.parse(rawBody) as DeploymentStatusEvent);
     } else if (event === "issues") {
       await handleIssues(JSON.parse(rawBody));
+    } else if (event === "push") {
+      await handlePush(JSON.parse(rawBody), repositoryIdentity?.id ?? null);
     }
   } catch (err) {
     // Best effort: we still answer 200, since the delivery is already marked

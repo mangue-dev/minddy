@@ -3522,6 +3522,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "merge_commit_shas": {
+        "type": "text[]",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -5590,6 +5595,26 @@
         "generated": false
       },
       "repo_name_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "commits_synced_sha": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "commits_synced_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "push_hook_aligned_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "push_hook_tried_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -11537,6 +11562,174 @@
       {
         "table": "users",
         "column": "resolved_by",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "issue_commits": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "issue_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "provider": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "external_repo_id": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "sha": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "title": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "author_name": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "author_login": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "author_avatar_url": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "co_authors": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "committed_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "on_default_branch": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "closes": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "pull_request_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "content_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "delivered_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "announced_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "issues",
+        "column": "issue_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "pull_requests",
+        "column": "pull_request_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "issue_branches": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "issue_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "provider": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "external_repo_id": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "branch": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "head_sha": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "pushed_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "content_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "issues",
+        "column": "issue_id",
         "targetColumn": "id"
       }
     ]

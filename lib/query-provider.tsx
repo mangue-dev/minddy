@@ -105,6 +105,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["me", "board-issues"], // short-lived resume snapshot; duplicates full issue rows
   ["issue-pull-requests"], // components/issue-pr-context.tsx
   ["issue-pull-request"], // ["issue-pull-request", issueId] — lib/use-agent-runs.ts
+  ["issue-code-work"], // ["issue-code-work", issueId] — commit titles are repository content
   ["pull-requests"], // ["pull-requests", "all"]
   ["pr-comments"],
   ["pr-review-comments"],

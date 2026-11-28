@@ -182,6 +182,8 @@ interface RawMr {
   web_url: string;
   state: string; // opened | closed | locked | merged
   merged_at?: string | null;
+  merge_commit_sha?: string | null;
+  squash_commit_sha?: string | null;
   draft?: boolean;
   work_in_progress?: boolean;
   title?: string;
@@ -295,6 +297,9 @@ function toRef(mr: RawMr): PullRequestRef {
     createdAt: mr.created_at,
     updatedAt: mr.updated_at,
     mergedAt: mr.merged_at ?? null,
+    mergeCommitShas: merged
+      ? [mr.merge_commit_sha, mr.squash_commit_sha].filter((sha): sha is string => !!sha)
+      : undefined,
     // `nodeId` remains empty: it is a GraphQL GitHub key, with no useful equivalent
     // here (the GitLab draft switch is done by the title — see below).
     ...toMergeable(mr),
@@ -452,6 +457,96 @@ interface RawCommit {
   stats?: { additions?: number; deletions?: number } | null;
 }
 
+/**
+ * A GitLab commit in the shared shape. Neither forge account nor signature:
+ * the commit API only serves the name written in the commit, and the check
+ * would cost one call per commit. `author: null` and `verified: null` say
+ * "we don't know", which the renderer already handles.
+ */
+function toCommit(c: RawCommit, repoFullName: string): PullRequestCommit {
+  return {
+    sha: c.id,
+    // `message` has the title AND the body; `title` alone is the fallback for
+    // instances that only serve it on this endpoint.
+    message: c.message ?? c.title ?? "",
+    author: null,
+    authorName: c.author_name ?? null,
+    authorEmail: c.author_email ?? null,
+    authoredAt: c.authored_date ?? c.created_at ?? null,
+    // Some instances do not serve `web_url` here: the commit URL is stable
+    // and can be rebuilt, like that of the compare.
+    url: c.web_url ?? `${GITLAB_HOST}/${repoFullName}/-/commit/${c.id}`,
+    verified: null,
+    // First parent: the main line of a merge commit.
+    parentSha: c.parent_ids?.[0] ?? null,
+    // As with GitHub, the list carries neither stats nor authors
+    // (`…CommitExtras`); the caller reads the `Co-authored-by` trailers.
+    authors: [],
+    additions: null,
+    deletions: null,
+  };
+}
+
+/**
+ * The commits `head` has and `base` does not, oldest first (MIN-1037). GitLab
+ * serves a comparison in one response, already in that order.
+ */
+export async function compareCommits(opts: {
+  token: string;
+  repoFullName: string;
+  base: string;
+  head: string;
+}): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
+  const data = await glJson<{ commits?: RawCommit[]; compare_timeout?: boolean }>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/compare` +
+      `?from=${encodeURIComponent(opts.base)}&to=${encodeURIComponent(opts.head)}`,
+    opts.token,
+  );
+  return {
+    commits: (data.commits ?? []).map((c) => toCommit(c, opts.repoFullName)),
+    truncated: data.compare_timeout === true,
+  };
+}
+
+/** SHA at the tip of a branch, or null when the branch does not exist. */
+export async function getBranchHeadSha(opts: {
+  token: string;
+  repoFullName: string;
+  branch: string;
+}): Promise<string | null> {
+  try {
+    const data = await glJson<{ commit?: { id?: string } }>(
+      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/branches/` +
+        encodeURIComponent(opts.branch),
+      opts.token,
+    );
+    return data.commit?.id ?? null;
+  } catch (error) {
+    if (error instanceof GitlabApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+/** Numbers (`iid`) of the merge requests a commit belongs to (MIN-1037). */
+export async function listCommitPullRequestNumbers(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<number[]> {
+  try {
+    const data = await glJson<Array<{ iid?: number }>>(
+      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/commits/` +
+        `${encodeURIComponent(opts.sha)}/merge_requests`,
+      opts.token,
+    );
+    return (Array.isArray(data) ? data : [])
+      .flatMap((mr) => (typeof mr.iid === "number" ? [mr.iid] : []));
+  } catch (error) {
+    if (error instanceof GitlabApiError && error.status === 404) return [];
+    throw error;
+  }
+}
+
 /** Same ceiling as `pr.ts`: 3 pages of 100 commits, `truncated` beyond. */
 const COMMITS_MAX_PAGES = 3;
 
@@ -481,31 +576,7 @@ export async function listMergeRequestCommits(opts: {
     // current, and the sorting that follows only straightens out the rebases (a
     // author date can precede that of the previous commit).
     .reverse()
-    .map((c) => {
-      const authoredAt = c.authored_date ?? c.created_at ?? null;
-      return {
-        sha: c.id,
-        // `message` has the title AND the body; `title` alone is the withdrawal of
-        // instances that only serve him on this endpoint.
-        message: c.message ?? c.title ?? "",
-        author: null,
-        authorName: c.author_name ?? null,
-        authorEmail: c.author_email ?? null,
-        authoredAt,
-        // Some instances do not serve `web_url` here: the commit URL is
-        // stable and rebuilds itself, like that of the compare.
-        url: c.web_url ?? `${GITLAB_HOST}/${opts.repoFullName}/-/commit/${c.id}`,
-        verified: null,
-        // First parent: The main line of a merge commit.
-        parentSha: c.parent_ids?.[0] ?? null,
-        // As with GitHub, the list contains neither stats nor authors (`…CommitExtras`)
-        // — except that GitLab will never be able to resolve the latter into accounts:
-        // the caller will read the `Co-authored-by` trailers of the message.
-        authors: [],
-        additions: null,
-        deletions: null,
-      } satisfies PullRequestCommit;
-    })
+    .map((c) => toCommit(c, opts.repoFullName))
     // STABLE sorting, and an unreadable date compares to 0 (`Array.sort` rule on
     // NaN): two commits from the same push often share the second, and
     // the order of the forge is then the only tie-breaker we have.

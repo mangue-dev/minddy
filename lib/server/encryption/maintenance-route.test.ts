@@ -12,6 +12,7 @@ const workers: Array<[string, string[]]> = [
   ["@/lib/server/encryption/github-comment-url-backfill", ["backfillGithubCommentUrlsBatch"]],
   ["@/lib/server/encryption/pull-request-url-backfill", ["backfillPullRequestUrlsBatch"]],
   ["@/lib/server/encryption/pull-request-content-backfill", ["backfillPullRequestContentBatch"]],
+  ["@/lib/server/encryption/issue-code-work-backfill", ["backfillIssueCodeWorkBatch"]],
   ["@/lib/server/encryption/pr-comment-edit-backfill", ["backfillPrCommentEditsBatch"]],
   ["@/lib/server/encryption/forge-relay-delivery-backfill", ["backfillForgeRelayDeliveriesBatch"]],
   ["@/lib/server/encryption/forge-relay-audit-backfill", ["scrubForgeRelayAuditBatch"]],

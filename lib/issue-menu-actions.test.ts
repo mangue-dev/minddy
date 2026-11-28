@@ -88,7 +88,7 @@ describe("shared issue menu actions", () => {
   it("keeps agent, PR, relation, field, cycle, and trash actions in the same order", () => {
     const { actions, action, options } = build();
     expect(actions.map((item) => item.id)).toEqual([
-      "copy-prompt", "launch-agent", "copy-identifier", "pull-request", "relations",
+      "copy-prompt", "launch-agent", "copy-identifier", "copy-branch-name", "pull-request", "relations",
       "set-objective", "set-due-date", "cycle-add", "delete",
     ]);
     expect(actions.slice(0, 2)).toEqual(options.agentActions);
@@ -141,7 +141,7 @@ describe("shared issue menu actions", () => {
       issue: { id: "issue", number: 623, objective_id: "objective", due_date: "2026-10-01" } as Issue,
       pr: null, onSelectRelation: undefined, onDelete: undefined,
     });
-    expect(actions.map((item) => item.id)).toEqual(["copy-prompt", "launch-agent", "copy-identifier", "cycle-add"]);
+    expect(actions.map((item) => item.id)).toEqual(["copy-prompt", "launch-agent", "copy-identifier", "copy-branch-name", "cycle-add"]);
     expect(build({ hasObjectives: false }).actions.map((item) => item.id)).not.toContain("set-objective");
   });
 
@@ -158,6 +158,18 @@ describe("shared issue menu actions", () => {
     expect(build({ pr: null, onLinkPullRequest, readOnly: true }).actions.map((item) => item.id)).not.toContain("link-pr");
   });
 
+  it("copies a branch name that carries the issue identifier, for readers too", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    build({
+      issue: { id: "issue", project_id: "project", number: 623, title: "Keyboard navigation" } as Issue,
+    }).action("copy-branch-name").onSelect?.();
+    await Promise.resolve();
+    expect(writeText).toHaveBeenCalledWith("min-623-keyboard-navigation");
+    expect(dependencies.toastSuccess).toHaveBeenCalledWith("min-623-keyboard-navigation");
+    expect(build({ readOnly: true }).actions.map((item) => item.id)).toContain("copy-branch-name");
+  });
+
   it("copies the issue identifier, for readers too", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     vi.stubGlobal("navigator", { clipboard: { writeText } });
@@ -166,7 +178,7 @@ describe("shared issue menu actions", () => {
     expect(writeText).toHaveBeenCalledWith("MIN-623");
     expect(dependencies.toastSuccess).toHaveBeenCalledWith("MIN-623");
     const reader = build({ readOnly: true });
-    expect(reader.actions.map((item) => item.id)).toEqual(["copy-identifier", "pull-request"]);
+    expect(reader.actions.map((item) => item.id)).toEqual(["copy-identifier", "copy-branch-name", "pull-request"]);
     expect(reader.action("pull-request").children?.map((item) => item.id)).toEqual(["open-pr"]);
   });
 

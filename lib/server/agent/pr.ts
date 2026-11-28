@@ -174,6 +174,8 @@ interface RawPull {
   draft?: boolean;
   merged?: boolean;
   merged_at?: string | null;
+  /** Before the merge this is GitHub's test merge commit: only read once merged. */
+  merge_commit_sha?: string | null;
   mergeable?: boolean | null;
   mergeable_state?: string | null;
   title?: string;
@@ -222,6 +224,9 @@ function toRef(pr: RawPull, baseRepoFullName: string): PullRequestRef {
     createdAt: pr.created_at,
     updatedAt: pr.updated_at,
     mergedAt: pr.merged_at ?? null,
+    mergeCommitShas: (pr.merged ?? !!pr.merged_at) && pr.merge_commit_sha
+      ? [pr.merge_commit_sha]
+      : undefined,
     nodeId: pr.node_id,
     mergeable: pr.mergeable,
     mergeableState: pr.mergeable_state,
@@ -498,6 +503,81 @@ export async function listPullRequestCommits(opts: {
     if (page === COMMITS_MAX_PAGES) truncated = true;
   }
   return { commits, truncated };
+}
+
+/** Pages of 100 commits read from a comparison: 1,000 commits, `truncated` beyond. */
+const COMPARE_MAX_PAGES = 10;
+
+/**
+ * The commits `head` has and `base` does not, oldest first (MIN-1037). GitHub
+ * pages the commits of a comparison; without paging it stops at 250.
+ */
+export async function compareCommits(opts: {
+  token: string;
+  repoFullName: string;
+  base: string;
+  head: string;
+}): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const range = `${encodeURIComponent(opts.base)}...${encodeURIComponent(opts.head)}`;
+  const commits: PullRequestCommit[] = [];
+  let truncated = false;
+  for (let page = 1; page <= COMPARE_MAX_PAGES; page++) {
+    const data = await ghJson<{ commits?: RawCommit[] }>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${range}` +
+        `?per_page=${COMMITS_PER_PAGE}&page=${page}`,
+      opts.token,
+    );
+    const batch = data.commits ?? [];
+    commits.push(...batch.map(toCommit));
+    if (batch.length < COMMITS_PER_PAGE) break;
+    if (page === COMPARE_MAX_PAGES) truncated = true;
+  }
+  return { commits, truncated };
+}
+
+/** SHA at the tip of a branch, or null when the branch does not exist. */
+export async function getBranchHeadSha(opts: {
+  token: string;
+  repoFullName: string;
+  branch: string;
+}): Promise<string | null> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  try {
+    const data = await ghJson<{ commit?: { sha?: string } }>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.branch)}`,
+      opts.token,
+    );
+    return data.commit?.sha ?? null;
+  } catch (error) {
+    if (error instanceof GithubApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+/**
+ * Numbers of the pull requests a commit belongs to (MIN-1037). GitHub answers
+ * with the pull request that brought the commit to the default branch, for a
+ * merge commit, a squash and a rebase alike.
+ */
+export async function listCommitPullRequestNumbers(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<number[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  try {
+    const data = await ghJson<Array<{ number?: number }>>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${encodeURIComponent(opts.sha)}/pulls` +
+        `?per_page=${COMMITS_PER_PAGE}`,
+      opts.token,
+    );
+    return (Array.isArray(data) ? data : [])
+      .flatMap((pull) => (typeof pull.number === "number" ? [pull.number] : []));
+  } catch (error) {
+    if (error instanceof GithubApiError && error.status === 404) return [];
+    throw error;
+  }
 }
 
 interface RawCommitExtras {

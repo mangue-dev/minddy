@@ -579,6 +579,13 @@ export function keysForProjectEvent(
         ...(issueId ? [active(["issue-pull-request", issueId])] : []),
       ];
     }
+    // Commits and branches tracked for an issue (MIN-1037). The broadcast
+    // carries the issue alone: its open panel reads the rows again.
+    case "issue_commits":
+    case "issue_branches": {
+      const issueId = issueIdOf(change);
+      return issueId ? [active(["issue-code-work", issueId])] : [];
+    }
     case "issue_events": {
       const issueId = issueIdOf(change);
       if (issueId) return [active(["events", issueId])];
@@ -637,6 +644,7 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
   ["issue-pull-request"],
+  ["issue-code-work"],
   ISSUE_PRS_KEY,
   // Routines can be edited while this tab is asleep. Their project broadcast
   // is ephemeral, so the persisted list needs the same resume catch-up.

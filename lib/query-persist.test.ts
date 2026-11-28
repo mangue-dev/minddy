@@ -3,7 +3,7 @@ import { authSessionsQueryKey } from "./use-auth-sessions-query";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { isPersistableKey, wasRestoredBeforeMount } from "./query-provider";
-import { issuePullRequestQueryKey } from "./use-agent-runs";
+import { issueCodeWorkQueryKey, issuePullRequestQueryKey } from "./use-agent-runs";
 import { issuePrQueryKey } from "@/components/issue-pr-context";
 import { pullRequestQueryOptions } from "./pull-request-query";
 import { mentionPreviewKey } from "./use-mention-preview";
@@ -37,6 +37,10 @@ describe("isPersistableKey", () => {
     expect(isPersistableKey(issuePrQueryKey("p1"))).toBe(false);
     expect(isPersistableKey(issuePrQueryKey(null))).toBe(false);
     expect(isPersistableKey(issuePullRequestQueryKey("i1"))).toBe(false);
+  });
+
+  it("excludes the commits and branches of an issue, which are repository content", () => {
+    expect(isPersistableKey(issueCodeWorkQueryKey("i1"))).toBe(false);
   });
 
   it("excludes pull requests and their comments", () => {

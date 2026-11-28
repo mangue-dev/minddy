@@ -47,6 +47,7 @@ export async function applyPrStateChange(input: {
       issueId,
       actorId: input.actorId,
       prState: state,
+      openedAt: updated?.opened_at ?? row?.opened_at ?? null,
       forgeSync: input.forgeSync ?? null,
     });
   }

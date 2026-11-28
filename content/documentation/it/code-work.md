@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 25,
+  "revision": 27,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-28",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "lib/pr-merge-intent.ts",
       "components/issue-pr-context.tsx",
       "components/issue-pr-chip.tsx",
-      "components/pull-requests/pr-hover-card.tsx"
+      "components/pull-requests/pr-hover-card.tsx",
+      "lib/forge-work-status.ts",
+      "lib/server/git/commit-ingest.ts",
+      "components/issue-code-work-section.tsx"
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-1001: usage sentence of the Merge with Numo paragraph, source audit against lib/server/agent/pr-state-actions.ts, lib/usage-features.ts, lib/billing-plans.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-1001 merge usage sentence translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 27,
+    "fact": "agent:claude-code (MIN-1037: commit tracking section #commits-without-pull-request written from lib/server/git/commit-ingest.ts, lib/forge-work-status.ts, lib/server/agent/pr-ingest-core.ts and components/issue-code-work-section.tsx; quoted labels checked against messages/*.json; the receiver was exercised against the preview database; no browser walkthrough; no figure shows this flow; existing figure kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (it MIN-1037 section translated from en with the locale register, glossary and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-28"
   },
   "related": [
     "issues",
@@ -88,7 +91,7 @@
       "src": "/documentation/it/review-pull-requests-workflow.png",
       "alt": "Scheda Modifiche della PR dimostrativa aperta, con il diff di greeting e l’avviso di autorizzazione GitHub non disponibile.",
       "caption": "PR dimostrativa che rimane aperta, non unita. Il diff rimuove gli spazi intorno al nome e usa World quando il valore è vuoto. Questa istanza non può richiedere l’autorizzazione dell’utente su GitHub: lo stato di disponibilità non concede il permesso di unione né dimostra che la CI del fornitore sia riuscita.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -136,6 +139,20 @@ Da una board, fai clic con il tasto destro su un ticket senza pull request apert
 Quando un ticket ha una pull request collegata, il suo menu del clic destro raccoglie le azioni di quella pull request in un sottomenu **Pull request**. **Visualizza pull request** apre la pull request in una propria scheda dell’app, o passa alla scheda che la mostra già. **Unisci** compare quando la pull request è aperta e pronta per l’unione e il tuo account del fornitore può scrivere nel repository; apre la pull request sulla sua consueta conferma di unione, dove scegli il metodo e il messaggio di commit, oppure usi **Unisci con Numo**. **Abilita unione automatica** compare finché la pull request non può ancora essere unita e il repository consente l’unione automatica; **Disabilita unione automatica** la sostituisce quando l’unione automatica è attiva. Quando la pull request collegata è unita o chiusa, **Collega a una pull request** collega il ticket a un’altra pull request aperta del progetto. **Scollega dalla pull request**, separata e in rosso in fondo al sottomenu, rimuove il collegamento dopo la tua conferma.
 
 In **Impostazioni account → Ticket → Avviare un ticket**, **Avvia il ticket o l'attività quando ne copio il prompt** porta in corso un ticket o un’attività del taccuino non ancora avviati quando ne copi il prompt. Lascia l’opzione disattivata se copi i prompt solo per leggerli.
+
+### Lavoro inviato senza pull request {#commits-without-pull-request}
+
+minddy segue anche il lavoro inviato direttamente al repository collegato, con la stessa convenzione dell’identificatore:
+
+- Un commit il cui messaggio cita `MIN-42`, su qualsiasi branch, viene collegato al ticket e lo porta a **In corso** se non era ancora iniziato. Uno stesso commit può citare più ticket.
+- Un commit che arriva sul branch predefinito con una parola di chiusura davanti all’identificatore, come `Fixes MIN-42`, `Closes MIN-42` o `Resolves MIN-42`, porta il ticket a **Completato**. Una semplice menzione sul branch predefinito non lo completa.
+- Un branch inviato il cui nome contiene l’identificatore, come `min-42-keyboard-navigation`, porta il ticket a **In corso**.
+
+Il pannello del ticket elenca questi commit sotto **Commit**, con titolo, autori, data e SHA breve, e questi branch sotto **Branch**; ogni riga porta alla forge. Un autore che fa parte del progetto e ha collegato quell’account della forge compare con il suo nome e avatar minddy; chiunque altro compare con il suo account della forge. Un commit firmato da più persone mostra tutti i suoi autori. L’attività del ticket registra ogni push in una riga, per esempio «ha inviato 3 commit». Per dare a un branch il nome di un ticket, apri il menu delle azioni del ticket e scegli **Copia il nome del branch**.
+
+Una pull request ha la priorità. I commit inviati sul branch di una pull request aperta o in bozza, e il commit prodotto dalla sua unione, appartengono a quella pull request: sono elencati lì, e lo stato del ticket segue la pull request. Questo vale per i ticket collegati alla pull request: un commit di quel branch che nomina un altro ticket resta lavoro proprio di quel ticket. Un commit non fa mai arretrare un ticket, non lo fa uscire da **Annullato** o **Duplicato** e non sostituisce uno stato più avanzato. Una pull request chiusa non riporta a **Da fare** un ticket che un commit ha completato mentre la pull request era aperta.
+
+minddy vede un commit dopo che è stato inviato; il lavoro che esiste solo sul tuo computer non viene seguito. Se un push è passato inosservato, minddy rilegge il branch predefinito quando aggiorna le pull request del repository, cosa che avviene aprendo **Revisione del codice**. I commit riscritti da un rebase o da un push forzato restano in elenco. Su GitHub, la GitHub App deve essere iscritta all’evento Push; su GitLab, minddy attiva gli eventi di push sull’hook di progetto che gestisce.
 
 ## Revisionare una pull request collegata {#review-pull-requests}
 

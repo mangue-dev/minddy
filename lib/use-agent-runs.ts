@@ -11,6 +11,7 @@ import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestRead
 import { nextReadActivationSequence } from "./read-activation-sequence";
 import {
   fetchAllPullRequestsApi,
+  fetchIssueCodeWorkApi,
   fetchIssuePullRequestApi,
   fetchOpenPullRequestCountApi,
   fetchPullRequestReadinessBatchApi,
@@ -19,11 +20,31 @@ import {
   type PullRequestMergeFlow,
   type PullRequestStateFilter,
 } from "./agent-api";
+import { EMPTY_ISSUE_CODE_WORK } from "./issue-code-work";
 import { refetchOnRevealWhenStale } from "./reveal-freshness";
 import {
   PULL_REQUEST_SETTLED_POLL_MS,
   pullRequestReadinessBatchRefetchInterval,
 } from "./pr-readiness-actions";
+
+/** Cache key for the commits and branches of an issue (side panel). */
+export function issueCodeWorkQueryKey(issueId: string) {
+  return ["issue-code-work", issueId] as const;
+}
+
+/**
+ * The commits and branches tracked for an issue (MIN-1037). Realtime
+ * invalidates this key when a push brings a commit, so no polling.
+ */
+export function useIssueCodeWorkQuery(issueId: string | null) {
+  const { data } = useQuery({
+    queryKey: issueCodeWorkQueryKey(issueId ?? ""),
+    queryFn: () => fetchIssueCodeWorkApi(issueId as string),
+    enabled: !!issueId,
+    refetchOnMount: refetchOnRevealWhenStale,
+  });
+  return data ?? EMPTY_ISSUE_CODE_WORK;
+}
 
 /** Cache key for the pull request of an issue (side panel). */
 export function issuePullRequestQueryKey(issueId: string) {

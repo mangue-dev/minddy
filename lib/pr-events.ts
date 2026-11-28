@@ -27,6 +27,13 @@ export const PR_ACTION_EVENT_TYPES = [
 export type PrActionEventType = (typeof PR_ACTION_EVENT_TYPES)[number];
 
 /**
+ * Commits pushed outside a pull request that name the issue (MIN-1037). One
+ * line per push: `to_value` is the number of commits, `from_value` the forge
+ * actor, encoded like a pull request action (`forgeActorValue`).
+ */
+export const COMMITS_PUSHED_EVENT = "commits_pushed";
+
+/**
  * Window for grouping REPEATABLE gestures (see `collapsesInBurst`): at
  * within this window, the same actor who repeats the same gesture on the same PR
  * only produces one line. Locked onto that of the anti-echo — the hook that returns
@@ -96,5 +103,8 @@ export function forgePrActor(fromValue: string | null): {
  * always a `actor_id` (the member) → this test excludes them.
  */
 export function isForgePrEvent(e: { type: string; actor_id: string | null }): boolean {
-  return !e.actor_id && (PR_ACTION_EVENT_TYPES as readonly string[]).includes(e.type);
+  return !e.actor_id && (
+    (PR_ACTION_EVENT_TYPES as readonly string[]).includes(e.type) ||
+    e.type === COMMITS_PUSHED_EVENT
+  );
 }

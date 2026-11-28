@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 25,
+  "revision": 27,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-28",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "lib/pr-merge-intent.ts",
       "components/issue-pr-context.tsx",
       "components/issue-pr-chip.tsx",
-      "components/pull-requests/pr-hover-card.tsx"
+      "components/pull-requests/pr-hover-card.tsx",
+      "lib/forge-work-status.ts",
+      "lib/server/git/commit-ingest.ts",
+      "components/issue-code-work-section.tsx"
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-1001: usage sentence of the Merge with Numo paragraph, source audit against lib/server/agent/pr-state-actions.ts, lib/usage-features.ts, lib/billing-plans.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-1001 merge usage sentence translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 27,
+    "fact": "agent:claude-code (MIN-1037: commit tracking section #commits-without-pull-request written from lib/server/git/commit-ingest.ts, lib/forge-work-status.ts, lib/server/agent/pr-ingest-core.ts and components/issue-code-work-section.tsx; quoted labels checked against messages/*.json; the receiver was exercised against the preview database; no browser walkthrough; no figure shows this flow; existing figure kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (de MIN-1037 section translated from en with the locale register, glossary and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-28"
   },
   "related": [
     "issues",
@@ -88,7 +91,7 @@
       "src": "/documentation/de/review-pull-requests-workflow.png",
       "alt": "Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.",
       "caption": "Demonstrations-PR, der offen bleibt und nicht gemergt wurde. Der Diff entfernt Leerzeichen um den Namen und verwendet World bei leerem Wert. Diese Instanz kann keine GitHub-Benutzerautorisierung anfordern; der Bereitschaftsstatus verleiht keine Merge-Rechte und belegt keine erfolgreiche Anbieter-CI.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -136,6 +139,20 @@ Klicke auf einem Board mit der rechten Maustaste auf ein Ticket ohne offenen Pul
 Hat ein Ticket einen verknüpften Pull Request, fasst sein Rechtsklickmenü dessen Aktionen im Untermenü **Pull Request** zusammen. **Pull Request anzeigen** öffnet den Pull Request in einem eigenen Tab oder wechselt zu dem Tab, der ihn bereits zeigt. **Zusammenführen** erscheint, wenn der Pull Request offen und zum Merge bereit ist und dein Anbieterkonto in das Repository schreiben kann; es öffnet den Pull Request mit seiner üblichen Merge-Bestätigung, in der du die Methode und die Commit-Nachricht wählst oder **Mit Numo zusammenführen** nutzt. **Auto-Merge aktivieren** erscheint, solange der Pull Request noch nicht zusammengeführt werden kann und das Repository Auto-Merge erlaubt; **Auto-Merge deaktivieren** ersetzt es, sobald Auto-Merge aktiv ist. Ist der verknüpfte Pull Request zusammengeführt oder geschlossen, verknüpft **Mit einem Pull Request verknüpfen** das Ticket mit einem anderen offenen Pull Request des Projekts. **Vom Pull Request lösen** steht abgesetzt und rot ganz unten und entfernt die Verknüpfung nach deiner Bestätigung.
 
 Unter **Kontoeinstellungen → Tickets → Ticket starten** setzt **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** ein noch nicht begonnenes Ticket oder eine Notizbuchaufgabe auf „In Arbeit“, sobald du deren Prompt kopierst. Lass die Option deaktiviert, wenn du Prompts nur zum Lesen kopieren.
+
+### Arbeit ohne Pull Request gepusht {#commits-without-pull-request}
+
+minddy verfolgt auch Arbeit, die direkt in das verknüpfte Repository gepusht wird, mit derselben Kennungskonvention:
+
+- Ein Commit, dessen Nachricht `MIN-42` nennt, wird auf jedem Branch an das Ticket gehängt und setzt es auf **In Bearbeitung**, wenn es noch nicht begonnen war. Ein Commit kann mehrere Tickets nennen.
+- Ein Commit, der mit einem Schlüsselwort zum Schließen vor der Kennung auf dem Standard-Branch ankommt, etwa `Fixes MIN-42`, `Closes MIN-42` oder `Resolves MIN-42`, setzt das Ticket auf **Erledigt**. Eine bloße Erwähnung auf dem Standard-Branch schließt es nicht ab.
+- Ein gepushter Branch, dessen Name die Kennung enthält, etwa `min-42-keyboard-navigation`, setzt das Ticket auf **In Bearbeitung**.
+
+Das Ticket-Panel listet diese Commits unter **Commits** mit Titel, Autoren, Datum und kurzem SHA und diese Branches unter **Branches**; jede Zeile führt zur Forge. Ein Autor, der zum Projekt gehört und dieses Forge-Konto verbunden hat, erscheint mit seinem minddy-Namen und -Avatar; alle anderen erscheinen mit ihrem Forge-Konto. Ein gemeinsam signierter Commit zeigt alle Autoren. Die Aktivität des Tickets hält jeden Push in einer Zeile fest, etwa „hat 3 Commits gepusht“. Um einen Branch nach einem Ticket zu benennen, öffne das Aktionsmenü des Tickets und wähle **Branch-Namen kopieren**.
+
+Ein Pull Request hat Vorrang. Commits, die auf den Branch eines offenen Pull Requests oder eines Entwurfs gepusht werden, und der Commit, den sein Zusammenführen erzeugt, gehören zu diesem Pull Request: Sie werden dort gelistet, und der Status des Tickets folgt dem Pull Request. Das gilt für die Tickets, die mit dem Pull Request verknüpft sind: Ein Commit dort, der ein anderes Ticket nennt, bleibt eigene Arbeit dieses Tickets. Ein Commit setzt ein Ticket nie zurück, holt es nicht aus **Abgebrochen** oder **Duplikat** und ersetzt keinen weiter fortgeschrittenen Status. Ein geschlossener Pull Request setzt ein Ticket nicht auf **Zu erledigen** zurück, das ein Commit abgeschlossen hat, während der Pull Request offen war.
+
+minddy sieht einen Commit, sobald er gepusht ist; Arbeit, die nur auf deinem Computer liegt, wird nicht verfolgt. Ist ein Push unbemerkt geblieben, liest minddy den Standard-Branch erneut, wenn es die Pull Requests des Repositorys aktualisiert, was beim Öffnen von **Code-Review** geschieht. Commits, die ein Rebase oder ein Force-Push umgeschrieben hat, bleiben gelistet. Bei GitHub muss die GitHub App das Push-Ereignis abonniert haben; bei GitLab schaltet minddy Push-Ereignisse am Projekt-Hook ein, den es verwaltet.
 
 ## Einen verknüpften Pull Request prüfen {#review-pull-requests}
 

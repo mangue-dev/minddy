@@ -11,6 +11,8 @@ import { backfillGithubIssueMetadataBatch } from "@/lib/server/encryption/github
 import { backfillGithubCommentUrlsBatch } from "@/lib/server/encryption/github-comment-url-backfill";
 import { backfillPullRequestUrlsBatch } from
   "@/lib/server/encryption/pull-request-url-backfill";
+import { backfillIssueCodeWorkBatch } from
+  "@/lib/server/encryption/issue-code-work-backfill";
 import { backfillPullRequestContentBatch } from
   "@/lib/server/encryption/pull-request-content-backfill";
 import { backfillPrCommentEditsBatch } from
@@ -217,6 +219,9 @@ async function runMaintenance(request: NextRequest) {
       // Editor documents (MIN-728) are not re-encoded: a clear one under a
       // parent encrypted since is deleted, and rebuilt from the Markdown.
       maintenancePass(() => purgeClearRichDocuments(200)),
+      // Appended: the outcomes below are read by position.
+      contentEnabled ? maintenancePass(() => backfillIssueCodeWorkBatch("issue_commits", 20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillIssueCodeWorkBatch("issue_branches", 20, signal)) : Promise.resolve(null),
     ] as const;
     await runner.run();
     const outcomes = await Promise.allSettled(passes);
@@ -289,6 +294,8 @@ async function runMaintenance(request: NextRequest) {
       ? outcomes[64].value : { scanned: 0, rotated: 0, failed: 1 };
     const richDocuments = outcomes[65].status === "fulfilled"
       ? outcomes[65].value : { removed: 0, failed: true };
+    const issueCommits = outcomes[66];
+    const issueBranches = outcomes[67];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (forgeAttachments?.failed ?? 0) > 0 ||
       (forgeAttachmentRotation?.failed ?? 0) > 0 ||
@@ -296,7 +303,7 @@ async function runMaintenance(request: NextRequest) {
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, issueSidecar, githubCommentUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, numoTurnIntents, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, issueSidecar, githubCommentUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, numoTurnIntents, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push, issueCommits, issueBranches].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     const result = {
       ...(invitation.status === "fulfilled" ? invitation.value : { invitation_failed: true }),
@@ -318,6 +325,8 @@ async function runMaintenance(request: NextRequest) {
         ...(contentEnabled ? { github_comment_urls: githubCommentUrls.status === "fulfilled" ? githubCommentUrls.value : { failed: true } } : {}),
         ...(contentEnabled ? { pull_request_urls: pullRequestUrls.status === "fulfilled" ? pullRequestUrls.value : { failed: true } } : {}),
         ...(contentEnabled ? { pull_request_content: pullRequestContent.status === "fulfilled" ? pullRequestContent.value : { failed: true } } : {}),
+        ...(contentEnabled ? { issue_commits: issueCommits.status === "fulfilled" ? issueCommits.value : { failed: true } } : {}),
+        ...(contentEnabled ? { issue_branches: issueBranches.status === "fulfilled" ? issueBranches.value : { failed: true } } : {}),
         ...(contentEnabled ? { pr_comment_edits: prCommentEdits.status === "fulfilled" ? prCommentEdits.value : { failed: true } } : {}),
         ...(contentEnabled ? { forge_relay_deliveries: forgeRelayDeliveries.status === "fulfilled" ? forgeRelayDeliveries.value : { failed: true } } : {}),
         ...(contentEnabled ? { forge_relay_audit: forgeRelayAudit.status === "fulfilled" ? forgeRelayAudit.value : { failed: true } } : {}),

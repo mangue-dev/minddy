@@ -1060,14 +1060,14 @@
     "file": "app/api/webhooks/github/route.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1005,
+    "line": 1036,
     "storage": false
   },
   {
     "file": "app/api/webhooks/gitlab/route.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 229,
+    "line": 238,
     "storage": false
   },
   {
@@ -2222,42 +2222,42 @@
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 869,
+    "line": 883,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 928,
+    "line": 942,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 975,
+    "line": 989,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 1001,
+    "line": 1015,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 1030,
+    "line": 1044,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 1082,
+    "line": 1096,
     "storage": false
   },
   {
@@ -4746,6 +4746,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/issue-code-work-backfill.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 44,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/issue-code-work-backfill.ts",
+    "operation": "from",
+    "resource": "issue_branches",
+    "line": 44,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/numo-activity-backfill.ts",
     "operation": "from",
     "resource": "numo_turn_events",
@@ -6559,6 +6573,146 @@
     "storage": false
   },
   {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 83,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "pull_requests",
+    "line": 197,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "pull_requests",
+    "line": 220,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "pull_request_issues",
+    "line": 252,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "rpc",
+    "resource": "upsert_issue_commit",
+    "line": 326,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_branches",
+    "line": 357,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_branches",
+    "line": 370,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_branches",
+    "line": 384,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_branches",
+    "line": 392,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_branches",
+    "line": 402,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 431,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 568,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 671,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "pull_requests",
+    "line": 698,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 704,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 719,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 739,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "pull_request_syncs",
+    "line": 773,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "pull_request_syncs",
+    "line": 798,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/commit-ingest.ts",
+    "operation": "from",
+    "resource": "pull_request_syncs",
+    "line": 806,
+    "storage": false
+  },
+  {
     "file": "lib/server/git/connections.ts",
     "operation": "from",
     "resource": "git_connections",
@@ -6645,22 +6799,22 @@
   {
     "file": "lib/server/git/forge-members.ts",
     "operation": "from",
-    "resource": "projects",
-    "line": 41,
+    "resource": "project_members",
+    "line": 44,
     "storage": false
   },
   {
     "file": "lib/server/git/forge-members.ts",
     "operation": "from",
-    "resource": "project_members",
-    "line": 42,
+    "resource": "projects",
+    "line": 46,
     "storage": false
   },
   {
     "file": "lib/server/git/forge-members.ts",
     "operation": "from",
     "resource": null,
-    "line": 72,
+    "line": 80,
     "storage": false
   },
   {
@@ -6688,7 +6842,35 @@
     "file": "lib/server/git/gitlab-app.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 707,
+    "line": 751,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/issue-code-work.ts",
+    "operation": "from",
+    "resource": "issue_branches",
+    "line": 78,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/issue-code-work.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 96,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/issue-code-work.ts",
+    "operation": "from",
+    "resource": "issue_commits",
+    "line": 138,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/issue-code-work.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 143,
     "storage": false
   },
   {
@@ -7297,28 +7479,35 @@
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 102,
+    "line": 110,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 109,
+    "line": 118,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 141,
+    "line": 125,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 163,
+    "line": 157,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-event-store.ts",
+    "operation": "from",
+    "resource": "issue_events",
+    "line": 179,
     "storage": false
   },
   {

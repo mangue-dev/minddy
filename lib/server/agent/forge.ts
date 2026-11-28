@@ -160,6 +160,28 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<{ commits: PullRequestCommit[]; truncated: boolean }>;
+  /** The commits `head` has and `base` does not, oldest first (MIN-1037):
+      what a push brought when its payload was cut, and what the default
+      branch gained since the last sweep. Both are commit SHAs or branch names. */
+  compareCommits(opts: {
+    token: string;
+    repoFullName: string;
+    base: string;
+    head: string;
+  }): Promise<{ commits: PullRequestCommit[]; truncated: boolean }>;
+  /** SHA at the tip of a branch, or null when the branch does not exist. */
+  getBranchHeadSha(opts: {
+    token: string;
+    repoFullName: string;
+    branch: string;
+  }): Promise<string | null>;
+  /** Numbers of the pull requests a commit belongs to (MIN-1037): the one
+      whose merge brought it to the default branch, whatever the merge method. */
+  listCommitPullRequestNumbers(opts: {
+    token: string;
+    repoFullName: string;
+    sha: string;
+  }): Promise<number[]>;
   /** The weight (+/− lines) of each commit, indexed by SHA — Aside from the
  list, because neither of the two forges serves it with: GitHub makes it
  all at once in GraphQL, GitLab commit by commit (therefore bounded). Best-effort
@@ -544,6 +566,9 @@ export const FORGE_METHOD_ACCESS = {
   getRepositoryMergePolicy: "read",
   listPullRequestFiles: "read",
   listPullRequestCommits: "read",
+  compareCommits: "read",
+  getBranchHeadSha: "read",
+  listCommitPullRequestNumbers: "read",
   listPullRequestCommitExtras: "read",
   getCommitDiff: "read",
   getMergeBaseSha: "read",
@@ -610,6 +635,9 @@ const githubForge: Forge = {
   getRepositoryMergePolicy: github.getRepositoryMergePolicy,
   listPullRequestFiles: github.listPullRequestFiles,
   listPullRequestCommits: github.listPullRequestCommits,
+  compareCommits: github.compareCommits,
+  getBranchHeadSha: github.getBranchHeadSha,
+  listCommitPullRequestNumbers: github.listCommitPullRequestNumbers,
   listPullRequestCommitExtras: github.listPullRequestCommitExtras,
   getCommitDiff: github.getCommitDiff,
   getMergeBaseSha: github.getMergeBaseSha,
@@ -716,6 +744,9 @@ const gitlabForge: Forge = {
   getRepositoryMergePolicy: gitlab.getRepositoryMergePolicy,
   listPullRequestFiles: gitlab.listMergeRequestChanges,
   listPullRequestCommits: gitlab.listMergeRequestCommits,
+  compareCommits: gitlab.compareCommits,
+  getBranchHeadSha: gitlab.getBranchHeadSha,
+  listCommitPullRequestNumbers: gitlab.listCommitPullRequestNumbers,
   listPullRequestCommitExtras: gitlab.listMergeRequestCommitExtras,
   getCommitDiff: gitlab.getCommitDiff,
   getMergeBaseSha: gitlab.getMergeBaseSha,

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 25,
+  "revision": 26,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-28",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "lib/pr-merge-intent.ts",
       "components/issue-pr-context.tsx",
       "components/issue-pr-chip.tsx",
-      "components/pull-requests/pr-hover-card.tsx"
+      "components/pull-requests/pr-hover-card.tsx",
+      "lib/forge-work-status.ts",
+      "lib/server/git/commit-ingest.ts",
+      "components/issue-code-work-section.tsx"
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-1001: usage sentence of the Merge with Numo paragraph, source audit against lib/server/agent/pr-state-actions.ts, lib/usage-features.ts, lib/billing-plans.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-1001 merge usage sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 26,
+    "fact": "agent:claude-code (MIN-1037: commit tracking section #commits-without-pull-request written from lib/server/git/commit-ingest.ts, lib/forge-work-status.ts, lib/server/agent/pr-ingest-core.ts and components/issue-code-work-section.tsx; quoted labels checked against messages/*.json; the receiver was exercised against the preview database; no browser walkthrough; no figure shows this flow; existing figure kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (en MIN-1037 section written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-28"
   },
   "related": [
     "issues",
@@ -88,7 +91,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -136,6 +139,20 @@ From a board, right-click an issue without an open pull request and choose **Lin
 When an issue has a linked pull request, its right-click menu gathers that pull request's actions in a **Pull request** submenu. **View pull request** opens the pull request in a tab of its own, or switches to the tab already showing it. **Merge** appears when the pull request is open and ready to merge and your provider account can write to the repository; it opens the pull request on its usual merge confirmation, where you choose the merge method and commit message or use **Merge with Numo**. **Enable auto-merge** appears while the pull request cannot merge yet and the repository allows auto-merge, and **Disable auto-merge** replaces it once auto-merge is on. When the linked pull request is merged or closed, **Link to a pull request** links the issue to another open pull request of the project. **Unlink from pull request**, set apart in red at the bottom, removes the link after you confirm.
 
 In **Account settings → Issues → Starting an issue**, **Start the issue or task when I copy its prompt** moves an issue or notebook task that has not started yet into progress when you copy its prompt. Leave it off if you copy prompts only to read them.
+
+### Work pushed without a pull request {#commits-without-pull-request}
+
+minddy also follows work pushed straight to the linked repository, with the same identifier convention:
+
+- A commit whose message names `MIN-42`, on any branch, is attached to the issue and moves it to **In progress** if it had not started. One commit can name several issues.
+- A commit that reaches the default branch with a closing keyword before the identifier, such as `Fixes MIN-42`, `Closes MIN-42` or `Resolves MIN-42`, moves the issue to **Done**. A plain mention on the default branch does not complete it.
+- A pushed branch whose name contains the identifier, such as `min-42-keyboard-navigation`, moves the issue to **In progress**.
+
+The issue panel lists these commits under **Commits**, with their title, authors, date and short SHA, and these branches under **Branches**; each one links to the forge. An author who belongs to the project and has connected that forge account appears under their minddy name and avatar; anyone else appears under their forge account. A co-signed commit shows every author. The issue's activity records each push as one line, such as "pushed 3 commits". To name a branch after an issue, open the issue's actions menu and choose **Copy the branch name**.
+
+A pull request keeps priority. Commits pushed to the branch of an open or draft pull request, and the commit its merge produces, belong to that pull request: they are listed there, and the issue's status follows the pull request. This applies to the issues linked to the pull request: a commit there that names another issue stays that issue's own work. A commit never moves an issue backward, out of **Canceled** or **Duplicate**, or over a status further along. A closed pull request does not send back to **Todo** an issue that a commit completed while the pull request was open.
+
+minddy sees a commit once it is pushed; work that exists only on your computer is not tracked. If a push went unnoticed, minddy reads the default branch again when it refreshes the repository's pull requests, which opening **Code review** does. Commits rewritten by a rebase or a force push stay listed. On GitHub, the GitHub App must be subscribed to the Push event; on GitLab, minddy turns on push events on the project hook it manages.
 
 ## Review a linked pull request {#review-pull-requests}
 

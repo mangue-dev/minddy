@@ -97,6 +97,22 @@ export async function hasMatchingIssueEvent(service: SupabaseClient, options: {
   }
 }
 
+/**
+ * Removes the forge events of one type recorded at an exact instant on these
+ * issues. Serves the one case where a line turns out to describe nothing of
+ * its own: commits first seen as a direct push, then recognized as the outcome
+ * of a pull request merge, which already has its line (MIN-1037).
+ */
+export async function removeForgeIssueEvents(service: SupabaseClient, options: {
+  issueIds: string[]; type: string; createdAt: string;
+}): Promise<void> {
+  if (!options.issueIds.length) return;
+  const { error } = await service.from("issue_events").delete()
+    .in("issue_id", options.issueIds).eq("type", options.type)
+    .eq("created_at", options.createdAt);
+  if (error) throw new Error("Unable to remove activity");
+}
+
 export async function hasRecentPageActivity(service: SupabaseClient, pageId: string, type: string,
   kind: string, actorId: string | null, after: string): Promise<boolean> {
   const { data } = await service.from("issue_events").select("id").eq("page_id", pageId)
