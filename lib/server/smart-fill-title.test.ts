@@ -38,13 +38,16 @@ describe("cleanIssueTitle", () => {
     );
   });
 
-  it("cuts a sentence-long answer at a whole word within a board row", () => {
-    const long = "The board loses the order of its columns after a card is dragged on a phone in landscape";
-    const title = cleanIssueTitle(long);
-    expect(title).not.toBeNull();
-    expect(title!.length).toBeLessThanOrEqual(MAX_GENERATED_TITLE_CHARS);
-    expect(long.startsWith(title!)).toBe(true);
-    expect(title!.split(" ").length).toBeLessThanOrEqual(12);
+  it("never cuts an answer into a fragment (MIN-1038)", () => {
+    // The answer behind MIN-1035: 14 words, the colon among them, kept whole.
+    const title = "Bases de données : items affichés sans filtres pendant le chargement de la vue";
+    expect(cleanIssueTitle(title)).toBe(title);
+    // Past the prompt's budget but still a title: kept as written.
+    const longish = "The board loses the order of its columns after a card is dragged on a phone in landscape";
+    expect(longish.length).toBeGreaterThan(MAX_GENERATED_TITLE_CHARS);
+    expect(cleanIssueTitle(longish)).toBe(longish);
+    // A paragraph is no title: refused, so the caller falls back to the description.
+    expect(cleanIssueTitle(`${longish}, then again after a reload, and only when the board has more than ten columns`)).toBeNull();
   });
 
   it("returns null when nothing remains", () => {
@@ -60,9 +63,20 @@ describe("fallbackIssueTitle", () => {
     expect(fallbackIssueTitle("- [ ] Rename the `sync` job\n")).toBe("Rename the sync job");
   });
 
+  it("closes a first line cut to fit a board row with an ellipsis", () => {
+    const title = fallbackIssueTitle(
+      "On databases, while they load, the items first show without the view's filters, then the filters apply.",
+    )!;
+    expect(title.length).toBeLessThanOrEqual(MAX_GENERATED_TITLE_CHARS);
+    expect(title).toBe("On databases, while they load, the items first show without the view's…");
+  });
+
   it("stays fast on a description crafted against its link patterns", () => {
     const started = performance.now();
-    expect(fallbackIssueTitle("![".repeat(30_000))).toBe("![".repeat(40));
+    const title = fallbackIssueTitle("![".repeat(30_000))!;
+    expect(title.startsWith("![![")).toBe(true);
+    expect(title.endsWith("…")).toBe(true);
+    expect(title.length).toBeLessThanOrEqual(MAX_GENERATED_TITLE_CHARS);
     fallbackIssueTitle("![](".repeat(20_000));
     expect(performance.now() - started).toBeLessThan(1_000);
   });

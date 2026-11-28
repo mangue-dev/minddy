@@ -112,12 +112,12 @@ describe("resolveTargetDate", () => {
 });
 
 describe("cleanObjectiveName", () => {
-  it("keeps a short noun phrase and caps a sentence at a whole word", () => {
+  it("keeps a short noun phrase whole and refuses a paragraph rather than cutting it", () => {
     expect(cleanObjectiveName("Name: Onboarding redesign!")).toBe("Onboarding redesign");
-    const long = "Redesign the whole onboarding flow for new teams joining from the marketing site this winter";
-    const name = cleanObjectiveName(long)!;
-    expect(name.length).toBeLessThanOrEqual(MAX_OBJECTIVE_NAME_CHARS);
-    expect(long.startsWith(name)).toBe(true);
+    // Past the prompt's budget and its word count, but still a name: kept whole (MIN-1038).
+    const longish = "Redesign of the onboarding flow for new teams from the marketing site";
+    expect(cleanObjectiveName(longish)).toBe(longish);
+    expect(cleanObjectiveName(`${longish} this winter, with every email and every empty state reworked`)).toBeNull();
   });
 
   it("keeps version names and technical identifiers intact", () => {
@@ -131,6 +131,14 @@ describe("cleanObjectiveName", () => {
       "Refonte de l'onboarding",
     );
     expect(fallbackObjectiveName("   ")).toBeNull();
+  });
+
+  it("closes a description line cut to fit with an ellipsis", () => {
+    const name = fallbackObjectiveName(
+      "Redesign the whole onboarding flow for new teams joining from the marketing site this winter",
+    )!;
+    expect(name.length).toBeLessThanOrEqual(MAX_OBJECTIVE_NAME_CHARS);
+    expect(name).toBe("Redesign the whole onboarding flow for new teams joining…");
   });
 });
 

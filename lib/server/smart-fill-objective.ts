@@ -7,7 +7,7 @@ import { hasUsageBudget } from "@/lib/server/usage";
 import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
 import { resolveSmartFill, resolveSmartFillObjectiveName, resolveSmartFillObjectives } from "@/lib/smart-fill";
 import { MAX_DESCRIPTION_CHARS } from "@/lib/server/smart-fill";
-import { fallbackIssueTitle } from "@/lib/server/smart-fill-title";
+import { excerptAtWord, firstDescriptionLine, tidyGeneratedText } from "@/lib/issue-title-fallback";
 import { isKnownTimezone, zonedDateTime, zonedTimeToUtc } from "@/lib/routine-schedule";
 import { aiInstructionPromptBlock, aiLanguageName, NO_AI_GUIDANCE, type ProjectAiGuidance } from "@/lib/ai-instructions";
 import { readProjectAiGuidance } from "@/lib/server/ai-instructions";
@@ -55,7 +55,11 @@ export const OBJECTIVE_FILL_NONE = "none";
 
 /** An objective name reads at a glance in a sidebar and on a board column. */
 export const MAX_OBJECTIVE_NAME_CHARS = 60;
-const MAX_OBJECTIVE_NAME_WORDS = 8;
+/** A model's name is kept whole up to here and rejected beyond, never cut
+ * into a fragment (MIN-1038, as for issue titles). */
+const MAX_ACCEPTED_OBJECTIVE_NAME_CHARS = 90;
+const OBJECTIVE_NAME_PREFIX = /^(nom|name|objective|objectif)\s*[:—-]\s*/i;
+const OBJECTIVE_NAME_TRAILING = /[.…;:,!?]+$/;
 const MAX_NAME_INPUT_CHARS = 500;
 
 /** What each palette color stands for, as the prompt tells the model. */
@@ -74,32 +78,22 @@ const COLOR_MEANINGS: Record<string, string> = {
 
 /**
  * Cleans a generated name: quotes, a "Name:" prefix, final punctuation and
- * spare whitespace go, and the length is capped at the last whole word.
- * `null` when nothing remains. Pure.
+ * spare whitespace go. The name is kept whole, never cut: `null` when nothing
+ * remains or when it runs past what a name can be. Pure.
  */
 export function cleanObjectiveName(raw: string): string | null {
-  const cleaned = raw
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^["'«»“”`\s]+|["'«»“”`\s]+$/g, "")
-    .replace(/^(nom|name|objective|objectif)\s*[:—-]\s*/i, "")
-    .replace(/[.…;:,!?]+$/, "")
-    .trim();
-  if (!cleaned) return null;
-  const words = cleaned.split(" ");
-  const capped = words.length > MAX_OBJECTIVE_NAME_WORDS
-    ? words.slice(0, MAX_OBJECTIVE_NAME_WORDS).join(" ")
-    : cleaned;
-  if (capped.length <= MAX_OBJECTIVE_NAME_CHARS) return capped;
-  const cut = capped.slice(0, MAX_OBJECTIVE_NAME_CHARS);
-  const lastSpace = cut.lastIndexOf(" ");
-  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[.…;:,!?]+$/, "");
+  const cleaned = tidyGeneratedText(raw, OBJECTIVE_NAME_PREFIX, OBJECTIVE_NAME_TRAILING);
+  if (!cleaned || cleaned.length > MAX_ACCEPTED_OBJECTIVE_NAME_CHARS) return null;
+  return cleaned;
 }
 
-/** The name when no model answers: the description's first line of text. */
+/** The name when no model answers: the description's first line of text,
+ * closed with an ellipsis when it had to be cut. */
 export function fallbackObjectiveName(description: string | null | undefined): string | null {
-  const line = fallbackIssueTitle(description);
-  return line ? cleanObjectiveName(line) : null;
+  const line = firstDescriptionLine(description);
+  if (!line) return null;
+  const name = tidyGeneratedText(line, OBJECTIVE_NAME_PREFIX, OBJECTIVE_NAME_TRAILING);
+  return name ? excerptAtWord(name, MAX_OBJECTIVE_NAME_CHARS) : null;
 }
 
 /** Where and when the pass reads dates: the author's time zone and its clock. */

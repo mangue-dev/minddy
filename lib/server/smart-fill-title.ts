@@ -6,7 +6,7 @@ import { hasUsageBudget } from "@/lib/server/usage";
 import { MAX_DESCRIPTION_CHARS } from "@/lib/server/smart-fill";
 import { aiInstructionPromptBlock, aiLanguageName, NO_AI_GUIDANCE, type ProjectAiGuidance } from "@/lib/ai-instructions";
 import { readProjectAiGuidance } from "@/lib/server/ai-instructions";
-import { cleanIssueTitle, MAX_GENERATED_TITLE_CHARS } from "@/lib/issue-title-fallback";
+import { cleanIssueTitle, MAX_ACCEPTED_TITLE_CHARS, MAX_GENERATED_TITLE_CHARS } from "@/lib/issue-title-fallback";
 
 // The pure title helpers live in a client-safe module: the board shows the
 // same fallback on the card Smart Fill is still filling (MIN-1032).
@@ -48,7 +48,7 @@ export function buildIssueTitlePrompt(
     : "Write it in the SAME language as the description.";
   const keep = currentTitle
     ? `
-- The issue already has a title Smart Fill wrote earlier: "${currentTitle.slice(0, MAX_GENERATED_TITLE_CHARS)}". The description may have changed since. Return that title UNCHANGED when it still describes the issue; write a new one only when the issue is now about something else or the title has become misleading.`
+- The issue already has a title Smart Fill wrote earlier: "${currentTitle.slice(0, MAX_ACCEPTED_TITLE_CHARS)}". The description may have changed since. Return that title UNCHANGED when it still describes the issue; write a new one only when the issue is now about something else or the title has become misleading.`
     : "";
   return `You title issues in minddy, an issue tracker, for the project "${projectName}". You are given the description someone just wrote for an issue. Call set_issue_title with its title.
 
