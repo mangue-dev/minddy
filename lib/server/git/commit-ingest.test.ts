@@ -26,6 +26,8 @@ const state = vi.hoisted(() => ({
   upserts: [] as Array<Record<string, unknown>>,
   calls: [] as Call[],
   compared: [] as unknown[],
+  /** forge login → member of the project who connected that account. */
+  memberLogins: {} as Record<string, string>,
 }));
 
 /** A chainable stand-in for one table: filters are recorded, rows come from `state`. */
@@ -118,6 +120,9 @@ vi.mock("./repository-name-content", () => ({
   repositoryStorageName: async (_provider: string, name: string) => name,
 }));
 vi.mock("./gitlab-app", () => ({ alignGitlabWebhook: vi.fn(async () => {}) }));
+vi.mock("./forge-members", () => ({
+  buildForgeAssigneeIndex: async () => new Map(Object.entries(state.memberLogins)),
+}));
 vi.mock("@/lib/server/agent/pull-request-content", () => ({
   decodePullRequestContentRow: async (row: unknown) => row,
 }));
@@ -155,7 +160,7 @@ const { ingestPush } = await import("./commit-ingest");
 function commit(sha: string, message: string): PushCommit {
   return {
     sha, message, authorLogin: "camille", authorAvatarUrl: null, authorName: "Camille Roy",
-    committedAt: "2026-11-28T10:00:00Z",
+    authorEmail: "camille@example.test", committedAt: "2026-11-28T10:00:00Z",
   };
 }
 
@@ -195,6 +200,7 @@ beforeEach(() => {
   state.upserts = [];
   state.calls = [];
   state.compared = [];
+  state.memberLogins = {};
   insertEvents.mockClear();
   syncStatus.mockClear();
 });
@@ -214,6 +220,33 @@ describe("ingestPush", () => {
       issueId: "issue-1", actorId: "linker", forgeSync: "gitlab",
       signal: { kind: "commits", closesOnDefaultBranch: false },
     }]);
+  });
+
+  it("credits the push to the member of the project who connected that forge account", async () => {
+    state.memberLogins = { camille: "user-camille" };
+    await ingestPush(push());
+    expect(events()).toEqual([expect.objectContaining({
+      actor_id: "user-camille", type: "commits_pushed", to_value: "1",
+    })]);
+  });
+
+  it("keeps the co-signers of a commit, without its author", async () => {
+    await ingestPush(push({
+      provider: "github",
+      commits: [commit("s1", [
+        "MIN-1 first pass",
+        "",
+        "Co-authored-by: Camille Roy <camille@example.test>",
+        "Co-Authored-By: Alex Martin <12345+alex-m@users.noreply.github.com>",
+        "Co-authored-by: Claude <claude@example.test>",
+      ].join("\n"))],
+    }));
+    expect(JSON.parse(state.upserts[0].co_authors as string)).toEqual([
+      { name: "Alex Martin", login: "alex-m" },
+      { name: "Claude", login: null },
+    ]);
+    await ingestPush(push({ commits: [commit("s2", "MIN-1 alone")] }));
+    expect(state.upserts[1].co_authors).toBeNull();
   });
 
   it("completes an issue only when the closing commit is on the default branch", async () => {

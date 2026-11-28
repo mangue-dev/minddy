@@ -6,7 +6,7 @@ import { shouldEncryptPullRequestContent } from "@/lib/server/agent/pull-request
 
 /**
  * Codec of what a tracked commit or branch says in clear (MIN-1037): a commit's
- * title and author name, and a branch's name. This is repository content, like
+ * title, author name and co-authors, and a branch's name. This is repository content, like
  * the title and branches of a pull request, so it is sealed under the same
  * system scope and the same activation (`shouldEncryptPullRequestContent`).
  *
@@ -14,7 +14,7 @@ import { shouldEncryptPullRequestContent } from "@/lib/server/agent/pull-request
  * another row or column does not decrypt.
  */
 
-export const COMMIT_CONTENT_FIELDS = ["title", "author_name"] as const;
+export const COMMIT_CONTENT_FIELDS = ["title", "author_name", "co_authors"] as const;
 export const BRANCH_CONTENT_FIELDS = ["branch"] as const;
 
 export type CodeWorkTable = "issue_commits" | "issue_branches";

@@ -24,7 +24,7 @@ describe("normalizeGithubPush", () => {
         id: "b".repeat(40),
         message: "Fixes MIN-42\n\nDetails.",
         timestamp: "2026-11-28T10:00:00+01:00",
-        author: { name: "Camille Roy", username: "camille" },
+        author: { name: "Camille Roy", email: "Camille@Example.test", username: "camille" },
       },
       { id: "c".repeat(40), message: "MIN-7", author: { name: "Someone", username: "other" } },
     ],
@@ -51,6 +51,7 @@ describe("normalizeGithubPush", () => {
         authorLogin: "camille",
         authorAvatarUrl: "https://avatars.test/7",
         authorName: "Camille Roy",
+        authorEmail: "camille@example.test",
         committedAt: "2026-11-28T10:00:00+01:00",
       },
       {
@@ -59,6 +60,7 @@ describe("normalizeGithubPush", () => {
         authorLogin: "other",
         authorAvatarUrl: null,
         authorName: "Someone",
+        authorEmail: null,
         committedAt: null,
       },
     ]);
@@ -127,6 +129,7 @@ describe("normalizeGitlabPush", () => {
     });
     expect(push?.commits[1]).toMatchObject({
       message: "Only a title", authorLogin: null, authorAvatarUrl: null, authorName: "Alex",
+      authorEmail: "alex@example.test",
     });
   });
 

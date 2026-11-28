@@ -11603,6 +11603,11 @@
         "nullable": true,
         "generated": false
       },
+      "co_authors": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "committed_at": {
         "type": "timestamp with time zone",
         "nullable": true,

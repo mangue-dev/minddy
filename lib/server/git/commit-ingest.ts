@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import type { ForgeWorkSignal } from "@/lib/forge-work-status";
+import { commitCoAuthors, githubNoreplyLogin } from "@/lib/commit-authors";
 import { COMMITS_PUSHED_EVENT, forgeActorValue } from "@/lib/pr-events";
 import type { PullRequestCommit } from "@/lib/pull-request-contract";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -29,6 +30,7 @@ import {
   encodeCodeWorkRow,
   shouldEncryptCodeWorkContent,
 } from "./commit-content";
+import { buildForgeAssigneeIndex, type ForgeAssigneeIndex } from "./forge-members";
 import { alignGitlabWebhook } from "./gitlab-app";
 import { commitTitle, type NormalizedPush, type PushCommit } from "./push-core";
 import { repositoryStorageName } from "./repository-name-content";
@@ -132,6 +134,7 @@ function fromForgeCommit(commit: PullRequestCommit): PushCommit {
     authorLogin: commit.author?.login || null,
     authorAvatarUrl: commit.author?.avatar_url ?? null,
     authorName: commit.authorName,
+    authorEmail: commit.authorEmail?.toLowerCase() ?? null,
     committedAt: commit.authoredAt,
   };
 }
@@ -241,6 +244,11 @@ async function storeCommit(opts: {
 }): Promise<StoredCommit | null> {
   const { push, commit } = opts;
   const committedAt = normalizeForgeInstant(commit.committedAt)?.toISOString() ?? null;
+  // GitHub names an author by a no-reply address when the push carries no
+  // account for them: that address is the account.
+  const authorLogin = commit.authorLogin ??
+    (push.provider === "github" ? githubNoreplyLogin(commit.authorEmail) : null);
+  const coAuthors = commitCoAuthors({ ...commit, authorLogin }, push.provider);
   const row = await encodeCodeWorkRow("issue_commits", {
     id: randomUUID(),
     issue_id: opts.issueId,
@@ -249,8 +257,9 @@ async function storeCommit(opts: {
     sha: commit.sha,
     title: commitTitle(commit.message) || null,
     author_name: commit.authorName,
-    author_login: commit.authorLogin,
+    author_login: authorLogin,
     author_avatar_url: commit.authorAvatarUrl,
+    co_authors: coAuthors.length > 0 ? JSON.stringify(coAuthors) : null,
     committed_at: committedAt,
     on_default_branch: push.onDefaultBranch,
     closes: opts.closes,
@@ -408,6 +417,20 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
   const signals = new Map<string, ForgeWorkSignal>();
   if (branchIssue && branchMoved) signals.set(branchIssue.id, { kind: "branch" });
   const events: Parameters<typeof insertEvents>[1] = [];
+  // A push by someone of the project is that person's gesture: the line
+  // carries their minddy account, and the forge login only when nobody of the
+  // project connected that account.
+  const memberIndexes = new Map<string, Promise<ForgeAssigneeIndex>>();
+  const memberFor = async (issueId: string, login: string | null): Promise<string | null> => {
+    const projectId = projectOf.get(issueId);
+    if (!projectId || !login) return null;
+    let index = memberIndexes.get(projectId);
+    if (!index) {
+      index = buildForgeAssigneeIndex({ projectId, provider: push.provider, includeReaders: true });
+      memberIndexes.set(projectId, index);
+    }
+    return (await index).get(login.toLowerCase()) ?? null;
+  };
   for (const issueId of new Set(stored.map((commit) => commit.issueId))) {
     // Only work that no pull request carries speaks for itself, and only when
     // it is news: a commit seen again says nothing more.
@@ -429,7 +452,7 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
     const at = fresh.map((commit) => commit.committedAt).filter(Boolean).sort().at(-1);
     events.push({
       issue_id: issueId,
-      actor_id: null,
+      actor_id: await memberFor(issueId, login),
       type: COMMITS_PUSHED_EVENT,
       from_value: forgeActorValue(push.provider, login),
       to_value: String(fresh.length),

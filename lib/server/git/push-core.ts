@@ -25,6 +25,8 @@ export interface PushCommit {
   authorAvatarUrl: string | null;
   /** Name written in the commit. */
   authorName: string | null;
+  /** Email written in the commit: only tells the author from its co-signers. */
+  authorEmail: string | null;
   committedAt: string | null;
 }
 
@@ -76,7 +78,7 @@ interface GithubPushCommit {
   id?: unknown;
   message?: unknown;
   timestamp?: unknown;
-  author?: { name?: unknown; username?: unknown } | null;
+  author?: { name?: unknown; email?: unknown; username?: unknown } | null;
 }
 
 interface GithubPushPayload {
@@ -111,6 +113,7 @@ export function normalizeGithubPush(payload: unknown): NormalizedPush | null {
         // The payload carries one avatar: the sender's.
         authorAvatarUrl: login && login === senderLogin ? senderAvatar : null,
         authorName: text(commit.author?.name),
+        authorEmail: text(commit.author?.email)?.toLowerCase() ?? null,
         committedAt: text(commit.timestamp),
       }];
     },
@@ -185,6 +188,7 @@ export function normalizeGitlabPush(payload: unknown): NormalizedPush | null {
         authorLogin: own ? pusherLogin : null,
         authorAvatarUrl: own ? pusherAvatar : null,
         authorName: text(commit.author?.name),
+        authorEmail: email,
         committedAt: text(commit.timestamp),
       }];
     },

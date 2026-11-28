@@ -6,13 +6,25 @@ import type { RepoProviderId } from "./repo-providers";
  * route that serves them and the panel that lists them.
  */
 
+/** One person who wrote a commit: its author, or a co-signer. */
+export interface IssueCommitAuthor {
+  /** The member of the project behind the forge account, when one connected
+      it: the panel then shows the minddy name and avatar. */
+  userId: string | null;
+  /** Forge account, when the forge or a no-reply address names one. */
+  login: string | null;
+  /** Name written in the commit. */
+  name: string | null;
+  /** Avatar of the forge account. */
+  avatarUrl: string | null;
+}
+
 export interface IssueCommit {
   sha: string;
   /** First line of the commit message. */
   title: string | null;
-  authorLogin: string | null;
-  authorName: string | null;
-  authorAvatarUrl: string | null;
+  /** Everyone who wrote the commit, its author first. */
+  authors: IssueCommitAuthor[];
   committedAt: string | null;
   /** Page of the commit on the forge, or null when its repository is no longer linked. */
   url: string | null;

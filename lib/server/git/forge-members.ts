@@ -35,12 +35,16 @@ export type ForgeAssigneeIndex = Map<string, string>;
  * have a line `project_members`) and the members with the `member` role.
  * Readers are never assignees, and they cannot trigger a forge `@numo`
  * either, which reuses this index (MIN-693). */
-async function loadProjectUserIds(projectId: string): Promise<string[]> {
+async function loadProjectUserIds(
+  projectId: string,
+  /** Readers too: for naming someone, not for assigning to them. */
+  includeReaders = false,
+): Promise<string[]> {
   const service = getServiceClient();
+  const memberRead = service.from("project_members").select("user_id").eq("project_id", projectId);
   const [{ data: project }, { data: members }] = await Promise.all([
     service.from("projects").select("owner_id").eq("id", projectId).maybeSingle(),
-    service.from("project_members").select("user_id").eq("project_id", projectId)
-      .eq("role", "member"),
+    includeReaders ? memberRead : memberRead.eq("role", "member"),
   ]);
   return [
     ...new Set([
@@ -58,9 +62,13 @@ async function loadProjectUserIds(projectId: string): Promise<string[]> {
 export async function buildForgeAssigneeIndex(params: {
   projectId: string;
   provider: RepoProviderId;
+  /** Index everyone in the project, readers included. Only for NAMING the
+      person behind a forge account (the author of a commit): assignment and
+      the forge `@numo` keep the default. */
+  includeReaders?: boolean;
 }): Promise<ForgeAssigneeIndex> {
   const index: ForgeAssigneeIndex = new Map();
-  const userIds = await loadProjectUserIds(params.projectId);
+  const userIds = await loadProjectUserIds(params.projectId, params.includeReaders);
   if (userIds.length === 0) return index;
 
   const service = getServiceClient();

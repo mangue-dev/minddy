@@ -9,11 +9,13 @@ import {
   type IssueBranch,
   type IssueCodeWork,
   type IssueCommit,
+  type IssueCommitAuthor,
 } from "@/lib/issue-code-work";
 import { isRepoProviderId, type RepoProviderId } from "@/lib/repo-providers";
 import { listPullRequestsForIssues } from "@/lib/server/agent/pull-requests";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeCodeWorkRow } from "./commit-content";
+import { buildForgeAssigneeIndex } from "./forge-members";
 import { decodeRepositoryName } from "./repository-name-content";
 
 /**
@@ -30,6 +32,7 @@ interface CommitRow {
   author_name: string | null;
   author_login: string | null;
   author_avatar_url: string | null;
+  co_authors: string | null;
   committed_at: string | null;
   on_default_branch: boolean;
   closes: boolean;
@@ -46,8 +49,26 @@ interface BranchRow {
 
 const COMMIT_COLUMNS =
   "id, provider, external_repo_id, sha, title, author_name, author_login, author_avatar_url, " +
+  "co_authors, " +
   "committed_at, on_default_branch, closes, pull_request_id";
 const BRANCH_COLUMNS = "id, provider, external_repo_id, branch, pushed_at";
+
+/** The co-signers stored with a commit: a JSON list, tolerant of anything else. */
+function storedCoAuthors(value: string | null): Array<{ name: string; login: string | null }> {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((entry) => {
+      const co = entry as { name?: unknown; login?: unknown } | null;
+      return typeof co?.name === "string" && co.name
+        ? [{ name: co.name, login: typeof co.login === "string" && co.login ? co.login : null }]
+        : [];
+    });
+  } catch {
+    return [];
+  }
+}
 
 /** The tracked branches of an issue, decoded. The caller has checked its access. */
 export async function readIssueBranches(
@@ -137,15 +158,35 @@ export async function listIssueCodeWork(
 
   const rows = await Promise.all(((commitRead.data ?? []) as unknown as CommitRow[])
     .map((row) => decodeCodeWorkRow("issue_commits", row)));
+  // The forge accounts the people of this project connected, per forge: an
+  // author among them is shown under their minddy name.
+  const memberIndexes = new Map(await Promise.all(
+    [...new Set(rows.map((row) => providerOf(row.provider)))].map(async (provider) =>
+      [provider, await buildForgeAssigneeIndex({
+        projectId: issue.projectId, provider, includeReaders: true,
+      })] as const),
+  ));
   const commits: IssueCommit[] = rows.map((row) => {
     const provider = providerOf(row.provider);
     const name = nameFor(row.provider, row.external_repo_id);
+    const members = memberIndexes.get(provider);
+    const author = (person: {
+      login: string | null; name: string | null; avatarUrl: string | null;
+    }): IssueCommitAuthor => ({
+      ...person,
+      userId: (person.login && members?.get(person.login.toLowerCase())) || null,
+    });
     return {
       sha: row.sha,
       title: row.title,
-      authorLogin: row.author_login,
-      authorName: row.author_name,
-      authorAvatarUrl: row.author_avatar_url,
+      authors: [
+        ...(row.author_login || row.author_name
+          ? [author({
+              login: row.author_login, name: row.author_name, avatarUrl: row.author_avatar_url,
+            })]
+          : []),
+        ...storedCoAuthors(row.co_authors).map((co) => author({ ...co, avatarUrl: null })),
+      ],
       committedAt: row.committed_at,
       url: name ? forgeCommitUrl(provider, name, row.sha) : null,
       onDefaultBranch: row.on_default_branch,

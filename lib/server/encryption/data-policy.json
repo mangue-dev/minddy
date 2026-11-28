@@ -4670,6 +4670,7 @@
     },
     "encrypted": [
       "author_name",
+      "co_authors",
       "title"
     ],
     "clear": {

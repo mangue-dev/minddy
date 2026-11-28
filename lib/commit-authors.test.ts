@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   commitAuthors,
+  commitCoAuthors,
+  githubNoreplyLogin,
   mergeCommitAuthors,
   parseCoAuthorTrailers,
 } from "@/lib/commit-authors";
@@ -107,5 +109,57 @@ describe("mergeCommitAuthors", () => {
     const autre = { login: null, name: "Quelqu'un d'autre", avatar_url: null };
     const anonyme = { login: null, name: "Claude", avatar_url: null };
     expect(mergeCommitAuthors([[autre], [anonyme]])).toHaveLength(2);
+  });
+});
+
+describe("githubNoreplyLogin", () => {
+  it("reads the account of a GitHub no-reply address, in both forms", () => {
+    expect(githubNoreplyLogin("12345+octo-cat@users.noreply.github.com")).toBe("octo-cat");
+    expect(githubNoreplyLogin("octocat@users.noreply.github.com")).toBe("octocat");
+    expect(githubNoreplyLogin("41898282+github-actions[bot]@users.noreply.github.com"))
+      .toBe("github-actions[bot]");
+  });
+
+  it("names no account for any other address", () => {
+    expect(githubNoreplyLogin("camille@example.test")).toBeNull();
+    expect(githubNoreplyLogin("noreply@anthropic.com")).toBeNull();
+    expect(githubNoreplyLogin("x@users.noreply.github.com.evil.test")).toBeNull();
+    expect(githubNoreplyLogin(null)).toBeNull();
+  });
+});
+
+describe("commitCoAuthors", () => {
+  const commit = {
+    message: "Fix\n\nCo-authored-by: Alex <1+alex@users.noreply.github.com>\nCo-authored-by: Sam <sam@example.test>",
+    authorLogin: "camille",
+    authorName: "Camille Roy",
+    authorEmail: "camille@example.test",
+  };
+
+  it("lists the co-signers without the author, with the account a no-reply address names", () => {
+    expect(commitCoAuthors(commit, "github")).toEqual([
+      { name: "Alex", login: "alex" },
+      { name: "Sam", login: null },
+    ]);
+  });
+
+  it("names no account from an address on GitLab", () => {
+    expect(commitCoAuthors(commit, "gitlab").map((co) => co.login)).toEqual([null, null]);
+  });
+
+  it("drops a trailer that repeats the author, by email, name or account", () => {
+    const message = [
+      "Fix", "",
+      "Co-authored-by: C. Roy <camille@example.test>",
+      "Co-authored-by: Camille Roy <other@example.test>",
+      "Co-authored-by: Cam <9+Camille@users.noreply.github.com>",
+    ].join("\n");
+    expect(commitCoAuthors({ ...commit, message }, "github")).toEqual([]);
+  });
+
+  it("keeps every trailer when the commit names no author", () => {
+    expect(commitCoAuthors(
+      { ...commit, authorLogin: null, authorName: null, authorEmail: null }, "github",
+    )).toHaveLength(2);
   });
 });

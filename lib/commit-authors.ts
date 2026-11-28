@@ -114,6 +114,53 @@ export function commitAuthors(
 }
 
 /**
+ * The GitHub login a no-reply commit email carries, or null. GitHub gives
+ * every account `<id>+<login>@users.noreply.github.com` (older accounts:
+ * `<login>@…`), and it is the address agents and privacy-minded authors sign
+ * with: the one case where an email names an account exactly.
+ */
+export function githubNoreplyLogin(email: string | null | undefined): string | null {
+  const match = /^(?:\d+\+)?([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\[bot\])?)@users\.noreply\.github\.com$/i
+    .exec(email?.trim() ?? "");
+  return match ? match[1] : null;
+}
+
+/**
+ * The co-signers of a commit, as stored with a commit tracked outside a pull
+ * request (MIN-1037): the trailers of its message, without the main author.
+ * A GitHub no-reply address gives the co-signer's account; any other address
+ * is dropped, and the name alone remains.
+ */
+export function commitCoAuthors(
+  commit: {
+    message: string;
+    authorLogin: string | null;
+    authorName: string | null;
+    authorEmail: string | null;
+  },
+  provider: "github" | "gitlab",
+): Array<{ name: string; login: string | null }> {
+  const emails = new Map(
+    parseCoAuthorTrailers(commit.message).map((co) => [co.name.toLowerCase(), co.email]),
+  );
+  return commitAuthors({
+    message: commit.message,
+    author: commit.authorLogin ? { login: commit.authorLogin, avatar_url: null } : null,
+    authorName: commit.authorName,
+    authorEmail: commit.authorEmail,
+  })
+    .slice(commit.authorLogin || commit.authorName ? 1 : 0)
+    .map((co) => {
+      const login = provider === "github"
+        ? githubNoreplyLogin(emails.get(co.name.toLowerCase()))
+        : null;
+      return { name: co.name, login };
+    })
+    // The same account under two names is one person.
+    .filter((co) => !co.login || co.login.toLowerCase() !== commit.authorLogin?.toLowerCase());
+}
+
+/**
  * Authors of MULTIPLE commits, deduplicated — what a push says
  * folded (“so-and-so pushed 5 commits”). The order of first
  * appearance is preserved: it is that of history.

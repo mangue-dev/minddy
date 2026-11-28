@@ -109,7 +109,7 @@ export async function removeForgeIssueEvents(service: SupabaseClient, options: {
   if (!options.issueIds.length) return;
   const { error } = await service.from("issue_events").delete()
     .in("issue_id", options.issueIds).eq("type", options.type)
-    .eq("created_at", options.createdAt).is("actor_id", null);
+    .eq("created_at", options.createdAt);
   if (error) throw new Error("Unable to remove activity");
 }
 
