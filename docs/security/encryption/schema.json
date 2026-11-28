@@ -5608,6 +5608,16 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "push_hook_aligned_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "push_hook_tried_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -11636,6 +11646,16 @@
       "created_at": {
         "type": "timestamp with time zone",
         "nullable": false,
+        "generated": false
+      },
+      "delivered_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "announced_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },

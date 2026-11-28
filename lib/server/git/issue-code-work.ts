@@ -94,7 +94,7 @@ export async function readForgeWork(issueId: string): Promise<ForgeWork> {
   const [pullRequests, commits, branches] = await Promise.all([
     listPullRequestsForIssues([issueId]).then((byIssue) => byIssue.get(issueId) ?? []),
     service.from("issue_commits")
-      .select("closes, on_default_branch, committed_at, pull_request_id")
+      .select("closes, on_default_branch, committed_at, delivered_at, pull_request_id")
       .eq("issue_id", issueId),
     readIssueBranches(service, issueId),
   ]);
@@ -108,11 +108,13 @@ export async function readForgeWork(issueId: string): Promise<ForgeWork> {
       closes: boolean;
       on_default_branch: boolean;
       committed_at: string | null;
+      delivered_at: string | null;
       pull_request_id: string | null;
     }>).map((commit) => ({
       closes: commit.closes,
       onDefaultBranch: commit.on_default_branch,
       committedAt: commit.committed_at,
+      deliveredAt: commit.delivered_at,
       inPullRequest: !!commit.pull_request_id,
     })),
     branchPushed: branches.some((branch) => !prBranches.has(branch.branch)),

@@ -684,16 +684,26 @@ export async function ensureGitlabIssuesHook(
 
 /**
  * Brings an installed hook up to the events minddy reads today, without
- * touching the project's issue sync setting. Commit tracking calls it once
- * per repository, so hooks created before `push_events` receive pushes
+ * touching the project's issue sync setting. Commit tracking calls it until
+ * it succeeds, so hooks created before `push_events` receive pushes
  * (MIN-1037). It is the rotation below under its other use: the PUT that
  * rewrites the secret is also the one that aligns the flags.
+ *
+ * Returns whether the hook is now aligned. A repository without a hook has
+ * nothing to align (one created later carries every flag), so it counts as
+ * done; a refused or failed write does not, and the caller tries again.
  */
-export function alignGitlabWebhook(params: {
+export async function alignGitlabWebhook(params: {
   externalRepoId: string;
   connectionId: string;
-}): Promise<void> {
-  return rotateGitlabWebhookSecret(params);
+}): Promise<boolean> {
+  try {
+    await writeGitlabWebhook(params);
+    return true;
+  } catch {
+    console.error("[gitlab-app] webhook_alignment_failed", params.externalRepoId);
+    return false;
+  }
 }
 
 /**
@@ -714,22 +724,7 @@ export async function rotateGitlabWebhookSecret(params: {
   connectionId: string;
 }): Promise<void> {
   try {
-    const secret = await ensureRepoWebhookSecret({
-      provider: "gitlab",
-      externalRepoId: params.externalRepoId,
-    });
-    const token = await getGitlabAccessToken(params.connectionId);
-    // The rotation must preserve the hook's relay-ness: the source marker of
-    // the connection decides where the hook points and whether the secret is
-    // shared with Cloud.
-    const supabase = getServiceClient();
-    const { data: connection } = await supabase
-      .from("git_connections")
-      .select("source")
-      .eq("id", params.connectionId)
-      .maybeSingle();
-    const source = (connection as { source: string | null } | null)?.source ?? null;
-    await ensureGitlabIssuesHook(token, params.externalRepoId, { secret, source });
+    await writeGitlabWebhook(params);
     console.info(
       "[gitlab-app] webhook secret rotated for project %s",
       params.externalRepoId,
@@ -737,4 +732,27 @@ export async function rotateGitlabWebhookSecret(params: {
   } catch {
     console.error("[gitlab-app] webhook_secret_rotation_failed", params.externalRepoId);
   }
+}
+
+/** Rewrites the installed hook with the repository's secret and today's flags. */
+async function writeGitlabWebhook(params: {
+  externalRepoId: string;
+  connectionId: string;
+}): Promise<void> {
+  const secret = await ensureRepoWebhookSecret({
+    provider: "gitlab",
+    externalRepoId: params.externalRepoId,
+  });
+  const token = await getGitlabAccessToken(params.connectionId);
+  // The rotation must preserve the hook's relay-ness: the source marker of
+  // the connection decides where the hook points and whether the secret is
+  // shared with Cloud.
+  const supabase = getServiceClient();
+  const { data: connection } = await supabase
+    .from("git_connections")
+    .select("source")
+    .eq("id", params.connectionId)
+    .maybeSingle();
+  const source = (connection as { source: string | null } | null)?.source ?? null;
+  await ensureGitlabIssuesHook(token, params.externalRepoId, { secret, source });
 }

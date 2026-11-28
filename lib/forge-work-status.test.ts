@@ -23,6 +23,7 @@ function commit(overrides: Partial<LinkedCommitWork> = {}): LinkedCommitWork {
     closes: false,
     onDefaultBranch: false,
     committedAt: "2026-11-10T10:00:00Z",
+    deliveredAt: null,
     inPullRequest: false,
     ...overrides,
   };
@@ -170,6 +171,23 @@ describe("resolveForgeWorkStatus — pull requests", () => {
         commits: [commit({ closes: true, onDefaultBranch: true })],
       },
     })).toBe("done");
+  });
+
+  it("dates a delivery by its arrival on the default branch, not by the commit", () => {
+    // Written before the pull request opened, cherry-picked to the default
+    // branch while it was open.
+    expect(resolveForgeWorkStatus({
+      current: "done",
+      signal: { kind: "pull_request", state: "closed", openedAt: "2026-11-10T10:00:00Z" },
+      work: {
+        ...NONE,
+        pullRequests: [pr("closed", "2026-11-10T10:00:00Z")],
+        commits: [commit({
+          closes: true, onDefaultBranch: true,
+          committedAt: "2026-11-09T10:00:00Z", deliveredAt: "2026-11-12T10:00:00Z",
+        })],
+      },
+    })).toBeNull();
   });
 
   it("returns to \"to do\" when a follow-up pull request closes after an older delivery", () => {

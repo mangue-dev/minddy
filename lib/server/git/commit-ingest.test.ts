@@ -22,13 +22,30 @@ const state = vi.hoisted(() => ({
   mergedPullRequests: [] as Array<{ id: string; merge_commit_shas: string[] }>,
   branches: [] as Array<{ id: string; issue_id: string; branch: string; head_sha: string | null }>,
   /** (issue, sha) pairs already stored, with the pull request that carries them. */
-  known: new Map<string, { onDefaultBranch: boolean; pullRequestId: string | null }>(),
+  known: new Map<string, { id: string; onDefaultBranch: boolean; pullRequestId: string | null }>(),
   upserts: [] as Array<Record<string, unknown>>,
   calls: [] as Call[],
   compared: [] as unknown[],
   /** forge login → member of the project who connected that account. */
   memberLogins: {} as Record<string, string>,
+  /** issue ↔ pull request links. */
+  linked: [] as Array<{ issue_id: string; pull_request: Record<string, unknown> }>,
+  /** sha → numbers of the pull requests the forge says it came through. */
+  forgePullRequests: {} as Record<string, number[]>,
+  /** Makes the branch read fail, as a transient database error would. */
+  failBranches: false,
+  /** Rows marked as announced, by id. */
+  announcedIds: [] as string[],
+  removedLines: [] as unknown[],
 }));
+
+/** A pull request of the pushed repository, linked to an issue. */
+function link(issueId: string, id: string, number: number, stateOf = "open") {
+  return {
+    issue_id: issueId,
+    pull_request: { id, provider: "gitlab", repo_full_name: "group/app", number, state: stateOf },
+  };
+}
 
 /** A chainable stand-in for one table: filters are recorded, rows come from `state`. */
 function table(name: string) {
@@ -54,7 +71,15 @@ function table(name: string) {
         error: null,
       };
     }
+    if (name === "pull_request_issues") return { data: state.linked, error: null };
+    if (name === "issue_commits") {
+      if (action === "update" && values && "announced_at" in values) {
+        state.announcedIds.push(...(filters.id as string[]));
+      }
+      return { data: [], error: null };
+    }
     if (name === "issue_branches") {
+      if (state.failBranches) return { data: [], error: { code: "08006" } };
       if (action === "insert" && values) {
         state.branches.push(values as (typeof state.branches)[number]);
       } else if (action === "update" && values) {
@@ -98,11 +123,14 @@ vi.mock("@/lib/supabase-service", () => ({
       const known = state.known.get(key);
       const pullRequestId = known?.pullRequestId ?? (p_values.pull_request_id as string | null);
       const onDefaultBranch = (known?.onDefaultBranch ?? false) || p_values.on_default_branch === true;
-      state.known.set(key, { onDefaultBranch, pullRequestId });
+      const id = known?.id ?? (p_values.id as string);
+      state.known.set(key, { id, onDefaultBranch, pullRequestId });
       return {
         data: {
+          id,
           inserted: !known,
           promoted: !!known && !known.onDefaultBranch && onDefaultBranch,
+          announced: state.announcedIds.includes(id),
           pull_request_id: pullRequestId,
         },
         error: null,
@@ -127,7 +155,11 @@ vi.mock("@/lib/server/agent/pull-request-content", () => ({
   decodePullRequestContentRow: async (row: unknown) => row,
 }));
 vi.mock("@/lib/server/agent/pull-requests", () => ({ pullRequestIssueIds: async () => [] }));
-vi.mock("@/lib/server/issue-event-store", () => ({ removeForgeIssueEvents: vi.fn(async () => {}) }));
+vi.mock("@/lib/server/issue-event-store", () => ({
+  removeForgeIssueEvents: vi.fn(async (_service: unknown, options: unknown) => {
+    state.removedLines.push(options);
+  }),
+}));
 vi.mock("@/lib/server/agent/repo-access", () => ({
   resolveLinkedRepository: async () => ({
     provider: "gitlab", repoFullName: "group/app", externalRepoId: "77", token: "token",
@@ -136,6 +168,8 @@ vi.mock("@/lib/server/agent/repo-access", () => ({
 vi.mock("@/lib/server/agent/forge", () => ({
   isForgeApiError: () => false,
   forgeFor: () => ({
+    listCommitPullRequestNumbers: async ({ sha }: { sha: string }) =>
+      state.forgePullRequests[sha] ?? [],
     compareCommits: async (opts: unknown) => {
       state.compared.push(opts);
       return {
@@ -201,6 +235,11 @@ beforeEach(() => {
   state.calls = [];
   state.compared = [];
   state.memberLogins = {};
+  state.linked = [];
+  state.forgePullRequests = {};
+  state.failBranches = false;
+  state.announcedIds = [];
+  state.removedLines = [];
   insertEvents.mockClear();
   syncStatus.mockClear();
 });
@@ -270,14 +309,78 @@ describe("ingestPush", () => {
 
   it("leaves the commits of a live pull request to that pull request", async () => {
     state.livePullRequests = [{ id: "pr-7", head_branch: "feature/board" }];
+    state.linked = [link("issue-1", "pr-7", 7)];
     await ingestPush(push());
     expect(state.upserts[0].pull_request_id).toBe("pr-7");
     expect(events()).toEqual([]);
     expect(signals()).toEqual([]);
   });
 
+  it("keeps for its issue a commit pushed on the branch of a pull request linked to another", async () => {
+    state.livePullRequests = [{ id: "pr-7", head_branch: "feature/board" }];
+    state.linked = [link("issue-1", "pr-7", 7)];
+    await ingestPush(push({ commits: [commit("s1", "MIN-1 pass, fixes MIN-2")] }));
+    expect(state.upserts.map((row) => [row.issue_id, row.pull_request_id]))
+      .toEqual([["issue-1", "pr-7"], ["issue-2", null]]);
+    expect(events().map((event) => event.issue_id)).toEqual(["issue-2"]);
+    expect(signals().map((signal) => signal.issueId)).toEqual(["issue-2"]);
+  });
+
+  it("gives a merged pull request the commits its merge brought to the default branch", async () => {
+    state.linked = [link("issue-1", "pr-7", 7, "merged")];
+    state.forgePullRequests = { s1: [7], s2: [7] };
+    await ingestPush(push({
+      branch: "main", onDefaultBranch: true,
+      commits: [commit("s1", "MIN-1 first pass"), commit("s2", "MIN-1 second pass, see MIN-2")],
+    }));
+    expect(state.upserts.map((row) => [row.sha, row.issue_id, row.pull_request_id])).toEqual([
+      ["s1", "issue-1", "pr-7"], ["s2", "issue-1", "pr-7"], ["s2", "issue-2", null],
+    ]);
+    expect(events().map((event) => event.issue_id)).toEqual(["issue-2"]);
+  });
+
+  it("hands over a merge commit recorded while its push was being stored", async () => {
+    state.linked = [link("issue-1", "pr-7", 7, "merged")];
+    // The merge is recorded after the first lookup: it only shows once the
+    // rows and the line are written.
+    insertEvents.mockImplementationOnce(async () => {
+      state.mergedPullRequests = [{ id: "pr-7", merge_commit_shas: ["s1"] }];
+    });
+    await ingestPush(push({
+      branch: "main", onDefaultBranch: true, commits: [commit("s1", "Fixes MIN-1 (#7)")],
+    }));
+    expect(state.upserts[0].pull_request_id).toBeNull();
+    expect(state.removedLines).toEqual([expect.objectContaining({
+      issueIds: ["issue-1"], type: "commits_pushed",
+    })]);
+    expect(signals()).toEqual([]);
+  });
+
+  it("still asks for the status when a step after the commits fails, and speaks once", async () => {
+    state.failBranches = true;
+    const named = push({ branch: "min-1-board" });
+    await ingestPush(named);
+    expect(signals()).toEqual([expect.objectContaining({
+      issueId: "issue-1", signal: { kind: "commits", closesOnDefaultBranch: false },
+    })]);
+    expect(events()).toHaveLength(1);
+    expect(state.announcedIds).toHaveLength(1);
+  });
+
+  it("speaks for a stored commit that no push announced", async () => {
+    syncStatus.mockRejectedValueOnce(new Error("interrupted"));
+    await expect(ingestPush(push())).rejects.toThrow();
+    expect(state.announcedIds).toEqual([]);
+    insertEvents.mockClear();
+    syncStatus.mockClear();
+    await ingestPush(push());
+    expect(events()).toHaveLength(1);
+    expect(signals()).toHaveLength(1);
+  });
+
   it("gives the commit a merge produced back to its pull request", async () => {
     state.mergedPullRequests = [{ id: "pr-7", merge_commit_shas: ["s1"] }];
+    state.linked = [link("issue-1", "pr-7", 7, "merged")];
     await ingestPush(push({ branch: "main", onDefaultBranch: true, commits: [commit("s1", "Fixes MIN-1 (#7)")] }));
     expect(state.upserts[0].pull_request_id).toBe("pr-7");
     expect(events()).toEqual([]);

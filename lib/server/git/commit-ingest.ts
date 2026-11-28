@@ -139,6 +139,16 @@ function fromForgeCommit(commit: PullRequestCommit): PushCommit {
   };
 }
 
+/** The linked repository a forge read of this push goes through, or null. */
+async function pushRepository(push: RepoPush, projects: LinkedProject[]) {
+  for (const project of projects) {
+    const target = await resolveLinkedRepository(project.id);
+    if (target && target.provider === push.provider &&
+        target.externalRepoId === push.externalRepoId) return target;
+  }
+  return null;
+}
+
 /**
  * Every commit of the push. A payload is cut past a size (20 commits on
  * GitLab): the rest is read from the forge, comparing the two ends of the
@@ -152,10 +162,8 @@ async function allPushCommits(
   const base = push.before ?? push.defaultBranch;
   if (!push.truncated || !push.after || !base) return push.commits;
   try {
-    for (const project of projects) {
-      const target = await resolveLinkedRepository(project.id);
-      if (!target || target.provider !== push.provider ||
-          target.externalRepoId !== push.externalRepoId) continue;
+    const target = await pushRepository(push, projects);
+    if (target) {
       const { commits } = await forgeFor(push.provider).compareCommits({
         token: target.token,
         repoFullName: target.repoFullName,
@@ -221,14 +229,63 @@ async function pullRequestsByMergeCommit(
   return merged;
 }
 
+interface LinkedPullRequest {
+  id: string;
+  number: number;
+  state: string;
+  /** The pull request lives in the repository of the push. */
+  sameRepository: boolean;
+}
+
+/**
+ * issue → the pull requests linked to it. A pull request only speaks for the
+ * issues it is linked to: a commit that names another issue stays that
+ * issue's own work, even pushed on the pull request's branch.
+ */
+async function linkedPullRequests(
+  push: RepoPush,
+  issueIds: readonly string[],
+): Promise<Map<string, LinkedPullRequest[]>> {
+  const byIssue = new Map<string, LinkedPullRequest[]>();
+  if (issueIds.length === 0) return byIssue;
+  const service = getServiceClient();
+  const { data, error } = await service.from("pull_request_issues")
+    .select("issue_id, pull_request:pull_requests(id, provider, repo_full_name, number, state)")
+    .in("issue_id", [...issueIds]);
+  if (error) throw new Error("Unable to read linked pull requests");
+  const storedName = await repositoryStorageName(push.provider, push.repoFullName, false, service);
+  // Embedded to-one relationship: an object at runtime.
+  for (const row of (data ?? []) as unknown as Array<{
+    issue_id: string;
+    pull_request: {
+      id: string; provider: string; repo_full_name: string; number: number; state: string;
+    } | null;
+  }>) {
+    const pr = row.pull_request;
+    if (!pr) continue;
+    byIssue.set(row.issue_id, [...(byIssue.get(row.issue_id) ?? []), {
+      id: pr.id,
+      number: pr.number,
+      state: pr.state,
+      sameRepository: pr.provider === push.provider && pr.repo_full_name === storedName,
+    }]);
+  }
+  return byIssue;
+}
+
+/** Default-branch commits whose pull request is asked to the forge, per push. */
+const FORGE_LOOKUPS_PER_PUSH = 50;
+
 interface StoredCommit {
+  /** Row of the commit for this issue, or null when the database did not say. */
+  id: string | null;
   issueId: string;
   sha: string;
   closes: boolean;
   committedAt: string | null;
   authorLogin: string | null;
-  /** First sighting of this commit for this issue. */
-  inserted: boolean;
+  /** A push already recorded this commit's line and asked for the status. */
+  announced: boolean;
   /** Already known from a branch, and now on the default branch. */
   promoted: boolean;
   pullRequestId: string | null;
@@ -271,15 +328,19 @@ async function storeCommit(opts: {
     return null;
   }
   const result = data as {
-    inserted?: boolean; promoted?: boolean; pull_request_id?: string | null;
+    id?: string; inserted?: boolean; promoted?: boolean; announced?: boolean;
+    pull_request_id?: string | null;
   } | null;
   return {
+    id: result?.id ?? null,
     issueId: opts.issueId,
     sha: commit.sha,
     closes: opts.closes,
     committedAt,
     authorLogin: commit.authorLogin,
-    inserted: result?.inserted === true,
+    // A database that does not say yet (the release applies the migration
+    // first, a preview may not have it) falls back to the first sighting.
+    announced: result?.announced ?? result?.inserted !== true,
     promoted: result?.promoted === true,
     pullRequestId: result?.pull_request_id ?? null,
   };
@@ -340,6 +401,55 @@ async function forgetBranch(push: RepoPush, issueId: string, branch: string): Pr
   if (deleteError) throw new Error("Unable to forget issue branch");
 }
 
+/**
+ * Second look at the commits a default-branch push stored on their own: those
+ * a merge recorded in the meantime go to its pull request, their line is
+ * taken back and they no longer ask for a status. Best effort.
+ */
+async function handOverLateMergeCommits(opts: {
+  push: RepoPush;
+  stored: StoredCommit[];
+  linked: Map<string, LinkedPullRequest[]>;
+  lines: Map<string, string>;
+  signals: Map<string, ForgeWorkSignal>;
+}): Promise<void> {
+  const { push, stored, linked, lines, signals } = opts;
+  const loose = stored.filter((commit) => !commit.pullRequestId);
+  if (loose.length === 0) return;
+  try {
+    const service = getServiceClient();
+    const merged = await pullRequestsByMergeCommit(
+      push.provider, push.repoFullName, [...new Set(loose.map((commit) => commit.sha))]);
+    const handedOver = new Set<string>();
+    for (const commit of loose) {
+      const pullRequestId = merged.get(commit.sha);
+      if (!pullRequestId ||
+          !(linked.get(commit.issueId) ?? []).some((pr) => pr.id === pullRequestId)) continue;
+      if (commit.id) {
+        const { error } = await service.from("issue_commits")
+          .update({ pull_request_id: pullRequestId })
+          .eq("id", commit.id).is("pull_request_id", null);
+        if (error) continue;
+      }
+      commit.pullRequestId = pullRequestId;
+      handedOver.add(commit.issueId);
+    }
+    for (const issueId of handedOver) {
+      // Other commits of the push may still be the issue's own work.
+      if (stored.some((commit) => commit.issueId === issueId && !commit.pullRequestId)) continue;
+      signals.delete(issueId);
+      const at = lines.get(issueId);
+      if (at) {
+        await removeForgeIssueEvents(service, {
+          issueIds: [issueId], type: COMMITS_PUSHED_EVENT, createdAt: at,
+        });
+      }
+    }
+  } catch {
+    console.error("[commit-ingest] late_merge_hand_over_failed");
+  }
+}
+
 export interface PushIngestion {
   /** Commits stored or seen again, one per (commit, issue) pair. */
   commits: number;
@@ -384,7 +494,8 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
   if (issues.size === 0) return NOTHING;
 
   // A commit belongs to at most one pull request: the live one on this
-  // branch, or the one whose merge produced it on the default branch.
+  // branch, or the one whose merge brought it to the default branch. And a
+  // pull request only takes a commit for the issues it is linked to.
   const livePullRequestId = push.onDefaultBranch
     ? null
     : await livePullRequestOnBranch(push.provider, push.repoFullName, branch);
@@ -392,6 +503,48 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
     ? await pullRequestsByMergeCommit(
         push.provider, push.repoFullName, cited.map(({ commit }) => commit.sha))
     : new Map<string, string>();
+  const linked = await linkedPullRequests(
+    push, [...new Set([...issues.values()].map((issue) => issue.id))]);
+
+  // A merge commit also brings the pull request's own commits to the default
+  // branch, and a squash can arrive before the event that names it. The forge
+  // knows which pull request a commit came through: it is asked once per
+  // commit, and only for an issue that has a pull request to give it to.
+  let repository: ReturnType<typeof pushRepository> | undefined;
+  const forgeNumbers = new Map<string, Promise<number[]>>();
+  const pullRequestNumbersOf = (sha: string): Promise<number[]> => {
+    let read = forgeNumbers.get(sha);
+    if (!read) {
+      read = forgeNumbers.size >= FORGE_LOOKUPS_PER_PUSH
+        ? Promise.resolve([])
+        : (async () => {
+            try {
+              const target = await (repository ??= pushRepository(push, projects));
+              return target
+                ? await forgeFor(push.provider).listCommitPullRequestNumbers({
+                    token: target.token, repoFullName: target.repoFullName, sha,
+                  })
+                : [];
+            } catch {
+              console.error("[commit-ingest] commit_pull_requests_failed");
+              return [];
+            }
+          })();
+      forgeNumbers.set(sha, read);
+    }
+    return read;
+  };
+  const ownerOf = async (issueId: string, sha: string): Promise<string | null> => {
+    const candidates = linked.get(issueId) ?? [];
+    if (candidates.length === 0) return null;
+    const known = livePullRequestId ?? mergedBy.get(sha);
+    if (known) return candidates.some((pr) => pr.id === known) ? known : null;
+    if (!push.onDefaultBranch) return null;
+    const mergeable = candidates.filter((pr) => pr.sameRepository && pr.state !== "closed");
+    if (mergeable.length === 0) return null;
+    const numbers = await pullRequestNumbersOf(sha);
+    return mergeable.find((pr) => numbers.includes(pr.number))?.id ?? null;
+  };
 
   const encrypt = cited.length > 0 && (await shouldEncryptCodeWorkContent());
   const stored: StoredCommit[] = [];
@@ -401,22 +554,31 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
       if (!issue) continue;
       const result = await storeCommit({
         push, commit, issueId: issue.id, closes, encrypt,
-        pullRequestId: livePullRequestId ?? mergedBy.get(commit.sha) ?? null,
+        pullRequestId: await ownerOf(issue.id, commit.sha),
       });
       if (result) stored.push(result);
     }
   }
 
+  // From here every step stands alone: the commits are stored, and a step
+  // that fails must not keep the issues from their line and their status.
+
   // The branch is shown on its issue as long as no pull request carries it.
   let branchMoved = false;
   if (branchIssue && !livePullRequestId) {
-    branchMoved = await recordBranch(push, branchIssue.id, branch);
+    try {
+      branchMoved = await recordBranch(push, branchIssue.id, branch);
+    } catch {
+      console.error("[commit-ingest] branch_record_failed");
+    }
   }
 
   const projectOf = new Map([...issues.values()].map((issue) => [issue.id, issue.projectId]));
   const signals = new Map<string, ForgeWorkSignal>();
   if (branchIssue && branchMoved) signals.set(branchIssue.id, { kind: "branch" });
   const events: Parameters<typeof insertEvents>[1] = [];
+  /** issue → the instant its line of this push is recorded at. */
+  const lines = new Map<string, string>();
   // A push by someone of the project is that person's gesture: the line
   // carries their minddy account, and the forge login only when nobody of the
   // project connected that account.
@@ -424,32 +586,39 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
   const memberFor = async (issueId: string, login: string | null): Promise<string | null> => {
     const projectId = projectOf.get(issueId);
     if (!projectId || !login) return null;
-    let index = memberIndexes.get(projectId);
-    if (!index) {
-      index = buildForgeAssigneeIndex({ projectId, provider: push.provider, includeReaders: true });
-      memberIndexes.set(projectId, index);
+    try {
+      let index = memberIndexes.get(projectId);
+      if (!index) {
+        index = buildForgeAssigneeIndex({ projectId, provider: push.provider, includeReaders: true });
+        memberIndexes.set(projectId, index);
+      }
+      return (await index).get(login.toLowerCase()) ?? null;
+    } catch {
+      // The line then names the forge account.
+      return null;
     }
-    return (await index).get(login.toLowerCase()) ?? null;
   };
   for (const issueId of new Set(stored.map((commit) => commit.issueId))) {
     // Only work that no pull request carries speaks for itself, and only when
-    // it is news: a commit seen again says nothing more.
+    // it is news: a commit already announced says nothing more, unless it
+    // just reached the default branch.
     const standalone = stored.filter(
       (commit) => commit.issueId === issueId && !commit.pullRequestId);
-    const news = standalone.filter((commit) => commit.inserted || commit.promoted);
+    const news = standalone.filter((commit) => !commit.announced || commit.promoted);
     if (news.length > 0) {
       signals.set(issueId, {
         kind: "commits",
         closesOnDefaultBranch: push.onDefaultBranch && news.some((commit) => commit.closes),
       });
     }
-    const fresh = standalone.filter((commit) => commit.inserted);
+    const fresh = standalone.filter((commit) => !commit.announced);
     if (fresh.length === 0) continue;
     const authors = new Set(fresh.map((commit) => commit.authorLogin).filter(Boolean));
     const login = push.pusher.login ?? (authors.size === 1 ? [...authors][0] : null);
     // The line is dated from its latest commit, which is also the key that
     // lets a merge take it back (`reconcilePullRequestCommits`).
     const at = fresh.map((commit) => commit.committedAt).filter(Boolean).sort().at(-1);
+    if (at) lines.set(issueId, at);
     events.push({
       issue_id: issueId,
       actor_id: await memberFor(issueId, login),
@@ -461,12 +630,30 @@ export async function ingestPush(push: RepoPush): Promise<PushIngestion> {
   }
   await insertEvents(getServiceClient(), events);
 
+  // The merge event and its push arrive together. Now that the rows and their
+  // lines exist, look again for the merge: either it is recorded and its
+  // commits are handed over here, or it is not yet and its own reconciliation
+  // finds them. One of the two always runs after the other's writes.
+  if (push.onDefaultBranch) {
+    await handOverLateMergeCommits({ push, stored, linked, lines, signals });
+  }
+
   for (const [issueId, signal] of signals) {
     const actorId = projects.find((p) => p.id === projectOf.get(issueId))?.linkedBy;
     if (!actorId) continue;
     await syncIssueStatusFromForgeWork({
       issueId, actorId, signal, forgeSync: push.provider,
     });
+  }
+
+  // Said once: a push that stopped before this line leaves its commits
+  // unannounced, and the next sighting (the sweep, a later push) speaks.
+  const announced = stored.flatMap((commit) => (commit.id && !commit.announced ? [commit.id] : []));
+  if (announced.length > 0) {
+    const { error } = await getServiceClient().from("issue_commits")
+      .update({ announced_at: new Date().toISOString() })
+      .in("id", announced).is("announced_at", null);
+    if (error) console.error("[commit-ingest] commit_announce_failed", error.code);
   }
   return { commits: stored.length, signaledIssueIds: [...signals.keys()] };
 }
@@ -506,11 +693,16 @@ export async function reconcilePullRequestCommits(
       .map((link) => link.external_repo_id))];
     if (repoIds.length === 0) return;
 
+    // A pull request only takes commits for the issues it is linked to.
+    const issueIds = await pullRequestIssueIds(pr.id);
+    if (issueIds.length === 0) return;
+
     if (pr.state === "merged" && shas.length > 0) {
       const { data: adopted, error } = await service.from("issue_commits")
         .update({ pull_request_id: pr.id })
         .eq("provider", pr.provider)
         .in("external_repo_id", repoIds)
+        .in("issue_id", issueIds)
         .in("sha", shas)
         .is("pull_request_id", null)
         .select("issue_id, committed_at");
@@ -525,8 +717,6 @@ export async function reconcilePullRequestCommits(
       }
     }
 
-    const issueIds = await pullRequestIssueIds(pr.id);
-    if (issueIds.length === 0) return;
     const { error } = await service.from("issue_commits")
       .update({ pull_request_id: pr.id })
       .eq("provider", pr.provider)
@@ -539,6 +729,9 @@ export async function reconcilePullRequestCommits(
     console.error("[commit-ingest] pull_request_reconcile_failed");
   }
 }
+
+/** How long a failed hook alignment waits before the next attempt. */
+const HOOK_ALIGNMENT_RETRY_MS = 60 * 60_000;
 
 /**
  * Catch-up of the default branch (MIN-1037): reads the commits it gained
@@ -559,13 +752,36 @@ export async function syncDefaultBranchCommits(repo: {
   const service = getServiceClient();
   const storedName = await repositoryStorageName(repo.provider, repo.repoFullName, false, service);
   const { data, error } = await service.from("pull_request_syncs")
-    .select("commits_synced_sha")
+    .select("commits_synced_sha, push_hook_aligned_at, push_hook_tried_at")
     .eq("provider", repo.provider)
     .eq("repo_full_name", storedName)
     .maybeSingle();
   // The cursor lives on the sweep row: without one, the next sweep starts it.
   if (error || !data) return;
-  const cursor = (data as { commits_synced_sha: string | null }).commits_synced_sha;
+  const row = data as {
+    commits_synced_sha: string | null;
+    push_hook_aligned_at: string | null;
+    push_hook_tried_at: string | null;
+  };
+  const cursor = row.commits_synced_sha;
+
+  // A GitLab hook installed before commit tracking does not send pushes yet.
+  // Its alignment is recorded apart from the cursor: the sweeping member may
+  // lack the rights to edit hooks, so a failure is tried again later, by
+  // whoever sweeps next, and a success is not repeated.
+  const triedAt = row.push_hook_tried_at ? Date.parse(row.push_hook_tried_at) : Number.NaN;
+  if (repo.provider === "gitlab" && !row.push_hook_aligned_at &&
+      !(Date.now() - triedAt < HOOK_ALIGNMENT_RETRY_MS)) {
+    const aligned = await alignGitlabWebhook({
+      externalRepoId: repo.externalRepoId, connectionId: repo.connectionId,
+    });
+    const now = new Date().toISOString();
+    const { error: hookError } = await service.from("pull_request_syncs")
+      .update({ push_hook_tried_at: now, ...(aligned ? { push_hook_aligned_at: now } : {}) })
+      .eq("provider", repo.provider)
+      .eq("repo_full_name", storedName);
+    if (hookError) console.error("[commit-ingest] hook_alignment_save_failed", hookError.code);
+  }
   const forge = forgeFor(repo.provider);
   const saveCursor = async (sha: string | null) => {
     const { error: saveError } = await service.from("pull_request_syncs")
@@ -581,16 +797,8 @@ export async function syncDefaultBranchCommits(repo: {
     token: repo.token, repoFullName: repo.repoFullName, branch: repo.defaultBranch,
   }));
 
-  if (!cursor) {
-    // First sweep of this repository: a GitLab hook installed before commit
-    // tracking does not send pushes yet.
-    if (repo.provider === "gitlab") {
-      await alignGitlabWebhook({
-        externalRepoId: repo.externalRepoId, connectionId: repo.connectionId,
-      });
-    }
-    return restart();
-  }
+  // First sweep of this repository: only note where the branch stands.
+  if (!cursor) return restart();
   let commits: PullRequestCommit[];
   try {
     ({ commits } = await forge.compareCommits({

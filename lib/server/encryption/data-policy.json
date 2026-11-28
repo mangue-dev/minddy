@@ -3254,6 +3254,8 @@
       ],
       "timestamp": [
         "commits_synced_at",
+        "push_hook_aligned_at",
+        "push_hook_tried_at",
         "repo_name_attempted_at",
         "repo_name_checked_at",
         "synced_at"
@@ -4693,9 +4695,11 @@
         "sha"
       ],
       "timestamp": [
+        "announced_at",
         "committed_at",
         "content_checked_at",
-        "created_at"
+        "created_at",
+        "delivered_at"
       ]
     }
   },

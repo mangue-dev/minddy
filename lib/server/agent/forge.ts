@@ -175,6 +175,13 @@ export interface Forge {
     repoFullName: string;
     branch: string;
   }): Promise<string | null>;
+  /** Numbers of the pull requests a commit belongs to (MIN-1037): the one
+      whose merge brought it to the default branch, whatever the merge method. */
+  listCommitPullRequestNumbers(opts: {
+    token: string;
+    repoFullName: string;
+    sha: string;
+  }): Promise<number[]>;
   /** The weight (+/− lines) of each commit, indexed by SHA — Aside from the
  list, because neither of the two forges serves it with: GitHub makes it
  all at once in GraphQL, GitLab commit by commit (therefore bounded). Best-effort
@@ -561,6 +568,7 @@ export const FORGE_METHOD_ACCESS = {
   listPullRequestCommits: "read",
   compareCommits: "read",
   getBranchHeadSha: "read",
+  listCommitPullRequestNumbers: "read",
   listPullRequestCommitExtras: "read",
   getCommitDiff: "read",
   getMergeBaseSha: "read",
@@ -629,6 +637,7 @@ const githubForge: Forge = {
   listPullRequestCommits: github.listPullRequestCommits,
   compareCommits: github.compareCommits,
   getBranchHeadSha: github.getBranchHeadSha,
+  listCommitPullRequestNumbers: github.listCommitPullRequestNumbers,
   listPullRequestCommitExtras: github.listPullRequestCommitExtras,
   getCommitDiff: github.getCommitDiff,
   getMergeBaseSha: github.getMergeBaseSha,
@@ -737,6 +746,7 @@ const gitlabForge: Forge = {
   listPullRequestCommits: gitlab.listMergeRequestCommits,
   compareCommits: gitlab.compareCommits,
   getBranchHeadSha: gitlab.getBranchHeadSha,
+  listCommitPullRequestNumbers: gitlab.listCommitPullRequestNumbers,
   listPullRequestCommitExtras: gitlab.listMergeRequestCommitExtras,
   getCommitDiff: gitlab.getCommitDiff,
   getMergeBaseSha: gitlab.getMergeBaseSha,

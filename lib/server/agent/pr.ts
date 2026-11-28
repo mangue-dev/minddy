@@ -555,6 +555,31 @@ export async function getBranchHeadSha(opts: {
   }
 }
 
+/**
+ * Numbers of the pull requests a commit belongs to (MIN-1037). GitHub answers
+ * with the pull request that brought the commit to the default branch, for a
+ * merge commit, a squash and a rebase alike.
+ */
+export async function listCommitPullRequestNumbers(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<number[]> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  try {
+    const data = await ghJson<Array<{ number?: number }>>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${encodeURIComponent(opts.sha)}/pulls` +
+        `?per_page=${COMMITS_PER_PAGE}`,
+      opts.token,
+    );
+    return (Array.isArray(data) ? data : [])
+      .flatMap((pull) => (typeof pull.number === "number" ? [pull.number] : []));
+  } catch (error) {
+    if (error instanceof GithubApiError && error.status === 404) return [];
+    throw error;
+  }
+}
+
 interface RawCommitExtras {
   repository?: {
     pullRequest?: {

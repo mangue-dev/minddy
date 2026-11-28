@@ -28,6 +28,10 @@ export interface LinkedCommitWork {
   closes: boolean;
   onDefaultBranch: boolean;
   committedAt: string | null;
+  /** When the commit was first seen on the default branch. This dates a
+      delivery: the commit's own date says when it was written, which a
+      cherry-pick keeps and which can precede the push by days. */
+  deliveredAt: string | null;
   /** The commit belongs to a pull request: that pull request speaks for it. */
   inPullRequest: boolean;
 }
@@ -77,7 +81,9 @@ function deliveredAt(work: ForgeWork): number | "unknown" | null {
     if (pr.state === "merged") note(instant(pr.mergedAt));
   }
   for (const commit of work.commits) {
-    if (commit.closes && commit.onDefaultBranch) note(instant(commit.committedAt));
+    if (commit.closes && commit.onDefaultBranch) {
+      note(instant(commit.deliveredAt) ?? instant(commit.committedAt));
+    }
   }
   return latest;
 }

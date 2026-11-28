@@ -527,6 +527,26 @@ export async function getBranchHeadSha(opts: {
   }
 }
 
+/** Numbers (`iid`) of the merge requests a commit belongs to (MIN-1037). */
+export async function listCommitPullRequestNumbers(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<number[]> {
+  try {
+    const data = await glJson<Array<{ iid?: number }>>(
+      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/repository/commits/` +
+        `${encodeURIComponent(opts.sha)}/merge_requests`,
+      opts.token,
+    );
+    return (Array.isArray(data) ? data : [])
+      .flatMap((mr) => (typeof mr.iid === "number" ? [mr.iid] : []));
+  } catch (error) {
+    if (error instanceof GitlabApiError && error.status === 404) return [];
+    throw error;
+  }
+}
+
 /** Same ceiling as `pr.ts`: 3 pages of 100 commits, `truncated` beyond. */
 const COMMITS_MAX_PAGES = 3;
 
