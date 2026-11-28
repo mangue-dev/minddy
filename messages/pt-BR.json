@@ -4889,8 +4889,7 @@
       "undoToast": "Redefinição desfeita para {name}."
     },
     "users": {
-      "subtitle": "Busque uma conta pelo endereço de e-mail exato e abra-a para gerenciar a cobrança ou o uso.",
-      "searchPlaceholder": "E-mail da conta",
+      "subtitle": "Busque uma conta pelo endereço de e-mail exato para gerenciar a cobrança ou o uso. As atividades e o conteúdo dela não são exibidos.",
       "clearSearch": "Limpar pesquisa",
       "empty": "Nenhuma conta encontrada para este e-mail.",
       "emailStatus": "E-mail",
@@ -4904,7 +4903,6 @@
       "emailLabel": "Endereço de e-mail",
       "findAccount": "Buscar conta",
       "openAccount": "Abrir conta",
-      "supportPurpose": "Abra contas apenas para tarefas de suporte ou cobrança. Atividades e conteúdo pessoal não são exibidos aqui.",
       "lookupFailed": "Não foi possível buscar a conta. Confira o e-mail e tente novamente.",
       "detailsFailed": "Não foi possível carregar a cobrança e o uso. Abra a conta para tentar novamente."
     },
@@ -4992,9 +4990,9 @@
     },
     "accounts": {
       "countLabel": "Contas",
-      "countHint": "Todas as contas desta instância.",
+      "countSentence": "{count, plural, =0 {contas nesta instância} one {conta nesta instância} other {contas nesta instância}}",
       "countFailed": "Não foi possível contar as contas.",
-      "supportTitle": "Suporte a contas"
+      "supportTitle": "Suporte"
     },
     "modelsFile": {
       "title": "Exportar e importar",

@@ -4889,8 +4889,7 @@
       "undoToast": "Restablecimiento deshecho para {name}."
     },
     "users": {
-      "subtitle": "Busca una cuenta con su dirección de correo exacta y ábrela para gestionar su plan o presupuesto.",
-      "searchPlaceholder": "Correo electrónico de la cuenta",
+      "subtitle": "Busca una cuenta por su dirección de correo exacta para gestionar su plan o presupuesto. Su actividad y su contenido no se muestran.",
       "clearSearch": "Limpiar la búsqueda",
       "empty": "No se encontró ninguna cuenta con este correo.",
       "emailStatus": "Correo electrónico",
@@ -4904,7 +4903,6 @@
       "emailLabel": "Correo electrónico",
       "findAccount": "Buscar cuenta",
       "openAccount": "Abrir cuenta",
-      "supportPurpose": "Abre cuentas solo para tareas de asistencia o facturación. La actividad y el contenido personal no se muestran aquí.",
       "lookupFailed": "No se pudo buscar la cuenta. Comprueba el correo e inténtalo de nuevo.",
       "detailsFailed": "No se pudieron cargar el plan y el presupuesto. Abre la cuenta para reintentarlo."
     },
@@ -4992,9 +4990,9 @@
     },
     "accounts": {
       "countLabel": "Cuentas",
-      "countHint": "Todas las cuentas de esta instancia.",
+      "countSentence": "{count, plural, one {cuenta en esta instancia} other {cuentas en esta instancia}}",
       "countFailed": "No se pudieron contar las cuentas.",
-      "supportTitle": "Asistencia de cuentas"
+      "supportTitle": "Asistencia"
     },
     "modelsFile": {
       "title": "Exportar e importar",

@@ -1680,9 +1680,11 @@ html[data-app-shell] {
    as a flicker. The transition in force is the one of the NEW state, so a
    zero duration under `:hover` makes the entry instant and leaves the exit
    animated. Unlayered on purpose, to win over the `transition-*` utilities;
-   app only, so the marketing pages keep their hover animations. */
+   app only, so the marketing pages keep their hover animations.
+   `data-hover-fade` opts a control out: a card standing apart from its
+   neighbours has no such flicker, and its border reads better faded in. */
 @media (hover: hover) and (pointer: fine) {
-  html[data-app-shell] :is(button, a, [role="button"], [role="tab"], summary):hover {
+  html[data-app-shell] :is(button, a, [role="button"], [role="tab"], summary):not([data-hover-fade]):hover {
     transition-duration: 0s;
   }
 }
@@ -1767,7 +1769,7 @@ html[data-app-shell] textarea {
    `.content-selectable` extends it to the other text people write and read
    rather than click: a feedback request and its original submission, a
    published page's title, a file or skill opened for reading, the agent's
-   reasoning, earlier versions of a pull request comment. */
+   reasoning, earlier versions of a pull request comment, the legal pages. */
 .chat-selectable,
 .chat-selectable
   *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code),
@@ -3299,14 +3301,15 @@ html[data-desktop-platform="darwin"]
   [data-close-button] {
   position: absolute;
   top: 50%;
-  right: 12px;
+  /* The same gap as above and below it on a one-line toast. */
+  right: 14px;
   left: auto;
   width: 24px;
   height: 24px;
   color: currentColor;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: 50%;
   transform: translateY(-50%);
 }
 
@@ -3385,9 +3388,17 @@ html[data-first-run-open] .content-toaster[data-sonner-toaster][data-x-position=
   width: fit-content;
   max-width: 100%;
   min-height: 32px;
-  padding: 6px 40px 6px 12px;
+  padding: 6px 36px 6px 12px;
   gap: 8px;
   border-radius: 9999px;
+}
+
+/* A round control nested in the pill's round end: the 24px circle sits 4px
+   from the edge on its three sides, concentric with the 32px pill. */
+.content-toaster[data-sonner-toaster][data-y-position]
+  [data-sonner-toast][data-styled="true"]
+  [data-close-button] {
+  right: 4px;
 }
 
 .content-toaster[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-content] {
@@ -3500,6 +3511,12 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   height: 44px;
   z-index: 30;
   -webkit-app-region: drag;
+}
+/* The skip link appears in the window's top-left corner, which on macOS is
+   where the system draws the traffic lights, over the page: there it drops
+   below their 44px band. */
+html[data-desktop-platform="darwin"] .skip-to-content-link:focus {
+  top: 52px;
 }
 /* Until the first-run gate has decided, a new account's session gets a blank
    page over the app (MIN-964), under the first-run pages (z-index 45) and

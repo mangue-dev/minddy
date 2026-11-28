@@ -1181,7 +1181,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
   return (
     <div className="mt-5 space-y-1">
       <div className="flex items-center gap-0.5">
-        <div className={`mr-auto flex min-w-0 items-center gap-1 ${mobile || panelToolbar ? "flex-1" : ""}`}>
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           <DatabaseViewStrip
             views={databaseViews.views}
             activeId={databaseViews.active?.id ?? null}

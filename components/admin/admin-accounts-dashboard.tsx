@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {UserAvatar} from "@/components/user-avatar";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
-import {Metric, StatsCard} from "@/components/stats/stats-chrome";
 import {BILLING_PLANS} from "@/lib/billing-plans";
 import type {BillingPlanId} from "@/lib/billing-plans";
 import {DEFAULT_GIFT_DURATION, GIFT_DURATIONS, giftExpiresAt} from "@/lib/billing-gift";
@@ -558,8 +557,9 @@ function Value({
 
 
 /**
- * The instance in one figure. Read once per visit: an account count does not
- * move fast enough to deserve a refresh button.
+ * The instance in one sentence, set like the statistics' opening line. Read
+ * once per visit: an account count does not move fast enough to deserve a
+ * refresh button.
  */
 function AccountCount() {
   const t = useTranslations("Admin");
@@ -574,19 +574,17 @@ function AccountCount() {
     staleTime: 60 * 1000,
   });
   const total = data?.totalAccounts ?? null;
-  const failed = isError;
+  const anchor = adminSectionAnchor(ADMIN_SECTIONS.accountsSummary);
 
+  if (isError) {
+    return <p id={anchor} className="scroll-mt-20 text-sm text-muted-foreground">{t("accounts.countFailed")}</p>;
+  }
+  if (total === null) return <Skeleton id={anchor} className="h-7 w-72 max-w-full scroll-mt-20" />;
   return (
-    <StatsCard id={adminSectionAnchor(ADMIN_SECTIONS.accountsSummary)}>
-      <Metric
-        variant="hero"
-        label={t("accounts.countLabel")}
-        value={
-          failed ? "—" : total === null ? <Skeleton className="h-9 w-16" /> : format.number(total)
-        }
-        hint={failed ? t("accounts.countFailed") : t("accounts.countHint")}
-      />
-    </StatsCard>
+    <p id={anchor} className="scroll-mt-20 font-display text-xl font-semibold leading-tight tracking-[-0.02em] sm:text-2xl">
+      <span data-account-count className="tabular-nums">{format.number(total)}</span>{" "}
+      <span className="text-muted-foreground">{t("accounts.countSentence", { count: total })}</span>
+    </p>
   );
 }
 
@@ -720,16 +718,17 @@ export function AdminAccountsDashboard() {
       <div className="flex flex-col gap-4">
       <div id={adminSectionAnchor(ADMIN_SECTIONS.accountsSupport)} className="flex scroll-mt-20 flex-col gap-1 rounded-lg">
         <h2 className="text-sm font-semibold">{t("accounts.supportTitle")}</h2>
-        <p className="text-sm text-muted-foreground">{t("users.subtitle")}</p>
+        <p id="admin-support-purpose" className="max-w-xl text-sm text-muted-foreground">{t("users.subtitle")}</p>
       </div>
-      <form className="flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); void lookup(); }}>
-        <label htmlFor="admin-support-email" className="text-sm font-medium">{t("users.emailLabel")}</label>
+      <form onSubmit={(event) => { event.preventDefault(); void lookup(); }}>
         <div className="flex items-center gap-2">
           <div className="relative max-w-sm flex-1">
             <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input id="admin-support-email" type="email" required maxLength={254} autoComplete="off"
               value={search} onChange={(e) => changeSearch(e.target.value)}
-              placeholder={t("users.searchPlaceholder")} className="pr-8 pl-8" aria-describedby="admin-support-purpose" />
+              // The placeholder names the field; the paragraph above says the rest.
+              aria-label={t("users.emailLabel")} placeholder={t("users.emailLabel")}
+              className="pr-8 pl-8" aria-describedby="admin-support-purpose" />
             {search ? (
               <AppTooltip label={t("users.clearSearch")}>
                 <button type="button" onClick={() => changeSearch("")} aria-label={t("users.clearSearch")}
@@ -743,7 +742,6 @@ export function AdminAccountsDashboard() {
             {loading ? <Spinner /> : null}{t("users.findAccount")}
           </Button>
         </div>
-        <p id="admin-support-purpose" className="text-xs text-muted-foreground">{t("users.supportPurpose")}</p>
       </form>
       <div aria-live="polite" aria-busy={loading || loadingDetails}>
         {loading ? <Skeleton className="h-14 rounded-lg" /> : account ? (

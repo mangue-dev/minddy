@@ -4889,8 +4889,7 @@
       "undoToast": "Zurücksetzung für {name} rückgängig gemacht."
     },
     "users": {
-      "subtitle": "Suche ein Konto über die genaue E-Mail-Adresse und öffne es, um Plan oder Budget zu verwalten.",
-      "searchPlaceholder": "E-Mail-Adresse des Kontos",
+      "subtitle": "Suche ein Konto über die genaue E-Mail-Adresse, um Plan oder Budget zu verwalten. Aktivitäten und Inhalte des Kontos werden nicht angezeigt.",
       "clearSearch": "Suche löschen",
       "empty": "Kein Konto für diese E-Mail-Adresse gefunden.",
       "emailStatus": "E-Mail",
@@ -4904,7 +4903,6 @@
       "emailLabel": "E-Mail-Adresse",
       "findAccount": "Konto suchen",
       "openAccount": "Konto öffnen",
-      "supportPurpose": "Öffne Konten nur für Support- oder Abrechnungsaufgaben. Aktivitäten und persönliche Inhalte werden hier nicht angezeigt.",
       "lookupFailed": "Das Konto konnte nicht gefunden werden. Prüfe die Adresse und versuche es erneut.",
       "detailsFailed": "Plan und Budget konnten nicht geladen werden. Öffne das Konto erneut."
     },
@@ -4992,9 +4990,9 @@
     },
     "accounts": {
       "countLabel": "Konten",
-      "countHint": "Alle Konten dieser Instanz.",
+      "countSentence": "{count, plural, one {Konto auf dieser Instanz} other {Konten auf dieser Instanz}}",
       "countFailed": "Die Konten konnten nicht gezählt werden.",
-      "supportTitle": "Kontosupport"
+      "supportTitle": "Support"
     },
     "modelsFile": {
       "title": "Export und Import",

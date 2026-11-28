@@ -42,14 +42,54 @@ import { keyboardAimsLast } from "@/lib/keyboard-modality";
  */
 export function innermostHovered<T>(
   registry: Map<Element, T>,
-  isHovered: (el: Element) => boolean = (el) => el.matches(":hover")
+  isHovered: (el: Element) => boolean = matchesHover
 ): T | undefined {
+  const hovered = innermostMatching(registry, isHovered);
+  if (hovered) return registry.get(hovered);
+  // Nothing registered is under the pointer, but one of its tooltips may be.
+  const trigger = hoveredTooltipTrigger(undefined, isHovered);
+  const owner = trigger && innermostMatching(registry, (el) => el.contains(trigger));
+  return owner ? registry.get(owner) : undefined;
+}
+
+const matchesHover = (el: Element) => el.matches(":hover");
+
+function innermostMatching<T>(
+  registry: Map<Element, T>,
+  matches: (el: Element) => boolean
+): Element | null {
   let innermost: Element | null = null;
   for (const el of registry.keys()) {
-    if (!isHovered(el)) continue;
+    if (!matches(el)) continue;
     if (!innermost || innermost.contains(el)) innermost = el;
   }
-  return innermost ? registry.get(innermost) : undefined;
+  return innermost;
+}
+
+/**
+ * The trigger of the tooltip under the pointer, or `null`.
+ *
+ * A tooltip renders in a portal, outside the element it describes: sliding
+ * from a card's avatar onto its tooltip leaves the card, which is no longer
+ * `:hover`, and its shortcuts went dead although the pointer never left what
+ * the user reads as the card. The tooltip leads back to it: Radix names the
+ * open bubble in its trigger's `aria-describedby`.
+ */
+export function hoveredTooltipTrigger(
+  root: ParentNode | null = typeof document === "undefined" ? null : document,
+  isHovered: (el: Element) => boolean = matchesHover
+): Element | null {
+  if (!root) return null;
+  for (const content of root.querySelectorAll('[data-slot="tooltip-content"]')) {
+    if (!isHovered(content)) continue;
+    // The bubble carries the id itself, or a hidden label inside it does.
+    const id = content.id || content.querySelector('[role="tooltip"]')?.id;
+    if (!id) continue;
+    for (const trigger of root.querySelectorAll("[aria-describedby]")) {
+      if (trigger.getAttribute("aria-describedby")?.split(/\s+/).includes(id)) return trigger;
+    }
+  }
+  return null;
 }
 
 /**

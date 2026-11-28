@@ -127,7 +127,6 @@ export function CreateIssueDialog({
   initialObjectiveId,
   initialAssigneeId,
   initialSubIssueOf = null,
-  initialParentId,
   initialTitle,
   initialDescription,
   initialCategoryIds,
@@ -152,14 +151,12 @@ export function CreateIssueDialog({
   initialStatus?: IssueStatus;
   /** Preset the objective (when creating from an objective-filtered board). */
   initialObjectiveId?: string | null;
-  /** Preset the parent (when creating from a family-scoped board, so the new
-      issue lands IN the family instead of silently next to it). */
-  initialParentId?: string | null;
   /** Preset the assignee (when creating from an assignee-filtered board, so
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
   /** Preset a visible "sub-issue of" relation (a parent's "Create a
-      sub-issue"), which the form shows and can remove. */
+      sub-issue", or a family-scoped board, so the new issue lands IN the
+      family instead of next to it), which the form shows and can remove. */
   initialSubIssueOf?: { id: string; label: string } | null;
   /**
    * Starting content — the form opens already written. It's the promotion
@@ -256,7 +253,8 @@ export function CreateIssueDialog({
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
   // The relations a new form starts with: the parent's, when it opened from
-  // its "Create a sub-issue", in the parent's own project only.
+  // its "Create a sub-issue" or from its family board, in the parent's own
+  // project only.
   const seededRelations = useCallback((): PendingRelationInput[] =>
     initialSubIssueOf && activeProjectId === projectId
       ? [{ type: "sub_issue_of", target_id: initialSubIssueOf.id, target_type: "issue", target_label: initialSubIssueOf.label }]
@@ -395,11 +393,10 @@ export function CreateIssueDialog({
       ? user.id
       : DEFAULTS.assignee_id;
 
-  // The project-scoped presets: the caller's objective, parent and assignee
+  // The project-scoped presets: the caller's objective and assignee
   // describe the board it opened from, so they only hold in that project.
   const scopedPresets = {
     objective_id: inHomeProject ? initialObjectiveId ?? DEFAULTS.objective_id : null,
-    parent_id: inHomeProject ? initialParentId ?? DEFAULTS.parent_id : null,
     assignee_id: (inHomeProject ? initialAssigneeId : null) ?? defaultAssigneeId,
   };
 
@@ -414,8 +411,7 @@ export function CreateIssueDialog({
 
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
   // that column's status; objective mode reopens it with the objective set;
-  // family mode reopens it under the active parent; the auto-assign
-  // preference seeds the assignee).
+  // the auto-assign preference seeds the assignee).
   useEffect(() => {
     if (!open || resuming.current) return;
     setFields((f) => ({ ...f, status: initialStatus ?? DEFAULTS.status }));
@@ -423,7 +419,7 @@ export function CreateIssueDialog({
   // Changing the "Create in" project resets the project-scoped fields to that
   // project's presets. Re-seeding on defaultAssigneeId also covers members
   // loading in after the dialog opens or the project changes.
-  const { objective_id: presetObjectiveId, parent_id: presetParentId, assignee_id: presetAssigneeId } = scopedPresets;
+  const { objective_id: presetObjectiveId, assignee_id: presetAssigneeId } = scopedPresets;
   useEffect(() => {
     // A resumed form keeps its own values until its project changes.
     if (!open || (resuming.current && resumedProjectRef.current === activeProjectId)) return;
@@ -431,10 +427,9 @@ export function CreateIssueDialog({
     setFields((f) => ({
       ...f,
       objective_id: presetObjectiveId,
-      parent_id: presetParentId,
       assignee_id: presetAssigneeId,
     }));
-  }, [open, presetObjectiveId, presetParentId, presetAssigneeId, activeProjectId]);
+  }, [open, presetObjectiveId, presetAssigneeId, activeProjectId]);
 
   // The starting content, placed ONCE per opening. The flag is a ref and
   // not an effect dependency: `initialCategoryIds` is an array, therefore a
@@ -630,15 +625,20 @@ export function CreateIssueDialog({
       effort: draft.effort,
       assignee_id: draft.assignee_id,
       objective_id: draft.objective_id,
-      // Drafts never recorded a parent: the dialog's own preset reasserts
-      // itself, so a draft recovered on a family board still lands there.
-      parent_id: presetParentId,
+      parent_id: DEFAULTS.parent_id,
       due_date: draft.due_date,
       recurrence: draft.recurrence ?? null,
     });
     setCategoryIds(draft.category_ids);
     uploads.restore(draft.resources);
-    setRelations(draft.relations ?? []);
+    // A draft without a parent takes the dialog's own: recovered on a family
+    // board, it still lands there.
+    const draftRelations = draft.relations ?? [];
+    setRelations(
+      draftRelations.some((relation) => relation.type === "sub_issue_of")
+        ? draftRelations
+        : [...seededRelations(), ...draftRelations],
+    );
     setActiveDraftId(draft.id);
   };
 

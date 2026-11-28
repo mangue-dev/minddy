@@ -313,6 +313,16 @@ function ProjectBoard() {
     () => resolveIssueFamily(issues, familyParam),
     [issues, familyParam],
   );
+  const familyParent = activeFamily?.parent;
+  const familySubIssueOf = useMemo(
+    () => familyParent
+      ? {
+          id: familyParent.id,
+          label: `${issueIdentifier(projectKey, familyParent.number)} ${familyParent.title}`,
+        }
+      : null,
+    [familyParent, projectKey],
+  );
   const activeObjective = !activeFamily && objectiveParam
     ? objectives.find((o) => o.id === objectiveParam) ?? null
     : null;
@@ -699,8 +709,9 @@ function ProjectBoard() {
           initialStatus={createStatus}
           // Family mode: a new issue created from this scoped board lands IN
           // the family — without the preset it would be born top-level and
-          // instantly vanish from the board it was created on.
-          initialParentId={activeFamily?.parent.id ?? null}
+          // instantly vanish from the board it was created on. The relation
+          // is visible in the form, where it can be removed.
+          initialSubIssueOf={familySubIssueOf}
           // The project board opens its own dialog (column presets) —
           // distinguished from the global dialog in the stats.
           analyticsSource={activeObjective ? "objective" : "board"}

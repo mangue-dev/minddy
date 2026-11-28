@@ -199,6 +199,8 @@ function ExampleCard({ example, onPick }: { example: RoutineExample; onPick: () 
       type="button"
       onClick={onPick}
       data-routine-example={example.id}
+      // The border fades in on hover instead of landing at once.
+      data-hover-fade=""
       className="flex w-full flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left outline-none transition-colors hover:border-primary/40 hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <HugeiconsIcon icon={example.icon} className={cn("size-5 shrink-0", example.tone)} />

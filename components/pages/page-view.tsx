@@ -1157,11 +1157,12 @@ function PageSurface({
           in the document, and it's scrolling through it. */}
       {!panel && <PageToc editor={editor} scrollRef={scrollRef} />}
 
-      {/* A database scrolls sideways inside this page and the side panel has
-          its own edges: only a document page in the main pane fades. */}
+      {/* Every page fades at the edge it scrolls past, a database like a
+          document, in the main pane as in the side panel and its bottom sheet
+          on a phone. A database's floating scrollbar is portaled out of this
+          scroller, so the mask leaves it whole. */}
       <PageScroll
         ref={scrollRef}
-        fade={!panel && page.database_schema == null}
         className="scrollbar-quiet overscroll-none"
       >
         {/* The COLUMN of the document. She carries two things, and she's the only one

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, Delete02Icon, Edit04Icon } from "@hugeicons/core-free-icons";
@@ -55,6 +55,40 @@ function ViewPill({ view, active, sortable, onSelect, onContextMenu }: {
       <span className="truncate">{view.name}</span>
     </button>
   );
+}
+
+/**
+ * Whether a strip no longer fits the width its row leaves it. The caller then
+ * renders something narrower in its place, so the strip is gone and cannot be
+ * measured again: the width it needed is kept, and it comes back once the row
+ * offers that much. `signature` names the strip's content; a change of it
+ * (a view added, renamed) measures afresh.
+ */
+function useStripOverflow(signature: string) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState<{ signature: string; width: number } | null>(null);
+  const overflowing = overflow?.signature === signature;
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const measure = () => {
+      const strip = stripRef.current;
+      if (strip) {
+        const width = strip.offsetWidth;
+        if (width > row.clientWidth) setOverflow({ signature, width });
+      } else {
+        setOverflow((current) => (current && row.clientWidth >= current.width ? null : current));
+      }
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    if (stripRef.current) observer.observe(stripRef.current);
+    return () => observer.disconnect();
+  }, [signature, overflowing]);
+  return { rowRef, stripRef, overflowing };
 }
 
 function ViewNameDialog({ open, onOpenChange, title, initialName, onSubmit }: {
@@ -177,6 +211,11 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   ] : [];
 
   const mobile = useMobileLayout() === true;
+  // Too many views for the row: the strip gives way to the picker instead of
+  // scrolling sideways, and returns when the row is wide enough again.
+  const { rowRef, stripRef, overflowing } = useStripOverflow(
+    `${canWrite}|${orderedViews.map((view) => `${view.id}:${view.name}`).join("|")}`,
+  );
   const dialogs = (
     <>
       <IssueContextMenu position={menu ? { x: menu.x, y: menu.y } : null}
@@ -208,8 +247,9 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
 
   // A phone has no room for a strip of pills and no right-click: one picker,
   // like the issue board's, whose menu creates, renames and deletes. A side
-  // panel is just as narrow, so it uses the same picker.
-  if (mobile || compact) {
+  // panel is just as narrow, so it uses the same picker, and so does a row
+  // the strip overflows.
+  if (mobile || compact || overflowing) {
     const actions = canWrite ? [
       ...(views.length < MAX_DATABASE_VIEWS ? [{
         id: "create-view", label: tBoard("newView"), inSearchRow: true,
@@ -226,7 +266,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
     // The picker takes the row's free width, so a long view name only
     // truncates once the toolbar buttons leave it no more room.
     return (
-      <div className="flex min-w-0 flex-1 items-center">
+      <div ref={rowRef} className="flex min-w-0 flex-1 items-center">
         <SearchSelect
           value={active?.id ?? "__default__"}
           onChange={(id) => { if (id && id !== "__default__") onSelect(id); }}
@@ -249,8 +289,11 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
     );
   }
 
+  // The row takes the width the toolbar leaves; the strip inside keeps its
+  // natural width, which is what gets compared with the row's.
   return (
-    <div role="group" aria-label={t("views")} className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
+    <div ref={rowRef} className="flex min-w-0 flex-1 items-center overflow-hidden">
+    <div ref={stripRef} role="group" aria-label={t("views")} className="flex shrink-0 items-center gap-0.5">
       {views.length ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements, screenReaderInstructions: viewInstructions }} modifiers={HORIZONTAL_DRAG}
           onDragStart={({ active: dragged }) => setDraggedId(String(dragged.id))}
@@ -307,6 +350,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
           </AppTooltip>
         </>
       )}
+    </div>
       {dialogs}
     </div>
   );

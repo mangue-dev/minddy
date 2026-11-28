@@ -4889,8 +4889,7 @@
       "undoToast": "Reset undone for {name}."
     },
     "users": {
-      "subtitle": "Find an account by its exact email address, then open it to manage billing or usage.",
-      "searchPlaceholder": "Account email address",
+      "subtitle": "Find an account by its exact email address to manage its billing or usage. Its activity and content are not shown.",
       "clearSearch": "Clear search",
       "empty": "No account found for this email address.",
       "emailStatus": "Email",
@@ -4904,7 +4903,6 @@
       "emailLabel": "Email address",
       "findAccount": "Find account",
       "openAccount": "Open account",
-      "supportPurpose": "Open accounts only for support or billing tasks. Activity and personal content are not shown here.",
       "lookupFailed": "Could not find the account. Check the address and try again.",
       "detailsFailed": "Could not load billing and usage. Open the account to try again."
     },
@@ -4992,9 +4990,9 @@
     },
     "accounts": {
       "countLabel": "Accounts",
-      "countHint": "Every account on this instance.",
+      "countSentence": "{count, plural, one {account on this instance} other {accounts on this instance}}",
       "countFailed": "Couldn’t count the accounts.",
-      "supportTitle": "Account support"
+      "supportTitle": "Support"
     },
     "modelsFile": {
       "title": "Export and import",

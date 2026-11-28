@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-27",
   "compatibility": {
     "version": "0.40.0 (MIN-970 release review)",
     "editions": [
@@ -73,10 +73,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/pt-BR.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-17"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/pt-BR.json; agent review, not human acceptance); agent:claude-code (MIN-1012 changes mirrored from en revision 21; agent review, not human acceptance); agent:claude-code (MIN-673: summary lengthened for the page description from facts stated in the article sections; body unchanged; no screenshot in scope); agent:claude-code (0.40.0 release review, MIN-970: source audit against the v0.30.1..0.40.0 delta: commit subjects and targeted commit bodies, quoted labels checked against messages/en.json; no correction needed; translations not reread; no screenshot recaptured; no browser walkthrough of the procedures); agent:claude-code (view dropdown sentence mirrored from en revision 23; labels checked against messages/pt-BR.json; no figure affected; agent review, not human acceptance)",
+    "language": "agent:claude-code (pt-BR translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the MIN-1012 views sentences, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-673 summary translated from the English revision with the locale glossary and register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the view dropdown sentence; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-27"
   },
   "related": [
     "pages"
@@ -100,7 +100,7 @@
       "src": "/documentation/pt-BR/database-setup-cards.png",
       "alt": "Prévia do componente com cartões para configurar uma nova base de dados com Numo ou importar uma existente.",
       "caption": "Sugestões para uma nova base com dados de demonstração. Escolha Numo ou importação, ou feche os cartões para continuar manualmente.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com um campo de busca, texto, número, seleções, data, pessoas, caixa de seleção e os quatro tipos somente leitura.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -134,7 +134,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +166,7 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +182,7 @@
       "src": "/documentation/pt-BR/database-options.png",
       "alt": "Prévia do componente Editar opções com status em português, alças de arraste, lixeiras e a explicação da exclusão.",
       "caption": "Edite nomes, cores e ordem das opções em conjunto. Arraste uma alça para reordenar; a lixeira remove uma opção do rascunho; Salvar aplica as alterações. São exibidos dados de demonstração.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-14",
       "viewport": [
@@ -199,7 +199,7 @@
       "src": "/documentation/pt-BR/database-date-time.png",
       "alt": "Prévia do seletor de data com 24 de julho de 2026 selecionado, Adicione um horário ativado e Hora definida como 02:00 AM.",
       "caption": "Ative Adicione um horário para inserir um horário. Esta prévia do componente usa dados de demonstração e o fuso horário do dispositivo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +282,7 @@ Nesse menu, o proprietário ou um Membro pode escolher **Promover a ticket** par
 
 ### Visualizações do banco de dados {#database-display}
 
-Um banco de dados mostra suas entradas por meio de visualizações, listadas acima da tabela. Cada visualização guarda sua própria ordenação, seu filtro e suas colunas ocultas, e todos os membros do projeto veem as mesmas visualizações. O proprietário ou um Membro adiciona uma visualização com **Nova visualização** (+), que parte da visualização na tela, clica com o botão direito em uma visualização para escolher **Renomear visualização** ou **Excluir visualização**, e arrasta as visualizações para reordená-las. As mudanças de ordenação, filtro e colunas são salvas na visualização ativa para todos. Um banco de dados mantém pelo menos uma visualização; antes da primeira mudança, ele mostra a visualização padrão **Tabela**. Leitores alternam entre visualizações e podem ajustar uma para si até sair da página. Seu navegador lembra a última visualização aberta; a pesquisa nunca é salva. A ordem manual é compartilhada com a árvore de páginas. Role horizontalmente com gesto de trackpad, Shift e roda do mouse ou a barra de rolagem na parte inferior da área de conteúdo, que aparece enquanto a tabela rola. Uma tela sensível ao toque não mostra essa barra: deslize a tabela com o dedo. Uma prévia de texto cortada não encurta o valor armazenado. Entradas com valores de colunas podem ser reordenadas dentro do banco, mas não movidas para fora. O Numo pode listar as visualizações de um banco de dados e, quando você pede, criá-las, renomeá-las, reordená-las ou excluí-las (nunca a última), ou mudar sua ordenação, seus filtros (todos ou qualquer um), suas colunas ocultas e os cálculos sob as colunas Número. Se o banco de dados ainda não tiver uma visualização salva, essa mudança salva a visualização padrão, como faz a sua primeira mudança. Na página de um banco de dados, o Numo entende “uma visualização” como uma visualização do banco de dados, não do quadro de tickets. A ordem das colunas não faz parte de uma visualização: ela pertence ao esquema do banco de dados. Os clientes do minddy MCP podem gerenciar visualizações da mesma forma.
+Um banco de dados mostra suas entradas por meio de visualizações, listadas acima da tabela. Cada visualização guarda sua própria ordenação, seu filtro e suas colunas ocultas, e todos os membros do projeto veem as mesmas visualizações. O proprietário ou um Membro adiciona uma visualização com **Nova visualização** (+), que parte da visualização na tela, clica com o botão direito em uma visualização para escolher **Renomear visualização** ou **Excluir visualização**, e arrasta as visualizações para reordená-las. Quando as visualizações não cabem mais em uma linha, um menu suspenso as substitui; o menu dele oferece **Nova visualização**, **Renomear visualização** e **Excluir visualização**. As mudanças de ordenação, filtro e colunas são salvas na visualização ativa para todos. Um banco de dados mantém pelo menos uma visualização; antes da primeira mudança, ele mostra a visualização padrão **Tabela**. Leitores alternam entre visualizações e podem ajustar uma para si até sair da página. Seu navegador lembra a última visualização aberta; a pesquisa nunca é salva. A ordem manual é compartilhada com a árvore de páginas. Role horizontalmente com gesto de trackpad, Shift e roda do mouse ou a barra de rolagem na parte inferior da área de conteúdo, que aparece enquanto a tabela rola. Uma tela sensível ao toque não mostra essa barra: deslize a tabela com o dedo. Uma prévia de texto cortada não encurta o valor armazenado. Entradas com valores de colunas podem ser reordenadas dentro do banco, mas não movidas para fora. O Numo pode listar as visualizações de um banco de dados e, quando você pede, criá-las, renomeá-las, reordená-las ou excluí-las (nunca a última), ou mudar sua ordenação, seus filtros (todos ou qualquer um), suas colunas ocultas e os cálculos sob as colunas Número. Se o banco de dados ainda não tiver uma visualização salva, essa mudança salva a visualização padrão, como faz a sua primeira mudança. Na página de um banco de dados, o Numo entende “uma visualização” como uma visualização do banco de dados, não do quadro de tickets. A ordem das colunas não faz parte de uma visualização: ela pertence ao esquema do banco de dados. Os clientes do minddy MCP podem gerenciar visualizações da mesma forma.
 
 Abra **Ordenar por** para escolher uma coluna e depois uma direção, formulada conforme o conteúdo da coluna: **De A a Z** ou **De Z a A** para texto e pessoas, **Primeira opção primeiro** ou **Última opção primeiro** para uma coluna Seleção ou Seleção múltipla, que é ordenada na ordem de suas opções, **Menor primeiro** ou **Maior primeiro** para um número, **Mais antigo primeiro** ou **Mais recente primeiro** para uma data, **Desmarcadas primeiro** ou **Marcadas primeiro** para uma caixa de seleção, e **De cima para baixo** ou **De baixo para cima** para a ordem manual. As listas de colunas de **Ordenar por** e **Filtrar** mostram o ícone do tipo de cada coluna.
 
