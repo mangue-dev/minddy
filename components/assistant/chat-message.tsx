@@ -42,6 +42,7 @@ import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-rendere
 import { TypedMentionChip } from "@/components/typed-mention-chip";
 import { keepMentionUrls, SANITIZE_SCHEMA } from "@/components/markdown";
 import { parseMentionHref } from "@/lib/mention-link";
+import { assistantMentionTarget, toAssistantMentionLinks } from "@/lib/assistant-mention-links";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { messageTimeLabel } from "@/lib/message-time";
 import { cn } from "@/lib/utils";
@@ -434,18 +435,10 @@ function UserText({
 // ── Assistant text renderer ───────────────────────────────────────────
 // For assistant responses: AI Elements Response (Streamdown).
 
-// Numo cites what it can with typed mentions (`[@Label](mention:type/id)`).
-// Streamdown's sanitizer drops an unknown URL scheme, so each mention travels
-// as an in-page address and its link renders as the pill an editor shows.
-const ASSISTANT_MENTION_PREFIX = "#mention:";
-const ASSISTANT_MENTION_LINK =
-  /(\[@(?:[^\]\\\n]|\\.){0,256}\])\(mention:([a-z_]{1,16}\/[A-Za-z0-9_.-]{1,64}(?:\?[A-Za-z0-9_.:=&-]{1,300})?)\)/g;
-
+// Numo's typed mentions render as the pill an editor shows: see
+// lib/assistant-mention-links for how they cross Streamdown's sanitizer.
 function AssistantLink(props: ComponentProps<typeof MarkdownLink>) {
-  const href = typeof props.href === "string" ? props.href : null;
-  const target = href?.startsWith(ASSISTANT_MENTION_PREFIX)
-    ? parseMentionHref(href.slice(1))
-    : null;
+  const target = assistantMentionTarget(props.href);
   if (target) return <TypedMentionChip type={target.type} id={target.id} meta={target.meta} />;
   return <MarkdownLink {...props} />;
 }
@@ -455,12 +448,7 @@ const ASSISTANT_COMPONENTS = { ...PAGE_CODE_COMPONENTS, a: AssistantLink };
 // Fenced code uses the app's code block, the one Pages and the notebook show;
 // Streamdown keeps the rest of the response.
 function AssistantText({ content }: { content: string }) {
-  const rendered = useMemo(
-    () => content.includes("](mention:")
-      ? content.replace(ASSISTANT_MENTION_LINK, `$1(${ASSISTANT_MENTION_PREFIX}$2)`)
-      : content,
-    [content],
-  );
+  const rendered = useMemo(() => toAssistantMentionLinks(content), [content]);
   return (
     <MessageResponse components={ASSISTANT_COMPONENTS}>
       {rendered}
